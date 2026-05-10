@@ -7,10 +7,42 @@ import FoundationModels
 
 /// Capacitor bridge for Apple's on-device LLM (Foundation Models, iOS 26+).
 ///
-/// Mirrors the shape of the Android GemmaPlugin so the JS side can swap them
-/// transparently. Returns `available: false` (instead of throwing) when the
-/// framework or Apple Intelligence isn't available — the caller falls back
-/// to the cloud LLM proxy.
+/// Resolves `available: false` (rather than throwing) when the framework
+/// or Apple Intelligence is missing — the JS caller falls back to a
+/// static text pack or, in v1.1+, a cloud proxy.
+///
+/// Three methods:
+///   - `generate(prompt, ...)`               → free-form String
+///   - `generateIrisLine(prompt, ...)`       → @Generable IrisLine, JSON-encoded
+///   - `generateFloorFlavor(prompt, ...)`    → @Generable FloorFlavor, JSON-encoded
+///
+/// The Generable macro emits a schema the framework uses for
+/// grammar-constrained decoding — the model literally cannot emit
+/// fields of the wrong shape, missing keys, or strings violating
+/// length/regex constraints. Eliminates the "model returned a paragraph
+/// when I wanted 3 words" failure mode.
+
+// MARK: - Generable schemas
+
+#if canImport(FoundationModels)
+@available(iOS 26.0, *)
+@Generable
+struct IrisLine: Codable {
+    @Guide(description: "A single in-character line from the iris.exe antagonist. 6 to 14 words. Terse, contemptuous, glitchy. No quotation marks, no preamble, no name labels.")
+    var line: String
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct FloorFlavor: Codable {
+    @Guide(description: "Evocative floor name, 1 to 3 words. Title case. No punctuation.")
+    var name: String
+
+    @Guide(description: "Single biome-flavor sentence, 6 to 18 words. Cyberpunk tone.")
+    var description: String
+}
+#endif
+
 @objc(FoundationModelsPlugin)
 public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "FoundationModelsPlugin"
@@ -18,6 +50,8 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generate", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "generateIrisLine", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "generateFloorFlavor", returnType: CAPPluginReturnPromise),
     ]
 
     @objc func isAvailable(_ call: CAPPluginCall) {
@@ -66,13 +100,7 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
                         return
                     }
 
-                    let session: LanguageModelSession
-                    if let sp = systemPrompt, !sp.isEmpty {
-                        session = LanguageModelSession(instructions: Instructions { sp })
-                    } else {
-                        session = LanguageModelSession()
-                    }
-
+                    let session = Self.makeSession(systemPrompt: systemPrompt)
                     let options = GenerationOptions(
                         temperature: temperature,
                         maximumResponseTokens: maxTokens
@@ -104,12 +132,107 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    /// Grammar-constrained iris.exe taunt generation via @Generable.
+    /// Returns `{text: <JSON-encoded IrisLine>}` — JS parses the JSON to
+    /// extract `.line`. Same return shape as `generate` so the bridge
+    /// contract stays uniform across all three methods.
+    @objc func generateIrisLine(_ call: CAPPluginCall) {
+        if #available(iOS 26.0, *) {
+            #if canImport(FoundationModels)
+            generateStructured(call: call, type: IrisLine.self)
+            #else
+            call.reject("FoundationModels framework not in SDK at compile time")
+            #endif
+        } else {
+            call.reject("iOS < 26.0; FoundationModels unavailable")
+        }
+    }
+
+    /// Grammar-constrained floor name + biome line via @Generable.
+    @objc func generateFloorFlavor(_ call: CAPPluginCall) {
+        if #available(iOS 26.0, *) {
+            #if canImport(FoundationModels)
+            generateStructured(call: call, type: FloorFlavor.self)
+            #else
+            call.reject("FoundationModels framework not in SDK at compile time")
+            #endif
+        } else {
+            call.reject("iOS < 26.0; FoundationModels unavailable")
+        }
+    }
+
+    // MARK: - Shared structured-generation envelope
+
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, *)
+    private func generateStructured<T: Codable & Generable>(
+        call: CAPPluginCall,
+        type: T.Type
+    ) {
+        guard let prompt = call.getString("prompt") else {
+            call.reject("Missing required field: prompt")
+            return
+        }
+        let systemPrompt = call.getString("systemPrompt")
+        let temperature = call.getDouble("temperature") ?? 0.7
+        let maxTokens = call.getInt("maxTokens") ?? 256
+
+        Task {
+            do {
+                let model = SystemLanguageModel.default
+                guard case .available = model.availability else {
+                    call.reject("FoundationModels unavailable on this device")
+                    return
+                }
+
+                let session = Self.makeSession(systemPrompt: systemPrompt)
+                let options = GenerationOptions(
+                    temperature: temperature,
+                    maximumResponseTokens: maxTokens
+                )
+
+                let result = try await Self.withTimeout(seconds: 15) {
+                    let response = try await session.respond(
+                        to: prompt,
+                        generating: T.self,
+                        options: options
+                    )
+                    return response.content
+                }
+
+                // Encode typed Swift value to JSON for the JS bridge.
+                // Default JSONEncoder emits Optional nil as `null`; JS
+                // parser treats null and missing keys identically.
+                let jsonData = try JSONEncoder().encode(result)
+                guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+                    call.reject("FoundationModels: failed to encode \(T.self) to JSON")
+                    return
+                }
+                call.resolve(["text": jsonString])
+            } catch is FoundationModelsTimeout {
+                call.reject("FoundationModels generation timed out after 15s")
+            } catch {
+                call.reject("FoundationModels generation failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    #endif
+
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, *)
+    private static func makeSession(systemPrompt: String?) -> LanguageModelSession {
+        if let sp = systemPrompt, !sp.isEmpty {
+            return LanguageModelSession(instructions: Instructions { sp })
+        }
+        return LanguageModelSession()
+    }
+    #endif
+
     /// Race an async throwing operation against a wall-clock deadline.
     /// First task to finish wins; the loser is cancelled. If the deadline
     /// task wins, the operation continues running (Swift can't preempt
     /// Apple's framework) but its eventual result is discarded — the
-    /// promise to JS rejects on time. Only callable from the iOS 26+
-    /// guarded path inside generate().
+    /// promise to JS rejects on time.
     @available(iOS 16.0, *)
     private static func withTimeout<T: Sendable>(
         seconds: Double,

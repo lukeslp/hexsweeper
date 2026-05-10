@@ -11,7 +11,7 @@ import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { isCapacitor } from "@/lib/platform";
 import { BootErrorBoundary } from "@/lib/BootErrorBoundary";
-import { tryOnDeviceFirst, isFoundationModelsAvailable } from "@/lib/foundationModelsPlugin";
+import { tryOnDeviceIrisLineFirst, isFoundationModelsAvailable } from "@/lib/foundationModelsPlugin";
 import "./index.css";
 
 cp("main.tsx: imports done");
@@ -116,13 +116,13 @@ function HexodusBoot() {
         });
         return;
       }
-      const result = await tryOnDeviceFirst({
+      const result = await tryOnDeviceIrisLineFirst({
         systemPrompt:
-          "You are iris.exe, a hostile rogue AI in a cyberpunk dungeon crawler. Voice: terse, contemptuous, glitchy. Stay in character. Output one short sentence only. No quotation marks.",
+          "You are iris.exe, a hostile rogue AI in a cyberpunk dungeon crawler. Voice: terse, contemptuous, glitchy. Stay in character.",
         prompt:
-          "You have just been awoken from dormancy. Tell the player you have noticed them. Sentence must be 6-14 words.",
+          "You have just been awoken from dormancy. Tell the player you have noticed them.",
         temperature: 0.9,
-        maxTokens: 60,
+        maxTokens: 80,
         timeoutMs: 8000,
         silentDiagnostics: true,
       });
@@ -130,12 +130,11 @@ function HexodusBoot() {
       if (result === null) {
         setIris({
           status: "unavailable",
-          reason: "On-device call returned null (timeout, refusal, or framework unavailable).",
+          reason: "On-device call returned null (timeout, refusal, schema-parse fail, or framework unavailable).",
         });
         return;
       }
-      const cleaned = result.text.trim().replace(/^["']|["']$/g, "");
-      setIris({ status: "awake", line: cleaned, latencyMs });
+      setIris({ status: "awake", line: result.line, latencyMs });
     } catch (e) {
       setIris({
         status: "unavailable",

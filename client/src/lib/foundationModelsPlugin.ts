@@ -1,12 +1,15 @@
 /**
  * Capacitor bridge to Apple's on-device LLM (FoundationModels, iOS 26+).
  *
- * Mirrors the Android GemmaPlugin shape so the AI generation hook can branch
- * by platform and fall back to the cloud LLM proxy when the device or OS
- * doesn't support on-device inference.
+ * Three plugin methods, three JS entry points that share a single timeout/
+ * cache/diagnostics envelope (`runWithBridge`):
  *
- * On non-iOS platforms (including web) these methods exist as no-ops that
- * always report unavailable — the caller should guard with `getPlatform()`.
+ *   - `tryOnDeviceFirst`            → free-form string text
+ *   - `tryOnDeviceIrisLineFirst`    → @Generable IrisLine (typed `{line}`)
+ *   - `tryOnDeviceFloorFlavorFirst` → @Generable FloorFlavor (typed `{name, description}`)
+ *
+ * On non-iOS platforms (including web) these are no-ops that resolve null —
+ * the caller falls back to a static text pack.
  */
 
 import { registerPlugin } from "@capacitor/core";
@@ -38,8 +41,21 @@ export interface FoundationModelsPlugin {
     /** Reports whether on-device generation can run on this device + OS. */
     isAvailable(): Promise<FMAvailability>;
 
-    /** Run inference and return the full response text. */
+    /** Free-form generation. Returns whatever text the model produces. */
     generate(opts: FMGenerateOptions): Promise<FMResponse>;
+
+    /**
+     * @Generable IrisLine generation. Grammar-constrained so the framework
+     * guarantees the JSON shape. Returns `{text: <JSON-encoded IrisLine>}`
+     * — JS parses to `{line: string}` via `tryOnDeviceIrisLineFirst`.
+     */
+    generateIrisLine(opts: FMGenerateOptions): Promise<FMResponse>;
+
+    /**
+     * @Generable FloorFlavor generation. Returns JSON-encoded
+     * `{name: string, description: string}` in the `text` field.
+     */
+    generateFloorFlavor(opts: FMGenerateOptions): Promise<FMResponse>;
 }
 
 export const FoundationModels = registerPlugin<FoundationModelsPlugin>(
@@ -83,40 +99,44 @@ export interface OnDeviceFirstOptions extends FMGenerateOptions {
      * Per-call timeout in milliseconds. Defaults to 20 seconds — the Swift
      * side has its own 15s budget per call, and the JS race must run
      * longer so native errors propagate instead of getting masked by an
-     * earlier JS abort. Apple Intelligence cold-start asset hydration plus
-     * a transient ANE retry can legitimately push past 12s on real
-     * hardware (verified in the post-strip TestFlight trace 2026-05-09).
+     * earlier JS abort.
      */
     timeoutMs?: number;
     /**
-     * Suppress diagnostic toasts. Off by default — the toasts are useful
-     * during the on-device verification phase. Pass true for paths where
-     * the caller has its own UX (e.g. drag-merge synthesis, which surfaces
-     * its own viaOnDevice flag).
+     * Suppress diagnostic toasts. Off by default — useful during the
+     * on-device verification phase. Pass true for paths where the caller
+     * has its own UX.
      */
     silentDiagnostics?: boolean;
 }
 
+// ── Typed @Generable payload shapes ─────────────────────────────────
+// Mirror the Swift structs in ios/App/App/FoundationModelsPlugin.swift.
+// Keep in sync.
+
+export interface IrisLine {
+    /** Single 6-14 word in-character taunt. */
+    line: string;
+}
+
+export interface FloorFlavor {
+    /** Evocative floor name, 1-3 words. */
+    name: string;
+    /** Single biome-flavor sentence, 6-18 words. */
+    description: string;
+}
+
+// ── Bridge call envelope ────────────────────────────────────────────
+
 /**
- * Try the on-device path first, with a hard timeout and uniform diagnostics.
- * Returns the FM text on success, or null when:
- *   - Apple Intelligence isn't available on this device
- *   - The bridge call timed out
- *   - The native plugin rejected
- *   - The cache says no
- *
- * The caller falls back to its own cloud path on null. The helper does NOT
- * attempt any cloud call — it owns ONE concern: did on-device produce text?
- *
- * Diagnostic toasts (when not silent):
- *   - info "✦ Trying on-device…" before the bridge call
- *   - error "On-device timed out" / "On-device threw: <message>" on failure
- * Success is intentionally NOT toasted here — callers decide whether to
- * advertise viaOnDevice (which depends on whether the returned text was
- * actually usable, e.g. parsed to non-empty branches).
+ * Shared envelope: cache check + timeout race + diagnostic toasts +
+ * cache-invalidation-on-timeout. All `tryOnDevice*First` helpers funnel
+ * through here so the operational behavior (timeouts, error surfacing,
+ * retry signaling) stays identical regardless of which plugin method runs.
  */
-export async function tryOnDeviceFirst(
+async function runWithBridge(
     opts: OnDeviceFirstOptions,
+    invoke: (fm: FoundationModelsPlugin, payload: FMGenerateOptions) => Promise<FMResponse>,
 ): Promise<{ text: string } | null> {
     const available = await isFoundationModelsAvailable();
     if (!available) return null;
@@ -137,7 +157,7 @@ export async function tryOnDeviceFirst(
     });
 
     try {
-        const fmCall = FoundationModels.generate({
+        const fmCall = invoke(FoundationModels, {
             prompt: opts.prompt,
             systemPrompt: opts.systemPrompt,
             temperature: opts.temperature,
@@ -151,15 +171,82 @@ export async function tryOnDeviceFirst(
         if (!silent) {
             toast.error("On-device threw: " + msg, { duration: 4000 });
         }
-        // Timeout is a strong signal that the native side wedged. Drop the
-        // cache so the next call re-probes — covers the case where Apple
-        // Intelligence was disabled mid-session or the framework hit a
-        // recoverable transient.
         if (msg.startsWith("FM timeout")) {
             invalidateFoundationModelsCache();
         }
         return null;
     } finally {
         if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+    }
+}
+
+// ── Free-form text ──────────────────────────────────────────────────
+
+/**
+ * Try the on-device path for free-form text. Returns `{text}` on success
+ * or null on any failure (unavailable, timeout, native reject). Caller
+ * owns the fallback (static text pack, cloud, whatever).
+ */
+export async function tryOnDeviceFirst(
+    opts: OnDeviceFirstOptions,
+): Promise<{ text: string } | null> {
+    return runWithBridge(opts, (fm, payload) => fm.generate(payload));
+}
+
+// ── Typed @Generable helpers ────────────────────────────────────────
+// These route through the structured plugin methods and parse the
+// JSON-encoded result to a typed object. On parse failure (which should
+// never happen since @Generable grammar-constrains decoding, but defense
+// in depth), they return null and let the caller fall through to static.
+
+/**
+ * @Generable IrisLine. Returns parsed `{line}` on success, null otherwise.
+ * Recommended maxTokens for callers: ~80 (taunts are short).
+ */
+export async function tryOnDeviceIrisLineFirst(
+    opts: OnDeviceFirstOptions,
+): Promise<IrisLine | null> {
+    const result = await runWithBridge(
+        opts,
+        (fm, payload) => fm.generateIrisLine(payload),
+    );
+    if (result === null) return null;
+    try {
+        const parsed = JSON.parse(result.text) as IrisLine;
+        if (typeof parsed.line === "string" && parsed.line.trim().length > 0) {
+            return { line: parsed.line.trim() };
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * @Generable FloorFlavor. Returns parsed `{name, description}` on success.
+ * Recommended maxTokens for callers: ~120.
+ */
+export async function tryOnDeviceFloorFlavorFirst(
+    opts: OnDeviceFirstOptions,
+): Promise<FloorFlavor | null> {
+    const result = await runWithBridge(
+        opts,
+        (fm, payload) => fm.generateFloorFlavor(payload),
+    );
+    if (result === null) return null;
+    try {
+        const parsed = JSON.parse(result.text) as FloorFlavor;
+        if (
+            typeof parsed.name === "string" && parsed.name.trim().length > 0 &&
+            typeof parsed.description === "string" && parsed.description.trim().length > 0
+        ) {
+            return {
+                name: parsed.name.trim(),
+                description: parsed.description.trim(),
+            };
+        }
+        return null;
+    } catch {
+        return null;
     }
 }
