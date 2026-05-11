@@ -24,7 +24,7 @@ gold()  { printf '\033[33m%s\033[0m\n'  "$*"; }
 gold "── smoke: $(basename "$REPO_ROOT") at $(git rev-parse --short HEAD 2>/dev/null || echo 'no-git') ──"
 
 # 1. Type-check
-gold "[1/5] pnpm check (typecheck)…"
+gold "[1/4] pnpm check (typecheck)…"
 if ! pnpm -s check 2>&1 | tail -10; then
     red "  ✘ typecheck failed"
     exit 1
@@ -32,7 +32,7 @@ fi
 green "  ✓ typecheck"
 
 # 2. Tests
-gold "[2/5] pnpm test (vitest)…"
+gold "[2/4] pnpm test (vitest)…"
 if ! pnpm -s test 2>&1 | tail -5; then
     red "  ✘ tests failed"
     exit 1
@@ -40,7 +40,7 @@ fi
 green "  ✓ tests"
 
 # 3. Native iOS plugin registration intact
-gold "[3/5] FoundationModelsPlugin registration…"
+gold "[3/4] FoundationModelsPlugin registration…"
 if ! grep -q "registerPluginInstance.*FoundationModelsPlugin" \
         "$REPO_ROOT/ios/App/App/AppViewController.swift"; then
     red "  ✘ FoundationModelsPlugin not registered in AppViewController.swift"
@@ -50,30 +50,20 @@ if ! grep -q "registerPluginInstance.*FoundationModelsPlugin" \
 fi
 green "  ✓ FoundationModelsPlugin registered"
 
-# 4. AASA payload integrity (server-served — Cloudflare Worker mirror is verified separately)
-gold "[4/5] AASA payload appID match…"
-if ! grep -q '596T7J7FB6.app.hexmind.ios' "$REPO_ROOT/server/_core/index.ts"; then
-    red "  ✘ AASA appID missing or changed in server/_core/index.ts"
-    red "    Universal Links break for already-installed apps if this drifts."
-    red "    Expected: 596T7J7FB6.app.hexmind.ios"
-    red "    (If you're intentionally renaming the bundle, update this AND deploy"
-    red "     the server BEFORE submitting the new build — see Phase 0 plan.)"
-    exit 1
-fi
-green "  ✓ AASA appID intact"
-
-# 5. Build + the dual-React-Internals bundle invariant
+# 4. Build + the dual-React-Internals bundle invariant
+# (Universal Links / AASA gate dropped — Hexodus v1 ships without them;
+#  re-add when v1.1 introduces deep linking.)
 if [ "$MODE" = "--no-build" ]; then
-    gold "[5/5] skip build (--no-build); React dedupe NOT verified this run"
+    gold "[4/4] skip build (--no-build); React dedupe NOT verified this run"
 else
     if [ "$MODE" = "--fast" ]; then
-        gold "[5/5] vite build (skipping cap:sync:ios)…"
+        gold "[4/4] vite build (skipping cap:sync:ios)…"
         if ! pnpm -s exec vite build --logLevel=error 2>&1 | tail -3; then
             red "  ✘ vite build failed"
             exit 1
         fi
     else
-        gold "[5/5] pnpm cap:sync:ios (full build + cap copy + plugin sync)…"
+        gold "[4/4] pnpm cap:sync:ios (full build + cap copy + plugin sync)…"
         if ! pnpm -s cap:sync:ios 2>&1 | tail -3; then
             red "  ✘ cap:sync:ios failed"
             exit 1

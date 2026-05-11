@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.hexmind.ios',
-  appName: 'Hexmind',
+  appId: 'app.hexodus.ios',
+  appName: 'Hexodus',
   webDir: 'dist/public',
   // Production: ship info/warn/error to the native log but suppress the
   // debug-level bridge chatter (`⚡️ To Native ->` plugin call traces and
