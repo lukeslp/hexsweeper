@@ -14,12 +14,9 @@
 - ✓ **Cloud LLM: killed for v1.** Local Apple Foundation Models only. No `/api/generate` endpoint, no privacy nutrition disclosure for prompt-data leaving device.
 - ✓ **Universal Links: deferred to v1.1.** No AASA in v1; `App.entitlements` is empty boilerplate. Cloudflare Worker recipe stays in this plan as v1.1 follow-up.
 
-**Remaining open (decision still pending):**
+- ✓ **Mac via Designed-for-iPad: v1.0.** Already enabled in `project.pbxproj`; verification budgeted into Phase 6 (Mac screenshots + pointer/keyboard/window-resize testing add 1-2 days to that phase).
 
-- **Mac via Designed-for-iPad at v1.0 launch, or v1.1?**
-  - **v1.0**: free reach, but Apple Review WILL test pointer/keyboard handling and reject for window-resize crashes; needs Mac screenshots; adds 1-2 days verification.
-  - **v1.1**: cleaner v1, faster ship, defer the Mac UX testing burden.
-  - Recommend **v1.0** — it's already enabled in the project, the cost is mostly verification not implementation.
+**All initial open decisions resolved.** Plan is fully unblocked for execution.
 
 ## Phase 0 status: MOSTLY DONE in deconfliction commit
 
@@ -31,10 +28,12 @@ The original Phase 0 scope was:
 - ~~Strip applinks:hexpand.app + :hexpander.app from entitlements~~ — DONE (entitlements emptied entirely)
 - ~~Dexie DB rename or accept brand-leak~~ — accepted brand-leak per "do not touch" list
 
-**Residual Phase 0 items still owed (~30 minutes):**
-- Flip `Info.plist` `LSApplicationCategoryType` from `public.app-category.productivity` → `public.app-category.puzzle-games`
-- Apple Developer portal: register new App ID `app.hexodus.ios`, generate provisioning profile (manual click-through)
-- Optional: rename repo dir `~/workspace/hivebreaker` → `~/workspace/hexodus`
+**Residual Phase 0 items:**
+- ✓ Flip `Info.plist` `LSApplicationCategoryType` → `public.app-category.puzzle-games` — DONE
+- Apple Developer portal: register new App ID `app.hexodus.ios`, generate provisioning profile (manual browser click-through, ~5 min, see deconfliction handoff)
+- Optional: rename repo dir `~/workspace/hivebreaker` → `~/workspace/hexodus` (manual shell command, ~30s, see deconfliction handoff)
+
+**Phase 0 in code is COMPLETE.** Remaining work is the two manual steps above, both well-documented. Phase 1 (or Phase 2 per the technical review's recommended swap) can start in parallel.
 
 ---
 

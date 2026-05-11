@@ -284,9 +284,9 @@ Already ported in commit `1923000`:
 2. ✓ **Cloud LLM fallback: killed for v1.** Local Apple Foundation Models only. Re-add as opt-in in v1.1 if metrics warrant.
 3. ✓ **Bundle id: `app.hexodus.ios`.** Renamed in deconfliction commit. Hexmind keeps `app.hexmind.ios` and continues to ship under that identity.
 
-Remaining open (decision still pending):
+4. ✓ **Mac via Designed-for-iPad: v1.0 launch.** Already enabled in `project.pbxproj` (`SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES`); ships at v1.0. Mac pointer/keyboard/window-resize testing budgeted into Phase 6 verification.
 
-- **Mac via Designed-for-iPad at v1.0 launch or v1.1?** — orthogonal to deconfliction; can decide before Phase 6 of impl plan.
+All initial open decisions resolved.
 
 ---
 
