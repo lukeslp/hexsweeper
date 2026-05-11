@@ -49,7 +49,7 @@
 
 **Airplane-mode test** is not in any phase. Should be in Phase 5 (meta) right alongside the persistence tests. The integration shape: `start a run, complete floor 1, enable airplane mode, complete floor 2 (proves no network dependency), restart app in airplane mode, restore run, complete floor 3 (proves persistence works offline)`. Manual test, but document the script.
 
-**AASA CDN cutover safety:** plan says "very unlikely to break already-installed builds." Mostly true. The hidden trap: if the OLD AASA payload (Express-served) and the NEW AASA payload (Cloudflare-served) differ in `appIDs` (e.g., bundle id rename happens in the same window), already-installed apps WILL break Universal Links. **Recommendation: cutover AASA to Cloudflare BEFORE any bundle id rename, never in the same window. Document this in Phase 0 explicitly.**
+**AASA CDN cutover safety:** ~~plan says "very unlikely to break already-installed builds."~~ **MOOT after 2026-05-10 deconfliction commit.** Hexodus v1 ships without Universal Links / AASA entirely; Hexmind retains all 6 brand domains and `app.hexmind.ios`. Concern returns in v1.1 when Hexodus introduces its own Cloudflare Worker + new domain — recommendation preserved here for that future cutover: deploy AASA to Cloudflare first, then change bundle id (never both in the same window).
 
 **Baked-seed path** isn't tested in Phase 1. The 30 baked seeds get loaded only when generation fails. CI never exercises that path unless you force it. **Add to Phase 1 verification: simulate generator failure and assert baked seed loads + plays correctly.**
 

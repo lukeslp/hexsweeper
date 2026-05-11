@@ -278,11 +278,15 @@ Already ported in commit `1923000`:
 
 ---
 
-## Open decisions (defer to user before writing-plans)
+## Decisions resolved (2026-05-10)
 
-1. **Final game name** — clear "Hexodus" / "Lattice" / "Wetware" / "Honeypot" / "Faraday" / "Exfil" via formal USPTO + itch.io + App Store search. Working title is non-binding.
-2. **Cloud LLM fallback** — keep as opt-in (default OFF in Settings), or kill entirely for v1? Killing is simpler; opt-in serves the iOS<26 audience.
-3. **Bundle id rename** — `app.hexmind.ios` → `app.hexodus.ios` (or whatever name clears) at v1.0 cut, or stay as `.hexmind.ios` to preserve the existing TestFlight setup?
+1. ✓ **Final game name: Hexodus.** Working title locked. Formal USPTO + itch.io + App Store clearance still owed before App Store submission (Phase 6 of impl plan); name commitment in code is reversible until then.
+2. ✓ **Cloud LLM fallback: killed for v1.** Local Apple Foundation Models only. Re-add as opt-in in v1.1 if metrics warrant.
+3. ✓ **Bundle id: `app.hexodus.ios`.** Renamed in deconfliction commit. Hexmind keeps `app.hexmind.ios` and continues to ship under that identity.
+
+Remaining open (decision still pending):
+
+- **Mac via Designed-for-iPad at v1.0 launch or v1.1?** — orthogonal to deconfliction; can decide before Phase 6 of impl plan.
 
 ---
 

@@ -7,23 +7,34 @@
 
 ---
 
-## Open decisions (resolve before any phase begins)
+## Decisions resolved (2026-05-10)
 
-These are NOT planning decisions — they belong to you. Plan execution waits on them. Each unblocks specific work in Phase 0; none block Phases 1-3 (the game itself).
+- ✓ **Game name: Hexodus.** Working title locked; formal trademark + itch.io + App Store clearance owed before submission.
+- ✓ **Bundle id: `app.hexodus.ios`.** Renamed in the deconfliction commit. Hexmind continues with `app.hexmind.ios`.
+- ✓ **Cloud LLM: killed for v1.** Local Apple Foundation Models only. No `/api/generate` endpoint, no privacy nutrition disclosure for prompt-data leaving device.
+- ✓ **Universal Links: deferred to v1.1.** No AASA in v1; `App.entitlements` is empty boilerplate. Cloudflare Worker recipe stays in this plan as v1.1 follow-up.
 
-1. **Final game name.** Working title `Hexodus`. Codex CLI flagged itch.io collisions on this exact string. Alternates surfaced in brainstorming: `Lattice`, `Wetware`, `Honeypot`, `Faraday`, `Exfil`. Need formal USPTO TESS knockout (Class 9 + Class 41) + itch.io search + App Store search before commit. Budget: 30 min self-search, $300-500 if you want counsel signoff.
+**Remaining open (decision still pending):**
 
-2. **Bundle id rename.** Current: `app.hexmind.ios`. Tied to existing TestFlight + provisioning. Rename to match the chosen game name (`app.hexodus.ios`?) creates a new App ID and orphans the existing TestFlight history. Keep means the game ships under a bundle id whose name doesn't match its store listing. Recommend rename at v1.0 cut, but flag the cost.
+- **Mac via Designed-for-iPad at v1.0 launch, or v1.1?**
+  - **v1.0**: free reach, but Apple Review WILL test pointer/keyboard handling and reject for window-resize crashes; needs Mac screenshots; adds 1-2 days verification.
+  - **v1.1**: cleaner v1, faster ship, defer the Mac UX testing burden.
+  - Recommend **v1.0** — it's already enabled in the project, the cost is mostly verification not implementation.
 
-3. **Cloud LLM fallback — kept opt-in or killed for v1?**
-   - **Keep (opt-in, default OFF in Settings)**: serves iOS<26 users with richer flavor; requires `NSPrivacyCollectedDataTypes` "User Content" disclosure; needs per-IP rate limit + daily $ kill switch; Ollama + Grok must be disabled (no commercial moderation per Legal).
-   - **Kill for v1**: simpler privacy story, smaller server footprint, smaller App Review surface; iOS<26 users get static fallback only (~80 names + ~50 taunts).
-   - Recommend **kill for v1**, add back in v1.1 if metrics warrant.
+## Phase 0 status: MOSTLY DONE in deconfliction commit
 
-4. **Mac via Designed-for-iPad — at v1.0 launch, or v1.1?**
-   - **v1.0**: free reach, but Apple Review WILL test pointer/keyboard handling and reject for window-resize crashes; needs Mac screenshots; adds 1-2 days verification.
-   - **v1.1**: cleaner v1, faster ship, defer the Mac UX testing burden.
-   - Recommend **v1.0** — it's already enabled in the project, the cost is mostly verification not implementation.
+The original Phase 0 scope was:
+- ~~Name clearance~~ — decision locked; formal clearance moves to Phase 6 prep
+- ~~Cloudflare AASA mirror~~ — moot (no Universal Links in v1)
+- ~~Privacy manifest "User Content" disclosure~~ — moot (no cloud LLM)
+- ~~Bundle id rename~~ — DONE in deconfliction commit
+- ~~Strip applinks:hexpand.app + :hexpander.app from entitlements~~ — DONE (entitlements emptied entirely)
+- ~~Dexie DB rename or accept brand-leak~~ — accepted brand-leak per "do not touch" list
+
+**Residual Phase 0 items still owed (~30 minutes):**
+- Flip `Info.plist` `LSApplicationCategoryType` from `public.app-category.productivity` → `public.app-category.puzzle-games`
+- Apple Developer portal: register new App ID `app.hexodus.ios`, generate provisioning profile (manual click-through)
+- Optional: rename repo dir `~/workspace/hivebreaker` → `~/workspace/hexodus`
 
 ---
 
