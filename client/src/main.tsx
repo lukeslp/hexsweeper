@@ -12,6 +12,7 @@ import { createRoot } from "react-dom/client";
 import { isCapacitor } from "@/lib/platform";
 import { BootErrorBoundary } from "@/lib/BootErrorBoundary";
 import { tryOnDeviceIrisLineFirst, isFoundationModelsAvailable } from "@/lib/foundationModelsPlugin";
+import { MiniBoard } from "@/game/MiniBoard";
 import "./index.css";
 
 cp("main.tsx: imports done");
@@ -100,7 +101,17 @@ type IrisState =
   | { status: "awake"; line: string; latencyMs: number }
   | { status: "unavailable"; reason: string };
 
-function HexodusBoot() {
+type Screen = "boot" | "playing";
+
+function HexodusApp() {
+  const [screen, setScreen] = useState<Screen>("boot");
+  if (screen === "playing") {
+    return <MiniBoard onExit={() => setScreen("boot")} />;
+  }
+  return <HexodusBoot onBegin={() => setScreen("playing")} />;
+}
+
+function HexodusBoot({ onBegin }: { onBegin: () => void }) {
   const platform = isCapacitor() ? "capacitor" : "web";
   const [iris, setIris] = useState<IrisState>({ status: "dormant" });
 
@@ -196,16 +207,44 @@ function HexodusBoot() {
       </div>
 
       {iris.status === "awake" && (
-        <div style={{
-          marginTop: "12px",
-          padding: "14px",
-          border: "1px solid #fb718566",
-          color: "#fb7185",
-          background: "#fb71850a",
-          maxWidth: "560px",
-        }}>
-          <div style={{ opacity: 0.6, fontSize: "11px", marginBottom: "6px" }}>iris.exe says:</div>
-          {iris.line}
+        <>
+          <div style={{
+            marginTop: "12px",
+            padding: "14px",
+            border: "1px solid #fb718566",
+            color: "#fb7185",
+            background: "#fb71850a",
+            maxWidth: "560px",
+          }}>
+            <div style={{ opacity: 0.6, fontSize: "11px", marginBottom: "6px" }}>iris.exe says:</div>
+            {iris.line}
+          </div>
+          <div style={{ marginTop: "20px" }}>
+            <button
+              onClick={onBegin}
+              style={{
+                background: "transparent",
+                color: "#34d399",
+                border: "1px solid #10b981",
+                padding: "12px 22px",
+                font: "15px ui-monospace, Menlo, monospace",
+                cursor: "pointer",
+                minHeight: "48px",
+                letterSpacing: "0.05em",
+              }}
+            >
+              begin run &gt;_
+            </button>
+            <div style={{ marginTop: "8px", opacity: 0.4, fontSize: "11px" }}>
+              floor 1 of 12 &middot; one hand-coded slice while the procedural generator lands
+            </div>
+          </div>
+        </>
+      )}
+      {iris.status === "dormant" && (
+        <div style={{ marginTop: "20px", opacity: 0.5, fontSize: "12px" }}>
+          (wake iris.exe first — proves the on-device LLM bridge is alive,
+          then you can begin the run.)
         </div>
       )}
       {iris.status === "unavailable" && (
@@ -244,7 +283,7 @@ function HexodusBoot() {
 cp("main.tsx: calling createRoot.render()");
 createRoot(rootEl).render(
   <BootErrorBoundary>
-    <HexodusBoot />
+    <HexodusApp />
   </BootErrorBoundary>
 );
 cp("main.tsx: render() returned");
