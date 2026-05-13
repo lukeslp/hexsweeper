@@ -3,6 +3,7 @@
  * File Purpose: Generate Hexodus iOS app icon variants (1024) and splash PNGs (2732) via AppKit.
  * Primary Functions: drawVariantA/B/C, write PNGs, optional --write-ios into Assets.xcassets.
  * Inputs/Outputs: Run from repo root: `swift scripts/generate-icon.swift` then `swift scripts/generate-icon.swift --write-ios`
+ * App icons must rasterize to **1024×1024** pixels for the single-slot `AppIcon` catalog entry; splash PNGs use 2732 / 5464 / 8196 for 1× / 2× / 3× universal slots.
  */
 
 import AppKit
@@ -58,17 +59,45 @@ func renderImage(size: CGFloat, draw: (CGContext, CGFloat) -> Void) -> NSImage {
   return img
 }
 
-func savePNG(_ image: NSImage, url: URL) throws {
+/// Rasterize to exact pixel dimensions. `NSImage.lockFocus()` uses the display
+/// backing scale, so TIFF export can be 2× the logical size — Xcode then
+/// rejects a 1024×1024 `AppIcon` slot. Always pass explicit pixel width/height.
+func savePNG(_ image: NSImage, url: URL, pixelWidth: Int, pixelHeight: Int) throws {
   try FileManager.default.createDirectory(
     at: url.deletingLastPathComponent(),
     withIntermediateDirectories: true
   )
-  guard let tiff = image.tiffRepresentation,
-        let rep = NSBitmapImageRep(data: tiff) else {
+  let w = pixelWidth
+  let h = pixelHeight
+  guard let rep = NSBitmapImageRep(
+    bitmapDataPlanes: nil,
+    pixelsWide: w,
+    pixelsHigh: h,
+    bitsPerSample: 8,
+    samplesPerPixel: 4,
+    hasAlpha: true,
+    isPlanar: false,
+    colorSpaceName: .deviceRGB,
+    bytesPerRow: 4 * w,
+    bitsPerPixel: 32
+  ) else {
     throw NSError(domain: "hexodus.icon", code: 1)
   }
-  guard let data = rep.representation(using: .png, properties: [:]) else {
+  NSGraphicsContext.saveGraphicsState()
+  defer { NSGraphicsContext.restoreGraphicsState() }
+  guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else {
     throw NSError(domain: "hexodus.icon", code: 2)
+  }
+  NSGraphicsContext.current = ctx
+  ctx.imageInterpolation = .high
+  image.draw(
+    in: NSRect(x: 0, y: 0, width: w, height: h),
+    from: NSRect.zero,
+    operation: .sourceOver,
+    fraction: 1.0
+  )
+  guard let data = rep.representation(using: .png, properties: [:]) else {
+    throw NSError(domain: "hexodus.icon", code: 3)
   }
   try data.write(to: url)
 }
@@ -203,17 +232,25 @@ let a = variantA(size: 1024)
 let b = variantB(size: 1024)
 let c = variantC(size: 1024)
 
-try savePNG(a, url: variantsDir.appendingPathComponent("hexodus-icon-variant-a.png"))
-try savePNG(b, url: variantsDir.appendingPathComponent("hexodus-icon-variant-b.png"))
-try savePNG(c, url: variantsDir.appendingPathComponent("hexodus-icon-variant-c.png"))
+try savePNG(a, url: variantsDir.appendingPathComponent("hexodus-icon-variant-a.png"), pixelWidth: 1024, pixelHeight: 1024)
+try savePNG(b, url: variantsDir.appendingPathComponent("hexodus-icon-variant-b.png"), pixelWidth: 1024, pixelHeight: 1024)
+try savePNG(c, url: variantsDir.appendingPathComponent("hexodus-icon-variant-c.png"), pixelWidth: 1024, pixelHeight: 1024)
 
 print("Wrote 1024 PNGs to \(variantsDir.path)")
 
 if CommandLine.arguments.contains("--write-ios") {
-  try savePNG(a, url: iconDest)
-  let sp2732 = splashFromIcon(size: 2732)
-  try savePNG(sp2732, url: splashDir.appendingPathComponent("splash-2732x2732.png"))
-  try savePNG(sp2732, url: splashDir.appendingPathComponent("splash-2732x2732-1.png"))
-  try savePNG(sp2732, url: splashDir.appendingPathComponent("splash-2732x2732-2.png"))
+  try savePNG(a, url: iconDest, pixelWidth: 1024, pixelHeight: 1024)
+  let sp1 = splashFromIcon(size: 2732)
+  let sp2 = splashFromIcon(size: 5464)
+  let sp3 = splashFromIcon(size: 8196)
+  try savePNG(
+    sp1, url: splashDir.appendingPathComponent("splash-2732x2732-2.png"),
+    pixelWidth: 2732, pixelHeight: 2732)
+  try savePNG(
+    sp2, url: splashDir.appendingPathComponent("splash-2732x2732-1.png"),
+    pixelWidth: 5464, pixelHeight: 5464)
+  try savePNG(
+    sp3, url: splashDir.appendingPathComponent("splash-2732x2732.png"),
+    pixelWidth: 8196, pixelHeight: 8196)
   print("Installed AppIcon + splash PNGs into ios/App/App/Assets.xcassets/")
 }

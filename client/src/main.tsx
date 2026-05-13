@@ -5,8 +5,14 @@ import { BootErrorBoundary } from "@/lib/BootErrorBoundary";
 import {
   tryOnDeviceIrisLineFirst,
   isFoundationModelsAvailable,
+  invalidateFoundationModelsCache,
 } from "@/lib/foundationModelsPlugin";
 import { GameApp } from "@/game/GameApp";
+import {
+  getValueCaptureStubGranted,
+  isValueCaptureStubEnabled,
+  setValueCaptureStubGranted,
+} from "@/lib/valueCaptureStub";
 import {
   defaultProgression,
   finiteProgression,
@@ -44,6 +50,9 @@ if (isCapacitor()) {
         } catch (e) {
           console.warn("appUrlOpen: failed to parse URL", event.url, e);
         }
+      });
+      CapacitorApp.addListener("appStateChange", ({ isActive }) => {
+        if (isActive) invalidateFoundationModelsCache();
       });
     })
     .catch(e => {
@@ -156,6 +165,9 @@ function HexodusBoot({
 }) {
   const platform = isCapacitor() ? "capacitor" : "web";
   const [iris, setIris] = useState<IrisState>({ status: "dormant" });
+  const [commerceStub, setCommerceStub] = useState(() =>
+    getValueCaptureStubGranted()
+  );
 
   const wake = async () => {
     setIris({ status: "waking" });
@@ -222,6 +234,45 @@ function HexodusBoot({
       <div style={{ opacity: 0.7 }}>
         capacitor.bridge: {isCapacitor() ? "alive" : "n/a (web)"}
       </div>
+
+      {isValueCaptureStubEnabled() && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            border: "1px solid #6366f155",
+            color: "#a5b4fc",
+            maxWidth: 520,
+            fontSize: 12,
+          }}
+        >
+          <div style={{ opacity: 0.75, marginBottom: 6 }}>
+            commerce stub (VITE_VALUE_CAPTURE_STUB=1 or ?commerce=1)
+          </div>
+          {commerceStub ? (
+            <span>Supporter unlock recorded locally (no StoreKit).</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setValueCaptureStubGranted(true);
+                setCommerceStub(true);
+              }}
+              style={{
+                background: "transparent",
+                color: "#a5b4fc",
+                border: "1px solid #6366f166",
+                padding: "8px 12px",
+                font: "12px ui-monospace, Menlo, monospace",
+                cursor: "pointer",
+                minHeight: "44px",
+              }}
+            >
+              Grant stub unlock (local only)
+            </button>
+          )}
+        </div>
+      )}
 
       <div
         style={{

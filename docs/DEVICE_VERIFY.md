@@ -35,6 +35,25 @@ Append `?diag=1` to the dev server URL or WebView entry URL (e.g. `capacitor://l
 
 From repo root, `pnpm smoke` (or `pnpm smoke --fast` / `pnpm smoke --no-build`) runs typecheck, tests, native plugin registration, and Phase 7 grep invariants — see [VERIFICATION_GATES.md](VERIFICATION_GATES.md).
 
+## Dual-device beta log (post Phase 7.1)
+
+Run the same short session on **two** physical devices after a clean install or force-quit cold start. For each device, copy the HUD **session** line after ~5 minutes of play (or use `?diag=1` → **Export diag log** and note the `current` block).
+
+| Field                                        | Device A | Device B |
+| -------------------------------------------- | -------- | -------- |
+| Date                                         |          |          |
+| Model + iOS build                            |          |          |
+| Cold launch OK (no blank frame)              | ☐        | ☐        |
+| Long-press mark reliable                     | ☐        | ☐        |
+| `dress` (session)                            |          |          |
+| `fb` / `dress` (approx %)                    |          |          |
+| `circuit` / `dress` (approx %)               |          |          |
+| `rim` (count; target 0)                      |          |          |
+| `?diag=1` burst / null×3 / rim sim exercised | ☐        | ☐        |
+| Anomalies / notes                            |          |          |
+
+Attach this table (or the exported JSON + `pnpm beta:diag-summary` output) to the TestFlight build notes or PR.
+
 ## Sign-off
 
 Record date, device model, iOS build, and any anomalies in TestFlight notes or the PR.

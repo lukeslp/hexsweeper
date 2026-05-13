@@ -5,14 +5,18 @@
  */
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useCanvasInteraction } from "@/hooks/useCanvasInteraction";
+import {
+  appendSessionDiagSnapshot,
+  loadSessionDiagSnapshots,
+} from "@/lib/sessionDiagLog";
 import { tryOnDeviceFirst } from "@/lib/foundationModelsPlugin";
+import { getValueCaptureStubGranted } from "@/lib/valueCaptureStub";
 import { HEX_HEIGHT, HEX_WIDTH } from "@/lib/hexConstants";
 import { hexToPixel, pixelToHex } from "@/lib/hexGrid";
 import { DiagnosticsPanel, readDiagQueryEnabled } from "./DiagnosticsPanel";
 import {
   directExpansion,
   type ExpansionDirectorInput,
-  type ExpansionDirectorOutput,
   type PublicCellContext,
 } from "./lib/director";
 import { tryDressFloor } from "./lib/dressingOrchestrator";
@@ -32,16 +36,12 @@ import {
 } from "./lib/runState";
 import type { FloorState, GameCell, HexKey } from "./lib/types";
 import { DressingGenerationGate } from "./lib/dressingGenerationGate";
+import { useSessionDiagnostics } from "./hooks/useSessionDiagnostics";
+
+export type { SessionDiagnostics } from "./hooks/useSessionDiagnostics";
 
 function getNodeKey(q: number, r: number) {
   return `${q},${r}` as HexKey;
-}
-
-export interface SessionDiagnostics {
-  directorDressingCalls: number;
-  directorFallbackCount: number;
-  directorCircuitDegradedCount: number;
-  generatorRimFallbackCount: number;
 }
 
 export interface GameAppProps {
@@ -57,12 +57,13 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
   const [floor, setFloor] = useState<FloorState>(() =>
     createFloorState(run.floor, floorSeed(run))
   );
-  const [sessionDiag, setSessionDiag] = useState<SessionDiagnostics>({
-    directorDressingCalls: 0,
-    directorFallbackCount: 0,
-    directorCircuitDegradedCount: 0,
-    generatorRimFallbackCount: 0,
-  });
+  const {
+    sessionDiag,
+    setSessionDiag,
+    recordDirectorMetrics,
+    resetSessionDiag,
+  } = useSessionDiagnostics();
+  const commerceStubGranted = useMemo(() => getValueCaptureStubGranted(), []);
   const [selectedKey, setSelectedKey] = useState<HexKey>("0,0");
   const [irisLine, setIrisLine] = useState("iris.exe is offscreen.");
   const [pacingBand, setPacingBand] = useState<string | undefined>(undefined);
@@ -115,15 +116,33 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
     return Object.values(floor.cells).filter(cell => keys.has(cell.key));
   }, [floor]);
 
-  function recordDirectorMetrics(output: ExpansionDirectorOutput) {
-    setSessionDiag(d => ({
-      ...d,
-      directorDressingCalls: d.directorDressingCalls + 1,
-      directorFallbackCount:
-        d.directorFallbackCount + (output.source === "fallback" ? 1 : 0),
-      directorCircuitDegradedCount:
-        d.directorCircuitDegradedCount + (output.degradedByCircuit ? 1 : 0),
-    }));
+  function exportSessionDiagBundle() {
+    appendSessionDiagSnapshot({
+      at: Date.now(),
+      reason: "manualExport",
+      runId: run.runId,
+      runFloor: run.floor,
+      directorDressingCalls: sessionDiag.directorDressingCalls,
+      directorFallbackCount: sessionDiag.directorFallbackCount,
+      directorCircuitDegradedCount: sessionDiag.directorCircuitDegradedCount,
+      generatorRimFallbackCount: sessionDiag.generatorRimFallbackCount,
+    });
+    const payload = {
+      exportedAt: Date.now(),
+      stored: loadSessionDiagSnapshots(),
+      currentRunId: run.runId,
+      currentRunFloor: run.floor,
+      current: sessionDiag,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hexodus-session-diag-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function requestDressing(
@@ -283,6 +302,16 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
   function restartRun() {
     dressingGateRef.current.invalidate();
     setDiagSimRim(false);
+    appendSessionDiagSnapshot({
+      at: Date.now(),
+      reason: "restartRun",
+      runId: run.runId,
+      runFloor: run.floor,
+      directorDressingCalls: sessionDiag.directorDressingCalls,
+      directorFallbackCount: sessionDiag.directorFallbackCount,
+      directorCircuitDegradedCount: sessionDiag.directorCircuitDegradedCount,
+      generatorRimFallbackCount: sessionDiag.generatorRimFallbackCount,
+    });
     const seed = `hexodus-${Date.now().toString(36)}`;
     const nextRun = createRunState({ seed, progression: progressionPolicy });
     const nextFloor = createFloorState(nextRun.floor, floorSeed(nextRun));
@@ -293,12 +322,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
     setIrisLine("iris.exe is offscreen.");
     setPacingBand(undefined);
     setInterFloorRoute(null);
-    setSessionDiag({
-      directorDressingCalls: 0,
-      directorFallbackCount: 0,
-      directorCircuitDegradedCount: 0,
-      generatorRimFallbackCount: 0,
-    });
+    resetSessionDiag();
     setFloor(nextFloor);
   }
 
@@ -343,6 +367,11 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
           <div className="pointer-events-auto max-h-[calc(100vh-8rem)] overflow-y-auto border border-white/10 bg-black/50 px-3 py-2 text-xs text-muted-foreground backdrop-blur">
             <div className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-emerald-200">
               Hexodus
+              {commerceStubGranted ? (
+                <span className="ml-2 rounded border border-indigo-400/50 px-1.5 py-0.5 text-[9px] font-mono normal-case tracking-normal text-indigo-200">
+                  supporter stub
+                </span>
+              ) : null}
             </div>
             <div>
               run floor {run.floor} · band {milestoneBand(run.floor)}
@@ -379,6 +408,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
                 diagDirectorNullsRef.current = 3;
               }}
               onSimulateRimBanner={() => setDiagSimRim(true)}
+              onExportDiagLog={exportSessionDiagBundle}
             />
           </div>
           <div className="pointer-events-auto flex flex-wrap gap-2">

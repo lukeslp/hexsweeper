@@ -24,6 +24,7 @@ Hex-grid strategy/puzzle prototype with deterministic floor generation, infinite
 - [docs/DIRECTOR_GUARDRAILS.md](docs/DIRECTOR_GUARDRAILS.md)
 - [docs/VERIFICATION_GATES.md](docs/VERIFICATION_GATES.md)
 - [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md)
+- [docs/LAUNCH_CHECKPOINT.md](docs/LAUNCH_CHECKPOINT.md)
 
 ## Verify
 
@@ -38,7 +39,17 @@ pnpm icons:generate
 
 ## Dev diagnostics
 
-Append **`?diag=1`** to the loaded URL to show the amber diagnostics strip (burst reveal, forced director nulls, simulated rim banner). See [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md) for a full on-device checklist.
+Append **`?diag=1`** to the loaded URL to show the amber diagnostics strip (burst reveal, forced director nulls, simulated rim banner, **Export diag log**). Each **New Run** appends the prior session HUD counters to `localStorage` (`hexodus_session_diag_snapshots`, last 80 rows). Summarize an export on your machine:
+
+```bash
+pnpm beta:diag-summary path/to/hexodus-session-diag-*.json
+```
+
+### Commerce stub (economics experiments)
+
+Set **`VITE_VALUE_CAPTURE_STUB=1`** (or append **`?commerce=1`** on web) to show a boot-time **Grant stub unlock** control (localStorage only; no IAP). See [docs/LAUNCH_CHECKPOINT.md](docs/LAUNCH_CHECKPOINT.md).
+
+See [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md) for a full on-device checklist.
 
 ## iOS assets
 

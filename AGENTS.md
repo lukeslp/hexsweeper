@@ -19,6 +19,7 @@ Use pnpm, matching `pnpm-lock.yaml` and the `packageManager` field.
 - `pnpm test:soak` runs the optional long strided generator sweep (`SOAK=1`).
 - `pnpm icons:generate` (macOS) runs `scripts/generate-icon.swift --write-ios` to refresh App Icon + Splash assets.
 - `pnpm smoke` runs the pre-commit/pre-TestFlight smoke gates (typecheck, tests, native plugin registration, Phase 7 grep invariants, then build + React dedupe unless `--no-build`).
+- `pnpm beta:diag-summary` summarizes exported session diagnostic JSON from testers.
 - `pnpm smoke --fast` skips Capacitor sync but verifies the web build.
 - `pnpm cap:sync:ios` builds and syncs the iOS Capacitor project.
 - `pnpm cap:open` opens the iOS project in Xcode.

@@ -17,50 +17,49 @@ import { toast } from "sonner";
 import { getPlatform } from "./platform";
 
 export interface FMGenerateOptions {
-    /** User prompt. */
-    prompt: string;
-    /** Optional system instructions handed to LanguageModelSession. */
-    systemPrompt?: string;
-    /** 0.0 (deterministic) to 1.5+ (creative). Default 0.7. */
-    temperature: number;
-    /** Maximum tokens to generate. Default 1024. */
-    maxTokens: number;
+  /** User prompt. */
+  prompt: string;
+  /** Optional system instructions handed to LanguageModelSession. */
+  systemPrompt?: string;
+  /** 0.0 (deterministic) to 1.5+ (creative). Default 0.7. */
+  temperature: number;
+  /** Maximum tokens to generate. Default 1024. */
+  maxTokens: number;
 }
 
 export interface FMResponse {
-    text: string;
+  text: string;
 }
 
 export interface FMAvailability {
-    available: boolean;
-    /** Reason string when unavailable (iOS<26, no Apple Intelligence, framework missing, etc.). */
-    reason?: string;
+  available: boolean;
+  /** Reason string when unavailable (iOS<26, no Apple Intelligence, framework missing, etc.). */
+  reason?: string;
 }
 
 export interface FoundationModelsPlugin {
-    /** Reports whether on-device generation can run on this device + OS. */
-    isAvailable(): Promise<FMAvailability>;
+  /** Reports whether on-device generation can run on this device + OS. */
+  isAvailable(): Promise<FMAvailability>;
 
-    /** Free-form generation. Returns whatever text the model produces. */
-    generate(opts: FMGenerateOptions): Promise<FMResponse>;
+  /** Free-form generation. Returns whatever text the model produces. */
+  generate(opts: FMGenerateOptions): Promise<FMResponse>;
 
-    /**
-     * @Generable IrisLine generation. Grammar-constrained so the framework
-     * guarantees the JSON shape. Returns `{text: <JSON-encoded IrisLine>}`
-     * — JS parses to `{line: string}` via `tryOnDeviceIrisLineFirst`.
-     */
-    generateIrisLine(opts: FMGenerateOptions): Promise<FMResponse>;
+  /**
+   * @Generable IrisLine generation. Grammar-constrained so the framework
+   * guarantees the JSON shape. Returns `{text: <JSON-encoded IrisLine>}`
+   * — JS parses to `{line: string}` via `tryOnDeviceIrisLineFirst`.
+   */
+  generateIrisLine(opts: FMGenerateOptions): Promise<FMResponse>;
 
-    /**
-     * @Generable FloorFlavor generation. Returns JSON-encoded
-     * `{name: string, description: string}` in the `text` field.
-     */
-    generateFloorFlavor(opts: FMGenerateOptions): Promise<FMResponse>;
+  /**
+   * @Generable FloorFlavor generation. Returns JSON-encoded
+   * `{name: string, description: string}` in the `text` field.
+   */
+  generateFloorFlavor(opts: FMGenerateOptions): Promise<FMResponse>;
 }
 
-export const FoundationModels = registerPlugin<FoundationModelsPlugin>(
-    "FoundationModels"
-);
+export const FoundationModels =
+  registerPlugin<FoundationModelsPlugin>("FoundationModels");
 
 // Per-session cache. JS is single-threaded so the only "race" is two
 // concurrent first-callers both seeing null and both probing isAvailable;
@@ -70,44 +69,55 @@ export const FoundationModels = registerPlugin<FoundationModelsPlugin>(
 let availabilityCache: boolean | null = null;
 
 /**
+ * Vitest-only: force the availability cache for contract tests.
+ * @throws if not running under Vitest (`import.meta.env.VITEST`).
+ */
+export function __setAvailabilityCacheForTest(value: boolean | null): void {
+  if (!import.meta.env.VITEST) {
+    throw new Error("__setAvailabilityCacheForTest: Vitest only");
+  }
+  availabilityCache = value;
+}
+
+/**
  * Cached availability check. Returns false fast on non-iOS platforms.
  * The cache survives until invalidateFoundationModelsCache() is called.
  */
 export async function isFoundationModelsAvailable(): Promise<boolean> {
-    if (availabilityCache !== null) return availabilityCache;
-    if (getPlatform() !== "ios") {
-        availabilityCache = false;
-        return false;
-    }
-    try {
-        const { available } = await FoundationModels.isAvailable();
-        availabilityCache = available;
-        return available;
-    } catch {
-        availabilityCache = false;
-        return false;
-    }
+  if (availabilityCache !== null) return availabilityCache;
+  if (getPlatform() !== "ios") {
+    availabilityCache = false;
+    return false;
+  }
+  try {
+    const { available } = await FoundationModels.isAvailable();
+    availabilityCache = available;
+    return available;
+  } catch {
+    availabilityCache = false;
+    return false;
+  }
 }
 
 /** Drop the cached availability so the next caller re-probes the bridge. */
 export function invalidateFoundationModelsCache(): void {
-    availabilityCache = null;
+  availabilityCache = null;
 }
 
 export interface OnDeviceFirstOptions extends FMGenerateOptions {
-    /**
-     * Per-call timeout in milliseconds. Defaults to 20 seconds — the Swift
-     * side has its own 15s budget per call, and the JS race must run
-     * longer so native errors propagate instead of getting masked by an
-     * earlier JS abort.
-     */
-    timeoutMs?: number;
-    /**
-     * Suppress diagnostic toasts. Off by default — useful during the
-     * on-device verification phase. Pass true for paths where the caller
-     * has its own UX.
-     */
-    silentDiagnostics?: boolean;
+  /**
+   * Per-call timeout in milliseconds. Defaults to 20 seconds — the Swift
+   * side has its own 15s budget per call, and the JS race must run
+   * longer so native errors propagate instead of getting masked by an
+   * earlier JS abort.
+   */
+  timeoutMs?: number;
+  /**
+   * Suppress diagnostic toasts. Off by default — useful during the
+   * on-device verification phase. Pass true for paths where the caller
+   * has its own UX.
+   */
+  silentDiagnostics?: boolean;
 }
 
 // ── Typed @Generable payload shapes ─────────────────────────────────
@@ -115,15 +125,15 @@ export interface OnDeviceFirstOptions extends FMGenerateOptions {
 // Keep in sync.
 
 export interface IrisLine {
-    /** Single 6-14 word in-character taunt. */
-    line: string;
+  /** Single 6-14 word in-character taunt. */
+  line: string;
 }
 
 export interface FloorFlavor {
-    /** Evocative floor name, 1-3 words. */
-    name: string;
-    /** Single biome-flavor sentence, 6-18 words. */
-    description: string;
+  /** Evocative floor name, 1-3 words. */
+  name: string;
+  /** Single biome-flavor sentence, 6-18 words. */
+  description: string;
 }
 
 // ── Bridge call envelope ────────────────────────────────────────────
@@ -135,49 +145,52 @@ export interface FloorFlavor {
  * retry signaling) stays identical regardless of which plugin method runs.
  */
 async function runWithBridge(
-    opts: OnDeviceFirstOptions,
-    invoke: (fm: FoundationModelsPlugin, payload: FMGenerateOptions) => Promise<FMResponse>,
+  opts: OnDeviceFirstOptions,
+  invoke: (
+    fm: FoundationModelsPlugin,
+    payload: FMGenerateOptions
+  ) => Promise<FMResponse>
 ): Promise<{ text: string } | null> {
-    const available = await isFoundationModelsAvailable();
-    if (!available) return null;
+  const available = await isFoundationModelsAvailable();
+  if (!available) return null;
 
-    const timeoutMs = opts.timeoutMs ?? 20000;
-    const silent = opts.silentDiagnostics ?? false;
+  const timeoutMs = opts.timeoutMs ?? 20000;
+  const silent = opts.silentDiagnostics ?? false;
 
-    if (!silent) {
-        toast.info("✦ Trying on-device…", { duration: 800 });
-    }
+  if (!silent) {
+    toast.info("✦ Trying on-device…", { duration: 800 });
+  }
 
-    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
-    const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutHandle = setTimeout(
-            () => reject(new Error(`FM timeout after ${timeoutMs}ms`)),
-            timeoutMs,
-        );
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(
+      () => reject(new Error(`FM timeout after ${timeoutMs}ms`)),
+      timeoutMs
+    );
+  });
+
+  try {
+    const fmCall = invoke(FoundationModels, {
+      prompt: opts.prompt,
+      systemPrompt: opts.systemPrompt,
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
     });
-
-    try {
-        const fmCall = invoke(FoundationModels, {
-            prompt: opts.prompt,
-            systemPrompt: opts.systemPrompt,
-            temperature: opts.temperature,
-            maxTokens: opts.maxTokens,
-        });
-        const result = await Promise.race([fmCall, timeoutPromise]);
-        return { text: result.text };
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn("[FM] on-device failed, caller will fall back:", msg);
-        if (!silent) {
-            toast.error("On-device threw: " + msg, { duration: 4000 });
-        }
-        if (msg.startsWith("FM timeout")) {
-            invalidateFoundationModelsCache();
-        }
-        return null;
-    } finally {
-        if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+    const result = await Promise.race([fmCall, timeoutPromise]);
+    return { text: result.text };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn("[FM] on-device failed, caller will fall back:", msg);
+    if (!silent) {
+      toast.error("On-device threw: " + msg, { duration: 4000 });
     }
+    if (msg.startsWith("FM timeout")) {
+      invalidateFoundationModelsCache();
+    }
+    return null;
+  } finally {
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+  }
 }
 
 // ── Free-form text ──────────────────────────────────────────────────
@@ -188,9 +201,9 @@ async function runWithBridge(
  * owns the fallback (static text pack, cloud, whatever).
  */
 export async function tryOnDeviceFirst(
-    opts: OnDeviceFirstOptions,
+  opts: OnDeviceFirstOptions
 ): Promise<{ text: string } | null> {
-    return runWithBridge(opts, (fm, payload) => fm.generate(payload));
+  return runWithBridge(opts, (fm, payload) => fm.generate(payload));
 }
 
 // ── Typed @Generable helpers ────────────────────────────────────────
@@ -204,22 +217,21 @@ export async function tryOnDeviceFirst(
  * Recommended maxTokens for callers: ~80 (taunts are short).
  */
 export async function tryOnDeviceIrisLineFirst(
-    opts: OnDeviceFirstOptions,
+  opts: OnDeviceFirstOptions
 ): Promise<IrisLine | null> {
-    const result = await runWithBridge(
-        opts,
-        (fm, payload) => fm.generateIrisLine(payload),
-    );
-    if (result === null) return null;
-    try {
-        const parsed = JSON.parse(result.text) as IrisLine;
-        if (typeof parsed.line === "string" && parsed.line.trim().length > 0) {
-            return { line: parsed.line.trim() };
-        }
-        return null;
-    } catch {
-        return null;
+  const result = await runWithBridge(opts, (fm, payload) =>
+    fm.generateIrisLine(payload)
+  );
+  if (result === null) return null;
+  try {
+    const parsed = JSON.parse(result.text) as IrisLine;
+    if (typeof parsed.line === "string" && parsed.line.trim().length > 0) {
+      return { line: parsed.line.trim() };
     }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -227,26 +239,27 @@ export async function tryOnDeviceIrisLineFirst(
  * Recommended maxTokens for callers: ~120.
  */
 export async function tryOnDeviceFloorFlavorFirst(
-    opts: OnDeviceFirstOptions,
+  opts: OnDeviceFirstOptions
 ): Promise<FloorFlavor | null> {
-    const result = await runWithBridge(
-        opts,
-        (fm, payload) => fm.generateFloorFlavor(payload),
-    );
-    if (result === null) return null;
-    try {
-        const parsed = JSON.parse(result.text) as FloorFlavor;
-        if (
-            typeof parsed.name === "string" && parsed.name.trim().length > 0 &&
-            typeof parsed.description === "string" && parsed.description.trim().length > 0
-        ) {
-            return {
-                name: parsed.name.trim(),
-                description: parsed.description.trim(),
-            };
-        }
-        return null;
-    } catch {
-        return null;
+  const result = await runWithBridge(opts, (fm, payload) =>
+    fm.generateFloorFlavor(payload)
+  );
+  if (result === null) return null;
+  try {
+    const parsed = JSON.parse(result.text) as FloorFlavor;
+    if (
+      typeof parsed.name === "string" &&
+      parsed.name.trim().length > 0 &&
+      typeof parsed.description === "string" &&
+      parsed.description.trim().length > 0
+    ) {
+      return {
+        name: parsed.name.trim(),
+        description: parsed.description.trim(),
+      };
     }
+    return null;
+  } catch {
+    return null;
+  }
 }

@@ -1,7 +1,7 @@
 /**
  * File Purpose: Dev-only HUD panel for exercising async dressing + director metrics on device.
  * Primary Functions: DiagnosticsPanel — gated by `?diag=1` query string.
- * Inputs/Outputs: Callback props in; burst / null-streak / rim-sim actions out.
+ * Inputs/Outputs: Callback props in; burst / null-streak / rim-sim / export actions out.
  */
 
 export interface DiagnosticsPanelProps {
@@ -13,6 +13,8 @@ export interface DiagnosticsPanelProps {
   onForceDirectorNulls: () => void;
   /** Show rim-fallback HUD line without mutating generator truth. */
   onSimulateRimBanner: () => void;
+  /** Optional: download JSON bundle of stored + current session diagnostics. */
+  onExportDiagLog?: () => void;
 }
 
 export function DiagnosticsPanel({
@@ -20,6 +22,7 @@ export function DiagnosticsPanel({
   onBurstReveal,
   onForceDirectorNulls,
   onSimulateRimBanner,
+  onExportDiagLog,
 }: DiagnosticsPanelProps) {
   if (!enabled) return null;
 
@@ -50,6 +53,15 @@ export function DiagnosticsPanel({
         >
           Sim rim banner
         </button>
+        {onExportDiagLog ? (
+          <button
+            type="button"
+            className="min-h-[44px] min-w-[44px] rounded border border-amber-400/50 px-2 py-1.5 hover:bg-amber-500/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={onExportDiagLog}
+          >
+            Export diag log
+          </button>
+        ) : null}
       </div>
     </div>
   );

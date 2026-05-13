@@ -12,6 +12,7 @@
     "test:soak": "SOAK=1 vitest run client/src/game/lib/generator.soak.test.ts",
     "icons:generate": "swift scripts/generate-icon.swift --write-ios",
     "smoke": "scripts/smoke.sh",
+    "beta:diag-summary": "node scripts/beta-diag-summary.mjs",
     "cap:build": "pnpm build && npx cap sync ios",
     "cap:open": "npx cap open ios",
     "cap:sync:ios": "pnpm build && npx cap sync ios"
