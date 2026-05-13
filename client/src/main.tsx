@@ -16,6 +16,11 @@ import {
   isFoundationModelsAvailable,
 } from "@/lib/foundationModelsPlugin";
 import { GameApp } from "@/game/GameApp";
+import {
+  defaultProgression,
+  finiteProgression,
+  type RunProgressionPolicy,
+} from "@/game/lib/runState";
 import "./index.css";
 
 cp("main.tsx: imports done");
@@ -130,13 +135,35 @@ type Screen = "boot" | "playing";
 
 function HexodusApp() {
   const [screen, setScreen] = useState<Screen>("boot");
+  const [progressionPolicy, setProgressionPolicy] =
+    useState<RunProgressionPolicy>(defaultProgression);
+
   if (screen === "playing") {
-    return <GameApp onExit={() => setScreen("boot")} />;
+    return (
+      <GameApp
+        progressionPolicy={progressionPolicy}
+        onExit={() => setScreen("boot")}
+      />
+    );
   }
-  return <HexodusBoot onBegin={() => setScreen("playing")} />;
+  return (
+    <HexodusBoot
+      progressionPolicy={progressionPolicy}
+      onProgressionPolicyChange={setProgressionPolicy}
+      onBegin={() => setScreen("playing")}
+    />
+  );
 }
 
-function HexodusBoot({ onBegin }: { onBegin: () => void }) {
+function HexodusBoot({
+  onBegin,
+  progressionPolicy,
+  onProgressionPolicyChange,
+}: {
+  onBegin: () => void;
+  progressionPolicy: RunProgressionPolicy;
+  onProgressionPolicyChange: (next: RunProgressionPolicy) => void;
+}) {
   const platform = isCapacitor() ? "capacitor" : "web";
   const [iris, setIris] = useState<IrisState>({ status: "dormant" });
 
@@ -270,6 +297,53 @@ function HexodusBoot({ onBegin }: { onBegin: () => void }) {
             </div>
           )}
           <div style={{ marginTop: "20px" }}>
+            <div
+              style={{
+                marginBottom: "12px",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "10px",
+                alignItems: "center",
+              }}
+            >
+              <span style={{ opacity: 0.7 }}>run mode:</span>
+              <button
+                type="button"
+                onClick={() => onProgressionPolicyChange(defaultProgression())}
+                style={{
+                  background:
+                    progressionPolicy.mode === "infinite"
+                      ? "rgba(16,185,129,0.15)"
+                      : "transparent",
+                  color: "#34d399",
+                  border: "1px solid #10b98166",
+                  padding: "6px 12px",
+                  font: "12px ui-monospace, Menlo, monospace",
+                  cursor: "pointer",
+                  minHeight: "40px",
+                }}
+              >
+                infinite
+              </button>
+              <button
+                type="button"
+                onClick={() => onProgressionPolicyChange(finiteProgression(12))}
+                style={{
+                  background:
+                    progressionPolicy.mode === "finite"
+                      ? "rgba(16,185,129,0.15)"
+                      : "transparent",
+                  color: "#34d399",
+                  border: "1px solid #10b98166",
+                  padding: "6px 12px",
+                  font: "12px ui-monospace, Menlo, monospace",
+                  cursor: "pointer",
+                  minHeight: "40px",
+                }}
+              >
+                classic (12 floors)
+              </button>
+            </div>
             <button
               onClick={onBegin}
               style={{

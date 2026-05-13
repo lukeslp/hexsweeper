@@ -37,6 +37,8 @@ export interface FloorState {
   irisControl: number;
   status: FloorStatus;
   lastEvent?: FloorEvent;
+  /** True when solvability budget was exhausted and the rim-fallback board was used. */
+  usedRimFallback?: boolean;
 }
 
 export type FloorEvent =
@@ -47,15 +49,6 @@ export type FloorEvent =
   | "tile-broken"
   | "floor-won"
   | "floor-lost";
-
-export interface RunState {
-  runId: string;
-  seed: string;
-  floor: number;
-  status: "active" | "escaped" | "caught";
-  bestFloor: number;
-  totalWrongs: number;
-}
 
 export const HEX_DIRECTIONS: readonly Axial[] = [
   { q: 1, r: 0 },

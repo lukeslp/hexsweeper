@@ -9,6 +9,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run --passWithNoTests",
+    "test:soak": "SOAK=1 vitest run client/src/game/lib/generator.soak.test.ts",
     "smoke": "scripts/smoke.sh",
     "cap:build": "pnpm build && npx cap sync ios",
     "cap:open": "npx cap open ios",

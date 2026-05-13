@@ -1,33 +1,77 @@
+/**
+ * File Purpose: Render/play the Hexodus floor board, tile interactions, and HUD.
+ * Primary Functions: GameApp, GameTile, IrisApproachOverlay, route/pressure HUD, dressing.
+ * Inputs/Outputs: Consumes floor/run state and user interactions, emits updated game state.
+ */
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { AlertTriangle, CircleHelp, Shield, Zap } from "lucide-react";
 import { useCanvasInteraction } from "@/hooks/useCanvasInteraction";
 import { tryOnDeviceFirst } from "@/lib/foundationModelsPlugin";
 import { HEX_HEIGHT, HEX_WIDTH } from "@/lib/hexConstants";
 import { hexToPixel, pixelToHex } from "@/lib/hexGrid";
-import { directExpansion, type PublicCellContext } from "./lib/director";
+import { directExpansion, type ExpansionDirectorOutput, type PublicCellContext } from "./lib/director";
 import { createFloorState, reduceFloor } from "./lib/gameState";
-import { createRunState, floorSeed, reduceRun } from "./lib/runState";
+import {
+  advanceRunAfterFloorWin,
+  createNextFloorState,
+} from "./lib/cycleOrchestrator";
+import {
+  createRunState,
+  floorSeed,
+  milestoneBand,
+  reduceRun,
+  type RouteChoice,
+  type RunProgressionPolicy,
+  type RunState,
+} from "./lib/runState";
 import type { FloorState, GameCell, HexKey } from "./lib/types";
+import { DressingGenerationGate } from "./lib/dressingGenerationGate";
 
 function getNodeKey(q: number, r: number) {
   return `${q},${r}` as HexKey;
 }
 
-export function GameApp({ onExit }: { onExit?: () => void }) {
-  const [run, setRun] = useState(() =>
-    createRunState({ seed: "hexodus-dev-run" })
+export interface SessionDiagnostics {
+  directorDressingCalls: number;
+  directorFallbackCount: number;
+  directorCircuitDegradedCount: number;
+  generatorRimFallbackCount: number;
+}
+
+export interface GameAppProps {
+  onExit?: () => void;
+  /** Run length policy (infinite default vs classic finite escape). */
+  progressionPolicy: RunProgressionPolicy;
+}
+
+export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
+  const [run, setRun] = useState<RunState>(() =>
+    createRunState({ seed: "hexodus-dev-run", progression: progressionPolicy })
   );
   const [floor, setFloor] = useState<FloorState>(() =>
     createFloorState(run.floor, floorSeed(run))
   );
+  const [sessionDiag, setSessionDiag] = useState<SessionDiagnostics>({
+    directorDressingCalls: 0,
+    directorFallbackCount: 0,
+    directorCircuitDegradedCount: 0,
+    generatorRimFallbackCount: 0,
+  });
   const [selectedKey, setSelectedKey] = useState<HexKey>("0,0");
   const [irisLine, setIrisLine] = useState("iris.exe is offscreen.");
+  const [pacingBand, setPacingBand] = useState<string | undefined>(undefined);
+  const [interFloorRoute, setInterFloorRoute] = useState<RouteChoice | null>(
+    null
+  );
   const [pendingDressingKeys, setPendingDressingKeys] = useState<Set<HexKey>>(
     () => new Set()
   );
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevFloorStatus = useRef(floor.status);
   const justDropped = useRef(false);
-  const initialDressingRequested = useRef(false);
+  const dressingGateRef = useRef(new DressingGenerationGate());
+  const rimCountedKeysRef = useRef(new Set<string>());
+  const runRef = useRef(run);
+  runRef.current = run;
 
   const canvas = useCanvasInteraction({
     containerRef,
@@ -47,16 +91,39 @@ export function GameApp({ onExit }: { onExit?: () => void }) {
     return Object.values(floor.cells).filter(cell => keys.has(cell.key));
   }, [floor]);
 
+  function recordDirectorMetrics(output: ExpansionDirectorOutput) {
+    setSessionDiag(d => ({
+      ...d,
+      directorDressingCalls: d.directorDressingCalls + 1,
+      directorFallbackCount:
+        d.directorFallbackCount + (output.source === "fallback" ? 1 : 0),
+      directorCircuitDegradedCount:
+        d.directorCircuitDegradedCount +
+        (output.degradedByCircuit ? 1 : 0),
+    }));
+  }
+
   async function requestDressing(
+    runSnap: RunState,
     nextFloor: FloorState,
-    expandedCell: GameCell
-  ) {
-    const newCells = nextFloor.frontier
+    expandedCell: GameCell,
+    opGen: number
+  ): Promise<{ dressed: FloorState; committed: boolean }> {
+    const frontierCells = nextFloor.frontier
       .map(key => nextFloor.cells[key])
       .filter(cell => cell && !cell.dressing)
       .map(publicCellContext);
+    const revealedUndressedCells = Object.values(nextFloor.cells)
+      .filter(cell => cell.view === "revealed" && !cell.dressing)
+      .map(publicCellContext);
+    const newCells = dedupeCellContexts([
+      ...revealedUndressedCells,
+      ...frontierCells,
+    ]);
 
-    if (newCells.length === 0) return nextFloor;
+    if (newCells.length === 0) {
+      return { dressed: nextFloor, committed: dressingGateRef.current.isCurrent(opGen) };
+    }
     const pendingKeys = newCells.map(cell => cell.key);
 
     setPendingDressingKeys(current => {
@@ -68,7 +135,7 @@ export function GameApp({ onExit }: { onExit?: () => void }) {
     try {
       const output = await directExpansion(
         {
-          runId: run.runId,
+          runId: runSnap.runId,
           floor: nextFloor.floor,
           irisControl: nextFloor.irisControl,
           expandedCell: publicCellContext(expandedCell),
@@ -78,11 +145,19 @@ export function GameApp({ onExit }: { onExit?: () => void }) {
         tryOnDeviceFirst
       );
 
+      recordDirectorMetrics(output);
+
+      if (!dressingGateRef.current.isCurrent(opGen)) {
+        return { dressed: nextFloor, committed: false };
+      }
+
       setIrisLine(output.irisLine);
-      return reduceFloor(nextFloor, {
+      setPacingBand(output.pacingBand);
+      const dressed = reduceFloor(nextFloor, {
         type: "applyDressing",
         dressing: output.tiles,
       });
+      return { dressed, committed: true };
     } finally {
       setPendingDressingKeys(current => {
         const next = new Set(current);
@@ -96,14 +171,22 @@ export function GameApp({ onExit }: { onExit?: () => void }) {
     const cell = floor.cells[key];
     if (!cell || floor.status !== "playing") return;
 
+    const opGen = dressingGateRef.current.begin();
     setSelectedKey(key);
     const next = reduceFloor(floor, { type: "revealCell", key });
     setFloor(next);
     syncTerminalRunState(next);
     if (next.status !== "playing") return;
 
-    const dressed = await requestDressing(next, cell);
-    setFloor(dressed);
+    const { dressed, committed } = await requestDressing(
+      runRef.current,
+      next,
+      cell,
+      opGen
+    );
+    if (committed) {
+      setFloor(dressed);
+    }
   }
 
   function markCell(key: HexKey, event: MouseEvent) {
@@ -118,34 +201,69 @@ export function GameApp({ onExit }: { onExit?: () => void }) {
   const selected = floor.cells[selectedKey] ?? floor.cells["0,0"];
 
   useEffect(() => {
-    if (initialDressingRequested.current) return;
-    initialDressingRequested.current = true;
+    if (prevFloorStatus.current !== "won" && floor.status === "won") {
+      setInterFloorRoute(null);
+    }
+    prevFloorStatus.current = floor.status;
+  }, [floor.status]);
+
+  useEffect(() => {
+    if (!floor.usedRimFallback) return;
+    const key = `${floor.floor}|${floor.seed}`;
+    if (rimCountedKeysRef.current.has(key)) return;
+    rimCountedKeysRef.current.add(key);
+    setSessionDiag(d => ({
+      ...d,
+      generatorRimFallbackCount: d.generatorRimFallbackCount + 1,
+    }));
+  }, [floor.floor, floor.seed, floor.usedRimFallback]);
+
+  useEffect(() => {
     const entry = floor.cells["0,0" as HexKey];
-    void requestDressing(floor, entry).then(setFloor);
-  }, [floor]);
+    if (!entry) return;
+    const opGen = dressingGateRef.current.begin();
+    void requestDressing(runRef.current, floor, entry, opGen).then(
+      ({ dressed, committed }) => {
+        if (committed) {
+          setFloor(dressed);
+        }
+      }
+    );
+  }, [floor.floor, floor.seed, run.runId]);
 
   function continueRun() {
-    const nextRun = reduceRun(run, { type: "completeFloor" });
+    dressingGateRef.current.invalidate();
+    const route: RouteChoice = interFloorRoute ?? "safe";
+    const { nextRun } = advanceRunAfterFloorWin(run, route);
     setRun(nextRun);
     if (nextRun.status !== "active") return;
 
-    const nextFloor = createFloorState(nextRun.floor, floorSeed(nextRun));
-    initialDressingRequested.current = false;
+    const nextFloor = createNextFloorState(nextRun);
     setPendingDressingKeys(new Set<HexKey>());
     setSelectedKey("0,0" as HexKey);
     setIrisLine("iris.exe withdraws behind the next lattice.");
+    setPacingBand(undefined);
     setFloor(nextFloor);
   }
 
   function restartRun() {
+    dressingGateRef.current.invalidate();
     const seed = `hexodus-${Date.now().toString(36)}`;
-    const nextRun = createRunState({ seed });
+    const nextRun = createRunState({ seed, progression: progressionPolicy });
     const nextFloor = createFloorState(nextRun.floor, floorSeed(nextRun));
-    initialDressingRequested.current = false;
+    rimCountedKeysRef.current = new Set();
     setPendingDressingKeys(new Set<HexKey>());
     setRun(nextRun);
     setSelectedKey("0,0" as HexKey);
     setIrisLine("iris.exe is offscreen.");
+    setPacingBand(undefined);
+    setInterFloorRoute(null);
+    setSessionDiag({
+      directorDressingCalls: 0,
+      directorFallbackCount: 0,
+      directorCircuitDegradedCount: 0,
+      generatorRimFallbackCount: 0,
+    });
     setFloor(nextFloor);
   }
 
@@ -183,11 +301,33 @@ export function GameApp({ onExit }: { onExit?: () => void }) {
               Hexodus
             </div>
             <div>
-              floor {floor.floor}/12 · wrongs {floor.wrongsLeft}/
-              {floor.maxWrongs}
+              run floor {run.floor} · band {milestoneBand(run.floor)}
+              {run.progression.mode === "finite" && run.progression.maxFloors
+                ? ` / cap ${run.progression.maxFloors}`
+                : " · endless"}
             </div>
+            <div>
+              board {floor.floor} · wrongs {floor.wrongsLeft}/{floor.maxWrongs}
+            </div>
+            <div>
+              pressure {Math.round(run.regionalPressure * 100)}% · entropy{" "}
+              {Math.round(run.campaignEntropy * 100)}%
+            </div>
+            <div>sidegrades {run.sidegrades.length}</div>
             <div>iris control {Math.round(floor.irisControl * 100)}%</div>
+            <div>pacing {pacingBand ?? "—"}</div>
             <div>status {floor.status}</div>
+            <div className="font-mono text-[10px] text-muted-foreground/90">
+              session dress {sessionDiag.directorDressingCalls} · fb{" "}
+              {sessionDiag.directorFallbackCount} · circuit{" "}
+              {sessionDiag.directorCircuitDegradedCount} · rim{" "}
+              {sessionDiag.generatorRimFallbackCount}
+            </div>
+            {floor.usedRimFallback ? (
+              <div className="text-[10px] text-amber-200/90">
+                floor used generator rim fallback (see docs/VERIFICATION_GATES)
+              </div>
+            ) : null}
           </div>
           <div className="pointer-events-auto flex gap-2">
             <button
@@ -241,17 +381,44 @@ export function GameApp({ onExit }: { onExit?: () => void }) {
             puzzle truth.
           </div>
           {floor.status === "won" && run.status === "active" && (
-            <button
-              type="button"
-              className="pointer-events-auto mt-3 border border-emerald-400/60 px-3 py-2 font-mono uppercase text-emerald-200 hover:bg-emerald-400/10"
-              onClick={continueRun}
-            >
-              Continue
-            </button>
+            <div className="pointer-events-auto mt-3 space-y-2">
+              <div className="font-mono text-[10px] uppercase text-muted-foreground">
+                Next branch
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["safe", "Safe lane"],
+                    ["loot", "Loot lane"],
+                    ["risk", "Risk lane"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`border px-2 py-1 text-[10px] font-mono uppercase ${
+                      interFloorRoute === id
+                        ? "border-emerald-400/80 bg-emerald-500/20 text-emerald-100"
+                        : "border-white/15 bg-black/40 text-foreground hover:bg-white/10"
+                    }`}
+                    onClick={() => setInterFloorRoute(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="border border-emerald-400/60 px-3 py-2 font-mono uppercase text-emerald-200 hover:bg-emerald-400/10"
+                onClick={continueRun}
+              >
+                Continue
+              </button>
+            </div>
           )}
           {run.status === "escaped" && (
             <div className="mt-3 font-mono uppercase text-emerald-200">
-              escaped all floors
+              run complete · best depth {run.bestFloor}
             </div>
           )}
           {(floor.status === "lost" || run.status === "caught") && (
@@ -402,8 +569,8 @@ function GameTile({
   onMark: (event: MouseEvent) => void;
 }) {
   const { x, y } = hexToPixel(cell.q, cell.r);
-  const Icon = iconForCell(cell);
   const color = colorForCell(cell);
+  const glyphVariant = glyphForCell(cell, isGenerating);
 
   return (
     <div
@@ -468,7 +635,8 @@ function GameTile({
               <div className="h-full w-1/2 animate-[ping_1.2s_ease-in-out_infinite] bg-emerald-300/20 blur-sm" />
             </div>
           )}
-          <Icon
+          <TileGlyph
+            variant={glyphVariant}
             className={`h-6 w-6 ${color.text} ${
               isGenerating ? "animate-pulse" : ""
             }`}
@@ -484,6 +652,78 @@ function GameTile({
         </div>
       </button>
     </div>
+  );
+}
+
+type TileGlyphVariant =
+  | "entry"
+  | "revealed"
+  | "unknown"
+  | "marked"
+  | "broken"
+  | "generating";
+
+function TileGlyph({
+  variant,
+  className,
+}: {
+  variant: TileGlyphVariant;
+  className?: string;
+}) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {variant === "entry" && (
+        <>
+          <path d="M12 2.4 18.2 6v12L12 21.6 5.8 18V6L12 2.4Z" />
+          <path d="M13.4 7.2 10 12h2.8l-2.2 4.8 4-5.4h-2.6l1.4-4.2Z" />
+        </>
+      )}
+      {variant === "revealed" && (
+        <>
+          <path d="M12 2.6 18 5.2v5.2c0 4.1-2.6 7.9-6 9.4-3.4-1.5-6-5.3-6-9.4V5.2L12 2.6Z" />
+          <path d="m8.6 12.3 2.2 2.2 4.6-4.6" />
+        </>
+      )}
+      {variant === "unknown" && (
+        <>
+          <path d="M12 18.2v.2" />
+          <path d="M9.5 9.4a2.5 2.5 0 1 1 4 2l-.8.7c-.5.4-.7.8-.7 1.3v.4" />
+          <path d="M4.7 12a7.3 7.3 0 1 0 14.6 0 7.3 7.3 0 1 0-14.6 0Z" />
+        </>
+      )}
+      {variant === "marked" && (
+        <>
+          <path d="m12 4.2 8 14H4l8-14Z" />
+          <path d="M12 9.2v5.2" />
+          <path d="M12 17.1v.1" />
+        </>
+      )}
+      {variant === "broken" && (
+        <>
+          <path d="M12 2.4 18.2 6v12L12 21.6 5.8 18V6L12 2.4Z" />
+          <path d="m8.2 7.5 2.4 3.2-2 2.3 3.3 3.7-1.7 2.4" />
+          <path d="m13.8 8.1 2 2.4-1.6 2.2 1.8 2.1" />
+        </>
+      )}
+      {variant === "generating" && (
+        <>
+          <path d="M12 4.4a7.6 7.6 0 0 1 7.6 7.6" />
+          <path d="M4.4 12A7.6 7.6 0 0 1 12 4.4" />
+          <path d="M12 19.6A7.6 7.6 0 0 1 4.4 12" />
+          <path d="M19.6 12a7.6 7.6 0 0 1-7.6 7.6" />
+          <path d="m12 8.7 2.1 3.3h-4.2L12 8.7Z" />
+        </>
+      )}
+    </svg>
   );
 }
 
@@ -506,6 +746,7 @@ function titleForCell(cell: GameCell, isGenerating = false): string {
   if (cell.view === "revealed" && cell.q === 0 && cell.r === 0)
     return "Entry Node";
   if (isGenerating && !cell.dressing) return "Mapping";
+  if (cell.view === "revealed" && !cell.dressing) return "Unmapped Route";
   if (cell.view === "revealed" && cell.clueVisible) {
     return cell.dressing?.title ?? "Revealed Route";
   }
@@ -514,11 +755,16 @@ function titleForCell(cell: GameCell, isGenerating = false): string {
   return cell.dressing?.title ?? "Unmapped";
 }
 
-function iconForCell(cell: GameCell) {
-  if (cell.q === 0 && cell.r === 0) return Zap;
-  if (cell.view === "revealed") return Shield;
-  if (cell.view === "marked" || cell.view === "broken") return AlertTriangle;
-  return CircleHelp;
+function glyphForCell(
+  cell: GameCell,
+  isGenerating: boolean
+): TileGlyphVariant {
+  if (isGenerating) return "generating";
+  if (cell.q === 0 && cell.r === 0) return "entry";
+  if (cell.view === "revealed") return "revealed";
+  if (cell.view === "marked") return "marked";
+  if (cell.view === "broken") return "broken";
+  return "unknown";
 }
 
 function colorForCell(cell: GameCell) {
@@ -554,4 +800,12 @@ function eventToDirectorHistory(
   if (event === "wrong-mark") return ["marked-safe"];
   if (event === "tile-broken") return ["tile-broken"];
   return [];
+}
+
+function dedupeCellContexts(cells: PublicCellContext[]): PublicCellContext[] {
+  const byKey = new Map<HexKey, PublicCellContext>();
+  for (const cell of cells) {
+    byKey.set(cell.key, cell);
+  }
+  return Array.from(byKey.values());
 }

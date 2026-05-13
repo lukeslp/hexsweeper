@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   directExpansion,
   fallbackDirectorOutput,
+  resetDirectorCircuit,
   type ExpansionDirectorInput,
 } from "./director";
 
@@ -26,6 +27,10 @@ const input: ExpansionDirectorInput = {
 };
 
 describe("director", () => {
+  beforeEach(() => {
+    resetDirectorCircuit();
+  });
+
   it("returns deterministic fallback when generation is unavailable", async () => {
     const output = await directExpansion(input, async () => null);
     const expected = fallbackDirectorOutput(input);
@@ -122,5 +127,171 @@ describe("director", () => {
     expect(output.tiles["99,99"]).toBeUndefined();
     expect(output.tiles["1,0"].threatTone).toBe("watching");
     expect(output.tiles["1,0"].visualHint).toBe("none");
+  });
+
+  it("passes through a valid pacingBand", async () => {
+    const output = await directExpansion(input, async () => ({
+      text: JSON.stringify({
+        irisLine: "pace yourself.",
+        pacingBand: "ramp",
+        tiles: [
+          {
+            key: "1,0",
+            title: "Alpha",
+            flavor: "short.",
+            threatTone: "quiet",
+            visualHint: "none",
+          },
+          {
+            key: "0,1",
+            title: "Beta",
+            flavor: "short.",
+            threatTone: "quiet",
+            visualHint: "none",
+          },
+        ],
+      }),
+    }));
+
+    expect(output.pacingBand).toBe("ramp");
+    expect(output.source).toBe("on-device");
+  });
+
+  it("opens the circuit breaker after repeated failures and skips generation", async () => {
+    await directExpansion(input, async () => null);
+    await directExpansion(input, async () => null);
+    await directExpansion(input, async () => null);
+
+    let calls = 0;
+    const out = await directExpansion(input, async () => {
+      calls++;
+      return {
+        text: JSON.stringify({
+          irisLine: "should not run",
+          tiles: [
+            {
+              key: "1,0",
+              title: "A",
+              flavor: "b",
+              threatTone: "quiet",
+              visualHint: "none",
+            },
+            {
+              key: "0,1",
+              title: "B",
+              flavor: "c",
+              threatTone: "quiet",
+              visualHint: "none",
+            },
+          ],
+        }),
+      };
+    });
+
+    expect(calls).toBe(0);
+    expect(out.degradedByCircuit).toBe(true);
+    expect(out.source).toBe("fallback");
+  });
+
+  it("does not share circuit breaker state across different runId values", async () => {
+    const inputA: ExpansionDirectorInput = { ...input, runId: "run-a" };
+    const inputB: ExpansionDirectorInput = { ...input, runId: "run-b" };
+
+    await directExpansion(inputA, async () => null);
+    await directExpansion(inputA, async () => null);
+    await directExpansion(inputA, async () => null);
+
+    let callsB = 0;
+    const outB = await directExpansion(inputB, async () => {
+      callsB++;
+      return {
+        text: JSON.stringify({
+          irisLine: "other run still talks",
+          tiles: [
+            {
+              key: "1,0",
+              title: "X",
+              flavor: "y",
+              threatTone: "quiet",
+              visualHint: "none",
+            },
+            {
+              key: "0,1",
+              title: "Z",
+              flavor: "w",
+              threatTone: "quiet",
+              visualHint: "none",
+            },
+          ],
+        }),
+      };
+    });
+
+    expect(callsB).toBe(1);
+    expect(outB.source).toBe("on-device");
+  });
+
+  it("resetDirectorCircuit(runId) clears breaker for that run only", async () => {
+    const inputA: ExpansionDirectorInput = { ...input, runId: "reset-one" };
+    await directExpansion(inputA, async () => null);
+    await directExpansion(inputA, async () => null);
+    await directExpansion(inputA, async () => null);
+
+    let callsBefore = 0;
+    await directExpansion(inputA, async () => {
+      callsBefore++;
+      return {
+        text: JSON.stringify({
+          irisLine: "blocked by circuit",
+          tiles: [
+            {
+              key: "1,0",
+              title: "A",
+              flavor: "b",
+              threatTone: "quiet",
+              visualHint: "none",
+            },
+            {
+              key: "0,1",
+              title: "B",
+              flavor: "c",
+              threatTone: "quiet",
+              visualHint: "none",
+            },
+          ],
+        }),
+      };
+    });
+    expect(callsBefore).toBe(0);
+
+    resetDirectorCircuit("reset-one");
+
+    let callsAfter = 0;
+    const out = await directExpansion(inputA, async () => {
+      callsAfter++;
+      return {
+        text: JSON.stringify({
+          irisLine: "restored path",
+          tiles: [
+            {
+              key: "1,0",
+              title: "C",
+              flavor: "d",
+              threatTone: "quiet",
+              visualHint: "none",
+            },
+            {
+              key: "0,1",
+              title: "D",
+              flavor: "e",
+              threatTone: "quiet",
+              visualHint: "none",
+            },
+          ],
+        }),
+      };
+    });
+    expect(callsAfter).toBe(1);
+    expect(out.source).toBe("on-device");
   });
 });

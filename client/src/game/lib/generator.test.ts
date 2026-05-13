@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { floorParams, tryGenerateSolvableFloor } from "./generator";
 
 describe("generator", () => {
-  // The 80-attempt budget is supposed to find a real, varied
+  // The 200-attempt budget is supposed to find a real, varied
   // solver-solvable floor on every standard run. If we ever start
   // falling through to the rim-fallback, players see a degenerate
   // ring-of-blocked floor that's trivially solvable. The smoke fuzz
@@ -23,8 +23,38 @@ describe("generator", () => {
     }
   });
 
+  it("finds a solvable floor within budget for deep floors (infinite curve)", () => {
+    const deepFloors = [13, 18, 25, 40, 80, 120];
+    for (const floor of deepFloors) {
+      for (let i = 0; i < 12; i++) {
+        const state = tryGenerateSolvableFloor({
+          floor,
+          seed: `deep-fuzz-${floor}-${i}`,
+        });
+        expect(
+          state,
+          `floor ${floor} seed ${i} exhausted the retry budget`
+        ).not.toBeNull();
+      }
+    }
+  });
+
+  it(
+    "solvability sweep: one seeded candidate per floor 1..500 (infinite curve)",
+    () => {
+      for (let floor = 1; floor <= 500; floor++) {
+        const state = tryGenerateSolvableFloor({
+          floor,
+          seed: `depth-sweep-${floor}`,
+        });
+        expect(state, `floor ${floor} exhausted retry budget`).not.toBeNull();
+      }
+    },
+    { timeout: 180_000 }
+  );
+
   it("returned floors actually exercise the interior, not just the rim", () => {
-    for (let floor = 3; floor <= 12; floor++) {
+    for (const floor of [3, 6, 12, 18, 25]) {
       const state = tryGenerateSolvableFloor({
         floor,
         seed: `interior-fuzz-${floor}`,

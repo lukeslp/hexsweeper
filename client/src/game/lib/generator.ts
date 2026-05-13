@@ -1,3 +1,9 @@
+/**
+ * File Purpose: Build deterministic Hexodus floor states and frontier metadata.
+ * Primary Functions: floorParams, regionEpoch, effectiveDifficultyStep,
+ *   generateFloor, computeFrontier, neighborKeys.
+ * Inputs/Outputs: Accepts floor/seed inputs; returns populated FloorState objects (marks `usedRimFallback` only on rim-fallback path). Retry budget `GENERATOR_BUDGET` is 200 attempts per `tryGenerateSolvableFloor`.
+ */
 import {
   HEX_DIRECTIONS,
   type Axial,
@@ -19,28 +25,59 @@ interface FloorParams {
   blockedRate: number;
   maxWrongs: number;
   clueRate: number;
-  /**
-   * Axial-distance from origin within which cells are pre-revealed at
-   * floor start. Larger zones give the constraint-propagation solver
-   * more footholds — floors at radius 5 (blockedRate ~0.4) are not
-   * reliably crackable from a single revealed origin, so the starting
-   * zone scales with floor to keep the 80-attempt budget effective.
-   */
   startRadius: number;
 }
 
+/** 1-based floor index, always >= 1. */
+export function rawFloorIndex(floor: number): number {
+  return Math.max(1, Math.trunc(floor));
+}
+
+/**
+ * Region epoch: every `span` floors the generator grammar shifts slightly
+ * (blocked density / clue pressure) without breaking solver gating.
+ */
+export function regionEpoch(floor: number, span = 6): number {
+  return Math.floor((rawFloorIndex(floor) - 1) / span);
+}
+
+/**
+ * Difficulty step used for curves: linear 1..12 then sublinear beyond 12
+ * so infinite runs do not explode grid size or solver failure rates.
+ */
+export function effectiveDifficultyStep(floor: number): number {
+  const f = rawFloorIndex(floor);
+  if (f <= 12) return f;
+  return 12 + Math.floor((f - 12) / 3);
+}
+
+function radiusForStep(step: number): number {
+  const s = Math.min(step, 22);
+  if (s <= 2) return 2;
+  if (s <= 6) return 3;
+  if (s <= 10) return 4;
+  if (s <= 18) return 5;
+  return Math.min(7, 5 + Math.floor((s - 18) / 12));
+}
+
 export function floorParams(floor: number): FloorParams {
-  const clamped = Math.min(Math.max(Math.trunc(floor), 1), 12);
+  const step = effectiveDifficultyStep(floor);
+  const epoch = Math.min(regionEpoch(floor), 8);
+  const densityStep = Math.min(step, 15);
+  const blockedRate = Math.min(
+    0.46,
+    0.18 + densityStep * 0.016 + epoch * 0.007
+  );
   return {
-    radius: clamped <= 2 ? 2 : clamped <= 6 ? 3 : clamped <= 10 ? 4 : 5,
-    blockedRate: 0.18 + clamped * 0.018,
-    maxWrongs: Math.max(1, 6 - Math.ceil(clamped / 2)),
-    clueRate: Math.max(0.34, 0.62 - clamped * 0.018),
-    startRadius: clamped <= 6 ? 1 : clamped <= 10 ? 2 : 3,
+    radius: radiusForStep(step),
+    blockedRate,
+    maxWrongs: Math.max(2, 7 - Math.ceil(step / 2)),
+    clueRate: Math.max(0.3, 0.62 - densityStep * 0.017 - epoch * 0.015),
+    startRadius: step <= 6 ? 1 : step <= 10 ? 2 : 3,
   };
 }
 
-const GENERATOR_BUDGET = 80;
+const GENERATOR_BUDGET = 200;
 
 /**
  * Best-effort solvable-floor generation. Returns `null` if the
@@ -73,7 +110,7 @@ export function generateFloor(opts: GenerateFloorOptions): FloorState {
   if (found) return found;
 
   const params = floorParams(opts.floor);
-  return generateCandidate({
+  const rim = generateCandidate({
     floor: opts.floor,
     seed: opts.seed,
     params,
@@ -81,6 +118,7 @@ export function generateFloor(opts: GenerateFloorOptions): FloorState {
     blockedRate: 1,
     rimFallback: true,
   });
+  return { ...rim, usedRimFallback: true };
 }
 
 function generateCandidate({

@@ -9,9 +9,18 @@ export default defineConfig({
     alias: {
       "@": path.resolve(templateRoot, "client", "src"),
     },
+    dedupe: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime",
+    ],
   },
   test: {
     environment: "node",
-    include: ["client/src/**/*.test.ts"],
+    include: [
+      "client/src/**/*.test.ts",
+      "client/src/**/*.test.tsx",
+    ],
   },
 });

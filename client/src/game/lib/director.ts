@@ -1,5 +1,13 @@
+/**
+ * File Purpose: LLM-assisted tile dressing + iris taunts with strict JSON validation.
+ * Primary Functions: directExpansion, fallbackDirectorOutput, resetDirectorCircuit(runId?).
+ * Inputs/Outputs: Public cell context in; ExpansionDirectorOutput (never mutates puzzle truth).
+ */
+
 import type { Axial, HexKey, TileDressing } from "./types";
 import { hashString } from "./rng";
+
+export type PacingBand = "calm" | "ramp" | "spike" | "recovery";
 
 export interface PublicCellContext extends Axial {
   key: HexKey;
@@ -24,6 +32,10 @@ export interface ExpansionDirectorOutput {
   tiles: Record<HexKey, TileDressing>;
   irisLine: string;
   source: "on-device" | "fallback";
+  /** Optional pacing hint for UI / future director systems (never authoritative). */
+  pacingBand?: PacingBand;
+  /** True when output was forced to fallback because the circuit breaker is open. */
+  degradedByCircuit?: boolean;
 }
 
 export interface TextGenerator {
@@ -40,6 +52,7 @@ export interface TextGenerator {
 interface RawDirectorOutput {
   tiles?: Array<Partial<TileDressing> & { key?: string }>;
   irisLine?: string;
+  pacingBand?: string;
 }
 
 const FALLBACK_TITLES = [
@@ -60,11 +73,68 @@ const FALLBACK_LINES = [
   "continue. the lattice narrows.",
 ];
 
+/** Consecutive null/malformed generations before the circuit opens. */
+const CIRCUIT_MISS_THRESHOLD = 3;
+/** Cooldown (ms) while the circuit is open — deterministic fallback only. */
+const CIRCUIT_COOLDOWN_MS = 12_000;
+
+interface RunCircuitState {
+  consecutiveFailures: number;
+  circuitOpenUntil: number;
+}
+
+/** Per-runId circuit breaker so parallel runs / HMR / tests do not share breaker state. */
+const circuitByRunId = new Map<string, RunCircuitState>();
+
+function getCircuit(runId: string): RunCircuitState {
+  let state = circuitByRunId.get(runId);
+  if (!state) {
+    state = { consecutiveFailures: 0, circuitOpenUntil: 0 };
+    circuitByRunId.set(runId, state);
+  }
+  return state;
+}
+
+/**
+ * Reset director circuit breaker for one run, or all runs if `runId` is omitted.
+ * Tests call with no args to clear global map.
+ */
+export function resetDirectorCircuit(runId?: string): void {
+  if (runId === undefined) {
+    circuitByRunId.clear();
+    return;
+  }
+  circuitByRunId.delete(runId);
+}
+
+function recordDirectorFailure(runId: string): void {
+  const c = getCircuit(runId);
+  c.consecutiveFailures++;
+  if (c.consecutiveFailures >= CIRCUIT_MISS_THRESHOLD) {
+    c.circuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+    c.consecutiveFailures = 0;
+  }
+}
+
+function recordDirectorSuccess(runId: string): void {
+  getCircuit(runId).consecutiveFailures = 0;
+}
+
+function circuitOpen(runId: string): boolean {
+  return Date.now() < getCircuit(runId).circuitOpenUntil;
+}
+
 export async function directExpansion(
   input: ExpansionDirectorInput,
   generate: TextGenerator
 ): Promise<ExpansionDirectorOutput> {
   const fallback = fallbackDirectorOutput(input);
+  const runId = input.runId;
+
+  if (circuitOpen(runId)) {
+    return { ...fallback, degradedByCircuit: true };
+  }
+
   const result = await generate({
     ...buildDirectorPrompt(input),
     temperature: 0.8,
@@ -73,11 +143,18 @@ export async function directExpansion(
     silentDiagnostics: true,
   });
 
-  if (!result) return fallback;
+  if (!result) {
+    recordDirectorFailure(runId);
+    return fallback;
+  }
 
   const parsed = parseDirectorOutput(result.text, input);
-  if (!parsed) return fallback;
+  if (!parsed) {
+    recordDirectorFailure(runId);
+    return fallback;
+  }
 
+  recordDirectorSuccess(runId);
   return {
     tiles: {
       ...fallback.tiles,
@@ -85,6 +162,7 @@ export async function directExpansion(
     },
     irisLine: parsed.irisLine || fallback.irisLine,
     source: "on-device",
+    pacingBand: parsed.pacingBand,
   };
 }
 
@@ -141,6 +219,7 @@ Rules:
 - Flavor is one short tactical sentence.
 - threatTone is quiet, watching, pressing, or breach.
 - visualHint is none, flicker, tear, or blackout.
+- Optional pacingBand: calm, ramp, spike, or recovery (UI hint only).
 
 Context:
 runId=${input.runId}
@@ -153,14 +232,20 @@ New cells:
 ${input.newCells.map(cell => JSON.stringify(cell)).join("\n")}
 
 Return JSON:
-{"irisLine":"6-14 word taunt","tiles":[{"key":"q,r","title":"Short Label","flavor":"Short sentence.","threatTone":"quiet","visualHint":"none"}]}`,
+{"irisLine":"6-14 word taunt","pacingBand":"calm","tiles":[{"key":"q,r","title":"Short Label","flavor":"Short sentence.","threatTone":"quiet","visualHint":"none"}]}`,
   };
+}
+
+interface ParsedDirector {
+  tiles: Record<HexKey, TileDressing>;
+  irisLine: string;
+  pacingBand?: PacingBand;
 }
 
 function parseDirectorOutput(
   text: string,
   input: ExpansionDirectorInput
-): ExpansionDirectorOutput | null {
+): ParsedDirector | null {
   const cleaned = text
     .replace(/^```json\s*/i, "")
     .replace(/\s*```$/i, "")
@@ -191,7 +276,7 @@ function parseDirectorOutput(
   return {
     tiles,
     irisLine: clampText(raw.irisLine, "", 80),
-    source: "on-device",
+    pacingBand: safePacingBand(raw.pacingBand),
   };
 }
 
@@ -199,10 +284,6 @@ function tryParseJson(text: string): RawDirectorOutput | null {
   try {
     return JSON.parse(text) as RawDirectorOutput;
   } catch {
-    // Some on-device models add prose around the JSON ("Sure, here's
-    // the dressing: {...} let me know if..."). Recover the first
-    // balanced {...} object before giving up. Brace-counter respects
-    // strings so embedded `{`/`}` inside flavor text don't confuse it.
     const block = extractFirstJsonObject(text);
     if (!block) return null;
     try {
@@ -277,4 +358,13 @@ function safeVisualHint(value: unknown): TileDressing["visualHint"] {
     value === "blackout"
     ? value
     : "none";
+}
+
+function safePacingBand(value: unknown): PacingBand | undefined {
+  return value === "calm" ||
+    value === "ramp" ||
+    value === "spike" ||
+    value === "recovery"
+    ? value
+    : undefined;
 }
