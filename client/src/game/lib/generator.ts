@@ -19,6 +19,14 @@ interface FloorParams {
   blockedRate: number;
   maxWrongs: number;
   clueRate: number;
+  /**
+   * Axial-distance from origin within which cells are pre-revealed at
+   * floor start. Larger zones give the constraint-propagation solver
+   * more footholds — floors at radius 5 (blockedRate ~0.4) are not
+   * reliably crackable from a single revealed origin, so the starting
+   * zone scales with floor to keep the 80-attempt budget effective.
+   */
+  startRadius: number;
 }
 
 export function floorParams(floor: number): FloorParams {
@@ -28,15 +36,24 @@ export function floorParams(floor: number): FloorParams {
     blockedRate: 0.18 + clamped * 0.018,
     maxWrongs: Math.max(1, 6 - Math.ceil(clamped / 2)),
     clueRate: Math.max(0.34, 0.62 - clamped * 0.018),
+    startRadius: clamped <= 6 ? 1 : clamped <= 10 ? 2 : 3,
   };
 }
 
-export function generateFloor({
+const GENERATOR_BUDGET = 80;
+
+/**
+ * Best-effort solvable-floor generation. Returns `null` if the
+ * retry budget (`GENERATOR_BUDGET` attempts) runs out without
+ * finding a solver-solvable candidate. Tests use this to assert
+ * the budget is enough for real gameplay floors.
+ */
+export function tryGenerateSolvableFloor({
   floor,
   seed,
-}: GenerateFloorOptions): FloorState {
+}: GenerateFloorOptions): FloorState | null {
   const params = floorParams(floor);
-  for (let attempt = 0; attempt < 80; attempt++) {
+  for (let attempt = 0; attempt < GENERATOR_BUDGET; attempt++) {
     const candidate = generateCandidate({
       floor,
       seed,
@@ -48,12 +65,19 @@ export function generateFloor({
       return candidate;
     }
   }
+  return null;
+}
 
+export function generateFloor(opts: GenerateFloorOptions): FloorState {
+  const found = tryGenerateSolvableFloor(opts);
+  if (found) return found;
+
+  const params = floorParams(opts.floor);
   return generateCandidate({
-    floor,
-    seed,
+    floor: opts.floor,
+    seed: opts.seed,
     params,
-    attempt: 80,
+    attempt: GENERATOR_BUDGET,
     blockedRate: 1,
     rimFallback: true,
   });
@@ -80,7 +104,7 @@ function generateCandidate({
     const key = hexKey(coord.q, coord.r);
     const isOrigin = coord.q === 0 && coord.r === 0;
     const distance = axialDistance(coord, { q: 0, r: 0 });
-    const isStartingZone = distance <= 1;
+    const isStartingZone = distance <= params.startRadius;
     const truth = rimFallback
       ? distance === params.radius
         ? "blocked"
@@ -92,9 +116,9 @@ function generateCandidate({
       ...coord,
       key,
       truth,
-      view: isOrigin ? "revealed" : "unknown",
+      view: isStartingZone ? "revealed" : "unknown",
       adjacentBlocked: 0,
-      clueVisible: isOrigin,
+      clueVisible: isStartingZone,
     };
   }
 

@@ -165,12 +165,8 @@ function parseDirectorOutput(
     .replace(/^```json\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
-  let raw: RawDirectorOutput;
-  try {
-    raw = JSON.parse(cleaned) as RawDirectorOutput;
-  } catch {
-    return null;
-  }
+  const raw = tryParseJson(cleaned);
+  if (!raw) return null;
 
   const allowedKeys = new Set(input.newCells.map(cell => cell.key));
   const tiles: Record<HexKey, TileDressing> = {} as Record<
@@ -197,6 +193,51 @@ function parseDirectorOutput(
     irisLine: clampText(raw.irisLine, "", 80),
     source: "on-device",
   };
+}
+
+function tryParseJson(text: string): RawDirectorOutput | null {
+  try {
+    return JSON.parse(text) as RawDirectorOutput;
+  } catch {
+    // Some on-device models add prose around the JSON ("Sure, here's
+    // the dressing: {...} let me know if..."). Recover the first
+    // balanced {...} object before giving up. Brace-counter respects
+    // strings so embedded `{`/`}` inside flavor text don't confuse it.
+    const block = extractFirstJsonObject(text);
+    if (!block) return null;
+    try {
+      return JSON.parse(block) as RawDirectorOutput;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === "\\") escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
 }
 
 function clampWords(

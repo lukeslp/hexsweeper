@@ -71,6 +71,31 @@ describe("director", () => {
     expect(output.tiles["0,1"].source).toBe("fallback");
   });
 
+  it("recovers when the model wraps valid JSON in prose", async () => {
+    const json = JSON.stringify({
+      irisLine: "your edges resolve.",
+      tiles: [
+        {
+          key: "1,0",
+          title: "Recovered Tile",
+          flavor: "the wrapper prose did not hide me.",
+          threatTone: "pressing",
+          visualHint: "flicker",
+        },
+      ],
+    });
+    const output = await directExpansion(input, async () => ({
+      text: `Sure, here's the dressing you asked for: ${json}\n\nLet me know if you need anything else.`,
+    }));
+
+    expect(output.source).toBe("on-device");
+    expect(output.tiles["1,0"]).toMatchObject({
+      title: "Recovered Tile",
+      threatTone: "pressing",
+      source: "on-device",
+    });
+  });
+
   it("ignores unknown keys and unsafe enum values", async () => {
     const output = await directExpansion(input, async () => ({
       text: JSON.stringify({
