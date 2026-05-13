@@ -1,8 +1,8 @@
 declare global {
-    interface Window {
-        __checkpoint?: (msg: string) => void;
-        __lastCheckpoint?: string;
-    }
+  interface Window {
+    __checkpoint?: (msg: string) => void;
+    __lastCheckpoint?: string;
+  }
 }
 const cp = (msg: string) => window.__checkpoint?.(msg);
 cp("main.tsx: top of file");
@@ -11,8 +11,11 @@ import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { isCapacitor } from "@/lib/platform";
 import { BootErrorBoundary } from "@/lib/BootErrorBoundary";
-import { tryOnDeviceIrisLineFirst, isFoundationModelsAvailable } from "@/lib/foundationModelsPlugin";
-import { MiniBoard } from "@/game/MiniBoard";
+import {
+  tryOnDeviceIrisLineFirst,
+  isFoundationModelsAvailable,
+} from "@/lib/foundationModelsPlugin";
+import { GameApp } from "@/game/GameApp";
 import "./index.css";
 
 cp("main.tsx: imports done");
@@ -23,21 +26,26 @@ cp("main.tsx: imports done");
 // into the app. v1 has no router yet — pushState lands the URL where
 // the eventual game router can pick it up.
 if (isCapacitor()) {
-    void import("@capacitor/app").then(({ App: CapacitorApp }) => {
-        CapacitorApp.addListener("appUrlOpen", (event) => {
-            try {
-                const url = new URL(event.url);
-                const target = (url.pathname || "/") + url.search + url.hash;
-                const current = window.location.pathname + window.location.search + window.location.hash;
-                if (current === target) return;
-                window.history.pushState(null, "", target);
-                window.dispatchEvent(new PopStateEvent("popstate"));
-            } catch (e) {
-                console.warn("appUrlOpen: failed to parse URL", event.url, e);
-            }
-        });
-    }).catch((e) => {
-        console.warn("Could not load @capacitor/app for URL handling", e);
+  void import("@capacitor/app")
+    .then(({ App: CapacitorApp }) => {
+      CapacitorApp.addListener("appUrlOpen", event => {
+        try {
+          const url = new URL(event.url);
+          const target = (url.pathname || "/") + url.search + url.hash;
+          const current =
+            window.location.pathname +
+            window.location.search +
+            window.location.hash;
+          if (current === target) return;
+          window.history.pushState(null, "", target);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        } catch (e) {
+          console.warn("appUrlOpen: failed to parse URL", event.url, e);
+        }
+      });
+    })
+    .catch(e => {
+      console.warn("Could not load @capacitor/app for URL handling", e);
     });
 }
 
@@ -53,31 +61,46 @@ function describeError(error: unknown): Record<string, unknown> {
       name: error.name,
       message: error.message,
     };
-    const anyErr = error as Error & { data?: unknown; cause?: unknown; stack?: string };
-    if (anyErr.stack) out.stack = String(anyErr.stack).split("\n").slice(0, 5).join("\n");
+    const anyErr = error as Error & {
+      data?: unknown;
+      cause?: unknown;
+      stack?: string;
+    };
+    if (anyErr.stack)
+      out.stack = String(anyErr.stack).split("\n").slice(0, 5).join("\n");
     if (anyErr.data !== undefined) out.data = anyErr.data;
     if (anyErr.cause !== undefined) out.cause = String(anyErr.cause);
     return out;
   }
   if (typeof error === "object" && error !== null) {
-    try { return JSON.parse(JSON.stringify(error)); } catch { /* fall through */ }
+    try {
+      return JSON.parse(JSON.stringify(error));
+    } catch {
+      /* fall through */
+    }
   }
   return { value: String(error) };
 }
 
 if (typeof window !== "undefined") {
-    window.addEventListener("error", (event) => {
-        console.error("[Window Error]", JSON.stringify({
-            message: event.message,
-            source: event.filename,
-            line: event.lineno,
-            col: event.colno,
-            ...describeError(event.error),
-        }));
-    });
-    window.addEventListener("unhandledrejection", (event) => {
-        console.error("[Unhandled Promise]", JSON.stringify(describeError(event.reason)));
-    });
+  window.addEventListener("error", event => {
+    console.error(
+      "[Window Error]",
+      JSON.stringify({
+        message: event.message,
+        source: event.filename,
+        line: event.lineno,
+        col: event.colno,
+        ...describeError(event.error),
+      })
+    );
+  });
+  window.addEventListener("unhandledrejection", event => {
+    console.error(
+      "[Unhandled Promise]",
+      JSON.stringify(describeError(event.reason))
+    );
+  });
 }
 
 cp("main.tsx: error listeners wired");
@@ -85,10 +108,12 @@ cp("main.tsx: error listeners wired");
 const rootEl = document.getElementById("root");
 cp("main.tsx: rootEl is " + (rootEl ? "present" : "MISSING"));
 if (!rootEl) {
-  document.body.appendChild(Object.assign(document.createElement("div"), {
-    textContent: "FATAL: #root element not found",
-    style: "color:red;font:18px monospace;padding:20px",
-  }));
+  document.body.appendChild(
+    Object.assign(document.createElement("div"), {
+      textContent: "FATAL: #root element not found",
+      style: "color:red;font:18px monospace;padding:20px",
+    })
+  );
   throw new Error("#root element not found");
 }
 
@@ -106,7 +131,7 @@ type Screen = "boot" | "playing";
 function HexodusApp() {
   const [screen, setScreen] = useState<Screen>("boot");
   if (screen === "playing") {
-    return <MiniBoard onExit={() => setScreen("boot")} />;
+    return <GameApp onExit={() => setScreen("boot")} />;
   }
   return <HexodusBoot onBegin={() => setScreen("playing")} />;
 }
@@ -123,7 +148,8 @@ function HexodusBoot({ onBegin }: { onBegin: () => void }) {
       if (!available) {
         setIris({
           status: "unavailable",
-          reason: "Apple Intelligence not available (needs iOS 26+ on supported hardware, with Apple Intelligence enabled).",
+          reason:
+            "Apple Intelligence not available (needs iOS 26+ on supported hardware, with Apple Intelligence enabled).",
         });
         return;
       }
@@ -141,7 +167,8 @@ function HexodusBoot({ onBegin }: { onBegin: () => void }) {
       if (result === null) {
         setIris({
           status: "unavailable",
-          reason: "On-device call returned null (timeout, refusal, schema-parse fail, or framework unavailable).",
+          reason:
+            "On-device call returned null (timeout, refusal, schema-parse fail, or framework unavailable).",
         });
         return;
       }
@@ -155,26 +182,39 @@ function HexodusBoot({ onBegin }: { onBegin: () => void }) {
   };
 
   return (
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      background: "#0a0a0a",
-      color: "#10b981",
-      font: "14px ui-monospace, Menlo, monospace",
-      padding: "max(env(safe-area-inset-top, 24px), 24px) 24px max(env(safe-area-inset-bottom, 24px), 24px)",
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-      overflow: "auto",
-    }}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#0a0a0a",
+        color: "#10b981",
+        font: "14px ui-monospace, Menlo, monospace",
+        padding:
+          "max(env(safe-area-inset-top, 24px), 24px) 24px max(env(safe-area-inset-bottom, 24px), 24px)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        overflow: "auto",
+      }}
+    >
       <div style={{ color: "#34d399", fontSize: "20px", marginBottom: "12px" }}>
         HEXODUS &mdash; boot OK
       </div>
       <div style={{ opacity: 0.7 }}>react: mounted</div>
       <div style={{ opacity: 0.7 }}>platform: {platform}</div>
-      <div style={{ opacity: 0.7 }}>capacitor.bridge: {isCapacitor() ? "alive" : "n/a (web)"}</div>
+      <div style={{ opacity: 0.7 }}>
+        capacitor.bridge: {isCapacitor() ? "alive" : "n/a (web)"}
+      </div>
 
-      <div style={{ marginTop: "20px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+      <div
+        style={{
+          marginTop: "20px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
         <span style={{ opacity: 0.7 }}>iris.exe:</span>
         {iris.status === "dormant" && (
           <button
@@ -206,19 +246,29 @@ function HexodusBoot({ onBegin }: { onBegin: () => void }) {
         )}
       </div>
 
-      {iris.status === "awake" && (
+      {(iris.status === "awake" ||
+        iris.status === "dormant" ||
+        iris.status === "unavailable") && (
         <>
-          <div style={{
-            marginTop: "12px",
-            padding: "14px",
-            border: "1px solid #fb718566",
-            color: "#fb7185",
-            background: "#fb71850a",
-            maxWidth: "560px",
-          }}>
-            <div style={{ opacity: 0.6, fontSize: "11px", marginBottom: "6px" }}>iris.exe says:</div>
-            {iris.line}
-          </div>
+          {iris.status === "awake" && (
+            <div
+              style={{
+                marginTop: "12px",
+                padding: "14px",
+                border: "1px solid #fb718566",
+                color: "#fb7185",
+                background: "#fb71850a",
+                maxWidth: "560px",
+              }}
+            >
+              <div
+                style={{ opacity: 0.6, fontSize: "11px", marginBottom: "6px" }}
+              >
+                iris.exe says:
+              </div>
+              {iris.line}
+            </div>
+          )}
           <div style={{ marginTop: "20px" }}>
             <button
               onClick={onBegin}
@@ -236,27 +286,29 @@ function HexodusBoot({ onBegin }: { onBegin: () => void }) {
               begin run &gt;_
             </button>
             <div style={{ marginTop: "8px", opacity: 0.4, fontSize: "11px" }}>
-              floor 1 of 12 &middot; one hand-coded slice while the procedural generator lands
+              infinite hex grid &middot; tap tiles to expand the floor
             </div>
           </div>
         </>
       )}
       {iris.status === "dormant" && (
         <div style={{ marginTop: "20px", opacity: 0.5, fontSize: "12px" }}>
-          (wake iris.exe first — proves the on-device LLM bridge is alive,
-          then you can begin the run.)
+          (wake iris.exe first — proves the on-device LLM bridge is alive, then
+          you can begin the run.)
         </div>
       )}
       {iris.status === "unavailable" && (
-        <div style={{
-          marginTop: "12px",
-          padding: "14px",
-          border: "1px solid #fbbf2466",
-          color: "#fbbf24",
-          background: "#fbbf240a",
-          maxWidth: "560px",
-          fontSize: "12px",
-        }}>
+        <div
+          style={{
+            marginTop: "12px",
+            padding: "14px",
+            border: "1px solid #fbbf2466",
+            color: "#fbbf24",
+            background: "#fbbf240a",
+            maxWidth: "560px",
+            fontSize: "12px",
+          }}
+        >
           <div style={{ opacity: 0.6, marginBottom: "6px" }}>diagnostic:</div>
           {iris.reason}
           <div style={{ marginTop: "10px" }}>
@@ -292,14 +344,16 @@ cp("main.tsx: render() returned");
 // double-rAF waits for the React commit + browser paint to land so the
 // user never sees a blank frame between splash and app. No-op on web.
 if (isCapacitor()) {
-    void import("@capacitor/splash-screen").then(({ SplashScreen }) => {
+  void import("@capacitor/splash-screen")
+    .then(({ SplashScreen }) => {
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                void SplashScreen.hide({ fadeOutDuration: 200 });
-                cp("main.tsx: SplashScreen.hide() called");
-            });
+          void SplashScreen.hide({ fadeOutDuration: 200 });
+          cp("main.tsx: SplashScreen.hide() called");
         });
-    }).catch((e) => {
-        console.warn("Could not load @capacitor/splash-screen", e);
+      });
+    })
+    .catch(e => {
+      console.warn("Could not load @capacitor/splash-screen", e);
     });
 }

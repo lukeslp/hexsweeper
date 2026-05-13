@@ -7,15 +7,24 @@ import { defineConfig, type PluginOption } from "vite";
 // vendored copy of `vite`, which doesn't structurally match the project's
 // `vite` types. The runtime objects are interchangeable; cast the whole
 // array to bypass the type-identity collision.
-const plugins = [react(), tailwindcss()] as unknown as PluginOption[];
+const makePlugins = (command: string) =>
+  [
+    // Dev avoids @vitejs/plugin-react's Babel transform because this pnpm
+    // layout can resolve Babel's lru-cache@5 dependency to lru-cache@11,
+    // causing "_lruCache is not a constructor". Vite/esbuild handles TSX.
+    command === "build" ? react() : null,
+    tailwindcss(),
+  ].filter(Boolean) as unknown as PluginOption[];
 
-export default defineConfig({
-  plugins,
+export default defineConfig(({ command }) => ({
+  plugins: makePlugins(command),
+  esbuild: {
+    jsx: "automatic",
+    jsxImportSource: "react",
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
     // Force a single React + react-dom + jsx-runtime instance across the bundle.
     // pnpm's symlinked node_modules + multiple transitive React-using packages
@@ -45,4 +54,4 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
-});
+}));
