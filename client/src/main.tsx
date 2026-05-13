@@ -1,12 +1,3 @@
-declare global {
-  interface Window {
-    __checkpoint?: (msg: string) => void;
-    __lastCheckpoint?: string;
-  }
-}
-const cp = (msg: string) => window.__checkpoint?.(msg);
-cp("main.tsx: top of file");
-
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { isCapacitor } from "@/lib/platform";
@@ -23,7 +14,13 @@ import {
 } from "@/game/lib/runState";
 import "./index.css";
 
-cp("main.tsx: imports done");
+declare global {
+  interface Window {
+    /** Optional: `client/index.html` sets this for cold-boot timeout overlays. */
+    __checkpoint?: (msg: string) => void;
+    __lastCheckpoint?: string;
+  }
+}
 
 // ── Universal Links + custom URL scheme handler (Capacitor only) ────
 // When iOS hands the app a URL from outside (deep link from Safari,
@@ -53,8 +50,6 @@ if (isCapacitor()) {
       console.warn("Could not load @capacitor/app for URL handling", e);
     });
 }
-
-cp("main.tsx: side-effect blocks done");
 
 // Capacitor's JS-to-native log bridge serializes objects via JSON.stringify,
 // which renders Error instances as "{}" and loses the message+stack. Build
@@ -108,10 +103,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-cp("main.tsx: error listeners wired");
-
 const rootEl = document.getElementById("root");
-cp("main.tsx: rootEl is " + (rootEl ? "present" : "MISSING"));
 if (!rootEl) {
   document.body.appendChild(
     Object.assign(document.createElement("div"), {
@@ -122,9 +114,7 @@ if (!rootEl) {
   throw new Error("#root element not found");
 }
 
-// Minimal cyberpunk boot placeholder. Confirms the iOS shell, Capacitor
-// bridge, splash dance, and React mount all work end-to-end. The real
-// game shell (GameApp) will replace this once Hexodus is built.
+// Minimal cyberpunk boot screen: iris probe, run-mode picker, then GameApp.
 type IrisState =
   | { status: "dormant" }
   | { status: "waking" }
@@ -406,13 +396,12 @@ function HexodusBoot({
   );
 }
 
-cp("main.tsx: calling createRoot.render()");
 createRoot(rootEl).render(
   <BootErrorBoundary>
     <HexodusApp />
   </BootErrorBoundary>
 );
-cp("main.tsx: render() returned");
+window.__checkpoint?.("main: createRoot committed");
 
 // Hide the native splash once React has rendered its first frame. The
 // double-rAF waits for the React commit + browser paint to land so the
@@ -423,7 +412,7 @@ if (isCapacitor()) {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           void SplashScreen.hide({ fadeOutDuration: 200 });
-          cp("main.tsx: SplashScreen.hide() called");
+          window.__checkpoint?.("main: splash hidden");
         });
       });
     })

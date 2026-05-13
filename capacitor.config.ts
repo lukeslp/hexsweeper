@@ -1,22 +1,19 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: 'app.hexodus.ios',
-  appName: 'Hexodus',
-  webDir: 'dist/public',
+  appId: "app.hexodus.ios",
+  appName: "Hexodus",
+  webDir: "dist/public",
   // Production: ship info/warn/error to the native log but suppress the
   // debug-level bridge chatter (`⚡️ To Native ->` plugin call traces and
   // JS↔native message bodies) that we used during the FoundationModels
   // dispatch bisect. Switch back to 'debug' for diagnostic sessions.
-  loggingBehavior: 'production',
+  loggingBehavior: "production",
   plugins: {
-    // Patch fetch + XMLHttpRequest in the WebView to route through
-    // native HTTP. Bypasses WKWebView's CORS entirely — the live
-    // hivemind server's preflight response only includes
-    // Access-Control-Allow-Origin (no -Methods or -Headers), so
-    // browser CORS rejects the POST to /api/generate. Native HTTP
-    // doesn't enforce CORS, so this works without changing the
-    // production server.
+    // Patch fetch + XMLHttpRequest in the WebView to route through native
+    // HTTP (bypasses WKWebView CORS). Hexodus v1 has no cloud API; this stays
+    // enabled so a future release (telemetry, sync) does not rediscover CORS
+    // limits in WKWebView.
     CapacitorHttp: {
       enabled: true,
     },
@@ -28,12 +25,11 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchAutoHide: false,
       launchShowDuration: 0,
-      // Matches the cream bg of Splash.imageset and LaunchScreen.storyboard.
-      // Bumped from #0a0a0a after the icon switched to the light mockup.
-      backgroundColor: '#faf7f0',
+      // Matches dark boot (`client/src/main.tsx`) + LaunchScreen.storyboard.
+      backgroundColor: "#0a0a0a",
       showSpinner: true,
-      iosSpinnerStyle: 'medium',
-      spinnerColor: '#fbbf24',
+      iosSpinnerStyle: "medium",
+      spinnerColor: "#10b981",
       splashFullScreen: true,
       splashImmersive: true,
     },

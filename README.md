@@ -10,11 +10,12 @@ Hex-grid strategy/puzzle prototype with deterministic floor generation, infinite
 
 ## Core Runtime
 
-- `client/src/game/GameApp.tsx` — Board UI, HUD, route picker, **async dressing gate**, **session diagnostics**; requires `progressionPolicy` prop from boot.
+- `client/src/game/GameApp.tsx` — Board UI, HUD, route picker, **async dressing gate**, **session diagnostics**, **`?diag=1` dev panel**, long-press mark (touch); requires `progressionPolicy` prop from boot.
 - `client/src/game/lib/cycleOrchestrator.ts` — `advanceRunAfterFloorWin`, `createNextFloorState`.
 - `client/src/game/lib/generator.ts` — Deterministic floors + `regionEpoch` / `effectiveDifficultyStep`.
 - `client/src/game/lib/runState.ts` — Progression policy, `floorSeed` (includes route salt).
 - `client/src/game/lib/director.ts` — `directExpansion`, `resetDirectorCircuit(runId?)` (per-run circuit map; omit `runId` to clear all).
+- `client/src/game/lib/dressingOrchestrator.ts` — pure `tryDressFloor` (unit-tested async commit path used by `GameApp`).
 
 ## Design Docs
 
@@ -22,6 +23,7 @@ Hex-grid strategy/puzzle prototype with deterministic floor generation, infinite
 - [docs/INFINITE_GENERATION_SPEC.md](docs/INFINITE_GENERATION_SPEC.md)
 - [docs/DIRECTOR_GUARDRAILS.md](docs/DIRECTOR_GUARDRAILS.md)
 - [docs/VERIFICATION_GATES.md](docs/VERIFICATION_GATES.md)
+- [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md)
 
 ## Verify
 
@@ -30,4 +32,14 @@ pnpm check
 pnpm test
 # Optional long strided generator sweep (SOAK=1; long timeout):
 pnpm test:soak
+# Regenerate iOS app icon + splash PNGs (macOS + Swift; writes Assets.xcassets):
+pnpm icons:generate
 ```
+
+## Dev diagnostics
+
+Append **`?diag=1`** to the loaded URL to show the amber diagnostics strip (burst reveal, forced director nulls, simulated rim banner). See [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md) for a full on-device checklist.
+
+## iOS assets
+
+Source script: `scripts/generate-icon.swift`. Reviewable PNG variants are written to `icon-variants/` (gitignored); installed assets live in `ios/App/App/Assets.xcassets/`.

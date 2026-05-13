@@ -17,6 +17,10 @@
 - After **3** failures, opens **12s** cooldown: `directExpansion` returns deterministic fallback immediately (`degradedByCircuit: true`) without calling the model.
 - `resetDirectorCircuit()` clears all runs; `resetDirectorCircuit(runId)` clears one run (tests + manual recovery).
 
+## Session HUD (`dress` counter)
+
+The `dress` field on the `GameApp` session line increments for **every** `directExpansion` completion after `await`, including outputs that are **not** applied because the `DressingGenerationGate` invalidated the operation (stale async after `continueRun` / `restartRun` / overlapping reveals). It is a **director attempt** counter, not strictly “tiles written”. See [VERIFICATION_GATES.md](VERIFICATION_GATES.md) session diagnostics for rollout ratios vs `fb` / `circuit`.
+
 ## SLO notes (manual / future CI)
 
 - p95 `directExpansion` latency budget: inherit native timeout (16s) with UI spinner via pending dressing keys.

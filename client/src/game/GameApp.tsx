@@ -8,7 +8,14 @@ import { useCanvasInteraction } from "@/hooks/useCanvasInteraction";
 import { tryOnDeviceFirst } from "@/lib/foundationModelsPlugin";
 import { HEX_HEIGHT, HEX_WIDTH } from "@/lib/hexConstants";
 import { hexToPixel, pixelToHex } from "@/lib/hexGrid";
-import { directExpansion, type ExpansionDirectorOutput, type PublicCellContext } from "./lib/director";
+import { DiagnosticsPanel, readDiagQueryEnabled } from "./DiagnosticsPanel";
+import {
+  directExpansion,
+  type ExpansionDirectorInput,
+  type ExpansionDirectorOutput,
+  type PublicCellContext,
+} from "./lib/director";
+import { tryDressFloor } from "./lib/dressingOrchestrator";
 import { createFloorState, reduceFloor } from "./lib/gameState";
 import {
   advanceRunAfterFloorWin,
@@ -70,8 +77,25 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
   const justDropped = useRef(false);
   const dressingGateRef = useRef(new DressingGenerationGate());
   const rimCountedKeysRef = useRef(new Set<string>());
+  const diagDirectorNullsRef = useRef(0);
   const runRef = useRef(run);
   runRef.current = run;
+  const [diagMode, setDiagMode] = useState(false);
+  const [diagSimRim, setDiagSimRim] = useState(false);
+
+  useEffect(() => {
+    setDiagMode(readDiagQueryEnabled());
+  }, []);
+
+  async function dressingGenerate(
+    opts: Parameters<typeof tryOnDeviceFirst>[0]
+  ): Promise<{ text: string } | null> {
+    if (diagDirectorNullsRef.current > 0) {
+      diagDirectorNullsRef.current -= 1;
+      return null;
+    }
+    return tryOnDeviceFirst(opts);
+  }
 
   const canvas = useCanvasInteraction({
     containerRef,
@@ -98,8 +122,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
       directorFallbackCount:
         d.directorFallbackCount + (output.source === "fallback" ? 1 : 0),
       directorCircuitDegradedCount:
-        d.directorCircuitDegradedCount +
-        (output.degradedByCircuit ? 1 : 0),
+        d.directorCircuitDegradedCount + (output.degradedByCircuit ? 1 : 0),
     }));
   }
 
@@ -121,49 +144,55 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
       ...frontierCells,
     ]);
 
-    if (newCells.length === 0) {
-      return { dressed: nextFloor, committed: dressingGateRef.current.isCurrent(opGen) };
-    }
-    const pendingKeys = newCells.map(cell => cell.key);
+    const input: ExpansionDirectorInput = {
+      runId: runSnap.runId,
+      floor: nextFloor.floor,
+      irisControl: nextFloor.irisControl,
+      expandedCell: publicCellContext(expandedCell),
+      newCells,
+      recentEvents: eventToDirectorHistory(nextFloor.lastEvent),
+    };
 
-    setPendingDressingKeys(current => {
-      const next = new Set(current);
-      for (const key of pendingKeys) next.add(key);
-      return next;
-    });
+    const pendingKeys = newCells.map(cell => cell.key);
+    if (pendingKeys.length > 0) {
+      setPendingDressingKeys(current => {
+        const next = new Set(current);
+        for (const key of pendingKeys) next.add(key);
+        return next;
+      });
+    }
 
     try {
-      const output = await directExpansion(
-        {
-          runId: runSnap.runId,
-          floor: nextFloor.floor,
-          irisControl: nextFloor.irisControl,
-          expandedCell: publicCellContext(expandedCell),
-          newCells,
-          recentEvents: eventToDirectorHistory(nextFloor.lastEvent),
-        },
-        tryOnDeviceFirst
-      );
+      const result = await tryDressFloor({
+        gate: dressingGateRef.current,
+        opGen,
+        nextFloor,
+        input,
+        directExpansion,
+        generate: dressingGenerate,
+      });
 
-      recordDirectorMetrics(output);
+      if (result.kind === "no-new-cells") {
+        return { dressed: nextFloor, committed: result.shouldCommit };
+      }
 
-      if (!dressingGateRef.current.isCurrent(opGen)) {
+      recordDirectorMetrics(result.output);
+
+      if (result.kind === "discarded") {
         return { dressed: nextFloor, committed: false };
       }
 
-      setIrisLine(output.irisLine);
-      setPacingBand(output.pacingBand);
-      const dressed = reduceFloor(nextFloor, {
-        type: "applyDressing",
-        dressing: output.tiles,
-      });
-      return { dressed, committed: true };
+      setIrisLine(result.output.irisLine);
+      setPacingBand(result.output.pacingBand);
+      return { dressed: result.floor, committed: true };
     } finally {
-      setPendingDressingKeys(current => {
-        const next = new Set(current);
-        for (const key of pendingKeys) next.delete(key);
-        return next;
-      });
+      if (pendingKeys.length > 0) {
+        setPendingDressingKeys(current => {
+          const next = new Set(current);
+          for (const key of pendingKeys) next.delete(key);
+          return next;
+        });
+      }
     }
   }
 
@@ -189,13 +218,17 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
     }
   }
 
-  function markCell(key: HexKey, event: MouseEvent) {
-    event.preventDefault();
-    event.stopPropagation();
+  function applyMarkAtKey(key: HexKey) {
     setSelectedKey(key);
     const next = reduceFloor(floor, { type: "markCell", key });
     setFloor(next);
     syncTerminalRunState(next);
+  }
+
+  function markCellFromContextMenu(key: HexKey, event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    applyMarkAtKey(key);
   }
 
   const selected = floor.cells[selectedKey] ?? floor.cells["0,0"];
@@ -233,6 +266,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
 
   function continueRun() {
     dressingGateRef.current.invalidate();
+    setDiagSimRim(false);
     const route: RouteChoice = interFloorRoute ?? "safe";
     const { nextRun } = advanceRunAfterFloorWin(run, route);
     setRun(nextRun);
@@ -248,6 +282,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
 
   function restartRun() {
     dressingGateRef.current.invalidate();
+    setDiagSimRim(false);
     const seed = `hexodus-${Date.now().toString(36)}`;
     const nextRun = createRunState({ seed, progression: progressionPolicy });
     const nextFloor = createFloorState(nextRun.floor, floorSeed(nextRun));
@@ -278,6 +313,15 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
     }
   }
 
+  function burstRevealDiagnostics() {
+    const keys = [...floor.frontier]
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 3);
+    for (const key of keys) {
+      void revealCell(key);
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-background text-foreground dark">
       <div
@@ -295,8 +339,8 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
         onTouchEnd={canvas.handlers.handleTouchEnd}
       >
         <IrisApproachOverlay pressure={floor.irisControl} />
-        <div className="interactive-ui pointer-events-none absolute left-4 right-4 top-4 z-50 flex items-start justify-between gap-3">
-          <div className="pointer-events-auto border border-white/10 bg-black/50 px-3 py-2 text-xs text-muted-foreground backdrop-blur">
+        <div className="interactive-ui pointer-events-none absolute left-0 right-0 top-0 z-50 flex items-start justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))]">
+          <div className="pointer-events-auto max-h-[calc(100vh-8rem)] overflow-y-auto border border-white/10 bg-black/50 px-3 py-2 text-xs text-muted-foreground backdrop-blur">
             <div className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-emerald-200">
               Hexodus
             </div>
@@ -323,16 +367,24 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
               {sessionDiag.directorCircuitDegradedCount} · rim{" "}
               {sessionDiag.generatorRimFallbackCount}
             </div>
-            {floor.usedRimFallback ? (
-              <div className="text-[10px] text-amber-200/90">
+            {floor.usedRimFallback || diagSimRim ? (
+              <div className="text-[10px] text-amber-200">
                 floor used generator rim fallback (see docs/VERIFICATION_GATES)
               </div>
             ) : null}
+            <DiagnosticsPanel
+              enabled={diagMode}
+              onBurstReveal={burstRevealDiagnostics}
+              onForceDirectorNulls={() => {
+                diagDirectorNullsRef.current = 3;
+              }}
+              onSimulateRimBanner={() => setDiagSimRim(true)}
+            />
           </div>
-          <div className="pointer-events-auto flex gap-2">
+          <div className="pointer-events-auto flex flex-wrap gap-2">
             <button
               type="button"
-              className="border border-white/10 bg-black/45 px-3 py-2 text-xs uppercase text-foreground backdrop-blur hover:bg-white/10"
+              className="min-h-11 min-w-11 border border-white/10 bg-black/45 px-3 py-2 text-xs uppercase text-foreground backdrop-blur hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
               onClick={() => canvas.setViewState({ x: 0, y: 0, zoom: 0.8 })}
             >
               Center
@@ -340,7 +392,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
             {onExit && (
               <button
                 type="button"
-                className="border border-white/10 bg-black/45 px-3 py-2 text-xs uppercase text-foreground backdrop-blur hover:bg-white/10"
+                className="min-h-11 min-w-11 border border-white/10 bg-black/45 px-3 py-2 text-xs uppercase text-foreground backdrop-blur hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
                 onClick={onExit}
               >
                 Exit
@@ -365,20 +417,23 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
                 pendingDressingKeys.has(cell.key) && cell.dressing === undefined
               }
               onReveal={() => revealCell(cell.key)}
-              onMark={event => markCell(cell.key, event)}
+              onContextMenuMark={event =>
+                markCellFromContextMenu(cell.key, event)
+              }
+              onLongPressMark={() => applyMarkAtKey(cell.key)}
             />
           ))}
         </div>
 
-        <div className="interactive-ui pointer-events-none absolute bottom-4 left-4 max-w-[min(30rem,calc(100vw-2rem))] border border-white/10 bg-black/50 px-3 py-2 text-xs text-muted-foreground backdrop-blur">
+        <div className="interactive-ui pointer-events-none absolute bottom-0 left-0 max-w-[min(30rem,calc(100vw-2rem))] border border-white/10 bg-black/50 px-3 py-2 text-xs text-muted-foreground backdrop-blur pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="mb-1 font-mono uppercase tracking-[0.14em] text-foreground">
             {titleForCell(selected, pendingDressingKeys.has(selected.key))}
           </div>
           <div className="mb-1 text-emerald-300">{irisLine}</div>
           <div>
-            Left click reveals safe. Right click marks blocked. Tile text is
-            LLM/fallback dressing; numbers and win/loss come from deterministic
-            puzzle truth.
+            Tap reveals a safe cell. Long-press marks blocked (touch). Right-
+            click marks blocked (desktop). Tile text is LLM/fallback dressing;
+            numbers and win/loss come from deterministic puzzle truth.
           </div>
           {floor.status === "won" && run.status === "active" && (
             <div className="pointer-events-auto mt-3 space-y-2">
@@ -396,7 +451,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
                   <button
                     key={id}
                     type="button"
-                    className={`border px-2 py-1 text-[10px] font-mono uppercase ${
+                    className={`min-h-11 min-w-11 border px-2 py-1 text-[10px] font-mono uppercase focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 ${
                       interFloorRoute === id
                         ? "border-emerald-400/80 bg-emerald-500/20 text-emerald-100"
                         : "border-white/15 bg-black/40 text-foreground hover:bg-white/10"
@@ -409,7 +464,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
               </div>
               <button
                 type="button"
-                className="border border-emerald-400/60 px-3 py-2 font-mono uppercase text-emerald-200 hover:bg-emerald-400/10"
+                className="min-h-11 border border-emerald-400/60 px-3 py-2 font-mono uppercase text-emerald-200 hover:bg-emerald-400/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
                 onClick={continueRun}
               >
                 Continue
@@ -424,7 +479,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
           {(floor.status === "lost" || run.status === "caught") && (
             <button
               type="button"
-              className="pointer-events-auto mt-3 border border-rose-400/60 px-3 py-2 font-mono uppercase text-rose-200 hover:bg-rose-400/10"
+              className="pointer-events-auto mt-3 min-h-11 border border-rose-400/60 px-3 py-2 font-mono uppercase text-rose-200 hover:bg-rose-400/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
               onClick={restartRun}
             >
               New Run
@@ -555,19 +610,48 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+const LONG_PRESS_MARK_MS = 380;
+const LONG_PRESS_CANCEL_PX = 12;
+
+function ariaLabelForTile(cell: GameCell): string {
+  const view =
+    cell.view === "unknown"
+      ? "unknown"
+      : cell.view === "revealed"
+        ? cell.clueVisible
+          ? `revealed, clue ${cell.adjacentBlocked}`
+          : "revealed"
+        : cell.view;
+  return `Hex tile at axial ${cell.q},${cell.r}, ${view}. Tap to reveal. Long press to mark blocked.`;
+}
+
 function GameTile({
   cell,
   selected,
   isGenerating,
   onReveal,
-  onMark,
+  onContextMenuMark,
+  onLongPressMark,
 }: {
   cell: GameCell;
   selected: boolean;
   isGenerating: boolean;
   onReveal: () => void;
-  onMark: (event: MouseEvent) => void;
+  onContextMenuMark: (event: MouseEvent) => void;
+  onLongPressMark: () => void;
 }) {
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressConsumedClickRef = useRef(false);
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current !== null) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressStartRef.current = null;
+  }
+
   const { x, y } = hexToPixel(cell.q, cell.r);
   const color = colorForCell(cell);
   const glyphVariant = glyphForCell(cell, isGenerating);
@@ -586,18 +670,55 @@ function GameTile({
     >
       <button
         type="button"
-        className="hex-node relative flex h-full w-full items-center justify-center overflow-visible p-4 text-center"
+        aria-label={ariaLabelForTile(cell)}
+        className="hex-node relative flex h-full w-full min-h-11 min-w-11 items-center justify-center overflow-visible p-4 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
         style={{
           touchAction: "none",
           WebkitTouchCallout: "none",
           WebkitUserSelect: "none",
           userSelect: "none",
         }}
+        onPointerDown={event => {
+          if (event.pointerType === "mouse" && event.button !== 0) return;
+          event.stopPropagation();
+          longPressConsumedClickRef.current = false;
+          longPressStartRef.current = { x: event.clientX, y: event.clientY };
+          clearLongPressTimer();
+          longPressTimerRef.current = setTimeout(() => {
+            longPressConsumedClickRef.current = true;
+            longPressTimerRef.current = null;
+            longPressStartRef.current = null;
+            onLongPressMark();
+          }, LONG_PRESS_MARK_MS);
+        }}
+        onPointerMove={event => {
+          if (
+            !longPressStartRef.current ||
+            longPressTimerRef.current === null
+          ) {
+            return;
+          }
+          const dx = event.clientX - longPressStartRef.current.x;
+          const dy = event.clientY - longPressStartRef.current.y;
+          if (Math.hypot(dx, dy) > LONG_PRESS_CANCEL_PX) {
+            clearLongPressTimer();
+          }
+        }}
+        onPointerUp={clearLongPressTimer}
+        onPointerCancel={clearLongPressTimer}
+        onPointerLeave={clearLongPressTimer}
         onClick={event => {
           event.stopPropagation();
+          if (longPressConsumedClickRef.current) {
+            longPressConsumedClickRef.current = false;
+            return;
+          }
           onReveal();
         }}
-        onContextMenu={onMark}
+        onContextMenu={event => {
+          clearLongPressTimer();
+          onContextMenuMark(event);
+        }}
       >
         <svg
           className="absolute inset-0 h-full w-full"
@@ -621,11 +742,7 @@ function GameTile({
             strokeLinejoin="round"
             strokeLinecap="round"
             strokeDasharray={
-              isGenerating
-                ? "10 8"
-                : cell.view === "marked"
-                  ? "8 5"
-                  : undefined
+              isGenerating ? "10 8" : cell.view === "marked" ? "8 5" : undefined
             }
           />
         </svg>
@@ -755,10 +872,7 @@ function titleForCell(cell: GameCell, isGenerating = false): string {
   return cell.dressing?.title ?? "Unmapped";
 }
 
-function glyphForCell(
-  cell: GameCell,
-  isGenerating: boolean
-): TileGlyphVariant {
+function glyphForCell(cell: GameCell, isGenerating: boolean): TileGlyphVariant {
   if (isGenerating) return "generating";
   if (cell.q === 0 && cell.r === 0) return "entry";
   if (cell.view === "revealed") return "revealed";

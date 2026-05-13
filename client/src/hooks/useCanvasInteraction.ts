@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from "react";
 
 // Minimal local type — was imported from the deleted mind-mapper types.
 // Will be promoted to a shared module once GameHexBoard exists.
@@ -67,7 +67,11 @@ export function useCanvasInteraction(
     touchDragActiveRef,
   } = options;
 
-  const [viewState, setViewState] = useState<ViewState>({ x: 0, y: 0, zoom: 0.8 });
+  const [viewState, setViewState] = useState<ViewState>({
+    x: 0,
+    y: 0,
+    zoom: 0.8,
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [touchDistance, setTouchDistance] = useState(0);
 
@@ -83,17 +87,23 @@ export function useCanvasInteraction(
 
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0 || (e.target as HTMLElement).closest(".interactive-ui"))
+    if (
+      e.button !== 0 ||
+      (e.target as HTMLElement).closest(".interactive-ui, .hex-node")
+    )
       return;
     setIsDragging(true);
     hasDragged.current = false;
-    dragStart.current = { x: e.clientX - viewState.x, y: e.clientY - viewState.y };
+    dragStart.current = {
+      x: e.clientX - viewState.x,
+      y: e.clientY - viewState.y,
+    };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
     hasDragged.current = true;
-    setViewState((prev) => ({
+    setViewState(prev => ({
       ...prev,
       x: e.clientX - dragStart.current.x,
       y: e.clientY - dragStart.current.y,
@@ -112,15 +122,22 @@ export function useCanvasInteraction(
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (hasDragged.current) return;
     if (justDropped.current) return;
-    if ((e.target as HTMLElement).closest(".hex-node, .interactive-ui, .floating-action-bar")) return;
+    if (
+      (e.target as HTMLElement).closest(
+        ".hex-node, .interactive-ui, .floating-action-bar"
+      )
+    )
+      return;
 
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const screenX = (e.clientX - rect.left - centerX - viewState.x) / viewState.zoom;
-    const screenY = (e.clientY - rect.top - centerY - viewState.y) / viewState.zoom;
+    const screenX =
+      (e.clientX - rect.left - centerX - viewState.x) / viewState.zoom;
+    const screenY =
+      (e.clientY - rect.top - centerY - viewState.y) / viewState.zoom;
 
     const hexCoords = pixelToHex(screenX, screenY);
     const key = getNodeKey(hexCoords.q, hexCoords.r);
@@ -132,7 +149,7 @@ export function useCanvasInteraction(
 
   // Touch handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest(".interactive-ui")) return;
+    if ((e.target as HTMLElement).closest(".interactive-ui, .hex-node")) return;
 
     // If a tile drag is active, don't start canvas panning
     if (touchDragActiveRef?.current) return;
@@ -143,7 +160,10 @@ export function useCanvasInteraction(
       wasPinching.current = false;
       touchMaxDrift.current = 0;
       touchStartTime.current = Date.now();
-      touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      touchStartPos.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
       dragStart.current = {
         x: e.touches[0].clientX - viewState.x,
         y: e.touches[0].clientY - viewState.y,
@@ -171,7 +191,7 @@ export function useCanvasInteraction(
       }
 
       hasDragged.current = true;
-      setViewState((prev) => ({
+      setViewState(prev => ({
         ...prev,
         x: e.touches[0].clientX - dragStart.current.x,
         y: e.touches[0].clientY - dragStart.current.y,
@@ -183,7 +203,7 @@ export function useCanvasInteraction(
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const newTouchDistance = Math.sqrt(dx * dx + dy * dy);
       const scale = newTouchDistance / touchDistance;
-      setViewState((prev) => ({
+      setViewState(prev => ({
         ...prev,
         zoom: Math.min(Math.max(prev.zoom * scale, 0.1), 3),
       }));
@@ -204,7 +224,7 @@ export function useCanvasInteraction(
       !wasPinching.current &&
       touchStartPos.current &&
       touchMaxDrift.current < TAP_DISTANCE_THRESHOLD &&
-      (Date.now() - touchStartTime.current) < TAP_MAX_DURATION;
+      Date.now() - touchStartTime.current < TAP_MAX_DURATION;
 
     if (isTap && touchStartPos.current) {
       const target = e.target as HTMLElement;
@@ -213,8 +233,12 @@ export function useCanvasInteraction(
         if (rect) {
           const centerX = rect.width / 2;
           const centerY = rect.height / 2;
-          const screenX = (touchStartPos.current.x - rect.left - centerX - viewState.x) / viewState.zoom;
-          const screenY = (touchStartPos.current.y - rect.top - centerY - viewState.y) / viewState.zoom;
+          const screenX =
+            (touchStartPos.current.x - rect.left - centerX - viewState.x) /
+            viewState.zoom;
+          const screenY =
+            (touchStartPos.current.y - rect.top - centerY - viewState.y) /
+            viewState.zoom;
           const hexCoords = pixelToHex(screenX, screenY);
           const key = getNodeKey(hexCoords.q, hexCoords.r);
           if (!nodes[key]) {
@@ -237,9 +261,12 @@ export function useCanvasInteraction(
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      setViewState((prev) => ({
+      setViewState(prev => ({
         ...prev,
-        zoom: Math.min(Math.max(prev.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.1), 3),
+        zoom: Math.min(
+          Math.max(prev.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.1),
+          3
+        ),
       }));
     };
 
