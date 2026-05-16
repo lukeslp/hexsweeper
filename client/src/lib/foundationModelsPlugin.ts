@@ -1,18 +1,21 @@
 /**
  * Capacitor bridge to Apple's on-device LLM (FoundationModels, iOS 26+).
  *
- * Three plugin methods, three JS entry points that share a single timeout/
+ * Four plugin methods, four JS entry points that share a single timeout/
  * cache/diagnostics envelope (`runWithBridge`):
  *
  *   - `tryOnDeviceFirst`            → free-form string text
  *   - `tryOnDeviceIrisLineFirst`    → @Generable IrisLine (typed `{line}`)
  *   - `tryOnDeviceFloorFlavorFirst` → @Generable FloorFlavor (typed `{name, description}`)
+ *   - `tryOnDeviceTerminalTakeoverFirst` → @Generable TerminalTakeover (`{line}`)
+ *   - `tryOnDeviceFirstStreaming`       → free-form `generateStreaming` + chunk
+ *     events (`foundationModelsStreamChunk`) for terminal / HUD taps
  *
  * On non-iOS platforms (including web) these are no-ops that resolve null —
  * the caller falls back to a static text pack.
  */
 
-import { registerPlugin } from "@capacitor/core";
+import { registerPlugin, type Plugin } from "@capacitor/core";
 import { toast } from "sonner";
 import { getPlatform } from "./platform";
 
@@ -37,12 +40,28 @@ export interface FMAvailability {
   reason?: string;
 }
 
-export interface FoundationModelsPlugin {
+/** Native → JS event for `generateStreaming` partial text (aggregated so far). */
+export const FOUNDATION_MODELS_STREAM_EVENT = "foundationModelsStreamChunk";
+
+export interface FoundationModelsStreamChunk {
+  streamId: string;
+  text: string;
+}
+
+export interface FoundationModelsPlugin extends Plugin {
   /** Reports whether on-device generation can run on this device + OS. */
   isAvailable(): Promise<FMAvailability>;
 
   /** Free-form generation. Returns whatever text the model produces. */
   generate(opts: FMGenerateOptions): Promise<FMResponse>;
+
+  /**
+   * Free-form generation with incremental `FOUNDATION_MODELS_STREAM_EVENT`
+   * listener payloads `{ streamId, text }` (aggregated response text).
+   */
+  generateStreaming(
+    opts: FMGenerateOptions & { streamId: string }
+  ): Promise<FMResponse>;
 
   /**
    * @Generable IrisLine generation. Grammar-constrained so the framework
@@ -56,6 +75,11 @@ export interface FoundationModelsPlugin {
    * `{name: string, description: string}` in the `text` field.
    */
   generateFloorFlavor(opts: FMGenerateOptions): Promise<FMResponse>;
+
+  /**
+   * @Generable TerminalTakeover — one short iris.exe terminal line.
+   */
+  generateTerminalTakeover(opts: FMGenerateOptions): Promise<FMResponse>;
 }
 
 export const FoundationModels =
@@ -136,6 +160,11 @@ export interface FloorFlavor {
   description: string;
 }
 
+export interface TerminalTakeover {
+  /** One short iris.exe terminal line (max ~14 words). */
+  line: string;
+}
+
 // ── Bridge call envelope ────────────────────────────────────────────
 
 /**
@@ -206,6 +235,99 @@ export async function tryOnDeviceFirst(
   return runWithBridge(opts, (fm, payload) => fm.generate(payload));
 }
 
+export interface OnDeviceStreamOptions extends OnDeviceFirstOptions {
+  /** Correlate native chunks; a random id is assigned when omitted. */
+  streamId?: string;
+  /** Called with aggregated model text whenever a chunk arrives (iOS streaming). */
+  onStream?: (aggregatedText: string) => void;
+}
+
+/**
+ * Same contract as `tryOnDeviceFirst`, but on iOS uses `generateStreaming`
+ * and forwards partial text through `onStream`. Web/other platforms call
+ * `onStream` once after `tryOnDeviceFirst` completes (if text is non-null).
+ */
+export async function tryOnDeviceFirstStreaming(
+  opts: OnDeviceStreamOptions
+): Promise<{ text: string } | null> {
+  const timeoutMs = opts.timeoutMs ?? 20000;
+  const silent = opts.silentDiagnostics ?? false;
+  const streamId =
+    opts.streamId ??
+    `fm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+
+  if (getPlatform() !== "ios") {
+    const r = await tryOnDeviceFirst(opts);
+    if (r?.text && opts.onStream) opts.onStream(r.text);
+    return r;
+  }
+
+  const available = await isFoundationModelsAvailable();
+  if (!available) return null;
+
+  if (!silent) {
+    toast.info("✦ Trying on-device…", { duration: 800 });
+  }
+
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(
+      () => reject(new Error(`FM timeout after ${timeoutMs}ms`)),
+      timeoutMs
+    );
+  });
+
+  let listener: { remove: () => Promise<void> } | undefined;
+  if (opts.onStream) {
+    listener = await FoundationModels.addListener(
+      FOUNDATION_MODELS_STREAM_EVENT,
+      (info: FoundationModelsStreamChunk) => {
+        if (info.streamId === streamId && typeof info.text === "string") {
+          opts.onStream!(info.text);
+        }
+      }
+    );
+  }
+
+  try {
+    const fmCall = FoundationModels.generateStreaming({
+      prompt: opts.prompt,
+      systemPrompt: opts.systemPrompt,
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+      streamId,
+    });
+    const result = await Promise.race([fmCall, timeoutPromise]);
+    if (result.text && opts.onStream) {
+      opts.onStream(result.text);
+    }
+    return { text: result.text };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn("[FM] streaming failed, caller will fall back:", msg);
+    if (!silent) {
+      toast.error("On-device threw: " + msg, { duration: 4000 });
+    }
+    if (msg.startsWith("FM timeout")) {
+      invalidateFoundationModelsCache();
+      return null;
+    }
+    const fb = await tryOnDeviceFirst({
+      prompt: opts.prompt,
+      systemPrompt: opts.systemPrompt,
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+      timeoutMs: opts.timeoutMs,
+      silentDiagnostics: true,
+    });
+    if (fb?.text && opts.onStream) opts.onStream(fb.text);
+    return fb;
+  } finally {
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+    if (listener) void listener.remove();
+  }
+}
+
 // ── Typed @Generable helpers ────────────────────────────────────────
 // These route through the structured plugin methods and parse the
 // JSON-encoded result to a typed object. On parse failure (which should
@@ -257,6 +379,27 @@ export async function tryOnDeviceFloorFlavorFirst(
         name: parsed.name.trim(),
         description: parsed.description.trim(),
       };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @Generable TerminalTakeover. Short iris disruption line for the terminal.
+ */
+export async function tryOnDeviceTerminalTakeoverFirst(
+  opts: OnDeviceFirstOptions
+): Promise<TerminalTakeover | null> {
+  const result = await runWithBridge(opts, (fm, payload) =>
+    fm.generateTerminalTakeover(payload)
+  );
+  if (result === null) return null;
+  try {
+    const parsed = JSON.parse(result.text) as TerminalTakeover;
+    if (typeof parsed.line === "string" && parsed.line.trim().length > 0) {
+      return { line: parsed.line.trim().slice(0, 160) };
     }
     return null;
   } catch {

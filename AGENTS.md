@@ -4,7 +4,9 @@
 
 This is a Vite + React client with a Capacitor iOS target. Client code lives in
 `client/src`: gameplay in `client/src/game`, hooks in `client/src/hooks`, and
-platform/game helpers in `client/src/lib`. Native iOS code is under `ios/App`, including the
+platform/game helpers in `client/src/lib`. Terminal feed reducers live under
+`client/src/game/lib` (`terminalLog.ts`, `terminalTakeoverScheduler.ts`) with
+UI in `client/src/components/TerminalPanel.tsx`. Native iOS code is under `ios/App`, including the
 `FoundationModelsPlugin` bridge. Build output goes to `dist/public`; do not edit
 generated files there. Design and planning notes live in `docs/`.
 

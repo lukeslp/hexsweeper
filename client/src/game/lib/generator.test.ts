@@ -7,6 +7,20 @@ describe("generator", () => {
   // falling through to the rim-fallback, players see a degenerate
   // ring-of-blocked floor that's trivially solvable. The smoke fuzz
   // catches that regression class.
+  it("tags blocked cells with cellVariant in 0..3 at generation", () => {
+    const state = tryGenerateSolvableFloor({
+      floor: 6,
+      seed: "cell-variant-tier-smoke",
+    });
+    expect(state).not.toBeNull();
+    for (const c of Object.values(state!.cells)) {
+      if (c.truth === "blocked") {
+        expect(c.cellVariant).toBeGreaterThanOrEqual(0);
+        expect(c.cellVariant).toBeLessThanOrEqual(3);
+      }
+    }
+  });
+
   it("finds a solvable floor within budget for all 12 floors", () => {
     const seedsPerFloor = 30;
     for (let floor = 1; floor <= 12; floor++) {

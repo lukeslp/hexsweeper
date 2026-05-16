@@ -16,6 +16,7 @@
 - Tracks consecutive null / malformed generations **per `runId`** (map of breaker state).
 - After **3** failures, opens **12s** cooldown: `directExpansion` returns deterministic fallback immediately (`degradedByCircuit: true`) without calling the model.
 - `resetDirectorCircuit()` clears all runs; `resetDirectorCircuit(runId)` clears one run (tests + manual recovery).
+- **Terminal takeovers** (`tryOnDeviceTerminalTakeoverFirst`) share the same per-run circuit: when the director circuit is open, the game appends static iris takeover lines instead of calling the bridge (see `isDirectorCircuitOpen` in `director.ts`).
 
 ## Session HUD (`dress` counter)
 

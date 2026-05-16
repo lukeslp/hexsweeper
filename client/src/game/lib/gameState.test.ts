@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createFloorState, reduceFloor } from "./gameState";
+import {
+  applyCascadeDeductions,
+  createFloorState,
+  reduceFloor,
+} from "./gameState";
 import type { FloorState, GameCell, HexKey } from "./types";
+import { hexKey } from "./types";
 
 describe("gameState", () => {
   it("generates deterministic floors from floor and seed", () => {
@@ -13,7 +18,9 @@ describe("gameState", () => {
   });
 
   it("reveals a safe cell without spending the wrong budget", () => {
-    const floor = createFloorState(1, "safe-reveal");
+    const floor = createFloorState(1, "safe-reveal", {
+      warmStartDeductionCap: 0,
+    });
     const safe = findCell(
       floor,
       cell => cell.truth === "safe" && cell.view === "unknown"
@@ -24,7 +31,12 @@ describe("gameState", () => {
     expect(next.cells[safe.key].view).toBe("revealed");
     expect(next.cells[safe.key].clueVisible).toBe(true);
     expect(next.wrongsLeft).toBe(floor.wrongsLeft);
-    expect(next.lastEvent).toBe("correct-reveal");
+    if (next.status === "playing") {
+      expect(next.lastEvent).toBe("correct-reveal");
+    } else {
+      expect(next.status).toBe("won");
+      expect(next.lastEvent).toBe("floor-won");
+    }
   });
 
   it("breaks a blocked cell and spends wrong budget when revealed", () => {
@@ -61,7 +73,9 @@ describe("gameState", () => {
   });
 
   it("penalizes marking a safe cell", () => {
-    const floor = createFloorState(1, "wrong-mark");
+    const floor = createFloorState(1, "wrong-mark", {
+      warmStartDeductionCap: 0,
+    });
     const safe = findCell(
       floor,
       cell => cell.truth === "safe" && cell.view === "unknown"
@@ -75,7 +89,9 @@ describe("gameState", () => {
   });
 
   it("does not reveal a marked cell until it is unmarked", () => {
-    const floor = createFloorState(1, "marked-reveal");
+    const floor = createFloorState(1, "marked-reveal", {
+      warmStartDeductionCap: 0,
+    });
     const safe = findCell(
       floor,
       cell => cell.truth === "safe" && cell.view === "unknown"
@@ -142,6 +158,110 @@ describe("gameState", () => {
     expect(floor.status).toBe("lost");
     expect(floor.wrongsLeft).toBe(0);
     expect(floor.lastEvent).toBe("floor-lost");
+  });
+
+  it("applyCascadeDeductions reveals deduced safes and sets lastCascade rings", () => {
+    const a = hexKey(0, 0);
+    const b = hexKey(1, 0);
+    const c = hexKey(1, -1);
+    const cells: Record<HexKey, GameCell> = {
+      [a]: {
+        key: a,
+        q: 0,
+        r: 0,
+        truth: "safe",
+        view: "revealed",
+        adjacentBlocked: 0,
+        clueVisible: true,
+      },
+      [b]: {
+        key: b,
+        q: 1,
+        r: 0,
+        truth: "safe",
+        view: "unknown",
+        adjacentBlocked: 0,
+        clueVisible: false,
+      },
+      [c]: {
+        key: c,
+        q: 1,
+        r: -1,
+        truth: "safe",
+        view: "unknown",
+        adjacentBlocked: 0,
+        clueVisible: false,
+      },
+    };
+    const base: FloorState = {
+      floor: 1,
+      seed: "cascade-mini",
+      cells,
+      frontier: [b, c],
+      wrongsLeft: 4,
+      maxWrongs: 4,
+      irisControl: 0.1,
+      status: "playing",
+      lastEvent: "correct-reveal",
+    };
+    const out = applyCascadeDeductions(base, a);
+    expect(out.lastEvent).toBe("correct-reveal");
+    expect(out.wrongsLeft).toBe(base.wrongsLeft);
+    expect(out.lastCascade?.length).toBe(1);
+    expect(new Set(out.lastCascade![0])).toEqual(new Set([b, c]));
+    expect(out.cells[b]!.view).toBe("revealed");
+    expect(out.cells[c]!.view).toBe("revealed");
+  });
+
+  it("clears lastCascade via clearCascade without changing cells", () => {
+    const a = hexKey(0, 0);
+    const b = hexKey(1, 0);
+    const c = hexKey(1, -1);
+    const cells: Record<HexKey, GameCell> = {
+      [a]: {
+        key: a,
+        q: 0,
+        r: 0,
+        truth: "safe",
+        view: "revealed",
+        adjacentBlocked: 0,
+        clueVisible: true,
+      },
+      [b]: {
+        key: b,
+        q: 1,
+        r: 0,
+        truth: "safe",
+        view: "unknown",
+        adjacentBlocked: 0,
+        clueVisible: false,
+      },
+      [c]: {
+        key: c,
+        q: 1,
+        r: -1,
+        truth: "safe",
+        view: "unknown",
+        adjacentBlocked: 0,
+        clueVisible: false,
+      },
+    };
+    const base: FloorState = {
+      floor: 1,
+      seed: "cascade-mini",
+      cells,
+      frontier: [b, c],
+      wrongsLeft: 4,
+      maxWrongs: 4,
+      irisControl: 0.1,
+      status: "playing",
+      lastEvent: "correct-reveal",
+    };
+    const cascaded = applyCascadeDeductions(base, a);
+    expect(cascaded.lastCascade?.length).toBeTruthy();
+    const cleared = reduceFloor(cascaded, { type: "clearCascade" });
+    expect(cleared.lastCascade).toBeUndefined();
+    expect(snapshot(cleared)).toEqual(snapshot(cascaded));
   });
 });
 

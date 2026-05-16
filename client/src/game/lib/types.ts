@@ -22,6 +22,8 @@ export interface GameCell extends Axial {
   view: CellView;
   adjacentBlocked: number;
   clueVisible: boolean;
+  /** Mine-cluster visual tier (blocked cells only); set at generation. */
+  cellVariant?: 0 | 1 | 2 | 3;
   dressing?: TileDressing;
 }
 
@@ -37,6 +39,8 @@ export interface FloorState {
   irisControl: number;
   status: FloorStatus;
   lastEvent?: FloorEvent;
+  /** Auto-reveal cascade rings (hex axial distance from trigger); cleared after animation. */
+  lastCascade?: HexKey[][];
   /** True when solvability budget was exhausted and the rim-fallback board was used. */
   usedRimFallback?: boolean;
 }
@@ -47,6 +51,7 @@ export type FloorEvent =
   | "correct-mark"
   | "wrong-mark"
   | "tile-broken"
+  | "cascade-reveal"
   | "floor-won"
   | "floor-lost";
 

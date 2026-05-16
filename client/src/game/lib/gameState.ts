@@ -1,4 +1,5 @@
 import { computeFrontier, generateFloor } from "./generator";
+import { deriveDeductions, partitionCascadeRings } from "./solver";
 import {
   type FloorEvent,
   type FloorState,
@@ -13,10 +14,15 @@ export type GameAction =
   | { type: "markCell"; key: HexKey }
   | { type: "applyDressing"; dressing: Record<HexKey, TileDressing> }
   | { type: "breakRandomTile" }
+  | { type: "clearCascade" }
   | { type: "reset"; state: FloorState };
 
-export function createFloorState(floor: number, seed: string): FloorState {
-  return generateFloor({ floor, seed });
+export function createFloorState(
+  floor: number,
+  seed: string,
+  opts?: { warmStartDeductionCap?: number }
+): FloorState {
+  return generateFloor({ floor, seed, ...opts });
 }
 
 export function reduceFloor(state: FloorState, action: GameAction): FloorState {
@@ -39,6 +45,8 @@ export function reduceFloor(state: FloorState, action: GameAction): FloorState {
       return applyDressing(state, action.dressing);
     case "breakRandomTile":
       return breakRandomTile(state);
+    case "clearCascade":
+      return { ...state, lastCascade: undefined };
     default:
       return state;
   }
@@ -68,7 +76,7 @@ function revealCell(state: FloorState, key: HexKey): FloorState {
     });
   }
 
-  return finalize({
+  let afterReveal: FloorState = {
     ...state,
     cells: updateCell(state.cells, key, {
       view: "revealed",
@@ -76,7 +84,9 @@ function revealCell(state: FloorState, key: HexKey): FloorState {
     }),
     irisControl: clamp01(state.irisControl - 0.015),
     lastEvent: "correct-reveal",
-  });
+  };
+  afterReveal = applyCascadeDeductions(afterReveal, key);
+  return finalize(afterReveal);
 }
 
 function markCell(state: FloorState, key: HexKey): FloorState {
@@ -92,13 +102,17 @@ function markCell(state: FloorState, key: HexKey): FloorState {
   }
 
   const correct = cell.truth === "blocked";
-  return finalize({
+  let afterMark: FloorState = {
     ...state,
     cells: updateCell(state.cells, key, { view: "marked" }),
     wrongsLeft: correct ? state.wrongsLeft : Math.max(0, state.wrongsLeft - 1),
     irisControl: clamp01(state.irisControl + (correct ? -0.035 : 0.08)),
     lastEvent: correct ? "correct-mark" : "wrong-mark",
-  });
+  };
+  if (correct) {
+    afterMark = applyCascadeDeductions(afterMark, key);
+  }
+  return finalize(afterMark);
 }
 
 function applyDressing(
@@ -177,4 +191,42 @@ function updateCell(
 
 function clamp01(value: number): number {
   return Math.min(Math.max(value, 0), 1);
+}
+
+/**
+ * Auto-reveal all provably-safe unknown cells from visible clues + marks.
+ * Sets `lastCascade` rings (axial distance from trigger) when any extras reveal.
+ */
+export function applyCascadeDeductions(
+  state: FloorState,
+  triggerKey: HexKey
+): FloorState {
+  let cells = state.cells;
+  const toReveal = new Set<HexKey>();
+
+  while (true) {
+    const { provablySafe } = deriveDeductions(cells);
+    const batch = provablySafe.filter(k => cells[k]?.view === "unknown");
+    if (batch.length === 0) break;
+    for (const key of batch) {
+      toReveal.add(key);
+      cells = updateCell(cells, key, {
+        view: "revealed",
+        clueVisible: true,
+      });
+    }
+  }
+
+  if (toReveal.size === 0) {
+    return { ...state, cells };
+  }
+
+  const newKeys = Array.from(toReveal).sort((a, b) => a.localeCompare(b));
+  const rings = partitionCascadeRings(triggerKey, newKeys, cells);
+
+  return {
+    ...state,
+    cells,
+    lastCascade: rings.length > 0 ? rings : undefined,
+  };
 }

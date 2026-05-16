@@ -13,11 +13,16 @@ import {
   hexKey,
 } from "./types";
 import { makeRng } from "./rng";
-import { isSolverSolvable } from "./solver";
+import { deriveDeductions, isSolverSolvable } from "./solver";
 
 export interface GenerateFloorOptions {
   floor: number;
   seed: string;
+  /**
+   * Max auto-reveal steps after generation (constraint propagation).
+   * Default 80. Pass 0 in unit tests that need unknown safe cells.
+   */
+  warmStartDeductionCap?: number;
 }
 
 interface FloorParams {
@@ -88,6 +93,7 @@ const GENERATOR_BUDGET = 200;
 export function tryGenerateSolvableFloor({
   floor,
   seed,
+  warmStartDeductionCap,
 }: GenerateFloorOptions): FloorState | null {
   const params = floorParams(floor);
   for (let attempt = 0; attempt < GENERATOR_BUDGET; attempt++) {
@@ -97,6 +103,7 @@ export function tryGenerateSolvableFloor({
       params,
       attempt,
       blockedRate: params.blockedRate,
+      warmStartDeductionCap,
     });
     if (isSolverSolvable(candidate.cells)) {
       return candidate;
@@ -117,8 +124,46 @@ export function generateFloor(opts: GenerateFloorOptions): FloorState {
     attempt: GENERATOR_BUDGET,
     blockedRate: 1,
     rimFallback: true,
+    warmStartDeductionCap: opts.warmStartDeductionCap,
   });
   return { ...rim, usedRimFallback: true };
+}
+
+const WARM_START_DEDUCTION_CAP = 80;
+
+function countAdjacentBlockedAmongBlocked(
+  cell: Axial,
+  cells: Record<HexKey, GameCell>
+): number {
+  return neighborKeys(cell).filter(key => cells[key]?.truth === "blocked")
+    .length;
+}
+
+function cellVariantFromAmongBlocked(n: number): 0 | 1 | 2 | 3 {
+  if (n <= 0) return 0;
+  if (n === 1) return 1;
+  if (n <= 3) return 2;
+  return 3;
+}
+
+/** Deterministic auto-reveal from starting clues (capped). Mutates `cells`. */
+function applyWarmStartDeductionsInPlace(
+  cells: Record<HexKey, GameCell>,
+  cap: number
+): void {
+  if (cap <= 0) return;
+  let total = 0;
+  while (total < cap) {
+    const { provablySafe } = deriveDeductions(cells);
+    const batch = provablySafe.filter(k => cells[k]?.view === "unknown");
+    if (batch.length === 0) break;
+    for (const key of batch) {
+      if (total >= cap) break;
+      const c = cells[key];
+      cells[key] = { ...c, view: "revealed", clueVisible: true };
+      total++;
+    }
+  }
 }
 
 function generateCandidate({
@@ -128,6 +173,7 @@ function generateCandidate({
   attempt,
   blockedRate,
   rimFallback = false,
+  warmStartDeductionCap = WARM_START_DEDUCTION_CAP,
 }: GenerateFloorOptions & {
   params: FloorParams;
   attempt: number;
@@ -166,6 +212,15 @@ function generateCandidate({
       cell.clueVisible = rng() < params.clueRate;
     }
   }
+
+  for (const cell of Object.values(cells)) {
+    if (cell.truth === "blocked") {
+      const among = countAdjacentBlockedAmongBlocked(cell, cells);
+      cell.cellVariant = cellVariantFromAmongBlocked(among);
+    }
+  }
+
+  applyWarmStartDeductionsInPlace(cells, warmStartDeductionCap);
 
   return {
     floor,

@@ -3,7 +3,7 @@
 ## Loop
 
 1. **Boot** — player starts a run (`RunState` + `FloorState`).
-2. **Probe** — reveal/mark hex cells; deterministic puzzle truth resolves in `gameState.ts`.
+2. **Probe** — reveal/mark hex cells; deterministic puzzle truth resolves in `gameState.ts`. After a **correct** reveal or mark, `deriveDeductions` may auto-reveal additional safe unknowns (cascade); `lastCascade` drives staggered UI, then `clearCascade`.
 3. **Dress** — `directExpansion` labels tiles + `irisLine` (never mutates truth).
 4. **Resolve floor** — win = all safe revealed + blocked handled; loss = wrongs or iris pressure.
 5. **Branch** — player picks **Safe / Loot / Risk** lane (`setRouteChoice`) which salts the next floor seed and nudges pressure meters.
@@ -12,11 +12,11 @@
 
 ## Clocks
 
-| Clock | Storage | Role |
-|-------|---------|------|
-| Local mistakes | `FloorState.wrongsLeft`, `irisControl` | Immediate tactical failure pressure. |
-| Regional tempo | `RunState.regionalPressure` | Anti-grind / route tension (0–1). |
-| Campaign entropy | `RunState.campaignEntropy` | Long-horizon escalation (0–1). |
+| Clock            | Storage                                | Role                                 |
+| ---------------- | -------------------------------------- | ------------------------------------ |
+| Local mistakes   | `FloorState.wrongsLeft`, `irisControl` | Immediate tactical failure pressure. |
+| Regional tempo   | `RunState.regionalPressure`            | Anti-grind / route tension (0–1).    |
+| Campaign entropy | `RunState.campaignEntropy`             | Long-horizon escalation (0–1).       |
 
 ## Progression policy
 
@@ -26,3 +26,9 @@
 ## Milestones
 
 `milestoneBand(floor)` → `shallow | mid | deep | abyss | endless` for HUD + telemetry.
+
+## Terminal (presentation)
+
+Parallel to probe/dress: `FloorEvent` values map to deterministic `[evt]` lines
+(`terminalLog.ts`); `terminalTakeoverScheduler` may append iris takeover lines
+(on-device or static fallback). The terminal never mutates `FloorState`.

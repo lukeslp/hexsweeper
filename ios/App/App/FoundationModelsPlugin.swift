@@ -11,10 +11,12 @@ import FoundationModels
 /// or Apple Intelligence is missing — the JS caller falls back to a
 /// static text pack or, in v1.1+, a cloud proxy.
 ///
-/// Three methods:
+/// Structured / free-form methods:
 ///   - `generate(prompt, ...)`               → free-form String
+///   - `generateStreaming(prompt, streamId, ...)` → same String + `foundationModelsStreamChunk` events
 ///   - `generateIrisLine(prompt, ...)`       → @Generable IrisLine, JSON-encoded
 ///   - `generateFloorFlavor(prompt, ...)`    → @Generable FloorFlavor, JSON-encoded
+///   - `generateTerminalTakeover(prompt, ...)` → @Generable TerminalTakeover, JSON-encoded
 ///
 /// The Generable macro emits a schema the framework uses for
 /// grammar-constrained decoding — the model literally cannot emit
@@ -41,6 +43,13 @@ struct FloorFlavor: Codable {
     @Guide(description: "Single biome-flavor sentence, 6 to 18 words. Cyberpunk tone.")
     var description: String
 }
+
+@available(iOS 26.0, *)
+@Generable
+struct TerminalTakeover: Codable {
+    @Guide(description: "One hostile iris.exe terminal line, max 14 words. No quotation marks, no labels, terse glitchy tone.")
+    var line: String
+}
 #endif
 
 @objc(FoundationModelsPlugin)
@@ -50,8 +59,10 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generate", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "generateStreaming", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generateIrisLine", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generateFloorFlavor", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "generateTerminalTakeover", returnType: CAPPluginReturnPromise),
     ]
 
     @objc func isAvailable(_ call: CAPPluginCall) {
@@ -132,6 +143,63 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    /// Free-form generation with incremental JS notifications (`foundationModelsStreamChunk`).
+    @objc func generateStreaming(_ call: CAPPluginCall) {
+        guard let prompt = call.getString("prompt") else {
+            call.reject("Missing required field: prompt")
+            return
+        }
+        let streamId = call.getString("streamId") ?? UUID().uuidString
+        let systemPrompt = call.getString("systemPrompt")
+        let temperature = call.getDouble("temperature") ?? 0.7
+        let maxTokens = call.getInt("maxTokens") ?? 1024
+
+        if #available(iOS 26.0, *) {
+            #if canImport(FoundationModels)
+            Task {
+                do {
+                    let model = SystemLanguageModel.default
+                    guard case .available = model.availability else {
+                        call.reject("FoundationModels unavailable on this device")
+                        return
+                    }
+
+                    let session = Self.makeSession(systemPrompt: systemPrompt)
+                    let options = GenerationOptions(
+                        temperature: temperature,
+                        maximumResponseTokens: maxTokens
+                    )
+
+                    let finalText = try await Self.withTimeout(seconds: 15) {
+                        var accumulated = ""
+                        let stream = session.streamResponse(options: options) { prompt }
+                        for try await piece in stream {
+                            accumulated = piece
+                            self.notifyListeners(
+                                "foundationModelsStreamChunk",
+                                data: [
+                                    "streamId": streamId,
+                                    "text": accumulated,
+                                ]
+                            )
+                        }
+                        return accumulated
+                    }
+                    call.resolve(["text": finalText])
+                } catch is FoundationModelsTimeout {
+                    call.reject("FoundationModels generation timed out after 15s")
+                } catch {
+                    call.reject("FoundationModels generation failed: \(error.localizedDescription)")
+                }
+            }
+            #else
+            call.reject("FoundationModels framework not in SDK at compile time")
+            #endif
+        } else {
+            call.reject("iOS < 26.0; FoundationModels unavailable")
+        }
+    }
+
     /// Grammar-constrained iris.exe taunt generation via @Generable.
     /// Returns `{text: <JSON-encoded IrisLine>}` — JS parses the JSON to
     /// extract `.line`. Same return shape as `generate` so the bridge
@@ -153,6 +221,18 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
         if #available(iOS 26.0, *) {
             #if canImport(FoundationModels)
             generateStructured(call: call, type: FloorFlavor.self)
+            #else
+            call.reject("FoundationModels framework not in SDK at compile time")
+            #endif
+        } else {
+            call.reject("iOS < 26.0; FoundationModels unavailable")
+        }
+    }
+
+    @objc func generateTerminalTakeover(_ call: CAPPluginCall) {
+        if #available(iOS 26.0, *) {
+            #if canImport(FoundationModels)
+            generateStructured(call: call, type: TerminalTakeover.self)
             #else
             call.reject("FoundationModels framework not in SDK at compile time")
             #endif

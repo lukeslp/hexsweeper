@@ -26,6 +26,11 @@ export interface ExpansionDirectorInput {
   recentEvents: Array<
     "correct" | "wrong" | "marked-hazard" | "marked-safe" | "tile-broken"
   >;
+  /**
+   * Incremental raw model text while the director request is in flight
+   * (on-device streaming when supported; otherwise one callback at end).
+   */
+  onStream?: (partialResponseText: string) => void;
 }
 
 export interface ExpansionDirectorOutput {
@@ -46,6 +51,7 @@ export interface TextGenerator {
     maxTokens: number;
     timeoutMs: number;
     silentDiagnostics: boolean;
+    onStream?: (partialResponseText: string) => void;
   }): Promise<{ text: string } | null>;
 }
 
@@ -120,7 +126,8 @@ function recordDirectorSuccess(runId: string): void {
   getCircuit(runId).consecutiveFailures = 0;
 }
 
-function circuitOpen(runId: string): boolean {
+/** True while the dressing circuit is in cooldown (FM calls should skip on-device). */
+export function isDirectorCircuitOpen(runId: string): boolean {
   return Date.now() < getCircuit(runId).circuitOpenUntil;
 }
 
@@ -131,7 +138,7 @@ export async function directExpansion(
   const fallback = fallbackDirectorOutput(input);
   const runId = input.runId;
 
-  if (circuitOpen(runId)) {
+  if (isDirectorCircuitOpen(runId)) {
     return { ...fallback, degradedByCircuit: true };
   }
 
@@ -141,6 +148,7 @@ export async function directExpansion(
     maxTokens: 900,
     timeoutMs: 16000,
     silentDiagnostics: true,
+    onStream: input.onStream,
   });
 
   if (!result) {

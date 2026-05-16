@@ -8,14 +8,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const fmBehavior = vi.hoisted(() => ({
   isAvailable: vi.fn(async () => ({ available: true })),
   generate: vi.fn(),
+  generateStreaming: vi.fn(),
+  generateTerminalTakeover: vi.fn(),
+  addListener: vi.fn(async () => ({
+    remove: vi.fn(async () => {}),
+  })),
 }));
 
 vi.mock("@capacitor/core", () => ({
   registerPlugin: () => ({
     isAvailable: fmBehavior.isAvailable,
     generate: fmBehavior.generate,
+    generateStreaming: fmBehavior.generateStreaming,
     generateIrisLine: vi.fn(),
     generateFloorFlavor: vi.fn(),
+    generateTerminalTakeover: fmBehavior.generateTerminalTakeover,
+    addListener: fmBehavior.addListener,
   }),
 }));
 
@@ -32,6 +40,8 @@ vi.mock("sonner", () => ({
 
 import {
   tryOnDeviceFirst,
+  tryOnDeviceFirstStreaming,
+  tryOnDeviceTerminalTakeoverFirst,
   isFoundationModelsAvailable,
   invalidateFoundationModelsCache,
   __setAvailabilityCacheForTest,
@@ -44,6 +54,9 @@ describe("foundationModelsPlugin", () => {
     fmBehavior.isAvailable.mockClear();
     fmBehavior.isAvailable.mockResolvedValue({ available: true });
     fmBehavior.generate.mockReset();
+    fmBehavior.generateStreaming.mockReset();
+    fmBehavior.generateTerminalTakeover.mockReset();
+    fmBehavior.addListener.mockClear();
   });
 
   afterEach(() => {
@@ -109,5 +122,38 @@ describe("foundationModelsPlugin", () => {
 
     await isFoundationModelsAvailable();
     expect(fmBehavior.isAvailable).toHaveBeenCalledTimes(1);
+  });
+
+  it("parses TerminalTakeover JSON from generateTerminalTakeover", async () => {
+    __setAvailabilityCacheForTest(null);
+    await isFoundationModelsAvailable();
+    fmBehavior.generateTerminalTakeover.mockResolvedValue({
+      text: JSON.stringify({ line: "  glitch line  " }),
+    });
+    const out = await tryOnDeviceTerminalTakeoverFirst({
+      prompt: "x",
+      temperature: 0.8,
+      maxTokens: 40,
+      silentDiagnostics: true,
+    });
+    expect(out).toEqual({ line: "glitch line" });
+    expect(fmBehavior.generateTerminalTakeover).toHaveBeenCalledTimes(1);
+  });
+
+  it("tryOnDeviceFirstStreaming invokes onStream with final text on success", async () => {
+    __setAvailabilityCacheForTest(null);
+    await isFoundationModelsAvailable();
+    fmBehavior.generateStreaming.mockResolvedValue({ text: "full-json" });
+    const chunks: string[] = [];
+    const out = await tryOnDeviceFirstStreaming({
+      prompt: "p",
+      temperature: 0.7,
+      maxTokens: 100,
+      silentDiagnostics: true,
+      onStream: t => chunks.push(t),
+    });
+    expect(out).toEqual({ text: "full-json" });
+    expect(fmBehavior.generateStreaming).toHaveBeenCalledTimes(1);
+    expect(chunks).toContain("full-json");
   });
 });

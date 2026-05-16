@@ -4,22 +4,42 @@
  *   run metrics behind ?diag=1), dressing.
  * Inputs/Outputs: Consumes floor/run state and user interactions, emits updated game state.
  */
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import { useCanvasInteraction } from "@/hooks/useCanvasInteraction";
 import {
   appendSessionDiagSnapshot,
   loadSessionDiagSnapshots,
 } from "@/lib/sessionDiagLog";
-import { tryOnDeviceFirst } from "@/lib/foundationModelsPlugin";
+import {
+  tryOnDeviceFirstStreaming,
+  tryOnDeviceTerminalTakeoverFirst,
+} from "@/lib/foundationModelsPlugin";
 import { getValueCaptureStubGranted } from "@/lib/valueCaptureStub";
 import { HEX_HEIGHT, HEX_WIDTH } from "@/lib/hexConstants";
 import { hexToPixel, pixelToHex } from "@/lib/hexGrid";
 import { DiagnosticsPanel, readDiagQueryEnabled } from "./DiagnosticsPanel";
 import {
   directExpansion,
+  isDirectorCircuitOpen,
   type ExpansionDirectorInput,
   type PublicCellContext,
 } from "./lib/director";
+import {
+  createTakeoverSchedulerState,
+  fallbackTakeoverLine,
+  stepTakeoverScheduler,
+} from "./lib/terminalTakeoverScheduler";
+import {
+  floorEventToTerminalLines,
+  type TerminalLogAction,
+} from "./lib/terminalLog";
 import { tryDressFloor } from "./lib/dressingOrchestrator";
 import { createFloorState, reduceFloor } from "./lib/gameState";
 import {
@@ -36,6 +56,7 @@ import {
   type RunState,
 } from "./lib/runState";
 import type { FloorState, GameCell, HexKey } from "./lib/types";
+import { HEX_DIRECTIONS, hexKey } from "./lib/types";
 import { DressingGenerationGate } from "./lib/dressingGenerationGate";
 import { useSessionDiagnostics } from "./hooks/useSessionDiagnostics";
 
@@ -49,9 +70,14 @@ export interface GameAppProps {
   onExit?: () => void;
   /** Run length policy (infinite default vs classic finite escape). */
   progressionPolicy: RunProgressionPolicy;
+  dispatchTerminal: (action: TerminalLogAction) => void;
 }
 
-export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
+export function GameApp({
+  onExit,
+  progressionPolicy,
+  dispatchTerminal,
+}: GameAppProps) {
   const [run, setRun] = useState<RunState>(() =>
     createRunState({ seed: "hexodus-dev-run", progression: progressionPolicy })
   );
@@ -84,20 +110,88 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
   runRef.current = run;
   const [diagMode, setDiagMode] = useState(false);
   const [diagSimRim, setDiagSimRim] = useState(false);
+  const lastActionKeyRef = useRef<HexKey | undefined>(undefined);
+  const takeoverSchedRef = useRef(createTakeoverSchedulerState());
+  const terminalSigRef = useRef("");
 
   useEffect(() => {
     setDiagMode(readDiagQueryEnabled());
   }, []);
 
-  async function dressingGenerate(
-    opts: Parameters<typeof tryOnDeviceFirst>[0]
-  ): Promise<{ text: string } | null> {
-    if (diagDirectorNullsRef.current > 0) {
-      diagDirectorNullsRef.current -= 1;
-      return null;
+  useEffect(() => {
+    const ev = floor.lastEvent;
+    if (!ev) return;
+    const revealedCount = Object.values(floor.cells).filter(
+      c => c.view === "revealed"
+    ).length;
+    const sig = `${run.runId}|${floor.floor}|${ev}|${floor.wrongsLeft}|${floor.irisControl}|${floor.status}|${revealedCount}|${lastActionKeyRef.current ?? ""}`;
+    if (sig === terminalSigRef.current) return;
+    terminalSigRef.current = sig;
+
+    const ctx = {
+      floor: floor.floor,
+      key: lastActionKeyRef.current,
+      cascadeCellCount: floor.lastCascade?.flat().length ?? 0,
+      cascadeRingCount: floor.lastCascade?.length ?? 0,
+      irisControl: floor.irisControl,
+      wrongsLeft: floor.wrongsLeft,
+      maxWrongs: floor.maxWrongs,
+      status: floor.status,
+    };
+    const base = floorEventToTerminalLines(ev, ctx);
+    const extra =
+      floor.lastCascade?.length &&
+      (ev === "correct-reveal" || ev === "correct-mark")
+        ? floorEventToTerminalLines("cascade-reveal", ctx)
+        : [];
+    const entries = [...base, ...extra];
+    if (entries.length) {
+      dispatchTerminal({ type: "appendMany", entries });
     }
-    return tryOnDeviceFirst(opts);
-  }
+
+    const step = stepTakeoverScheduler(takeoverSchedRef.current, {
+      floor: floor.floor,
+      floorEvent: ev,
+      irisControl: floor.irisControl,
+    });
+    takeoverSchedRef.current = step.next;
+    if (step.kind && step.fmPrompt) {
+      const fb = fallbackTakeoverLine(step.kind, step.next.eventCount);
+      if (isDirectorCircuitOpen(run.runId)) {
+        dispatchTerminal({ type: "append", channel: "iris", text: fb });
+      } else {
+        void tryOnDeviceTerminalTakeoverFirst({
+          prompt: step.fmPrompt.prompt,
+          systemPrompt: step.fmPrompt.systemPrompt,
+          temperature: 0.88,
+          maxTokens: 96,
+          timeoutMs: 14000,
+          silentDiagnostics: true,
+        }).then(res => {
+          dispatchTerminal({
+            type: "append",
+            channel: "iris",
+            text: res?.line ?? fb,
+          });
+        });
+      }
+    }
+  }, [floor, run.runId, dispatchTerminal]);
+
+  useEffect(() => {
+    if (!floor.lastCascade?.length) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mq.matches) {
+      setFloor(f => reduceFloor(f, { type: "clearCascade" }));
+      return;
+    }
+    const rings = floor.lastCascade.length;
+    const ms = rings * 80 + 100;
+    const id = window.setTimeout(() => {
+      setFloor(f => reduceFloor(f, { type: "clearCascade" }));
+    }, ms);
+    return () => window.clearTimeout(id);
+  }, [floor.lastCascade, floor.floor, floor.seed]);
 
   const canvas = useCanvasInteraction({
     containerRef,
@@ -116,6 +210,16 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
     }
     return Object.values(floor.cells).filter(cell => keys.has(cell.key));
   }, [floor]);
+
+  const cascadeRingByKey = useMemo(() => {
+    const rings = floor.lastCascade;
+    if (!rings?.length) return null;
+    const m = new Map<HexKey, number>();
+    rings.forEach((ring, idx) => {
+      for (const k of ring) m.set(k, idx);
+    });
+    return m;
+  }, [floor.lastCascade]);
 
   function exportSessionDiagBundle() {
     appendSessionDiagSnapshot({
@@ -164,6 +268,8 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
       ...frontierCells,
     ]);
 
+    const streamKey = `dress:${runSnap.runId}:${nextFloor.floor}:${opGen}`;
+
     const input: ExpansionDirectorInput = {
       runId: runSnap.runId,
       floor: nextFloor.floor,
@@ -171,6 +277,15 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
       expandedCell: publicCellContext(expandedCell),
       newCells,
       recentEvents: eventToDirectorHistory(nextFloor.lastEvent),
+      onStream: partial => {
+        const cap = 900;
+        const body = partial.length > cap ? `${partial.slice(0, cap)}…` : partial;
+        dispatchTerminal({
+          type: "setStreamLine",
+          key: streamKey,
+          text: `[map] ${body}`,
+        });
+      },
     };
 
     const pendingKeys = newCells.map(cell => cell.key);
@@ -182,6 +297,19 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
       });
     }
 
+    async function generateWithDressStream(
+      genOpts: Parameters<typeof tryOnDeviceFirstStreaming>[0]
+    ): Promise<{ text: string } | null> {
+      if (diagDirectorNullsRef.current > 0) {
+        diagDirectorNullsRef.current -= 1;
+        return null;
+      }
+      return tryOnDeviceFirstStreaming({
+        ...genOpts,
+        streamId: streamKey,
+      });
+    }
+
     try {
       const result = await tryDressFloor({
         gate: dressingGateRef.current,
@@ -189,7 +317,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
         nextFloor,
         input,
         directExpansion,
-        generate: dressingGenerate,
+        generate: generateWithDressStream,
       });
 
       if (result.kind === "no-new-cells") {
@@ -199,11 +327,21 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
       recordDirectorMetrics(result.output);
 
       if (result.kind === "discarded") {
+        dispatchTerminal({
+          type: "setStreamLine",
+          key: streamKey,
+          text: "[map] discarded (stale generation)",
+        });
         return { dressed: nextFloor, committed: false };
       }
 
       setIrisLine(result.output.irisLine);
       setPacingBand(result.output.pacingBand);
+      dispatchTerminal({
+        type: "setStreamLine",
+        key: streamKey,
+        text: `[map] ${result.output.source} · ${pendingKeys.length} cell(s) · iris line applied`,
+      });
       return { dressed: result.floor, committed: true };
     } finally {
       if (pendingKeys.length > 0) {
@@ -219,7 +357,9 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
   async function revealCell(key: HexKey) {
     const cell = floor.cells[key];
     if (!cell || floor.status !== "playing") return;
+    if (floor.lastCascade?.length) return;
 
+    lastActionKeyRef.current = key;
     const opGen = dressingGateRef.current.begin();
     setSelectedKey(key);
     const next = reduceFloor(floor, { type: "revealCell", key });
@@ -239,6 +379,8 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
   }
 
   function applyMarkAtKey(key: HexKey) {
+    if (floor.lastCascade?.length) return;
+    lastActionKeyRef.current = key;
     setSelectedKey(key);
     const next = reduceFloor(floor, { type: "markCell", key });
     setFloor(next);
@@ -297,6 +439,11 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
     setSelectedKey("0,0" as HexKey);
     setIrisLine("iris.exe withdraws behind the next lattice.");
     setPacingBand(undefined);
+    dispatchTerminal({
+      type: "append",
+      channel: "event",
+      text: `[evt] RUN advance floor=${nextRun.floor}`,
+    });
     setFloor(nextFloor);
   }
 
@@ -324,6 +471,12 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
     setPacingBand(undefined);
     setInterFloorRoute(null);
     resetSessionDiag();
+    takeoverSchedRef.current = createTakeoverSchedulerState();
+    dispatchTerminal({
+      type: "append",
+      channel: "event",
+      text: "[evt] RUN restart",
+    });
     setFloor(nextFloor);
   }
 
@@ -348,7 +501,7 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-background text-foreground dark">
+    <div className="absolute inset-0 bg-background text-foreground dark">
       <div
         ref={containerRef}
         className={`relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.08),transparent_34%),linear-gradient(180deg,#070707,#101012)] ${
@@ -460,10 +613,12 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
             transformOrigin: "0 0",
           }}
         >
+          <MineVirusThreads cells={floor.cells} />
           {visibleCells.map(cell => (
             <GameTile
               key={cell.key}
               cell={cell}
+              cascadeRing={cascadeRingByKey?.get(cell.key)}
               selected={selectedKey === cell.key}
               isGenerating={
                 pendingDressingKeys.has(cell.key) && cell.dressing === undefined
@@ -669,6 +824,102 @@ function IrisApproachOverlay({ pressure }: { pressure: number }) {
   );
 }
 
+function MineVirusThreads({ cells }: { cells: Record<HexKey, GameCell> }) {
+  const { segs, box } = useMemo(() => {
+    const mines = Object.values(cells).filter(
+      c => c.view === "marked" || c.view === "broken"
+    );
+    const keySet = new Set(mines.map(m => m.key));
+    const seen = new Set<string>();
+    const out: Array<{
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      w: number;
+      o: number;
+      k: string;
+    }> = [];
+    for (const c of mines) {
+      for (const dir of HEX_DIRECTIONS) {
+        const nk = hexKey(c.q + dir.q, c.r + dir.r);
+        if (!keySet.has(nk)) continue;
+        const edge = c.key < nk ? `${c.key}|${nk}` : `${nk}|${c.key}`;
+        if (seen.has(edge)) continue;
+        seen.add(edge);
+        const nb = cells[nk];
+        if (!nb) continue;
+        const p1 = hexToPixel(c.q, c.r);
+        const p2 = hexToPixel(nb.q, nb.r);
+        const tier = Math.max(c.cellVariant ?? 0, nb.cellVariant ?? 0);
+        out.push({
+          x1: p1.x,
+          y1: p1.y,
+          x2: p2.x,
+          y2: p2.y,
+          w: 1 + tier * 0.9,
+          o: 0.22 + tier * 0.12,
+          k: edge,
+        });
+      }
+    }
+    if (out.length === 0) {
+      return {
+        segs: out,
+        box: null as null | {
+          minX: number;
+          minY: number;
+          w: number;
+          h: number;
+        },
+      };
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const s of out) {
+      minX = Math.min(minX, s.x1, s.x2);
+      minY = Math.min(minY, s.y1, s.y2);
+      maxX = Math.max(maxX, s.x1, s.x2);
+      maxY = Math.max(maxY, s.y1, s.y2);
+    }
+    const pad = 24;
+    minX -= pad;
+    minY -= pad;
+    maxX += pad;
+    maxY += pad;
+    const bw = Math.max(1, maxX - minX);
+    const bh = Math.max(1, maxY - minY);
+    return { segs: out, box: { minX, minY, w: bw, h: bh } };
+  }, [cells]);
+
+  if (segs.length === 0 || box === null) return null;
+
+  const { minX, minY, w, h } = box;
+
+  return (
+    <svg
+      className="pointer-events-none absolute z-[5] overflow-visible"
+      style={{ left: minX, top: minY, width: w, height: h }}
+      viewBox={`${minX} ${minY} ${w} ${h}`}
+      aria-hidden="true"
+    >
+      {segs.map(s => (
+        <line
+          key={s.k}
+          x1={s.x1}
+          y1={s.y1}
+          x2={s.x2}
+          y2={s.y2}
+          stroke={`rgba(251, 113, 133, ${s.o})`}
+          strokeWidth={s.w}
+        />
+      ))}
+    </svg>
+  );
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
@@ -688,8 +939,9 @@ function ariaLabelForTile(cell: GameCell): string {
   return `Hex tile at axial ${cell.q},${cell.r}, ${view}. Tap to reveal. Long press to mark blocked.`;
 }
 
-function GameTile({
+const GameTile = memo(function GameTile({
   cell,
+  cascadeRing,
   selected,
   isGenerating,
   onReveal,
@@ -697,6 +949,7 @@ function GameTile({
   onLongPressMark,
 }: {
   cell: GameCell;
+  cascadeRing?: number;
   selected: boolean;
   isGenerating: boolean;
   onReveal: () => void;
@@ -729,6 +982,13 @@ function GameTile({
         height: HEX_HEIGHT,
         transform: `translate(-50%, -50%) scale(${selected ? 1.08 : 0.94})`,
         zIndex: selected ? 20 : 10,
+        ...(cascadeRing !== undefined
+          ? {
+              opacity: 0,
+              animation: "cascadeTileReveal 90ms ease-out forwards",
+              animationDelay: `${cascadeRing * 80}ms`,
+            }
+          : {}),
       }}
     >
       <button
@@ -833,13 +1093,16 @@ function GameTile({
       </button>
     </div>
   );
-}
+});
 
 type TileGlyphVariant =
   | "entry"
   | "revealed"
   | "unknown"
   | "marked"
+  | "mine1"
+  | "mine2"
+  | "mine3"
   | "broken"
   | "generating";
 
@@ -885,6 +1148,26 @@ function TileGlyph({
           <path d="m12 4.2 8 14H4l8-14Z" />
           <path d="M12 9.2v5.2" />
           <path d="M12 17.1v.1" />
+        </>
+      )}
+      {variant === "mine1" && (
+        <>
+          <path d="m12 4.2 8 14H4l8-14Z" />
+          <circle cx="12" cy="13" r="1.6" fill="currentColor" />
+        </>
+      )}
+      {variant === "mine2" && (
+        <>
+          <path d="m12 4.2 8 14H4l8-14Z" />
+          <circle cx="10" cy="13" r="1.2" fill="currentColor" />
+          <circle cx="14" cy="13" r="1.2" fill="currentColor" />
+        </>
+      )}
+      {variant === "mine3" && (
+        <>
+          <path d="m12 4.2 8 14H4l8-14Z" />
+          <path d="M8.5 13h7" strokeWidth="2" />
+          <path d="M12 9.5v7" strokeWidth="2" />
         </>
       )}
       {variant === "broken" && (
@@ -939,8 +1222,20 @@ function glyphForCell(cell: GameCell, isGenerating: boolean): TileGlyphVariant {
   if (isGenerating) return "generating";
   if (cell.q === 0 && cell.r === 0) return "entry";
   if (cell.view === "revealed") return "revealed";
-  if (cell.view === "marked") return "marked";
-  if (cell.view === "broken") return "broken";
+  if (cell.view === "marked") {
+    const v = cell.cellVariant ?? 0;
+    if (v >= 3) return "mine3";
+    if (v === 2) return "mine2";
+    if (v === 1) return "mine1";
+    return "marked";
+  }
+  if (cell.view === "broken") {
+    const v = cell.cellVariant ?? 0;
+    if (v >= 3) return "mine3";
+    if (v === 2) return "mine2";
+    if (v === 1) return "mine1";
+    return "broken";
+  }
   return "unknown";
 }
 

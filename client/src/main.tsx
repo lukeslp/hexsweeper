@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { isCapacitor } from "@/lib/platform";
 import { BootErrorBoundary } from "@/lib/BootErrorBoundary";
@@ -7,6 +7,11 @@ import {
   isFoundationModelsAvailable,
   invalidateFoundationModelsCache,
 } from "@/lib/foundationModelsPlugin";
+import {
+  TerminalFeedProvider,
+  useTerminalFeed,
+} from "@/lib/terminalFeedContext";
+import { TerminalPanel } from "@/components/TerminalPanel";
 import { GameApp } from "@/game/GameApp";
 import {
   getValueCaptureStubGranted,
@@ -18,6 +23,7 @@ import {
   finiteProgression,
   type RunProgressionPolicy,
 } from "@/game/lib/runState";
+import type { TerminalLogAction } from "@/game/lib/terminalLog";
 import "./index.css";
 
 declare global {
@@ -136,21 +142,50 @@ function HexodusApp() {
   const [screen, setScreen] = useState<Screen>("boot");
   const [progressionPolicy, setProgressionPolicy] =
     useState<RunProgressionPolicy>(defaultProgression);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const { terminal, dispatchTerminal } = useTerminalFeed();
 
-  if (screen === "playing") {
-    return (
-      <GameApp
-        progressionPolicy={progressionPolicy}
-        onExit={() => setScreen("boot")}
-      />
-    );
-  }
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const fn = () => setReducedMotion(mq.matches);
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, []);
+
   return (
-    <HexodusBoot
-      progressionPolicy={progressionPolicy}
-      onProgressionPolicyChange={setProgressionPolicy}
-      onBegin={() => setScreen("playing")}
-    />
+    <div className="flex h-[100dvh] w-full flex-col bg-[#0a0a0a] text-emerald-300">
+      {screen === "boot" ? (
+        <>
+          <TerminalPanel
+            lines={terminal.lines}
+            layout="boot"
+            reducedMotion={reducedMotion}
+          />
+          <HexodusBoot
+            progressionPolicy={progressionPolicy}
+            onProgressionPolicyChange={setProgressionPolicy}
+            onBegin={() => setScreen("playing")}
+            dispatchTerminal={dispatchTerminal}
+          />
+        </>
+      ) : (
+        <>
+          <div className="relative min-h-0 flex-1">
+            <GameApp
+              progressionPolicy={progressionPolicy}
+              onExit={() => setScreen("boot")}
+              dispatchTerminal={dispatchTerminal}
+            />
+          </div>
+          <TerminalPanel
+            lines={terminal.lines}
+            layout="strip"
+            reducedMotion={reducedMotion}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
@@ -158,16 +193,31 @@ function HexodusBoot({
   onBegin,
   progressionPolicy,
   onProgressionPolicyChange,
+  dispatchTerminal,
 }: {
   onBegin: () => void;
   progressionPolicy: RunProgressionPolicy;
   onProgressionPolicyChange: (next: RunProgressionPolicy) => void;
+  dispatchTerminal: (action: TerminalLogAction) => void;
 }) {
   const platform = isCapacitor() ? "capacitor" : "web";
   const [iris, setIris] = useState<IrisState>({ status: "dormant" });
   const [commerceStub, setCommerceStub] = useState(() =>
     getValueCaptureStubGranted()
   );
+
+  useEffect(() => {
+    dispatchTerminal({
+      type: "appendMany",
+      entries: [
+        { channel: "event", text: "[evt] BOOT subsystem=hexodus" },
+        {
+          channel: "event",
+          text: `[evt] BOOT platform=${isCapacitor() ? "capacitor" : "web"}`,
+        },
+      ],
+    });
+  }, [dispatchTerminal]);
 
   const wake = async () => {
     setIris({ status: "waking" });
@@ -179,6 +229,11 @@ function HexodusBoot({
           status: "unavailable",
           reason:
             "Apple Intelligence not available (needs iOS 26+ on supported hardware, with Apple Intelligence enabled).",
+        });
+        dispatchTerminal({
+          type: "append",
+          channel: "event",
+          text: "[evt] IRIS_PROBE unavailable (bridge)",
         });
         return;
       }
@@ -199,31 +254,39 @@ function HexodusBoot({
           reason:
             "On-device call returned null (timeout, refusal, schema-parse fail, or framework unavailable).",
         });
+        dispatchTerminal({
+          type: "append",
+          channel: "event",
+          text: "[evt] IRIS_PROBE null response",
+        });
         return;
       }
       setIris({ status: "awake", line: result.line, latencyMs });
+      dispatchTerminal({
+        type: "append",
+        channel: "iris",
+        text: `> ${result.line}`,
+      });
     } catch (e) {
       setIris({
         status: "unavailable",
         reason: e instanceof Error ? e.message : String(e),
+      });
+      dispatchTerminal({
+        type: "append",
+        channel: "event",
+        text: `[evt] IRIS_PROBE error ${e instanceof Error ? e.message : String(e)}`,
       });
     }
   };
 
   return (
     <div
+      className="min-h-0 flex-1 overflow-y-auto px-4 py-4 text-emerald-400"
       style={{
-        position: "fixed",
-        inset: 0,
-        background: "#0a0a0a",
-        color: "#10b981",
         font: "14px ui-monospace, Menlo, monospace",
-        padding:
-          "max(env(safe-area-inset-top, 24px), 24px) 24px max(env(safe-area-inset-bottom, 24px), 24px)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-        overflow: "auto",
+        paddingTop: "max(env(safe-area-inset-top, 16px), 16px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 16px), 16px)",
       }}
     >
       <div style={{ color: "#34d399", fontSize: "20px", marginBottom: "12px" }}>
@@ -386,7 +449,14 @@ function HexodusBoot({
               </button>
             </div>
             <button
-              onClick={onBegin}
+              onClick={() => {
+                dispatchTerminal({
+                  type: "append",
+                  channel: "event",
+                  text: "[evt] RUN begin session=hexodus",
+                });
+                onBegin();
+              }}
               style={{
                 background: "transparent",
                 color: "#34d399",
@@ -449,7 +519,9 @@ function HexodusBoot({
 
 createRoot(rootEl).render(
   <BootErrorBoundary>
-    <HexodusApp />
+    <TerminalFeedProvider>
+      <HexodusApp />
+    </TerminalFeedProvider>
   </BootErrorBoundary>
 );
 window.__checkpoint?.("main: createRoot committed");
