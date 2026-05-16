@@ -1,6 +1,7 @@
 /**
  * File Purpose: Render/play the Hexodus floor board, tile interactions, and HUD.
- * Primary Functions: GameApp, GameTile, IrisApproachOverlay, route/pressure HUD, dressing.
+ * Primary Functions: GameApp, GameTile, IrisApproachOverlay, compact HUD (full
+ *   run metrics behind ?diag=1), dressing.
  * Inputs/Outputs: Consumes floor/run state and user interactions, emits updated game state.
  */
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
@@ -364,41 +365,48 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
       >
         <IrisApproachOverlay pressure={floor.irisControl} />
         <div className="interactive-ui pointer-events-none absolute left-0 right-0 top-0 z-50 flex items-start justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))]">
-          <div className="pointer-events-auto max-h-[calc(100vh-8rem)] overflow-y-auto border border-white/10 bg-black/50 px-3 py-2 text-xs text-muted-foreground backdrop-blur">
-            <div className="font-mono text-sm font-bold uppercase tracking-[0.18em] text-emerald-200">
-              Hexodus
+          <div className="pointer-events-auto max-h-[calc(100vh-8rem)] max-w-[min(16rem,calc(100vw-5rem))] overflow-y-auto border border-white/10 bg-black/50 px-2.5 py-1.5 text-[11px] leading-snug text-muted-foreground backdrop-blur">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-200">
+              <span>Hexodus</span>
               {commerceStubGranted ? (
-                <span className="ml-2 rounded border border-indigo-400/50 px-1.5 py-0.5 text-[9px] font-mono normal-case tracking-normal text-indigo-200">
-                  supporter stub
+                <span className="rounded border border-indigo-400/50 px-1 py-px text-[8px] font-mono normal-case tracking-normal text-indigo-200">
+                  stub
                 </span>
               ) : null}
             </div>
-            <div>
-              run floor {run.floor} · band {milestoneBand(run.floor)}
+            <div className="mt-0.5 text-[11px] text-foreground/90">
+              Floor {run.floor}
               {run.progression.mode === "finite" && run.progression.maxFloors
-                ? ` / cap ${run.progression.maxFloors}`
-                : " · endless"}
+                ? `/${run.progression.maxFloors}`
+                : ""}
+              <span className="text-muted-foreground"> · </span>
+              wrongs {floor.wrongsLeft}/{floor.maxWrongs}
+              <span className="text-muted-foreground"> · </span>
+              iris {Math.round(floor.irisControl * 100)}%
             </div>
-            <div>
-              board {floor.floor} · wrongs {floor.wrongsLeft}/{floor.maxWrongs}
-            </div>
-            <div>
-              pressure {Math.round(run.regionalPressure * 100)}% · entropy{" "}
-              {Math.round(run.campaignEntropy * 100)}%
-            </div>
-            <div>sidegrades {run.sidegrades.length}</div>
-            <div>iris control {Math.round(floor.irisControl * 100)}%</div>
-            <div>pacing {pacingBand ?? "—"}</div>
-            <div>status {floor.status}</div>
-            <div className="font-mono text-[10px] text-muted-foreground/90">
-              session dress {sessionDiag.directorDressingCalls} · fb{" "}
-              {sessionDiag.directorFallbackCount} · circuit{" "}
-              {sessionDiag.directorCircuitDegradedCount} · rim{" "}
-              {sessionDiag.generatorRimFallbackCount}
-            </div>
+            {diagMode ? (
+              <div className="mt-1.5 space-y-0.5 border-t border-white/10 pt-1.5 text-[10px]">
+                <div>band {milestoneBand(run.floor)}</div>
+                <div>
+                  board {floor.floor} · status {floor.status}
+                </div>
+                <div>
+                  pressure {Math.round(run.regionalPressure * 100)}% · entropy{" "}
+                  {Math.round(run.campaignEntropy * 100)}%
+                </div>
+                <div>sidegrades {run.sidegrades.length}</div>
+                <div>pacing {pacingBand ?? "—"}</div>
+                <div className="font-mono text-[9px] text-muted-foreground/90">
+                  dress {sessionDiag.directorDressingCalls} · fb{" "}
+                  {sessionDiag.directorFallbackCount} · circuit{" "}
+                  {sessionDiag.directorCircuitDegradedCount} · rim{" "}
+                  {sessionDiag.generatorRimFallbackCount}
+                </div>
+              </div>
+            ) : null}
             {floor.usedRimFallback || diagSimRim ? (
-              <div className="text-[10px] text-amber-200">
-                floor used generator rim fallback (see docs/VERIFICATION_GATES)
+              <div className="mt-1 text-[9px] text-amber-200">
+                rim fallback — see VERIFICATION_GATES
               </div>
             ) : null}
             <DiagnosticsPanel
@@ -411,13 +419,27 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
               onExportDiagLog={exportSessionDiagBundle}
             />
           </div>
-          <div className="pointer-events-auto flex flex-wrap gap-2">
+          <div className="pointer-events-auto flex flex-wrap gap-1.5">
             <button
               type="button"
-              className="min-h-11 min-w-11 border border-white/10 bg-black/45 px-3 py-2 text-xs uppercase text-foreground backdrop-blur hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+              aria-label="Recenter board view"
+              title="Recenter board view"
+              className="flex h-10 w-10 items-center justify-center border border-white/10 bg-black/45 text-foreground backdrop-blur hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
               onClick={() => canvas.setViewState({ x: 0, y: 0, zoom: 0.8 })}
             >
-              Center
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+              </svg>
             </button>
             {onExit && (
               <button
@@ -460,11 +482,22 @@ export function GameApp({ onExit, progressionPolicy }: GameAppProps) {
             {titleForCell(selected, pendingDressingKeys.has(selected.key))}
           </div>
           <div className="mb-1 text-emerald-300">{irisLine}</div>
-          <div>
-            Tap reveals a safe cell. Long-press marks blocked (touch). Right-
-            click marks blocked (desktop). Tile text is LLM/fallback dressing;
-            numbers and win/loss come from deterministic puzzle truth.
+          <div className="text-[10px] leading-snug text-muted-foreground">
+            Tap to reveal · long-press (touch) or right-click (desktop) to mark
+            blocked.
           </div>
+          <details className="pointer-events-auto mt-1.5 text-[10px] text-muted-foreground">
+            <summary className="cursor-pointer select-none text-muted-foreground/80 hover:text-muted-foreground">
+              More about this run
+            </summary>
+            <p className="mt-1.5 border-l border-white/15 pl-2 leading-snug">
+              Tile titles and flavor text may come from on-device generation or
+              static fallback; adjacency numbers and win/loss always follow the
+              deterministic puzzle. Add{" "}
+              <span className="font-mono text-foreground/80">?diag=1</span> to
+              the URL for developer diagnostics on web builds.
+            </p>
+          </details>
           {floor.status === "won" && run.status === "active" && (
             <div className="pointer-events-auto mt-3 space-y-2">
               <div className="font-mono text-[10px] uppercase text-muted-foreground">
