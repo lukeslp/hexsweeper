@@ -27,6 +27,15 @@ export interface GameCell extends Axial {
   dressing?: TileDressing;
 }
 
+/** Public puzzle-facing cell snapshot for director / procedural dressing. */
+export interface PublicCellContext extends Axial {
+  key: HexKey;
+  view: CellView;
+  adjacentBlocked?: number;
+  clueVisible: boolean;
+  title?: string;
+}
+
 export type FloorStatus = "playing" | "won" | "lost";
 
 export interface FloorState {

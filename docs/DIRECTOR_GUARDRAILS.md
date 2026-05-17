@@ -2,27 +2,36 @@
 
 ## Authority boundary
 
-- **Allowed** — `TileDressing` text, `irisLine`, optional `pacingBand` enum (`calm | ramp | spike | recovery`).
+- **Procedural (deterministic)** — per-cell `TileDressing` (title, flavor, threatTone, visualHint) from `floorSeed` + cell key + public cell context via `proceduralTileDressing.ts`. Never calls Foundation Models.
+- **On-device LLM** — `irisLine` only (`tryOnDeviceIrisLineFirst` → `generateIrisLine`). Optional `pacingBand` is derived procedurally from `irisControl` + `recentEvents`.
 - **Forbidden** — any change to cell truth, coordinates, counts, or win/loss logic.
 
 ## Validation
 
-- JSON-only contract with brace-balanced recovery for prose wrappers.
-- Unknown tile keys dropped; enum coercion for `threatTone` / `visualHint`.
-- Partial tile lists merge with deterministic `fallbackDirectorOutput` per cell.
+- Iris lines clamped to 80 chars in `directExpansion`; null / timeout increments per-run circuit breaker (tiles still apply procedurally).
+- `generateTileDressing` / `TileDressingBatch` remain in the Swift plugin for now but are **not** on the GameApp hot path.
+
+## Platform short-circuit
+
+- On non-iOS (`getPlatform() !== "ios"`), `directExpansion` returns fallback immediately with `platformUnavailable: true` and **does not** increment the circuit breaker.
 
 ## Circuit breaker
 
-- Tracks consecutive null / malformed generations **per `runId`** (map of breaker state).
-- After **3** failures, opens **12s** cooldown: `directExpansion` returns deterministic fallback immediately (`degradedByCircuit: true`) without calling the model.
+- Tracks consecutive null / failed validations **per `runId`** (map of breaker state).
+- After **3** iris failures, opens **12s** cooldown: `directExpansion` skips FM for iris only (`degradedByCircuit: true`); tiles still dress procedurally.
 - `resetDirectorCircuit()` clears all runs; `resetDirectorCircuit(runId)` clears one run (tests + manual recovery).
 - **Terminal takeovers** (`tryOnDeviceTerminalTakeoverFirst`) share the same per-run circuit: when the director circuit is open, the game appends static iris takeover lines instead of calling the bridge (see `isDirectorCircuitOpen` in `director.ts`).
 
 ## Session HUD (`dress` counter)
 
-The `dress` field on the `GameApp` session line increments for **every** `directExpansion` completion after `await`, including outputs that are **not** applied because the `DressingGenerationGate` invalidated the operation (stale async after `continueRun` / `restartRun` / overlapping reveals). It is a **director attempt** counter, not strictly “tiles written”. See [VERIFICATION_GATES.md](VERIFICATION_GATES.md) session diagnostics for rollout ratios vs `fb` / `circuit`.
+The `dress` field on the `GameApp` session line increments for **every** `directExpansion` completion after `await`, including outputs discarded by `DressingGenerationGate` (stale async after `continueRun` / `restartRun` / overlapping reveals). It is a **director attempt** counter. Compare `fb` (iris fallback), `plat`, and `circuit` to `dress` — see [VERIFICATION_GATES.md](VERIFICATION_GATES.md).
+
+## Playability
+
+- Procedural tiles commit synchronously in `tryDressFloor` (or via `deferIris` in GameApp) before FM iris work; pending dressing keys clear when tiles land, not when iris returns.
 
 ## SLO notes (manual / future CI)
 
-- p95 `directExpansion` latency budget: inherit native timeout (16s) with UI spinner via pending dressing keys.
-- Target fallback rate under normal device conditions: **< 5%** sessions (telemetry TBD).
+- p95 iris latency budget: inherit native timeout (16s); tile labels do not wait on FM.
+- Target fallback rate under normal device conditions: **< 5%** sessions on iOS (telemetry TBD).
+- **`plat`** (platform fallback) on web is expected and must not trip the circuit-breaker SLO.
