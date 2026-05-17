@@ -16,6 +16,112 @@ let variantsDir = repoRoot.appendingPathComponent("icon-variants", isDirectory: 
 let iconDest = repoRoot
   .appendingPathComponent("ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png")
 let splashDir = repoRoot.appendingPathComponent("ios/App/App/Assets.xcassets/Splash.imageset")
+let sourceIconURL = repoRoot.appendingPathComponent(
+  "assets/hexodus-terminal-icon-source.png")
+let publicIconURL = repoRoot.appendingPathComponent(
+  "client/public/hexodus-icon.png")
+
+/// Matches `capacitor.config.ts` splash `backgroundColor` and boot UI.
+let splashBackground = NSColor(red: 10 / 255, green: 10 / 255, blue: 10 / 255, alpha: 1)
+
+func loadSourceIcon() -> NSImage? {
+  guard FileManager.default.fileExists(atPath: sourceIconURL.path) else { return nil }
+  guard let image = NSImage(contentsOf: sourceIconURL) else { return nil }
+  return image
+}
+
+func drawSourceIcon(_ source: NSImage, in rect: NSRect) {
+  NSGraphicsContext.saveGraphicsState()
+  if let ctx = NSGraphicsContext.current {
+    ctx.imageInterpolation = .high
+  }
+  source.draw(
+    in: rect,
+    from: NSRect(origin: .zero, size: source.size),
+    operation: .copy,
+    fraction: 1.0,
+    respectFlipped: true,
+    hints: nil
+  )
+  NSGraphicsContext.restoreGraphicsState()
+}
+
+/// Faint terminal-line + hex motifs echoing the app icon on large splash canvases.
+func drawSplashTerminalMotif(ctx: CGContext, s: CGFloat) {
+  let line = NSColor(red: 0.12, green: 0.85, blue: 0.45, alpha: 0.1).cgColor
+  ctx.setStrokeColor(line)
+  ctx.setLineWidth(max(1, s * 0.0012))
+  let left = s * 0.07
+  for i in 0..<7 {
+    let y = s * 0.14 + CGFloat(i) * s * 0.052
+    let w = s * (0.1 + CGFloat(i % 3) * 0.028)
+    ctx.move(to: CGPoint(x: left, y: y))
+    ctx.addLine(to: CGPoint(x: left + w, y: y))
+    ctx.strokePath()
+  }
+  let hexCenter = CGPoint(x: s * 0.8, y: s * 0.2)
+  let hexR = s * 0.055
+  let hexPath = flatHexPath(center: hexCenter, radius: hexR)
+  ctx.setStrokeColor(
+    NSColor(red: 0.12, green: 0.85, blue: 0.45, alpha: 0.12).cgColor)
+  ctx.setLineWidth(max(1, s * 0.0015))
+  ctx.addPath(hexPath.cgPath)
+  ctx.strokePath()
+}
+
+func iconFromSource(_ source: NSImage, size: CGFloat) -> NSImage {
+  renderImage(size: size) { _, s in
+    drawSourceIcon(source, in: NSRect(x: 0, y: 0, width: s, height: s))
+  }
+}
+
+func splashFromSource(_ source: NSImage, canvasSize: CGFloat) -> NSImage {
+  renderImage(size: canvasSize) { ctx, s in
+    ctx.setFillColor(splashBackground.cgColor)
+    ctx.fill(CGRect(x: 0, y: 0, width: s, height: s))
+    drawSplashTerminalMotif(ctx: ctx, s: s)
+
+    let iconFrac: CGFloat = 0.34
+    let iconSize = s * iconFrac
+    let iconRect = NSRect(
+      x: (s - iconSize) / 2,
+      y: (s - iconSize) / 2,
+      width: iconSize,
+      height: iconSize
+    )
+    ctx.saveGState()
+    let glow = CGRect(
+      x: iconRect.midX - iconSize * 0.55,
+      y: iconRect.midY - iconSize * 0.55,
+      width: iconSize * 1.1,
+      height: iconSize * 1.1
+    )
+    ctx.addEllipse(in: glow)
+    ctx.clip()
+    let space = CGColorSpaceCreateDeviceRGB()
+    let colors = [
+      NSColor(red: 0.08, green: 0.55, blue: 0.32, alpha: 0.22).cgColor,
+      NSColor.clear.cgColor,
+    ] as CFArray
+    if let g = CGGradient(
+      colorsSpace: space,
+      colors: colors,
+      locations: [0, 1]
+    ) {
+      ctx.drawRadialGradient(
+        g,
+        startCenter: CGPoint(x: glow.midX, y: glow.midY),
+        startRadius: 0,
+        endCenter: CGPoint(x: glow.midX, y: glow.midY),
+        endRadius: iconSize * 0.65,
+        options: []
+      )
+    }
+    ctx.restoreGState()
+
+    drawSourceIcon(source, in: iconRect)
+  }
+}
 
 func drawLinearGradient(
   context: CGContext,
@@ -239,18 +345,41 @@ try savePNG(c, url: variantsDir.appendingPathComponent("hexodus-icon-variant-c.p
 print("Wrote 1024 PNGs to \(variantsDir.path)")
 
 if CommandLine.arguments.contains("--write-ios") {
-  try savePNG(a, url: iconDest, pixelWidth: 1024, pixelHeight: 1024)
-  let sp1 = splashFromIcon(size: 2732)
-  let sp2 = splashFromIcon(size: 5464)
-  let sp3 = splashFromIcon(size: 8196)
-  try savePNG(
-    sp1, url: splashDir.appendingPathComponent("splash-2732x2732-2.png"),
-    pixelWidth: 2732, pixelHeight: 2732)
-  try savePNG(
-    sp2, url: splashDir.appendingPathComponent("splash-2732x2732-1.png"),
-    pixelWidth: 5464, pixelHeight: 5464)
-  try savePNG(
-    sp3, url: splashDir.appendingPathComponent("splash-2732x2732.png"),
-    pixelWidth: 8196, pixelHeight: 8196)
-  print("Installed AppIcon + splash PNGs into ios/App/App/Assets.xcassets/")
+  if let source = loadSourceIcon() {
+    let appIcon = iconFromSource(source, size: 1024)
+    try savePNG(appIcon, url: iconDest, pixelWidth: 1024, pixelHeight: 1024)
+    let sp1 = splashFromSource(source, canvasSize: 2732)
+    let sp2 = splashFromSource(source, canvasSize: 5464)
+    let sp3 = splashFromSource(source, canvasSize: 8196)
+    try savePNG(
+      sp1, url: splashDir.appendingPathComponent("splash-2732x2732-2.png"),
+      pixelWidth: 2732, pixelHeight: 2732)
+    try savePNG(
+      sp2, url: splashDir.appendingPathComponent("splash-2732x2732-1.png"),
+      pixelWidth: 5464, pixelHeight: 5464)
+    try savePNG(
+      sp3, url: splashDir.appendingPathComponent("splash-2732x2732.png"),
+      pixelWidth: 8196, pixelHeight: 8196)
+    try savePNG(
+      appIcon, url: publicIconURL, pixelWidth: 1024, pixelHeight: 1024)
+    print(
+      "Installed terminal icon + splash from \(sourceIconURL.lastPathComponent)")
+  } else {
+    try savePNG(a, url: iconDest, pixelWidth: 1024, pixelHeight: 1024)
+    let sp1 = splashFromIcon(size: 2732)
+    let sp2 = splashFromIcon(size: 5464)
+    let sp3 = splashFromIcon(size: 8196)
+    try savePNG(
+      sp1, url: splashDir.appendingPathComponent("splash-2732x2732-2.png"),
+      pixelWidth: 2732, pixelHeight: 2732)
+    try savePNG(
+      sp2, url: splashDir.appendingPathComponent("splash-2732x2732-1.png"),
+      pixelWidth: 5464, pixelHeight: 5464)
+    try savePNG(
+      sp3, url: splashDir.appendingPathComponent("splash-2732x2732.png"),
+      pixelWidth: 8196, pixelHeight: 8196)
+    print(
+      "No \(sourceIconURL.lastPathComponent); installed procedural variant A")
+  }
+  print("Wrote ios/App/App/Assets.xcassets/ AppIcon + Splash")
 }
