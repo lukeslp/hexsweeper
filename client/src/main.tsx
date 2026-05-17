@@ -170,20 +170,20 @@ function HexodusApp() {
           />
         </>
       ) : (
-        <>
-          <div className="relative min-h-0 flex-1">
-            <GameApp
-              progressionPolicy={progressionPolicy}
-              onExit={() => setScreen("boot")}
-              dispatchTerminal={dispatchTerminal}
+        <div className="relative min-h-0 flex-1">
+          <GameApp
+            progressionPolicy={progressionPolicy}
+            onExit={() => setScreen("boot")}
+            dispatchTerminal={dispatchTerminal}
+          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <TerminalPanel
+              lines={terminal.lines}
+              layout="strip"
+              reducedMotion={reducedMotion}
             />
           </div>
-          <TerminalPanel
-            lines={terminal.lines}
-            layout="strip"
-            reducedMotion={reducedMotion}
-          />
-        </>
+        </div>
       )}
     </div>
   );
@@ -526,20 +526,32 @@ createRoot(rootEl).render(
 );
 window.__checkpoint?.("main: createRoot committed");
 
-// Hide the native splash once React has rendered its first frame. The
-// double-rAF waits for the React commit + browser paint to land so the
-// user never sees a blank frame between splash and app. No-op on web.
-if (isCapacitor()) {
-  void import("@capacitor/splash-screen")
-    .then(({ SplashScreen }) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+function hideBootSplash() {
+  const splash = document.getElementById("boot-splash");
+  if (!splash) return;
+  splash.style.transition = "opacity 200ms ease";
+  splash.style.opacity = "0";
+  window.setTimeout(() => splash.remove(), 220);
+}
+
+// Hide boot chrome once React has rendered its first frame. The double-rAF
+// waits for the React commit + browser paint so the user never sees a blank
+// frame between splash and app. Web: #boot-splash in index.html. iOS:
+// native LaunchScreen via Capacitor SplashScreen.hide().
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    hideBootSplash();
+    if (isCapacitor()) {
+      void import("@capacitor/splash-screen")
+        .then(({ SplashScreen }) => {
           void SplashScreen.hide({ fadeOutDuration: 200 });
           window.__checkpoint?.("main: splash hidden");
+        })
+        .catch(e => {
+          console.warn("Could not load @capacitor/splash-screen", e);
         });
-      });
-    })
-    .catch(e => {
-      console.warn("Could not load @capacitor/splash-screen", e);
-    });
-}
+    } else {
+      window.__checkpoint?.("main: boot splash hidden");
+    }
+  });
+});

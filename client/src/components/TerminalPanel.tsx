@@ -70,7 +70,7 @@ export function TerminalPanel({
   const outer =
     layout === "boot"
       ? "flex min-h-[140px] flex-1 flex-col border border-emerald-500/25 bg-black/60 p-3 text-[12px] leading-snug"
-      : "pointer-events-auto max-h-[28vh] min-h-[7rem] w-full max-w-full border-t border-emerald-500/20 bg-black/55 px-2 py-1.5 text-[10px] leading-snug sm:max-w-[min(36rem,calc(100vw-1rem))]";
+      : "pointer-events-auto max-h-[28vh] min-h-[7rem] w-full max-w-full border border-emerald-500/25 bg-black/45 px-2 py-1.5 text-[10px] leading-snug backdrop-blur-sm sm:max-w-[min(36rem,calc(100vw-1rem))]";
 
   return (
     <div
