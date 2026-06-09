@@ -3,10 +3,11 @@
  * Primary Functions: Vitest cases mirroring GameApp dressing commit semantics.
  */
 import { describe, expect, it, vi } from "vitest";
-import type {
-  ExpansionDirectorInput,
-  ExpansionDirectorOutput,
-} from "./director";
+
+vi.mock("@/lib/platform", () => ({
+  getPlatform: () => "ios",
+}));
+import type { ExpansionDirectorInput } from "./director";
 import { DressingGenerationGate } from "./dressingGenerationGate";
 import { createFloorState } from "./gameState";
 import { tryDressFloor } from "./dressingOrchestrator";
@@ -17,6 +18,7 @@ const baseInput = (
 ): ExpansionDirectorInput => ({
   runId: "orch-test",
   floor: 1,
+  floorSeed: "orch-floor-seed",
   irisControl: 0.5,
   expandedCell: {
     key: "0,0",
@@ -32,7 +34,7 @@ const baseInput = (
 });
 
 describe("tryDressFloor", () => {
-  it("returns no-new-cells without calling directExpansion", async () => {
+  it("returns no-new-cells without dressing", async () => {
     const gate = new DressingGenerationGate();
     const opGen = gate.begin();
     const spy = vi.fn();
@@ -44,8 +46,8 @@ describe("tryDressFloor", () => {
       opGen,
       nextFloor: floor,
       input: baseInput([]),
-      directExpansion: spy,
-      generate: async () => null,
+      dressingMode: "generable",
+      generateTileBatch: spy,
     });
 
     expect(result.kind).toBe("no-new-cells");
@@ -55,13 +57,41 @@ describe("tryDressFloor", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("discards when gate is invalidated before directExpansion resolves", async () => {
+  it("procedural: commits tiles immediately with irisPending when deferIris", async () => {
     const gate = new DressingGenerationGate();
     const opGen = gate.begin();
-    const run = createRunState({ seed: "inv", runId: "r2" });
+    const run = createRunState({ seed: "proc", runId: "r2" });
     const floor = createFloorState(run.floor, floorSeed(run));
-    const cell = floor.cells["1,0"];
-    expect(cell).toBeDefined();
+
+    const result = await tryDressFloor({
+      gate,
+      opGen,
+      nextFloor: floor,
+      input: baseInput([
+        {
+          key: "1,0",
+          q: 1,
+          r: 0,
+          view: "unknown",
+          clueVisible: false,
+        },
+      ]),
+      dressingMode: "procedural",
+      deferIris: true,
+    });
+
+    expect(result.kind).toBe("committed");
+    if (result.kind === "committed") {
+      expect(result.irisPending).toBe(true);
+      expect(result.floor.cells["1,0"]?.dressing?.title).toBeTruthy();
+    }
+  });
+
+  it("generable: discards when gate invalidated before batch resolves", async () => {
+    const gate = new DressingGenerationGate();
+    const opGen = gate.begin();
+    const run = createRunState({ seed: "inv", runId: "r3" });
+    const floor = createFloorState(run.floor, floorSeed(run));
 
     const pending = tryDressFloor({
       gate,
@@ -76,109 +106,95 @@ describe("tryDressFloor", () => {
           clueVisible: false,
         },
       ]),
-      directExpansion: async () =>
-        new Promise<ExpansionDirectorOutput>(resolve => {
+      dressingMode: "generable",
+      generateTileBatch: async () =>
+        new Promise(resolve => {
           setTimeout(
             () =>
               resolve({
-                tiles: {
-                  "1,0": {
+                irisLine: "late",
+                tiles: [
+                  {
+                    key: "1,0",
                     title: "Late",
                     flavor: "x",
                     threatTone: "quiet",
                     visualHint: "none",
-                    source: "fallback",
                   },
-                },
-                irisLine: "late",
-                source: "fallback",
+                ],
               }),
             20
           );
         }),
-      generate: async () => null,
     });
 
     gate.invalidate();
     const result = await pending;
 
     expect(result.kind).toBe("discarded");
-    if (result.kind === "discarded") {
-      expect(result.output.irisLine).toBe("late");
-    }
   });
 
-  it("rapid second begin invalidates first op: only second commits", async () => {
+  it("generable: rapid second begin invalidates first op", async () => {
     const gate = new DressingGenerationGate();
     const op1 = gate.begin();
     const op2 = gate.begin();
-
-    const run = createRunState({ seed: "race", runId: "r3" });
+    const run = createRunState({ seed: "race", runId: "r4" });
     const floor = createFloorState(run.floor, floorSeed(run));
+    const cells = [
+      {
+        key: "1,0" as const,
+        q: 1,
+        r: 0,
+        view: "unknown" as const,
+        clueVisible: false,
+      },
+    ];
 
     const slow = tryDressFloor({
       gate,
       opGen: op1,
       nextFloor: floor,
-      input: baseInput([
-        {
-          key: "1,0",
-          q: 1,
-          r: 0,
-          view: "unknown",
-          clueVisible: false,
-        },
-      ]),
-      directExpansion: async () =>
-        new Promise<ExpansionDirectorOutput>(resolve => {
+      input: baseInput(cells),
+      dressingMode: "generable",
+      generateTileBatch: async () =>
+        new Promise(resolve => {
           setTimeout(
             () =>
               resolve({
-                tiles: {
-                  "1,0": {
+                irisLine: "slow",
+                tiles: [
+                  {
+                    key: "1,0",
                     title: "Slow",
                     flavor: "s",
                     threatTone: "quiet",
                     visualHint: "none",
-                    source: "fallback",
                   },
-                },
-                irisLine: "slow",
-                source: "fallback",
+                ],
               }),
             40
           );
         }),
-      generate: async () => null,
     });
 
     const fast = tryDressFloor({
       gate,
       opGen: op2,
       nextFloor: floor,
-      input: baseInput([
-        {
-          key: "1,0",
-          q: 1,
-          r: 0,
-          view: "unknown",
-          clueVisible: false,
-        },
-      ]),
-      directExpansion: async () => ({
-        tiles: {
-          "1,0": {
+      input: baseInput(cells),
+      dressingMode: "generable",
+      generateTileBatch: async () => ({
+        irisLine: "fast",
+        tiles: [
+          {
+            key: "1,0",
             title: "Fast",
             flavor: "f",
             threatTone: "quiet",
             visualHint: "none",
-            source: "fallback",
           },
-        },
-        irisLine: "fast",
-        source: "fallback",
+        ],
       }),
-      generate: async () => null,
     });
 
     const [r1, r2] = await Promise.all([slow, fast]);
@@ -187,47 +203,6 @@ describe("tryDressFloor", () => {
     if (r2.kind === "committed") {
       expect(r2.output.irisLine).toBe("fast");
       expect(r2.floor.cells["1,0"]?.dressing?.title).toBe("Fast");
-    }
-  });
-
-  it("commits when gate still current after directExpansion", async () => {
-    const gate = new DressingGenerationGate();
-    const opGen = gate.begin();
-    const run = createRunState({ seed: "ok", runId: "r4" });
-    const floor = createFloorState(run.floor, floorSeed(run));
-
-    const result = await tryDressFloor({
-      gate,
-      opGen,
-      nextFloor: floor,
-      input: baseInput([
-        {
-          key: "1,0",
-          q: 1,
-          r: 0,
-          view: "unknown",
-          clueVisible: false,
-        },
-      ]),
-      directExpansion: async () => ({
-        tiles: {
-          "1,0": {
-            title: "Ok",
-            flavor: "o",
-            threatTone: "quiet",
-            visualHint: "none",
-            source: "fallback",
-          },
-        },
-        irisLine: "ok-line",
-        source: "fallback",
-      }),
-      generate: async () => null,
-    });
-
-    expect(result.kind).toBe("committed");
-    if (result.kind === "committed") {
-      expect(result.floor.cells["1,0"]?.dressing?.title).toBe("Ok");
     }
   });
 });

@@ -1,13 +1,20 @@
 /**
- * File Purpose: Pure async dressing pipeline used by GameApp — director call + gate check + applyDressing.
- * Primary Functions: tryDressFloor — returns tagged result for UI to commit or discard.
- * Inputs/Outputs: ExpansionDirectorInput + gate generation id in; TryDressFloorResult out (no React).
+ * File Purpose: Pure async dressing pipeline — procedural or @Generable path + gate check.
+ * Primary Functions: tryDressFloor, completeDeferredDressingIris.
+ * Inputs/Outputs: ExpansionDirectorInput + dressingMode in; TryDressFloorResult out.
  */
 
+import type { DressingMode } from "./dressingMode";
 import type {
   ExpansionDirectorInput,
   ExpansionDirectorOutput,
-  TextGenerator,
+  IrisLineGenerator,
+  StructuredDressingGenerator,
+} from "./director";
+import {
+  directExpansionGenerable,
+  proceduralDirectorOutput,
+  resolveDirectorIris,
 } from "./director";
 import { reduceFloor } from "./gameState";
 import type { DressingGenerationGate } from "./dressingGenerationGate";
@@ -16,26 +23,74 @@ import type { FloorState } from "./types";
 export type TryDressFloorResult =
   | { kind: "no-new-cells"; shouldCommit: boolean }
   | { kind: "discarded"; output: ExpansionDirectorOutput }
-  | { kind: "committed"; floor: FloorState; output: ExpansionDirectorOutput };
+  | {
+      kind: "committed";
+      floor: FloorState;
+      output: ExpansionDirectorOutput;
+      irisPending?: boolean;
+    };
 
 export async function tryDressFloor(params: {
   gate: DressingGenerationGate;
   opGen: number;
   nextFloor: FloorState;
   input: ExpansionDirectorInput;
-  directExpansion: (
-    input: ExpansionDirectorInput,
-    generate: TextGenerator
-  ) => Promise<ExpansionDirectorOutput>;
-  generate: TextGenerator;
+  dressingMode: DressingMode;
+  generateTileBatch?: StructuredDressingGenerator;
+  generateIrisLine?: IrisLineGenerator;
+  deferIris?: boolean;
 }): Promise<TryDressFloorResult> {
-  const { gate, opGen, nextFloor, input, directExpansion, generate } = params;
+  const {
+    gate,
+    opGen,
+    nextFloor,
+    input,
+    dressingMode,
+    generateTileBatch,
+    generateIrisLine,
+    deferIris,
+  } = params;
 
   if (input.newCells.length === 0) {
     return { kind: "no-new-cells", shouldCommit: gate.isCurrent(opGen) };
   }
 
-  const output = await directExpansion(input, generate);
+  if (dressingMode === "procedural") {
+    const procedural = proceduralDirectorOutput(input);
+
+    if (!gate.isCurrent(opGen)) {
+      return { kind: "discarded", output: procedural };
+    }
+
+    const floor = reduceFloor(nextFloor, {
+      type: "applyDressing",
+      dressing: procedural.tiles,
+    });
+
+    if (deferIris) {
+      return {
+        kind: "committed",
+        floor,
+        output: procedural,
+        irisPending: true,
+      };
+    }
+
+    const iris = await resolveDirectorIris(input, generateIrisLine);
+    const output: ExpansionDirectorOutput = { ...procedural, ...iris };
+
+    if (!gate.isCurrent(opGen)) {
+      return { kind: "discarded", output };
+    }
+
+    return { kind: "committed", floor, output };
+  }
+
+  if (!generateTileBatch) {
+    throw new Error("tryDressFloor(generable): generateTileBatch required");
+  }
+
+  const output = await directExpansionGenerable(input, generateTileBatch);
 
   if (!gate.isCurrent(opGen)) {
     return { kind: "discarded", output };
@@ -46,4 +101,13 @@ export async function tryDressFloor(params: {
     dressing: output.tiles,
   });
   return { kind: "committed", floor, output };
+}
+
+export async function completeDeferredDressingIris(params: {
+  input: ExpansionDirectorInput;
+  procedural: ExpansionDirectorOutput;
+  generateIrisLine?: IrisLineGenerator;
+}): Promise<ExpansionDirectorOutput> {
+  const iris = await resolveDirectorIris(params.input, params.generateIrisLine);
+  return { ...params.procedural, ...iris };
 }

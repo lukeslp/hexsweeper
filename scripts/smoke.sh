@@ -66,6 +66,14 @@ if ! grep -q "usedRimFallback" "$REPO_ROOT/client/src/game/lib/types.ts"; then
     red "  ✘ types.ts missing usedRimFallback on FloorState"
     exit 1
 fi
+if ! grep -q "generateIrisLine" "$REPO_ROOT/ios/App/App/FoundationModelsPlugin.swift"; then
+    red "  ✘ FoundationModelsPlugin.swift missing generateIrisLine (@Generable iris path)"
+    exit 1
+fi
+if ! grep -q "generateTileDressing" "$REPO_ROOT/ios/App/App/FoundationModelsPlugin.swift"; then
+    red "  ✘ FoundationModelsPlugin.swift missing generateTileDressing (@Generable tile batch)"
+    exit 1
+fi
 green "  ✓ Phase 7 invariants present"
 
 # 5. Build + the dual-React-Internals bundle invariant

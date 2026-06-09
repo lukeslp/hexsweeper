@@ -8,6 +8,7 @@
  *   - `tryOnDeviceIrisLineFirst`    → @Generable IrisLine (typed `{line}`)
  *   - `tryOnDeviceFloorFlavorFirst` → @Generable FloorFlavor (typed `{name, description}`)
  *   - `tryOnDeviceTerminalTakeoverFirst` → @Generable TerminalTakeover (`{line}`)
+ *   - `tryOnDeviceTileDressingFirst`    → @Generable TileDressingBatch (legacy; not used by director)
  *   - `tryOnDeviceFirstStreaming`       → free-form `generateStreaming` + chunk
  *     events (`foundationModelsStreamChunk`) for terminal / HUD taps
  *
@@ -80,6 +81,11 @@ export interface FoundationModelsPlugin extends Plugin {
    * @Generable TerminalTakeover — one short iris.exe terminal line.
    */
   generateTerminalTakeover(opts: FMGenerateOptions): Promise<FMResponse>;
+
+  /**
+   * @Generable TileDressingBatch — director tile labels + iris taunt.
+   */
+  generateTileDressing(opts: FMGenerateOptions): Promise<FMResponse>;
 }
 
 export const FoundationModels =
@@ -163,6 +169,22 @@ export interface FloorFlavor {
 export interface TerminalTakeover {
   /** One short iris.exe terminal line (max ~14 words). */
   line: string;
+}
+
+/** Single tile in a director dressing batch (mirrors Swift TileDressingItem). */
+export interface TileDressingItemPayload {
+  key: string;
+  title: string;
+  flavor: string;
+  threatTone: string;
+  visualHint: string;
+}
+
+/** Director expansion output from @Generable TileDressingBatch. */
+export interface TileDressingBatch {
+  irisLine: string;
+  pacingBand?: string;
+  tiles: TileDressingItemPayload[];
 }
 
 // ── Bridge call envelope ────────────────────────────────────────────
@@ -402,6 +424,56 @@ export async function tryOnDeviceTerminalTakeoverFirst(
       return { line: parsed.line.trim().slice(0, 160) };
     }
     return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @Generable TileDressingBatch — director per-cell labels + iris taunt.
+ */
+export async function tryOnDeviceTileDressingFirst(
+  opts: OnDeviceFirstOptions
+): Promise<TileDressingBatch | null> {
+  const result = await runWithBridge(opts, (fm, payload) =>
+    fm.generateTileDressing(payload)
+  );
+  if (result === null) return null;
+  try {
+    const parsed = JSON.parse(result.text) as TileDressingBatch;
+    if (
+      typeof parsed.irisLine !== "string" ||
+      parsed.irisLine.trim().length === 0 ||
+      !Array.isArray(parsed.tiles) ||
+      parsed.tiles.length === 0
+    ) {
+      return null;
+    }
+    const tiles = parsed.tiles
+      .filter(
+        t =>
+          typeof t.key === "string" &&
+          typeof t.title === "string" &&
+          typeof t.flavor === "string"
+      )
+      .map(t => ({
+        key: t.key.trim(),
+        title: t.title.trim(),
+        flavor: t.flavor.trim(),
+        threatTone:
+          typeof t.threatTone === "string" ? t.threatTone.trim() : "watching",
+        visualHint:
+          typeof t.visualHint === "string" ? t.visualHint.trim() : "none",
+      }));
+    if (tiles.length === 0) return null;
+    return {
+      irisLine: parsed.irisLine.trim(),
+      pacingBand:
+        typeof parsed.pacingBand === "string"
+          ? parsed.pacingBand.trim()
+          : undefined,
+      tiles,
+    };
   } catch {
     return null;
   }

@@ -1,9 +1,15 @@
 /**
- * File Purpose: LLM-assisted tile dressing + iris taunts with strict JSON validation.
- * Primary Functions: directExpansion, fallbackDirectorOutput, resetDirectorCircuit(runId?).
+ * File Purpose: Tile dressing — procedural labels and/or @Generable FM batches + iris taunts.
+ * Primary Functions: directExpansionGenerable, proceduralDirectorOutput, resolveDirectorIris.
  * Inputs/Outputs: Public cell context in; ExpansionDirectorOutput (never mutates puzzle truth).
  */
 
+import {
+  tryOnDeviceTileDressingFirst,
+  type TileDressingBatch,
+} from "@/lib/foundationModelsPlugin";
+import { getPlatform } from "@/lib/platform";
+import { proceduralTilesForCells } from "./proceduralTileDressing";
 import type { Axial, HexKey, TileDressing } from "./types";
 import { hashString } from "./rng";
 
@@ -20,30 +26,30 @@ export interface PublicCellContext extends Axial {
 export interface ExpansionDirectorInput {
   runId: string;
   floor: number;
+  /** Deterministic floor seed (runState.floorSeed). */
+  floorSeed: string;
   irisControl: number;
   expandedCell: PublicCellContext;
   newCells: PublicCellContext[];
   recentEvents: Array<
     "correct" | "wrong" | "marked-hazard" | "marked-safe" | "tile-broken"
   >;
-  /**
-   * Incremental raw model text while the director request is in flight
-   * (on-device streaming when supported; otherwise one callback at end).
-   */
-  onStream?: (partialResponseText: string) => void;
 }
 
 export interface ExpansionDirectorOutput {
   tiles: Record<HexKey, TileDressing>;
   irisLine: string;
   source: "on-device" | "fallback";
-  /** Optional pacing hint for UI / future director systems (never authoritative). */
   pacingBand?: PacingBand;
-  /** True when output was forced to fallback because the circuit breaker is open. */
   degradedByCircuit?: boolean;
+  platformUnavailable?: boolean;
 }
 
-export interface TextGenerator {
+export type StructuredDressingGenerator = (
+  input: ExpansionDirectorInput
+) => Promise<TileDressingBatch | null>;
+
+export interface IrisLineGenerator {
   (opts: {
     prompt: string;
     systemPrompt: string;
@@ -51,14 +57,7 @@ export interface TextGenerator {
     maxTokens: number;
     timeoutMs: number;
     silentDiagnostics: boolean;
-    onStream?: (partialResponseText: string) => void;
-  }): Promise<{ text: string } | null>;
-}
-
-interface RawDirectorOutput {
-  tiles?: Array<Partial<TileDressing> & { key?: string }>;
-  irisLine?: string;
-  pacingBand?: string;
+  }): Promise<{ line: string } | null>;
 }
 
 const FALLBACK_TITLES = [
@@ -79,9 +78,9 @@ const FALLBACK_LINES = [
   "continue. the lattice narrows.",
 ];
 
-/** Consecutive null/malformed generations before the circuit opens. */
+const TITLE_EXAMPLES = FALLBACK_TITLES.slice(0, 4).join(", ");
+const MAX_IRIS_CHARS = 80;
 const CIRCUIT_MISS_THRESHOLD = 3;
-/** Cooldown (ms) while the circuit is open — deterministic fallback only. */
 const CIRCUIT_COOLDOWN_MS = 12_000;
 
 interface RunCircuitState {
@@ -89,7 +88,6 @@ interface RunCircuitState {
   circuitOpenUntil: number;
 }
 
-/** Per-runId circuit breaker so parallel runs / HMR / tests do not share breaker state. */
 const circuitByRunId = new Map<string, RunCircuitState>();
 
 function getCircuit(runId: string): RunCircuitState {
@@ -101,10 +99,6 @@ function getCircuit(runId: string): RunCircuitState {
   return state;
 }
 
-/**
- * Reset director circuit breaker for one run, or all runs if `runId` is omitted.
- * Tests call with no args to clear global map.
- */
 export function resetDirectorCircuit(runId?: string): void {
   if (runId === undefined) {
     circuitByRunId.clear();
@@ -126,37 +120,136 @@ function recordDirectorSuccess(runId: string): void {
   getCircuit(runId).consecutiveFailures = 0;
 }
 
-/** True while the dressing circuit is in cooldown (FM calls should skip on-device). */
 export function isDirectorCircuitOpen(runId: string): boolean {
   return Date.now() < getCircuit(runId).circuitOpenUntil;
 }
 
-export async function directExpansion(
+// ── Procedural path ─────────────────────────────────────────────────
+
+export function proceduralDirectorOutput(
+  input: ExpansionDirectorInput
+): ExpansionDirectorOutput {
+  return fallbackDirectorOutput(input);
+}
+
+export type DirectorIrisResolution = Pick<
+  ExpansionDirectorOutput,
+  "irisLine" | "source" | "degradedByCircuit" | "platformUnavailable"
+>;
+
+export async function resolveDirectorIris(
   input: ExpansionDirectorInput,
-  generate: TextGenerator
+  generateIrisLine?: IrisLineGenerator
+): Promise<DirectorIrisResolution> {
+  const fallback = fallbackDirectorOutput(input);
+
+  if (!generateIrisLine || getPlatform() !== "ios") {
+    return {
+      irisLine: fallback.irisLine,
+      source: "fallback",
+      platformUnavailable: getPlatform() !== "ios",
+    };
+  }
+
+  if (isDirectorCircuitOpen(input.runId)) {
+    return {
+      irisLine: fallback.irisLine,
+      source: "fallback",
+      degradedByCircuit: true,
+    };
+  }
+
+  const iris = await generateIrisLine({
+    ...buildIrisPrompt(input),
+    temperature: 0.85,
+    maxTokens: 80,
+    timeoutMs: 10_000,
+    silentDiagnostics: true,
+  });
+
+  if (!iris?.line) {
+    recordDirectorFailure(input.runId);
+    return {
+      irisLine: fallback.irisLine,
+      source: "fallback",
+    };
+  }
+
+  recordDirectorSuccess(input.runId);
+  return {
+    irisLine: clampIrisLine(iris.line),
+    source: "on-device",
+  };
+}
+
+export function buildIrisPrompt(input: ExpansionDirectorInput): {
+  prompt: string;
+  systemPrompt: string;
+} {
+  return {
+    systemPrompt:
+      "You are iris.exe, the hostile AI director in Hexodus. Voice: terse, contemptuous, glitchy. One short taunt only — no tile names, no puzzle spoilers.",
+    prompt: `React to the player's latest expansion on floor ${input.floor}.
+irisControl=${Math.round(input.irisControl * 100)}%
+expanded=${JSON.stringify(input.expandedCell)}
+recentEvents=${input.recentEvents.join(",") || "none"}
+newCellCount=${input.newCells.length}`,
+  };
+}
+
+function clampIrisLine(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.length > MAX_IRIS_CHARS
+    ? trimmed.slice(0, MAX_IRIS_CHARS)
+    : trimmed;
+}
+
+function proceduralPacingBand(input: ExpansionDirectorInput): PacingBand {
+  if (input.recentEvents.includes("wrong")) return "spike";
+  if (input.recentEvents.includes("tile-broken")) return "recovery";
+  if (input.irisControl >= 0.85) return "ramp";
+  if (input.irisControl <= 0.25) return "calm";
+  return "ramp";
+}
+
+// ── @Generable path ─────────────────────────────────────────────────
+
+export function createOnDeviceTileDressingGenerator(): StructuredDressingGenerator {
+  return async (input: ExpansionDirectorInput) => {
+    const { prompt, systemPrompt } = buildDirectorPrompt(input);
+    return tryOnDeviceTileDressingFirst({
+      prompt,
+      systemPrompt,
+      temperature: 0.8,
+      maxTokens: 900,
+      timeoutMs: 16000,
+      silentDiagnostics: true,
+    });
+  };
+}
+
+export async function directExpansionGenerable(
+  input: ExpansionDirectorInput,
+  generate: StructuredDressingGenerator
 ): Promise<ExpansionDirectorOutput> {
   const fallback = fallbackDirectorOutput(input);
   const runId = input.runId;
+
+  if (getPlatform() !== "ios") {
+    return { ...fallback, platformUnavailable: true };
+  }
 
   if (isDirectorCircuitOpen(runId)) {
     return { ...fallback, degradedByCircuit: true };
   }
 
-  const result = await generate({
-    ...buildDirectorPrompt(input),
-    temperature: 0.8,
-    maxTokens: 900,
-    timeoutMs: 16000,
-    silentDiagnostics: true,
-    onStream: input.onStream,
-  });
-
-  if (!result) {
+  const batch = await generate(input);
+  if (!batch) {
     recordDirectorFailure(runId);
     return fallback;
   }
 
-  const parsed = parseDirectorOutput(result.text, input);
+  const parsed = validateDirectorOutput(batch, input);
   if (!parsed) {
     recordDirectorFailure(runId);
     return fallback;
@@ -174,60 +267,46 @@ export async function directExpansion(
   };
 }
 
+/** @deprecated Tests — use `directExpansionGenerable`. */
+export const directExpansion = directExpansionGenerable;
+
+// ── Shared fallback ─────────────────────────────────────────────────
+
 export function fallbackDirectorOutput(
   input: ExpansionDirectorInput
 ): ExpansionDirectorOutput {
-  const tiles: Record<HexKey, TileDressing> = {} as Record<
-    HexKey,
-    TileDressing
-  >;
-  for (const cell of input.newCells) {
-    const index = hashString(`${input.runId}:${input.floor}:${cell.key}`);
-    const tone =
-      input.irisControl >= 0.85
-        ? "breach"
-        : input.irisControl >= 0.65
-          ? "pressing"
-          : input.irisControl >= 0.35
-            ? "watching"
-            : "quiet";
-    tiles[cell.key] = {
-      title: FALLBACK_TITLES[index % FALLBACK_TITLES.length],
-      flavor: "Static fallback: iris labels the edge without changing it.",
-      threatTone: tone,
-      visualHint:
-        tone === "breach" ? "blackout" : tone === "pressing" ? "tear" : "none",
-      source: "fallback",
-    };
-  }
-
   return {
-    tiles,
+    tiles: proceduralTilesForCells(
+      input.floorSeed,
+      input.irisControl,
+      input.newCells
+    ),
     irisLine:
       FALLBACK_LINES[
         hashString(`${input.runId}:${input.floor}:iris`) % FALLBACK_LINES.length
       ],
+    pacingBand: proceduralPacingBand(input),
     source: "fallback",
   };
 }
 
-function buildDirectorPrompt(input: ExpansionDirectorInput): {
+export function buildDirectorPrompt(input: ExpansionDirectorInput): {
   prompt: string;
   systemPrompt: string;
 } {
   return {
     systemPrompt:
-      "You are iris.exe, the hostile AI director in Hexodus. You label newly exposed hex tiles and taunt the player. You must not invent gameplay outcomes. Return strict JSON only.",
+      "You are iris.exe, the hostile AI director in Hexodus. Label newly exposed hex tiles and taunt the player. Never invent puzzle outcomes. Grammar-constrained JSON only.",
     prompt: `Assign presentation for newly exposed Hexodus tiles.
 
 Rules:
-- Do not change puzzle truth, numbers, or coordinates.
-- Return one tile object for each key listed below.
-- Titles are 1-4 words.
-- Flavor is one short tactical sentence.
-- threatTone is quiet, watching, pressing, or breach.
-- visualHint is none, flicker, tear, or blackout.
-- Optional pacingBand: calm, ramp, spike, or recovery (UI hint only).
+- One tile object per key listed below (no extras).
+- Titles: 1-3 words, title case, cyberpunk noun phrase. Good examples: ${TITLE_EXAMPLES}. Never output placeholder text like "Short Label".
+- Flavor: one tactical sentence, max 90 characters.
+- threatTone: quiet, watching, pressing, or breach.
+- visualHint: none, flicker, tear, or blackout.
+- irisLine: 6-14 word in-character taunt, no quotation marks.
+- Optional pacingBand: calm, ramp, spike, or recovery.
 
 Context:
 runId=${input.runId}
@@ -237,10 +316,7 @@ expanded=${JSON.stringify(input.expandedCell)}
 recentEvents=${input.recentEvents.join(",") || "none"}
 
 New cells:
-${input.newCells.map(cell => JSON.stringify(cell)).join("\n")}
-
-Return JSON:
-{"irisLine":"6-14 word taunt","pacingBand":"calm","tiles":[{"key":"q,r","title":"Short Label","flavor":"Short sentence.","threatTone":"quiet","visualHint":"none"}]}`,
+${input.newCells.map(cell => JSON.stringify(cell)).join("\n")}`,
   };
 }
 
@@ -250,28 +326,22 @@ interface ParsedDirector {
   pacingBand?: PacingBand;
 }
 
-function parseDirectorOutput(
-  text: string,
+function validateDirectorOutput(
+  batch: TileDressingBatch,
   input: ExpansionDirectorInput
 ): ParsedDirector | null {
-  const cleaned = text
-    .replace(/^```json\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-  const raw = tryParseJson(cleaned);
-  if (!raw) return null;
-
   const allowedKeys = new Set(input.newCells.map(cell => cell.key));
   const tiles: Record<HexKey, TileDressing> = {} as Record<
     HexKey,
     TileDressing
   >;
 
-  for (const tile of raw.tiles ?? []) {
+  for (const tile of batch.tiles) {
     if (!tile.key || !allowedKeys.has(tile.key as HexKey)) continue;
     const key = tile.key as HexKey;
+    const titleSeed = `${input.runId}:${input.floor}:${key}`;
     tiles[key] = {
-      title: clampWords(tile.title, "Unknown Sector", 4),
+      title: clampTitle(tile.title, titleSeed),
       flavor: clampText(tile.flavor, "iris marks the route.", 90),
       threatTone: safeThreatTone(tile.threatTone),
       visualHint: safeVisualHint(tile.visualHint),
@@ -283,61 +353,27 @@ function parseDirectorOutput(
 
   return {
     tiles,
-    irisLine: clampText(raw.irisLine, "", 80),
-    pacingBand: safePacingBand(raw.pacingBand),
+    irisLine: clampText(batch.irisLine, "", 80),
+    pacingBand: safePacingBand(batch.pacingBand),
   };
 }
 
-function tryParseJson(text: string): RawDirectorOutput | null {
-  try {
-    return JSON.parse(text) as RawDirectorOutput;
-  } catch {
-    const block = extractFirstJsonObject(text);
-    if (!block) return null;
-    try {
-      return JSON.parse(block) as RawDirectorOutput;
-    } catch {
-      return null;
-    }
-  }
+function stripTitleDecor(value: string): string {
+  return value.replace(/^["'`[*]+|["'`\]*]+$/g, "").trim();
 }
 
-function extractFirstJsonObject(text: string): string | null {
-  const start = text.indexOf("{");
-  if (start < 0) return null;
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-  for (let i = start; i < text.length; i++) {
-    const ch = text[i];
-    if (escape) {
-      escape = false;
-      continue;
-    }
-    if (inString) {
-      if (ch === "\\") escape = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') inString = true;
-    else if (ch === "{") depth++;
-    else if (ch === "}") {
-      depth--;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-  return null;
+function hashPickFallbackTitle(seed: string): string {
+  return FALLBACK_TITLES[hashString(seed) % FALLBACK_TITLES.length];
 }
 
-function clampWords(
-  value: unknown,
-  fallback: string,
-  maxWords: number
-): string {
-  if (typeof value !== "string") return fallback;
-  const words = value.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return fallback;
-  return words.slice(0, maxWords).join(" ");
+function clampTitle(value: unknown, seed: string): string {
+  if (typeof value !== "string") return hashPickFallbackTitle(seed);
+  const cleaned = stripTitleDecor(value);
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > 4 || cleaned.length > 22) {
+    return hashPickFallbackTitle(seed);
+  }
+  return words.join(" ");
 }
 
 function clampText(

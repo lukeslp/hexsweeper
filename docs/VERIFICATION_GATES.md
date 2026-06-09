@@ -18,7 +18,8 @@ pnpm smoke --no-build   # typecheck + tests + greps + plugin line only
 | `generator.soak.test.ts`            | **Optional** strided deep sweep when `SOAK=1` (see `pnpm test:soak`).                                                   |
 | `solver.test.ts`                    | Solver correctness on generated boards.                                                                                 |
 | `runState.test.ts`                  | Infinite vs finite progression + route salt + milestones.                                                               |
-| `director.test.ts`                  | JSON validation, merge rules, **per-runId circuit breaker**.                                                            |
+| `director.test.ts`                  | `@Generable` batch validation, title clamps, **per-runId circuit breaker**, web `platformUnavailable`.                  |
+| `dressingBatch.test.ts`             | `MAX_DRESSING_BATCH` chunking for cascade dressing.                                                                     |
 | `cycleOrchestrator.test.ts`         | Deterministic advance + next floor seed wiring + run/floor index sync.                                                  |
 | `replayVerification.test.ts`        | Replay parity + cohort solvability sample.                                                                              |
 | `dressingGenerationGate.test.ts`    | Async dressing generation token semantics.                                                                              |
@@ -28,7 +29,7 @@ pnpm smoke --no-build   # typecheck + tests + greps + plugin line only
 
 ## Session diagnostics (runtime)
 
-`GameApp` HUD includes a **session** line: dressing call count (`dress`), director fallback count (`fb`), circuit-degraded count (`circuit`), and **rim fallback** floors (`rim`, from `FloorState.usedRimFallback`). Use these to operationalize rollout triggers below without extra telemetry plumbing.
+`GameApp` HUD includes a **session** line: dressing call count (`dress`), director fallback count (`fb`), **platform** short-circuit count (`plat`, web/non-iOS — not a model failure), circuit-degraded count (`circuit`), and **rim fallback** floors (`rim`, from `FloorState.usedRimFallback`). With `?diag=1`, coherence samples (key, adjacency, threatTone, flavor, source) are included in manual export JSON. Use these to operationalize rollout triggers below without extra telemetry plumbing.
 
 **Persistence:** each **New Run** appends the prior session counters to `localStorage` under `hexodus_session_diag_snapshots` (ring buffer, last 80 rows). With `?diag=1`, **Export diag log** downloads JSON (`stored` array + `current`). Summarize exports locally:
 
@@ -59,6 +60,6 @@ pnpm icons:generate   # macOS: Swift script → AppIcon + Splash PNGs
 
 - Solvability null rate > baseline in `replayVerification` cohort test.
 - Circuit breaker open > **25%** of dressing calls in a session (compare `circuit` to `dress` counts on the HUD session line; investigate model/provider).
-- Director fallback rate > **25%** of dressing calls (`fb` / `dress`) sustained across a session — treat as infra failure.
+- Director fallback rate > **25%** of dressing calls **excluding platform** (`fb` / (`dress` − `plat`)) sustained on iOS — treat as infra failure. High `plat` on web builds is expected.
 - Rim fallback: **any `rim` count > 0 in a session is sev-2** — investigate generator curve regression or a bad deploy (the depth sweep in CI expects zero rim in normal seeds; a non-zero `rim` means a floor exhausted `GENERATOR_BUDGET` and used the rim fallback board).
 - Player-reported softlocks / impossible boards: freeze generator curve changes.

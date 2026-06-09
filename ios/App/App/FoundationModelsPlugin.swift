@@ -17,6 +17,7 @@ import FoundationModels
 ///   - `generateIrisLine(prompt, ...)`       → @Generable IrisLine, JSON-encoded
 ///   - `generateFloorFlavor(prompt, ...)`    → @Generable FloorFlavor, JSON-encoded
 ///   - `generateTerminalTakeover(prompt, ...)` → @Generable TerminalTakeover, JSON-encoded
+///   - `generateTileDressing(prompt, ...)` → @Generable TileDressingBatch, JSON-encoded
 ///
 /// The Generable macro emits a schema the framework uses for
 /// grammar-constrained decoding — the model literally cannot emit
@@ -50,6 +51,31 @@ struct TerminalTakeover: Codable {
     @Guide(description: "One hostile iris.exe terminal line, max 14 words. No quotation marks, no labels, terse glitchy tone.")
     var line: String
 }
+
+@available(iOS 26.0, *)
+@Generable
+struct TileDressingItem: Codable {
+    @Guide(description: "Hex axial key in q,r form, e.g. 1,-2.")
+    var key: String
+    @Guide(description: "1-3 word title, title case, no punctuation, evocative cyberpunk noun phrase. Examples: Cold Lattice, Static Ghost, Quiet Port.")
+    var title: String
+    @Guide(description: "One short tactical sentence, max 90 chars.")
+    var flavor: String
+    @Guide(description: "Threat tone: quiet, watching, pressing, or breach.")
+    var threatTone: String
+    @Guide(description: "Visual hint: none, flicker, tear, or blackout.")
+    var visualHint: String
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct TileDressingBatch: Codable {
+    @Guide(description: "6-14 word in-character iris.exe taunt. No quotation marks.")
+    var irisLine: String
+    @Guide(description: "Optional pacing hint: calm, ramp, spike, or recovery.")
+    var pacingBand: String?
+    var tiles: [TileDressingItem]
+}
 #endif
 
 @objc(FoundationModelsPlugin)
@@ -63,6 +89,7 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "generateIrisLine", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generateFloorFlavor", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "generateTerminalTakeover", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "generateTileDressing", returnType: CAPPluginReturnPromise),
     ]
 
     @objc func isAvailable(_ call: CAPPluginCall) {
@@ -173,8 +200,8 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
                     let finalText = try await Self.withTimeout(seconds: 15) {
                         var accumulated = ""
                         let stream = session.streamResponse(options: options) { prompt }
-                        for try await piece in stream {
-                            accumulated = piece
+                        for try await snapshot in stream {
+                            accumulated = snapshot.content
                             self.notifyListeners(
                                 "foundationModelsStreamChunk",
                                 data: [
@@ -233,6 +260,19 @@ public class FoundationModelsPlugin: CAPPlugin, CAPBridgedPlugin {
         if #available(iOS 26.0, *) {
             #if canImport(FoundationModels)
             generateStructured(call: call, type: TerminalTakeover.self)
+            #else
+            call.reject("FoundationModels framework not in SDK at compile time")
+            #endif
+        } else {
+            call.reject("iOS < 26.0; FoundationModels unavailable")
+        }
+    }
+
+    /// Grammar-constrained tile dressing batch for the director expansion path.
+    @objc func generateTileDressing(_ call: CAPPluginCall) {
+        if #available(iOS 26.0, *) {
+            #if canImport(FoundationModels)
+            generateStructured(call: call, type: TileDressingBatch.self)
             #else
             call.reject("FoundationModels framework not in SDK at compile time")
             #endif

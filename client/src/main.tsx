@@ -170,20 +170,20 @@ function HexodusApp() {
           />
         </>
       ) : (
-        <>
-          <div className="relative min-h-0 flex-1">
-            <GameApp
-              progressionPolicy={progressionPolicy}
-              onExit={() => setScreen("boot")}
-              dispatchTerminal={dispatchTerminal}
+        <div className="relative min-h-0 flex-1">
+          <GameApp
+            progressionPolicy={progressionPolicy}
+            onExit={() => setScreen("boot")}
+            dispatchTerminal={dispatchTerminal}
+          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <TerminalPanel
+              lines={terminal.lines}
+              layout="strip"
+              reducedMotion={reducedMotion}
             />
           </div>
-          <TerminalPanel
-            lines={terminal.lines}
-            layout="strip"
-            reducedMotion={reducedMotion}
-          />
-        </>
+        </div>
       )}
     </div>
   );

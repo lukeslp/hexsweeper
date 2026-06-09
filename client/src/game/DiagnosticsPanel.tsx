@@ -4,9 +4,14 @@
  * Inputs/Outputs: Callback props in; burst / null-streak / rim-sim / export actions out.
  */
 
+import type { DressingMode } from "@/game/lib/dressingMode";
+
 export interface DiagnosticsPanelProps {
   /** When false, renders nothing (no layout cost). */
   enabled: boolean;
+  dressingMode?: DressingMode;
+  /** Toggle procedural ↔ generable tile dressing (persists in localStorage). */
+  onCycleDressingMode?: () => void;
   /** Fire up to three rapid reveals on frontier keys (async race harness). */
   onBurstReveal: () => void;
   /** Next three director dressing calls return null (circuit breaker harness). */
@@ -19,6 +24,8 @@ export interface DiagnosticsPanelProps {
 
 export function DiagnosticsPanel({
   enabled,
+  dressingMode,
+  onCycleDressingMode,
   onBurstReveal,
   onForceDirectorNulls,
   onSimulateRimBanner,
@@ -32,6 +39,15 @@ export function DiagnosticsPanel({
         diag mode (?diag=1) — dev only
       </div>
       <div className="flex flex-wrap gap-2">
+        {onCycleDressingMode ? (
+          <button
+            type="button"
+            className="min-h-[44px] rounded border border-emerald-400/50 px-2 py-1.5 hover:bg-emerald-500/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={onCycleDressingMode}
+          >
+            Tiles: {dressingMode ?? "proc"}
+          </button>
+        ) : null}
         <button
           type="button"
           className="min-h-[44px] min-w-[44px] rounded border border-amber-400/50 px-2 py-1.5 hover:bg-amber-500/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
