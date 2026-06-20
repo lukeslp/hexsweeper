@@ -70,10 +70,6 @@ if ! grep -q "generateIrisLine" "$REPO_ROOT/ios/App/App/FoundationModelsPlugin.s
     red "  ✘ FoundationModelsPlugin.swift missing generateIrisLine (@Generable iris path)"
     exit 1
 fi
-if ! grep -q "generateTileDressing" "$REPO_ROOT/ios/App/App/FoundationModelsPlugin.swift"; then
-    red "  ✘ FoundationModelsPlugin.swift missing generateTileDressing (@Generable tile batch)"
-    exit 1
-fi
 green "  ✓ Phase 7 invariants present"
 
 # 5. Build + the dual-React-Internals bundle invariant

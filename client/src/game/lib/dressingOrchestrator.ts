@@ -9,10 +9,8 @@ import type {
   ExpansionDirectorInput,
   ExpansionDirectorOutput,
   IrisLineGenerator,
-  StructuredDressingGenerator,
 } from "./director";
 import {
-  directExpansionGenerable,
   proceduralDirectorOutput,
   resolveDirectorIris,
 } from "./director";
@@ -35,74 +33,47 @@ export async function tryDressFloor(params: {
   opGen: number;
   nextFloor: FloorState;
   input: ExpansionDirectorInput;
-  dressingMode: DressingMode;
-  generateTileBatch?: StructuredDressingGenerator;
   generateIrisLine?: IrisLineGenerator;
+  /** When true, commit procedural tiles immediately; iris resolves via `irisPending`. */
   deferIris?: boolean;
 }): Promise<TryDressFloorResult> {
-  const {
-    gate,
-    opGen,
-    nextFloor,
-    input,
-    dressingMode,
-    generateTileBatch,
-    generateIrisLine,
-    deferIris,
-  } = params;
+  const { gate, opGen, nextFloor, input, generateIrisLine, deferIris } = params;
 
   if (input.newCells.length === 0) {
     return { kind: "no-new-cells", shouldCommit: gate.isCurrent(opGen) };
   }
 
-  if (dressingMode === "procedural") {
-    const procedural = proceduralDirectorOutput(input);
+  const procedural = proceduralDirectorOutput(input);
 
-    if (!gate.isCurrent(opGen)) {
-      return { kind: "discarded", output: procedural };
-    }
-
-    const floor = reduceFloor(nextFloor, {
-      type: "applyDressing",
-      dressing: procedural.tiles,
-    });
-
-    if (deferIris) {
-      return {
-        kind: "committed",
-        floor,
-        output: procedural,
-        irisPending: true,
-      };
-    }
-
-    const iris = await resolveDirectorIris(input, generateIrisLine);
-    const output: ExpansionDirectorOutput = { ...procedural, ...iris };
-
-    if (!gate.isCurrent(opGen)) {
-      return { kind: "discarded", output };
-    }
-
-    return { kind: "committed", floor, output };
+  if (!gate.isCurrent(opGen)) {
+    return { kind: "discarded", output: procedural };
   }
 
-  if (!generateTileBatch) {
-    throw new Error("tryDressFloor(generable): generateTileBatch required");
+  const floor = reduceFloor(nextFloor, {
+    type: "applyDressing",
+    dressing: procedural.tiles,
+  });
+
+  if (deferIris) {
+    return {
+      kind: "committed",
+      floor,
+      output: procedural,
+      irisPending: true,
+    };
   }
 
-  const output = await directExpansionGenerable(input, generateTileBatch);
+  const iris = await resolveDirectorIris(input, generateIrisLine);
+  const output: ExpansionDirectorOutput = { ...procedural, ...iris };
 
   if (!gate.isCurrent(opGen)) {
     return { kind: "discarded", output };
   }
 
-  const floor = reduceFloor(nextFloor, {
-    type: "applyDressing",
-    dressing: output.tiles,
-  });
   return { kind: "committed", floor, output };
 }
 
+/** Finish deferred iris after tiles are already on the floor. */
 export async function completeDeferredDressingIris(params: {
   input: ExpansionDirectorInput;
   procedural: ExpansionDirectorOutput;

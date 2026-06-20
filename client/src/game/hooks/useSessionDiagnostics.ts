@@ -1,20 +1,18 @@
 /**
  * File Purpose: Session HUD diagnostic counters for director/generator degradation.
- * Primary Functions: useSessionDiagnostics — state + record + reset.
+ * Primary Functions: useSessionDiagnostics — state + record + reset + coherence samples.
  * Inputs/Outputs: ExpansionDirectorOutput in; SessionDiagnostics state out.
  */
 import { useCallback, useState } from "react";
 import type { ExpansionDirectorOutput } from "@/game/lib/director";
-import type { DressingMode } from "@/game/lib/dressingMode";
 import type { HexKey } from "@/game/lib/types";
 
-export interface CoherenceSample {
+export interface DressingCoherenceSample {
   key: HexKey;
-  adjacentBlocked?: number;
+  adjacentBlocked: number | null;
   threatTone: string;
   flavor: string;
-  source: string;
-  dressingMode: DressingMode;
+  source: "on-device" | "fallback";
 }
 
 export interface SessionDiagnostics {
@@ -23,11 +21,10 @@ export interface SessionDiagnostics {
   directorCircuitDegradedCount: number;
   directorPlatformFallbackCount: number;
   generatorRimFallbackCount: number;
-  lastDressingMode?: DressingMode;
-  coherenceSamples: CoherenceSample[];
+  coherenceSamples: DressingCoherenceSample[];
 }
 
-const MAX_COHERENCE_SAMPLES = 48;
+const COHERENCE_RING_MAX = 80;
 
 const initial: SessionDiagnostics = {
   directorDressingCalls: 0,
@@ -53,35 +50,21 @@ export function useSessionDiagnostics() {
         directorPlatformFallbackCount:
           d.directorPlatformFallbackCount +
           (output.platformUnavailable ? 1 : 0),
-        lastDressingMode: dressingMode,
       }));
     },
     []
   );
 
   const appendCoherenceSamples = useCallback(
-    (
-      output: ExpansionDirectorOutput,
-      cells: Array<{ key: HexKey; adjacentBlocked?: number }>,
-      dressingMode: DressingMode
-    ) => {
-      const rows: CoherenceSample[] = cells.map(cell => {
-        const dressing = output.tiles[cell.key];
+    (samples: DressingCoherenceSample[]) => {
+      if (samples.length === 0) return;
+      setSessionDiag(d => {
+        const next = [...d.coherenceSamples, ...samples];
         return {
-          key: cell.key,
-          adjacentBlocked: cell.adjacentBlocked,
-          threatTone: dressing?.threatTone ?? "unknown",
-          flavor: dressing?.flavor ?? "",
-          source: dressing?.source ?? output.source,
-          dressingMode,
+          ...d,
+          coherenceSamples: next.slice(-COHERENCE_RING_MAX),
         };
       });
-      setSessionDiag(d => ({
-        ...d,
-        coherenceSamples: [...d.coherenceSamples, ...rows].slice(
-          -MAX_COHERENCE_SAMPLES
-        ),
-      }));
     },
     []
   );

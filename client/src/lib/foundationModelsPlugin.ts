@@ -430,7 +430,7 @@ export async function tryOnDeviceTerminalTakeoverFirst(
 }
 
 /**
- * @Generable TileDressingBatch — director per-cell labels + iris taunt.
+ * @Generable TileDressingBatch. Legacy batch API — GameApp uses procedural tiles + iris line only.
  */
 export async function tryOnDeviceTileDressingFirst(
   opts: OnDeviceFirstOptions

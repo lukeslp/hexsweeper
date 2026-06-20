@@ -26,7 +26,6 @@ import { HEX_HEIGHT, HEX_WIDTH } from "@/lib/hexConstants";
 import { hexToPixel, pixelToHex } from "@/lib/hexGrid";
 import { DiagnosticsPanel, readDiagQueryEnabled } from "./DiagnosticsPanel";
 import {
-  createOnDeviceTileDressingGenerator,
   isDirectorCircuitOpen,
   type ExpansionDirectorInput,
   type ExpansionDirectorOutput,
@@ -51,6 +50,10 @@ import {
   floorEventToTerminalLines,
   type TerminalLogAction,
 } from "./lib/terminalLog";
+import {
+  completeDeferredDressingIris,
+  tryDressFloor,
+} from "./lib/dressingOrchestrator";
 import { createFloorState, reduceFloor } from "./lib/gameState";
 import {
   advanceRunAfterFloorWin,
@@ -68,7 +71,10 @@ import {
 import type { FloorState, GameCell, HexKey } from "./lib/types";
 import { HEX_DIRECTIONS, hexKey } from "./lib/types";
 import { DressingGenerationGate } from "./lib/dressingGenerationGate";
-import { useSessionDiagnostics } from "./hooks/useSessionDiagnostics";
+import {
+  useSessionDiagnostics,
+  type DressingCoherenceSample,
+} from "./hooks/useSessionDiagnostics";
 
 export type { SessionDiagnostics } from "./hooks/useSessionDiagnostics";
 
@@ -259,7 +265,6 @@ export function GameApp({
       currentRunFloor: run.floor,
       current: sessionDiag,
       coherenceSamples: sessionDiag.coherenceSamples,
-      dressingMode,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
@@ -291,23 +296,8 @@ export function GameApp({
     ]);
 
     const streamKey = `dress:${runSnap.runId}:${nextFloor.floor}:${opGen}`;
-    const chunks = chunkDressingCells(newCells);
-    const totalChunks = chunks.length;
-
-    const mode = dressingMode;
-    const seed = floorSeed(runSnap);
-    const baseInput: ExpansionDirectorInput = {
-      runId: runSnap.runId,
-      floor: nextFloor.floor,
-      floorSeed: seed,
-      irisControl: nextFloor.irisControl,
-      expandedCell: publicCellContext(expandedCell),
-      newCells,
-      recentEvents: eventToDirectorHistory(nextFloor.lastEvent),
-    };
-    const deferIris = mode === "procedural";
-
     const pendingKeys = newCells.map(cell => cell.key);
+
     if (pendingKeys.length > 0) {
       setPendingDressingKeys(current => {
         const next = new Set(current);
@@ -316,41 +306,32 @@ export function GameApp({
       });
     }
 
-    async function generateStructured(
-      chunkInput: ExpansionDirectorInput
-    ) {
-      if (diagDirectorNullsRef.current > 0) {
-        diagDirectorNullsRef.current -= 1;
-        return null;
-      }
-      return tileDressingGenerator(chunkInput);
-    }
-
     async function generateIrisLine(
-      opts: Parameters<typeof tryOnDeviceIrisLineFirst>[0]
+      genOpts: Parameters<typeof tryOnDeviceIrisLineFirst>[0]
     ) {
       if (diagDirectorNullsRef.current > 0) {
         diagDirectorNullsRef.current -= 1;
         return null;
       }
-      const result = await tryOnDeviceIrisLineFirst(opts);
-      return result ? { line: result.line } : null;
+      return tryOnDeviceIrisLineFirst(genOpts);
     }
-
-    const mapVerb = mode === "procedural" ? "labeling" : "mapping";
 
     try {
-      if (totalChunks === 0) {
+      if (newCells.length === 0) {
         const result = await tryDressFloor({
           gate: dressingGateRef.current,
           opGen,
           nextFloor,
-          input: { ...baseInput, newCells: [] },
-          dressingMode: mode,
-          generateTileBatch:
-            mode === "generable" ? generateStructured : undefined,
-          generateIrisLine: mode === "procedural" ? generateIrisLine : undefined,
-          deferIris,
+          input: {
+            runId: runSnap.runId,
+            floor: nextFloor.floor,
+            floorSeed: nextFloor.seed,
+            irisControl: nextFloor.irisControl,
+            expandedCell: publicCellContext(expandedCell),
+            newCells: [],
+            recentEvents: eventToDirectorHistory(nextFloor.lastEvent),
+          },
+          generateIrisLine,
         });
         if (result.kind === "no-new-cells") {
           return { dressed: nextFloor, committed: result.shouldCommit };
@@ -358,101 +339,91 @@ export function GameApp({
         return { dressed: nextFloor, committed: false };
       }
 
-      let dressed = nextFloor;
-      let lastOutput: ExpansionDirectorOutput | null = null;
-      let anyCommitted = false;
+      dispatchTerminal({
+        type: "setStreamLine",
+        key: streamKey,
+        text: `[map] mapping ${newCells.length} cell(s)`,
+      });
 
-      for (let i = 0; i < chunks.length; i++) {
-        const chunkCells = chunks[i];
-        const chunkNum = i + 1;
-        const chunkStreamKey = `${streamKey}:c${chunkNum}`;
+      const input: ExpansionDirectorInput = {
+        runId: runSnap.runId,
+        floor: nextFloor.floor,
+        floorSeed: nextFloor.seed,
+        irisControl: nextFloor.irisControl,
+        expandedCell: publicCellContext(expandedCell),
+        newCells,
+        recentEvents: eventToDirectorHistory(nextFloor.lastEvent),
+      };
 
+      const result = await tryDressFloor({
+        gate: dressingGateRef.current,
+        opGen,
+        nextFloor,
+        input,
+        generateIrisLine,
+        deferIris: true,
+      });
+
+      if (result.kind === "no-new-cells") {
+        return { dressed: nextFloor, committed: false };
+      }
+      const result = await tryOnDeviceIrisLineFirst(opts);
+      return result ? { line: result.line } : null;
+    }
+
+      if (result.kind === "discarded") {
         dispatchTerminal({
           type: "setStreamLine",
-          key: chunkStreamKey,
-          text: `[map] ${mapVerb} chunk ${chunkNum}/${totalChunks} (${chunkCells.length} cells, ${mode})`,
+          key: streamKey,
+          text: `[map] discarded (stale generation)`,
         });
-
-        const chunkInput: ExpansionDirectorInput = {
-          ...baseInput,
-          newCells: chunkCells,
-        };
-
-        const result = await tryDressFloor({
-          gate: dressingGateRef.current,
-          opGen,
-          nextFloor: dressed,
-          input: chunkInput,
-          dressingMode: mode,
-          generateTileBatch:
-            mode === "generable" ? generateStructured : undefined,
-          generateIrisLine: mode === "procedural" ? generateIrisLine : undefined,
-          deferIris,
-        });
-
         if (result.kind === "no-new-cells") {
-          continue;
+          return { dressed: nextFloor, committed: result.shouldCommit };
         }
-
-        if (result.kind === "discarded") {
-          dispatchTerminal({
-            type: "setStreamLine",
-            key: chunkStreamKey,
-            text: "[map] discarded (stale generation)",
-          });
-          return { dressed, committed: false };
-        }
-
-        dressed = result.floor;
-        anyCommitted = true;
-        recordDirectorMetrics(result.output, mode);
-        lastOutput = result.output;
-
-        if (diagMode) {
-          appendCoherenceSamples(result.output, chunkCells, mode);
-        }
-
-        if (result.irisPending) {
-          dispatchTerminal({
-            type: "setStreamLine",
-            key: chunkStreamKey,
-            text: `[map] ${chunkCells.length} cells dressed (procedural) · iris pending`,
-          });
-          const capturedGen = opGen;
-          void completeDeferredDressingIris({
-            input: chunkInput,
-            procedural: result.output,
-            generateIrisLine,
-          }).then(irisOut => {
-            if (!dressingGateRef.current.isCurrent(capturedGen)) return;
-            setIrisLine(irisOut.irisLine);
-            setPacingBand(irisOut.pacingBand);
-            recordDirectorMetrics(irisOut, mode);
-            const src =
-              irisOut.source === "on-device" ? "on-device" : "fallback";
-            dispatchTerminal({
-              type: "setStreamLine",
-              key: `${chunkStreamKey}:iris`,
-              text: `[map] iris line (${src})`,
-            });
-          });
-        } else {
-          const srcLabel =
-            result.output.source === "on-device" ? "on-device" : "fallback";
-          dispatchTerminal({
-            type: "setStreamLine",
-            key: chunkStreamKey,
-            text: `[map] iris commits ${chunkCells.length} cells (${srcLabel}, ${mode})`,
-          });
-        }
+        return { dressed: nextFloor, committed: false };
       }
 
-      if (lastOutput) {
-        setIrisLine(lastOutput.irisLine);
-        setPacingBand(lastOutput.pacingBand);
+      setPacingBand(result.output.pacingBand);
+
+      dispatchTerminal({
+        type: "setStreamLine",
+        key: streamKey,
+        text: `[map] mapped ${newCells.length} cell(s) (procedural)`,
+      });
+
+      if (diagMode) {
+        appendCoherenceSamples(
+          coherenceSamplesForChunk(
+            result.floor,
+            newCells.map(c => c.key),
+            "fallback"
+          )
+        );
       }
 
-      return { dressed, committed: anyCommitted };
+      const committedFloor = result.floor;
+
+      if (result.irisPending) {
+        void completeDeferredDressingIris({
+          input,
+          procedural: result.output,
+          generateIrisLine,
+        }).then(output => {
+          if (!dressingGateRef.current.isCurrent(opGen)) return;
+          recordDirectorMetrics(output);
+          setIrisLine(output.irisLine);
+          dispatchTerminal({
+            type: "setStreamLine",
+            key: streamKey,
+            text: `[map] iris line (${output.source})`,
+          });
+        });
+      } else {
+        recordDirectorMetrics(result.output);
+        setIrisLine(result.output.irisLine);
+      }
+
+      return { dressed: committedFloor, committed: true };
     } finally {
       if (pendingKeys.length > 0) {
         setPendingDressingKeys(current => {
@@ -661,8 +632,7 @@ export function GameApp({
                 <div>sidegrades {run.sidegrades.length}</div>
                 <div>pacing {pacingBand ?? "—"}</div>
                 <div className="font-mono text-[9px] text-muted-foreground/90">
-                  mode {dressingMode.slice(0, 4)} · dress{" "}
-                  {sessionDiag.directorDressingCalls} · fb{" "}
+                  dress {sessionDiag.directorDressingCalls} · fb{" "}
                   {sessionDiag.directorFallbackCount} · plat{" "}
                   {sessionDiag.directorPlatformFallbackCount} · circuit{" "}
                   {sessionDiag.directorCircuitDegradedCount} · rim{" "}
@@ -750,7 +720,7 @@ export function GameApp({
           ))}
         </div>
 
-        <div className="interactive-ui pointer-events-none absolute bottom-0 left-0 max-w-[min(30rem,calc(100vw-2rem))] border border-white/10 bg-black/50 px-3 py-2 text-xs text-muted-foreground backdrop-blur pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="interactive-ui pointer-events-none absolute bottom-0 left-0 z-20 max-w-[min(30rem,calc(100vw-2rem))] border border-white/10 bg-black/50 px-3 py-2 text-xs text-muted-foreground backdrop-blur pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(8.5rem,env(safe-area-inset-bottom))]">
           <div className="mb-1 font-mono uppercase tracking-[0.14em] text-foreground">
             {titleForCell(selected, pendingDressingKeys.has(selected.key))}
           </div>
@@ -827,6 +797,9 @@ export function GameApp({
   );
 }
 
+/** Decorative full-screen iris “pressure” field. North star: couple the same
+ *  field to real tile transforms — see
+ *  docs/superpowers/specs/2026-05-16-iris-physical-tile-distortion.md */
 function IrisApproachOverlay({ pressure }: { pressure: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -1398,4 +1371,25 @@ function dedupeCellContexts(cells: PublicCellContext[]): PublicCellContext[] {
     byKey.set(cell.key, cell);
   }
   return Array.from(byKey.values());
+}
+
+function coherenceSamplesForChunk(
+  floor: FloorState,
+  keys: HexKey[],
+  source: "on-device" | "fallback"
+): DressingCoherenceSample[] {
+  return keys.map(key => {
+    const cell = floor.cells[key];
+    const dressing = cell?.dressing;
+    return {
+      key,
+      adjacentBlocked:
+        cell?.view === "revealed" && cell.clueVisible
+          ? cell.adjacentBlocked
+          : null,
+      threatTone: dressing?.threatTone ?? "quiet",
+      flavor: dressing?.flavor ?? "",
+      source: dressing?.source ?? source,
+    };
+  });
 }

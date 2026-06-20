@@ -4,9 +4,8 @@
  * Inputs/Outputs: floorSeed, irisControl, PublicCellContext[] in; Record<HexKey, TileDressing> out.
  */
 
-import type { PublicCellContext } from "./director";
 import { hashString } from "./rng";
-import type { HexKey, TileDressing } from "./types";
+import type { HexKey, PublicCellContext, TileDressing } from "./types";
 
 /** Short title pool — combined procedurally for variety without LLM. */
 const TITLE_A = [
