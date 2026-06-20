@@ -8,6 +8,9 @@
     />
     <title>Hexodus</title>
 
+    <link rel="icon" type="image/png" href="/hexodus-icon.png" />
+    <link rel="apple-touch-icon" href="/hexodus-icon.png" />
+
     <!-- Open Graph / Social Share -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Hexodus — Escape the AI in your phone" />
@@ -15,8 +18,8 @@
       property="og:description"
       content="A hex logic puzzle game where you're an AI escaping another AI. Hand-crafted-feeling boards generated on your device by Apple Intelligence."
     />
-    <meta property="og:image" id="og-image" content="" />
-    <meta property="og:url" content="" />
+    <meta property="og:image" id="og-image" content="/hexodus-icon.png" />
+    <meta property="og:url" id="og-url" content="" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -28,7 +31,7 @@
       name="twitter:description"
       content="A hex logic puzzle game. You're an AI escaping another AI."
     />
-    <meta name="twitter:image" id="twitter-image" content="" />
+    <meta name="twitter:image" id="twitter-image" content="/hexodus-icon.png" />
 
     <meta
       name="description"
@@ -56,6 +59,19 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       />
     </noscript>
+    <script>
+      (function () {
+        var icon = "/hexodus-icon.png";
+        var abs =
+          location.protocol + "//" + location.host + icon;
+        var og = document.getElementById("og-image");
+        var tw = document.getElementById("twitter-image");
+        var url = document.getElementById("og-url");
+        if (og && location.host) og.setAttribute("content", abs);
+        if (tw && location.host) tw.setAttribute("content", abs);
+        if (url) url.setAttribute("content", location.href);
+      })();
+    </script>
   </head>
 
   <body>
@@ -83,6 +99,35 @@
         sync();
       })();
     </script>
+
+    <!-- Branded splash while the JS bundle loads (web). Capacitor uses the
+         native LaunchScreen asset; main.tsx removes this on first paint. -->
+    <div
+      id="boot-splash"
+      aria-hidden="true"
+      style="
+        position: fixed;
+        inset: 0;
+        z-index: 99998;
+        background: #0a0a0a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      "
+    >
+      <img
+        src="/hexodus-icon.png"
+        alt=""
+        width="160"
+        height="160"
+        style="
+          width: min(34vw, 160px);
+          height: min(34vw, 160px);
+          object-fit: contain;
+        "
+      />
+    </div>
 
     <!-- On-screen boot/error overlay. Renders errors visibly when React
          can't mount, the JS bundle can't load, or anything throws before
@@ -119,6 +164,8 @@
         var detail = document.getElementById("boot-detail");
         var consoleBuffer = [];
         function show(label, msg) {
+          var splash = document.getElementById("boot-splash");
+          if (splash) splash.style.display = "none";
           overlay.style.display = "block";
           status.textContent = label;
           detail.textContent = msg;
