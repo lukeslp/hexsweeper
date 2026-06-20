@@ -10,6 +10,7 @@ const fmBehavior = vi.hoisted(() => ({
   generate: vi.fn(),
   generateStreaming: vi.fn(),
   generateTerminalTakeover: vi.fn(),
+  generateTileDressing: vi.fn(),
   addListener: vi.fn(async () => ({
     remove: vi.fn(async () => {}),
   })),
@@ -22,8 +23,9 @@ vi.mock("@capacitor/core", () => ({
     generateStreaming: fmBehavior.generateStreaming,
     generateIrisLine: vi.fn(),
     generateFloorFlavor: vi.fn(),
-    generateTerminalTakeover: fmBehavior.generateTerminalTakeover,
-    addListener: fmBehavior.addListener,
+  generateTerminalTakeover: fmBehavior.generateTerminalTakeover,
+  generateTileDressing: fmBehavior.generateTileDressing,
+  addListener: fmBehavior.addListener,
   }),
 }));
 
@@ -42,6 +44,7 @@ import {
   tryOnDeviceFirst,
   tryOnDeviceFirstStreaming,
   tryOnDeviceTerminalTakeoverFirst,
+  tryOnDeviceTileDressingFirst,
   isFoundationModelsAvailable,
   invalidateFoundationModelsCache,
   __setAvailabilityCacheForTest,
@@ -56,6 +59,7 @@ describe("foundationModelsPlugin", () => {
     fmBehavior.generate.mockReset();
     fmBehavior.generateStreaming.mockReset();
     fmBehavior.generateTerminalTakeover.mockReset();
+    fmBehavior.generateTileDressing.mockReset();
     fmBehavior.addListener.mockClear();
   });
 
@@ -155,5 +159,34 @@ describe("foundationModelsPlugin", () => {
     expect(out).toEqual({ text: "full-json" });
     expect(fmBehavior.generateStreaming).toHaveBeenCalledTimes(1);
     expect(chunks).toContain("full-json");
+  });
+
+  it("tryOnDeviceTileDressingFirst parses TileDressingBatch JSON", async () => {
+    __setAvailabilityCacheForTest(null);
+    await isFoundationModelsAvailable();
+    fmBehavior.generateTileDressing.mockResolvedValue({
+      text: JSON.stringify({
+        irisLine: "your edges resolve.",
+        pacingBand: "ramp",
+        tiles: [
+          {
+            key: "1,0",
+            title: "Cold Lattice",
+            flavor: "iris marks the route.",
+            threatTone: "pressing",
+            visualHint: "flicker",
+          },
+        ],
+      }),
+    });
+    const out = await tryOnDeviceTileDressingFirst({
+      prompt: "dress",
+      temperature: 0.8,
+      maxTokens: 200,
+      silentDiagnostics: true,
+    });
+    expect(out?.irisLine).toBe("your edges resolve.");
+    expect(out?.tiles[0]?.title).toBe("Cold Lattice");
+    expect(fmBehavior.generateTileDressing).toHaveBeenCalledTimes(1);
   });
 });
