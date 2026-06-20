@@ -28,19 +28,8 @@ import { DiagnosticsPanel, readDiagQueryEnabled } from "./DiagnosticsPanel";
 import {
   isDirectorCircuitOpen,
   type ExpansionDirectorInput,
-  type ExpansionDirectorOutput,
   type PublicCellContext,
 } from "./lib/director";
-import { chunkDressingCells } from "./lib/dressingBatch";
-import {
-  cycleDressingMode,
-  getDressingMode,
-  type DressingMode,
-} from "./lib/dressingMode";
-import {
-  completeDeferredDressingIris,
-  tryDressFloor,
-} from "./lib/dressingOrchestrator";
 import {
   createTakeoverSchedulerState,
   fallbackTakeoverLine,
@@ -107,10 +96,6 @@ export function GameApp({
     appendCoherenceSamples,
     resetSessionDiag,
   } = useSessionDiagnostics();
-  const tileDressingGenerator = useMemo(
-    () => createOnDeviceTileDressingGenerator(),
-    []
-  );
   const commerceStubGranted = useMemo(() => getValueCaptureStubGranted(), []);
   const [selectedKey, setSelectedKey] = useState<HexKey>("0,0");
   const [irisLine, setIrisLine] = useState("iris.exe is offscreen.");
@@ -130,9 +115,6 @@ export function GameApp({
   const runRef = useRef(run);
   runRef.current = run;
   const [diagMode, setDiagMode] = useState(false);
-  const [dressingMode, setDressingModeState] = useState<DressingMode>(() =>
-    getDressingMode()
-  );
   const [diagSimRim, setDiagSimRim] = useState(false);
   const lastActionKeyRef = useRef<HexKey | undefined>(undefined);
   const takeoverSchedRef = useRef(createTakeoverSchedulerState());
@@ -140,7 +122,6 @@ export function GameApp({
 
   useEffect(() => {
     setDiagMode(readDiagQueryEnabled());
-    setDressingModeState(getDressingMode());
   }, []);
 
   useEffect(() => {
@@ -367,9 +348,6 @@ export function GameApp({
       if (result.kind === "no-new-cells") {
         return { dressed: nextFloor, committed: false };
       }
-      const result = await tryOnDeviceIrisLineFirst(opts);
-      return result ? { line: result.line } : null;
-    }
 
       if (result.kind === "discarded") {
         dispatchTerminal({
@@ -377,9 +355,6 @@ export function GameApp({
           key: streamKey,
           text: `[map] discarded (stale generation)`,
         });
-        if (result.kind === "no-new-cells") {
-          return { dressed: nextFloor, committed: result.shouldCommit };
-        }
         return { dressed: nextFloor, committed: false };
       }
 
@@ -647,11 +622,6 @@ export function GameApp({
             ) : null}
             <DiagnosticsPanel
               enabled={diagMode}
-              dressingMode={dressingMode}
-              onCycleDressingMode={() => {
-                const next = cycleDressingMode();
-                setDressingModeState(next);
-              }}
               onBurstReveal={burstRevealDiagnostics}
               onForceDirectorNulls={() => {
                 diagDirectorNullsRef.current = 3;

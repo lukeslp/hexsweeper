@@ -59,38 +59,10 @@ describe("tryDressFloor", () => {
   it("discards when gate is invalidated before iris resolves", async () => {
     const gate = new DressingGenerationGate();
     const opGen = gate.begin();
-    const run = createRunState({ seed: "proc", runId: "r2" });
+    const run = createRunState({ seed: "inv", runId: "r2" });
     const floor = createFloorState(run.floor, floorSeed(run));
-
-    const result = await tryDressFloor({
-      gate,
-      opGen,
-      nextFloor: floor,
-      input: baseInput([
-        {
-          key: "1,0",
-          q: 1,
-          r: 0,
-          view: "unknown",
-          clueVisible: false,
-        },
-      ]),
-      dressingMode: "procedural",
-      deferIris: true,
-    });
-
-    expect(result.kind).toBe("committed");
-    if (result.kind === "committed") {
-      expect(result.irisPending).toBe(true);
-      expect(result.floor.cells["1,0"]?.dressing?.title).toBeTruthy();
-    }
-  });
-
-  it("generable: discards when gate invalidated before batch resolves", async () => {
-    const gate = new DressingGenerationGate();
-    const opGen = gate.begin();
-    const run = createRunState({ seed: "inv", runId: "r3" });
-    const floor = createFloorState(run.floor, floorSeed(run));
+    const cell = floor.cells["1,0"];
+    expect(cell).toBeDefined();
 
     const pending = tryDressFloor({
       gate,
@@ -115,23 +87,18 @@ describe("tryDressFloor", () => {
     const result = await pending;
 
     expect(result.kind).toBe("discarded");
+    if (result.kind === "discarded") {
+      expect(result.output.irisLine).toBe("late");
+    }
   });
 
-  it("generable: rapid second begin invalidates first op", async () => {
+  it("rapid second begin invalidates first op: only second commits", async () => {
     const gate = new DressingGenerationGate();
     const op1 = gate.begin();
     const op2 = gate.begin();
-    const run = createRunState({ seed: "race", runId: "r4" });
+
+    const run = createRunState({ seed: "race", runId: "r3" });
     const floor = createFloorState(run.floor, floorSeed(run));
-    const cells = [
-      {
-        key: "1,0" as const,
-        q: 1,
-        r: 0,
-        view: "unknown" as const,
-        clueVisible: false,
-      },
-    ];
 
     const slow = tryDressFloor({
       gate,

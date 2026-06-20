@@ -30,7 +30,9 @@ export interface ExpansionDirectorOutput {
   tiles: Record<HexKey, TileDressing>;
   irisLine: string;
   source: "on-device" | "fallback";
+  /** Optional pacing hint for UI / future director systems (never authoritative). */
   pacingBand?: PacingBand;
+  /** True when output was forced to fallback because the circuit breaker is open. */
   degradedByCircuit?: boolean;
   /** True when on-device path was skipped (non-iOS / FM unavailable). */
   platformUnavailable?: boolean;
@@ -54,9 +56,9 @@ const FALLBACK_LINES = [
   "continue. the lattice narrows.",
 ];
 
-const TITLE_EXAMPLES = FALLBACK_TITLES.slice(0, 4).join(", ");
-const MAX_IRIS_CHARS = 80;
+/** Consecutive null/malformed generations before the circuit opens. */
 const CIRCUIT_MISS_THRESHOLD = 3;
+/** Cooldown (ms) while the circuit is open — deterministic fallback only. */
 const CIRCUIT_COOLDOWN_MS = 12_000;
 
 const MAX_IRIS_CHARS = 80;
@@ -66,6 +68,7 @@ interface RunCircuitState {
   circuitOpenUntil: number;
 }
 
+/** Per-runId circuit breaker so parallel runs / HMR / tests do not share breaker state. */
 const circuitByRunId = new Map<string, RunCircuitState>();
 
 function getCircuit(runId: string): RunCircuitState {
@@ -77,6 +80,10 @@ function getCircuit(runId: string): RunCircuitState {
   return state;
 }
 
+/**
+ * Reset director circuit breaker for one run, or all runs if `runId` is omitted.
+ * Tests call with no args to clear global map.
+ */
 export function resetDirectorCircuit(runId?: string): void {
   if (runId === undefined) {
     circuitByRunId.clear();
@@ -98,6 +105,7 @@ function recordDirectorSuccess(runId: string): void {
   getCircuit(runId).consecutiveFailures = 0;
 }
 
+/** True while the dressing circuit is in cooldown (FM calls should skip on-device). */
 export function isDirectorCircuitOpen(runId: string): boolean {
   return Date.now() < getCircuit(runId).circuitOpenUntil;
 }

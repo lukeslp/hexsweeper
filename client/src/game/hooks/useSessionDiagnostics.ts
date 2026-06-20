@@ -39,7 +39,7 @@ export function useSessionDiagnostics() {
   const [sessionDiag, setSessionDiag] = useState<SessionDiagnostics>(initial);
 
   const recordDirectorMetrics = useCallback(
-    (output: ExpansionDirectorOutput, dressingMode: DressingMode) => {
+    (output: ExpansionDirectorOutput) => {
       setSessionDiag(d => ({
         ...d,
         directorDressingCalls: d.directorDressingCalls + 1,

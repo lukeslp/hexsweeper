@@ -1,10 +1,9 @@
 /**
- * File Purpose: Pure async dressing pipeline — procedural or @Generable path + gate check.
- * Primary Functions: tryDressFloor, completeDeferredDressingIris.
- * Inputs/Outputs: ExpansionDirectorInput + dressingMode in; TryDressFloorResult out.
+ * File Purpose: Pure async dressing pipeline used by GameApp — director call + gate check + applyDressing.
+ * Primary Functions: tryDressFloor — returns tagged result for UI to commit or discard.
+ * Inputs/Outputs: ExpansionDirectorInput + gate generation id in; TryDressFloorResult out (no React).
  */
 
-import type { DressingMode } from "./dressingMode";
 import type {
   ExpansionDirectorInput,
   ExpansionDirectorOutput,

@@ -41,7 +41,6 @@ vi.mock("@/lib/platform", () => ({
 
 describe("director", () => {
   beforeEach(() => {
-    platformRef.value = "ios";
     resetDirectorCircuit();
   });
 
