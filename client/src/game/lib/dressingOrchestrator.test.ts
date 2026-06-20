@@ -3,10 +3,11 @@
  * Primary Functions: Vitest cases mirroring GameApp dressing commit semantics.
  */
 import { describe, expect, it, vi } from "vitest";
-import type {
-  ExpansionDirectorInput,
-  ExpansionDirectorOutput,
-} from "./director";
+
+vi.mock("@/lib/platform", () => ({
+  getPlatform: vi.fn(() => "ios"),
+}));
+import type { ExpansionDirectorInput } from "./director";
 import { DressingGenerationGate } from "./dressingGenerationGate";
 import { createFloorState } from "./gameState";
 import { tryDressFloor } from "./dressingOrchestrator";
@@ -17,6 +18,7 @@ const baseInput = (
 ): ExpansionDirectorInput => ({
   runId: "orch-test",
   floor: 1,
+  floorSeed: "orch-seed:floor:1:route:loot",
   irisControl: 0.5,
   expandedCell: {
     key: "0,0",
@@ -32,10 +34,10 @@ const baseInput = (
 });
 
 describe("tryDressFloor", () => {
-  it("returns no-new-cells without calling directExpansion", async () => {
+  it("returns no-new-cells without calling iris generation", async () => {
     const gate = new DressingGenerationGate();
     const opGen = gate.begin();
-    const spy = vi.fn();
+    const irisSpy = vi.fn(async () => null);
     const run = createRunState({ seed: "empty", runId: "r1" });
     const floor = createFloorState(run.floor, floorSeed(run));
 
@@ -44,18 +46,17 @@ describe("tryDressFloor", () => {
       opGen,
       nextFloor: floor,
       input: baseInput([]),
-      directExpansion: spy,
-      generate: async () => null,
+      generateIrisLine: irisSpy,
     });
 
     expect(result.kind).toBe("no-new-cells");
     if (result.kind === "no-new-cells") {
       expect(result.shouldCommit).toBe(true);
     }
-    expect(spy).not.toHaveBeenCalled();
+    expect(irisSpy).not.toHaveBeenCalled();
   });
 
-  it("discards when gate is invalidated before directExpansion resolves", async () => {
+  it("discards when gate is invalidated before iris resolves", async () => {
     const gate = new DressingGenerationGate();
     const opGen = gate.begin();
     const run = createRunState({ seed: "inv", runId: "r2" });
@@ -76,27 +77,10 @@ describe("tryDressFloor", () => {
           clueVisible: false,
         },
       ]),
-      directExpansion: async () =>
-        new Promise<ExpansionDirectorOutput>(resolve => {
-          setTimeout(
-            () =>
-              resolve({
-                tiles: {
-                  "1,0": {
-                    title: "Late",
-                    flavor: "x",
-                    threatTone: "quiet",
-                    visualHint: "none",
-                    source: "fallback",
-                  },
-                },
-                irisLine: "late",
-                source: "fallback",
-              }),
-            20
-          );
+      generateIrisLine: () =>
+        new Promise<{ line: string } | null>(resolve => {
+          setTimeout(() => resolve({ line: "late" }), 20);
         }),
-      generate: async () => null,
     });
 
     gate.invalidate();
@@ -129,27 +113,10 @@ describe("tryDressFloor", () => {
           clueVisible: false,
         },
       ]),
-      directExpansion: async () =>
-        new Promise<ExpansionDirectorOutput>(resolve => {
-          setTimeout(
-            () =>
-              resolve({
-                tiles: {
-                  "1,0": {
-                    title: "Slow",
-                    flavor: "s",
-                    threatTone: "quiet",
-                    visualHint: "none",
-                    source: "fallback",
-                  },
-                },
-                irisLine: "slow",
-                source: "fallback",
-              }),
-            40
-          );
+      generateIrisLine: () =>
+        new Promise<{ line: string } | null>(resolve => {
+          setTimeout(() => resolve({ line: "slow" }), 40);
         }),
-      generate: async () => null,
     });
 
     const fast = tryDressFloor({
@@ -165,20 +132,7 @@ describe("tryDressFloor", () => {
           clueVisible: false,
         },
       ]),
-      directExpansion: async () => ({
-        tiles: {
-          "1,0": {
-            title: "Fast",
-            flavor: "f",
-            threatTone: "quiet",
-            visualHint: "none",
-            source: "fallback",
-          },
-        },
-        irisLine: "fast",
-        source: "fallback",
-      }),
-      generate: async () => null,
+      generateIrisLine: async () => ({ line: "fast" }),
     });
 
     const [r1, r2] = await Promise.all([slow, fast]);
@@ -186,11 +140,47 @@ describe("tryDressFloor", () => {
     expect(r2.kind).toBe("committed");
     if (r2.kind === "committed") {
       expect(r2.output.irisLine).toBe("fast");
-      expect(r2.floor.cells["1,0"]?.dressing?.title).toBe("Fast");
+      expect(r2.floor.cells["1,0"]?.dressing?.title.length).toBeGreaterThan(0);
     }
   });
 
-  it("commits when gate still current after directExpansion", async () => {
+  it("commits procedural tiles before deferred iris when deferIris is set", async () => {
+    const gate = new DressingGenerationGate();
+    const opGen = gate.begin();
+    const run = createRunState({ seed: "defer", runId: "r-defer" });
+    const floor = createFloorState(run.floor, floorSeed(run));
+
+    const result = await tryDressFloor({
+      gate,
+      opGen,
+      nextFloor: floor,
+      input: baseInput([
+        {
+          key: "1,0",
+          q: 1,
+          r: 0,
+          view: "unknown",
+          clueVisible: false,
+        },
+      ]),
+      deferIris: true,
+      generateIrisLine: () =>
+        new Promise<{ line: string } | null>(resolve => {
+          setTimeout(() => resolve({ line: "later" }), 50);
+        }),
+    });
+
+    expect(result.kind).toBe("committed");
+    if (result.kind === "committed") {
+      expect(result.irisPending).toBe(true);
+      expect(result.floor.cells["1,0"]?.dressing?.title.length).toBeGreaterThan(
+        0
+      );
+      expect(result.output.irisLine).not.toBe("later");
+    }
+  });
+
+  it("commits when gate still current after iris resolves", async () => {
     const gate = new DressingGenerationGate();
     const opGen = gate.begin();
     const run = createRunState({ seed: "ok", runId: "r4" });
@@ -209,25 +199,15 @@ describe("tryDressFloor", () => {
           clueVisible: false,
         },
       ]),
-      directExpansion: async () => ({
-        tiles: {
-          "1,0": {
-            title: "Ok",
-            flavor: "o",
-            threatTone: "quiet",
-            visualHint: "none",
-            source: "fallback",
-          },
-        },
-        irisLine: "ok-line",
-        source: "fallback",
-      }),
-      generate: async () => null,
+      generateIrisLine: async () => ({ line: "ok-line" }),
     });
 
     expect(result.kind).toBe("committed");
     if (result.kind === "committed") {
-      expect(result.floor.cells["1,0"]?.dressing?.title).toBe("Ok");
+      expect(result.output.irisLine).toBe("ok-line");
+      expect(result.floor.cells["1,0"]?.dressing?.title.length).toBeGreaterThan(
+        0
+      );
     }
   });
 });

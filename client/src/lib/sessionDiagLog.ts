@@ -16,6 +16,7 @@ export interface SessionDiagSnapshot {
   directorDressingCalls: number;
   directorFallbackCount: number;
   directorCircuitDegradedCount: number;
+  directorPlatformFallbackCount?: number;
   generatorRimFallbackCount: number;
 }
 

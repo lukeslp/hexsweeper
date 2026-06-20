@@ -18,17 +18,20 @@ pnpm smoke --no-build   # typecheck + tests + greps + plugin line only
 | `generator.soak.test.ts`            | **Optional** strided deep sweep when `SOAK=1` (see `pnpm test:soak`).                                                   |
 | `solver.test.ts`                    | Solver correctness on generated boards.                                                                                 |
 | `runState.test.ts`                  | Infinite vs finite progression + route salt + milestones.                                                               |
-| `director.test.ts`                  | JSON validation, merge rules, **per-runId circuit breaker**.                                                            |
+| `director.test.ts`                  | Procedural tiles + iris-only FM path, **per-runId circuit breaker**, platform short-circuit.                              |
+| `proceduralTileDressing.test.ts`    | Deterministic titles/flavor from floor seed + cell context.                                                               |
+| `foundationModelsPlugin.test.ts`    | Bridge contracts including `tryOnDeviceIrisLineFirst` (tile batch API retained, not on hot path).                         |
 | `cycleOrchestrator.test.ts`         | Deterministic advance + next floor seed wiring + run/floor index sync.                                                  |
 | `replayVerification.test.ts`        | Replay parity + cohort solvability sample.                                                                              |
 | `dressingGenerationGate.test.ts`    | Async dressing generation token semantics.                                                                              |
 | `asyncDressing.integration.test.ts` | Run/floor index sync + async dressing gate pattern used by `GameApp`.                                                   |
 | `dressingOrchestrator.test.ts`      | Stale-guard + rapid-reveal races for `tryDressFloor` (pure async dressing pipeline).                                    |
-| `foundationModelsPlugin.test.ts`    | Mocked FM bridge: cached-unavailable short-circuit, timeout → availability re-probe, non-timeout errors preserve cache. |
 
 ## Session diagnostics (runtime)
 
-`GameApp` HUD includes a **session** line: dressing call count (`dress`), director fallback count (`fb`), circuit-degraded count (`circuit`), and **rim fallback** floors (`rim`, from `FloorState.usedRimFallback`). Use these to operationalize rollout triggers below without extra telemetry plumbing.
+`GameApp` HUD includes a **session** line (behind `?diag=1`): dressing call count (`dress`), director fallback count (`fb`), **platform** fallback count (`plat`, non-iOS / FM unavailable — does not trip circuit SLO), circuit-degraded count (`circuit`), and **rim fallback** floors (`rim`, from `FloorState.usedRimFallback`). Use these to operationalize rollout triggers below without extra telemetry plumbing.
+
+With `?diag=1`, **Export diag log** also includes `coherenceSamples`: `(key, adjacentBlocked, threatTone, flavor, source)` tuples for reviewing flavor-vs-clue mismatches before changing prompts.
 
 **Persistence:** each **New Run** appends the prior session counters to `localStorage` under `hexodus_session_diag_snapshots` (ring buffer, last 80 rows). With `?diag=1`, **Export diag log** downloads JSON (`stored` array + `current`). Summarize exports locally:
 
@@ -58,7 +61,7 @@ pnpm icons:generate   # macOS: Swift script → AppIcon + Splash PNGs
 ## Rollout stop triggers
 
 - Solvability null rate > baseline in `replayVerification` cohort test.
-- Circuit breaker open > **25%** of dressing calls in a session (compare `circuit` to `dress` counts on the HUD session line; investigate model/provider).
-- Director fallback rate > **25%** of dressing calls (`fb` / `dress`) sustained across a session — treat as infra failure.
+- Circuit breaker open > **25%** of dressing calls in a session on **iOS** (compare `circuit` to `dress`; ignore `plat` on web).
+- Director fallback rate > **25%** of dressing calls (`fb` / `dress`) sustained across a session on **iOS** — treat as infra failure. Web sessions will show high `plat`; that is expected.
 - Rim fallback: **any `rim` count > 0 in a session is sev-2** — investigate generator curve regression or a bad deploy (the depth sweep in CI expects zero rim in normal seeds; a non-zero `rim` means a floor exhausted `GENERATOR_BUDGET` and used the rim fallback board).
 - Player-reported softlocks / impossible boards: freeze generator curve changes.
