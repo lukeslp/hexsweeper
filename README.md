@@ -1,56 +1,108 @@
 # Hexodus
 
-Hex-grid strategy/puzzle prototype with deterministic floor generation, infinite-run progression (default), and AI-assisted tile dressing guarded by a circuit breaker.
+Hexodus is an iOS-first hex-grid puzzle roguelike. Floors are generated from a
+seed, checked for solvability, and played as an infinite run by default. A
+12-floor finite mode is also available from the boot screen.
 
-## Features
+Puzzle truth stays deterministic. Procedural code supplies tile names and
+flavor, while Apple's on-device Foundation Models framework may add iris.exe
+taunts and terminal takeovers. Web builds and unsupported devices use static
+fallback text without changing gameplay.
 
-- **Infinite runs** by default (`runState.defaultProgression()`); use `finiteProgression(12)` for a legacy-style capped escape.
-- **Inter-floor routes** — Safe / Loot / Risk lanes salt the next board seed and nudge pressure meters.
-- **Director** — On-device or fallback dressing; optional `pacingBand`; automatic **12s** circuit cooldown after 3 consecutive failures.
+## Gameplay
 
-## Core Runtime
+- Reveal safe cells and mark blocked cells from the visible clues.
+- Correct moves can trigger solver-backed cascade reveals.
+- Mistakes reduce the floor's error budget and increase iris control.
+- Clearing a floor opens Safe, Loot, and Risk routes. The selected route salts
+  the next floor seed and changes run pressure.
+- Infinite runs continue through sublinear difficulty growth. Finite runs
+  escape after floor 12.
 
-- `client/src/game/GameApp.tsx` — Board UI, HUD, route picker, **async dressing gate**, **session diagnostics**, **`?diag=1` dev panel**, long-press mark (touch); requires `progressionPolicy` prop from boot.
-- `client/src/game/lib/cycleOrchestrator.ts` — `advanceRunAfterFloorWin`, `createNextFloorState`.
-- `client/src/game/lib/generator.ts` — Deterministic floors + `regionEpoch` / `effectiveDifficultyStep`.
-- `client/src/game/lib/runState.ts` — Progression policy, `floorSeed` (includes route salt).
-- `client/src/game/lib/director.ts` — `directExpansion`, `resetDirectorCircuit(runId?)` (per-run circuit map; omit `runId` to clear all).
-- `client/src/game/lib/dressingOrchestrator.ts` — pure `tryDressFloor` (unit-tested async commit path used by `GameApp`).
+## Architecture
 
-## Design Docs
+- `client/src/main.tsx` boots the app, probes Foundation Models availability,
+  selects the run mode, owns the terminal feed, and hides the native splash.
+- `client/src/game/GameApp.tsx` renders the procedural board, HUD, route picker,
+  diagnostics, dressing flow, and terminal takeover scheduling.
+- `client/src/game/lib/gameState.ts` owns floor actions and win/loss rules.
+- `client/src/game/lib/runState.ts` owns progression, routes, checkpoints, and
+  deterministic floor seeds.
+- `client/src/game/lib/generator.ts` and `solver.ts` generate solvable floors
+  and derive safe cascade moves.
+- `client/src/game/lib/proceduralTileDressing.ts` creates deterministic tile
+  labels and flavor.
+- `client/src/game/lib/director.ts` requests optional iris lines and protects
+  the native generation path with a per-run circuit breaker.
+- `client/src/game/lib/terminalLog.ts` and
+  `terminalTakeoverScheduler.ts` produce presentation-only terminal events.
+- `client/src/lib/foundationModelsPlugin.ts` wraps the Capacitor bridge. Native
+  methods live in `ios/App/App/FoundationModelsPlugin.swift`.
 
-- [docs/GAMEPLAY_CYCLE_SPEC.md](docs/GAMEPLAY_CYCLE_SPEC.md)
-- [docs/INFINITE_GENERATION_SPEC.md](docs/INFINITE_GENERATION_SPEC.md)
-- [docs/DIRECTOR_GUARDRAILS.md](docs/DIRECTOR_GUARDRAILS.md)
-- [docs/VERIFICATION_GATES.md](docs/VERIFICATION_GATES.md)
-- [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md)
-- [docs/LAUNCH_CHECKPOINT.md](docs/LAUNCH_CHECKPOINT.md)
+Build output is written to `dist/public`. Do not edit that directory.
 
-## Verify
+## Requirements
+
+- Node.js with pnpm 10
+- macOS and Xcode for the iOS target and asset generation
+- iOS 26+ on supported hardware for Foundation Models output
+
+The web build remains fully playable. It uses deterministic and static text
+instead of on-device generation.
+
+## Commands
 
 ```bash
+pnpm install
+pnpm dev
 pnpm check
 pnpm test
-# Optional long strided generator sweep (SOAK=1; long timeout):
-pnpm test:soak
-# Regenerate iOS app icon + splash PNGs (macOS + Swift; writes Assets.xcassets):
+pnpm build
+```
+
+Additional checks and iOS tasks:
+
+```bash
+pnpm test:soak          # optional long generator sweep
+pnpm smoke --no-build  # typecheck, tests, registration, source invariants
+pnpm smoke --fast      # the above plus a web build and React dedupe check
+pnpm smoke             # full gate, including Capacitor iOS sync
+pnpm cap:sync:ios
+pnpm cap:open
 pnpm icons:generate
 ```
 
-## Dev diagnostics
+## Diagnostics
 
-Append **`?diag=1`** to the loaded URL to show the amber diagnostics strip (burst reveal, forced director nulls, simulated rim banner, **Export diag log**). Each **New Run** appends the prior session HUD counters to `localStorage` (`hexodus_session_diag_snapshots`, last 80 rows). Summarize an export on your machine:
+Append `?diag=1` to show session counters and controls for burst reveals,
+forced director fallbacks, rim fallback simulation, and diagnostic export.
+Starting a new run stores the prior counters in
+`hexodus_session_diag_snapshots`, capped at 80 rows.
+
+Summarize an exported file locally:
 
 ```bash
 pnpm beta:diag-summary path/to/hexodus-session-diag-*.json
 ```
 
-### Commerce stub (economics experiments)
+Set `VITE_VALUE_CAPTURE_STUB=1`, or use `?commerce=1` on web, to expose the
+local-only supporter experiment. It does not use StoreKit.
 
-Set **`VITE_VALUE_CAPTURE_STUB=1`** (or append **`?commerce=1`** on web) to show a boot-time **Grant stub unlock** control (localStorage only; no IAP). See [docs/LAUNCH_CHECKPOINT.md](docs/LAUNCH_CHECKPOINT.md).
+## Project Docs
 
-See [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md) for a full on-device checklist.
+- [Project plan](PROJECT_PLAN.md)
+- [Gameplay cycle](docs/GAMEPLAY_CYCLE_SPEC.md)
+- [Infinite generation](docs/INFINITE_GENERATION_SPEC.md)
+- [Director guardrails](docs/DIRECTOR_GUARDRAILS.md)
+- [Verification gates](docs/VERIFICATION_GATES.md)
+- [iOS device verification](docs/DEVICE_VERIFY.md)
+- [Launch checkpoint](docs/LAUNCH_CHECKPOINT.md)
 
-## iOS assets
+Files under `docs/superpowers/specs/` are historical design records. The docs
+listed above describe the current runtime.
 
-Source script: `scripts/generate-icon.swift`. Reviewable PNG variants are written to `icon-variants/` (gitignored); installed assets live in `ios/App/App/Assets.xcassets/`.
+## iOS Assets
+
+`scripts/generate-icon.swift` generates review variants in the ignored
+`icon-variants/` directory and installs the App Icon and splash images in
+`ios/App/App/Assets.xcassets/`.

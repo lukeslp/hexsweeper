@@ -1,60 +1,110 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Product and Architecture
 
-This is a Vite + React client with a Capacitor iOS target. Client code lives in
-`client/src`: gameplay in `client/src/game`, hooks in `client/src/hooks`, and
-platform/game helpers in `client/src/lib`. Terminal feed reducers live under
-`client/src/game/lib` (`terminalLog.ts`, `terminalTakeoverScheduler.ts`) with
-UI in `client/src/components/TerminalPanel.tsx`. Native iOS code is under `ios/App`, including the
-`FoundationModelsPlugin` bridge. Build output goes to `dist/public`; do not edit
-generated files there. Design and planning notes live in `docs/`.
+Hexodus is an iOS-first Vite and React 19 puzzle game shipped through
+Capacitor 8. The web target is a development and fallback surface. Puzzle
+truth, generation, solver deductions, win/loss state, and run progression must
+remain deterministic. Foundation Models output is presentation only.
 
-## Build, Test, and Development Commands
+Client code lives in `client/src`:
 
-Use pnpm, matching `pnpm-lock.yaml` and the `packageManager` field.
+- `game/GameApp.tsx` owns the procedural board and run UI.
+- `game/lib` contains pure reducers, generation, solving, dressing, terminal
+  scheduling, and their tests.
+- `components/TerminalPanel.tsx` renders the terminal feed owned by `main.tsx`.
+- `lib/foundationModelsPlugin.ts` wraps the native bridge and fallbacks.
+- `hooks` contains canvas and touch interaction helpers.
 
-- `pnpm dev` starts the Vite dev server for the web client.
-- `pnpm build` builds the client into `dist/public`.
-- `pnpm check` runs strict TypeScript checking without emitting files.
-- `pnpm test` runs Vitest; it currently allows an empty test suite.
-- `pnpm test:soak` runs the optional long strided generator sweep (`SOAK=1`).
-- `pnpm icons:generate` (macOS) runs `scripts/generate-icon.swift --write-ios` to refresh App Icon + Splash assets.
-- `pnpm smoke` runs the pre-commit/pre-TestFlight smoke gates (typecheck, tests, native plugin registration, Phase 7 grep invariants, then build + React dedupe unless `--no-build`).
-- `pnpm beta:diag-summary` summarizes exported session diagnostic JSON from testers.
-- `pnpm smoke --fast` skips Capacitor sync but verifies the web build.
-- `pnpm cap:sync:ios` builds and syncs the iOS Capacitor project.
-- `pnpm cap:open` opens the iOS project in Xcode.
+Native iOS code lives in `ios/App`. The app-local
+`FoundationModelsPlugin.swift` must stay manually registered in
+`AppViewController.swift`. Build output goes to `dist/public`; never edit it.
+Current operational docs live at the repository root and in `docs/`.
+`docs/superpowers/specs/` contains historical design records.
 
-## Coding Style & Naming Conventions
+## Commands
+
+Use pnpm, matching `pnpm-lock.yaml` and the pinned `packageManager` field.
+
+- `pnpm dev`: start Vite for the web client.
+- `pnpm build`: build to `dist/public`.
+- `pnpm check`: run strict TypeScript checking.
+- `pnpm test`: run the default Vitest suite. The optional soak suite is
+  skipped unless enabled.
+- `pnpm test:soak`: run the long strided generator sweep with `SOAK=1`.
+- `pnpm smoke --no-build`: run typecheck, tests, native registration, and
+  source invariant checks.
+- `pnpm smoke --fast`: add a Vite build and React dedupe check without syncing
+  Capacitor.
+- `pnpm smoke`: run all five gates and sync the iOS project.
+- `pnpm cap:sync:ios`: build and sync the Capacitor iOS target.
+- `pnpm cap:open`: open the iOS workspace in Xcode.
+- `pnpm icons:generate`: regenerate App Icon and splash assets on macOS.
+- `pnpm beta:diag-summary <file>`: summarize an exported diagnostic bundle.
+
+## Runtime Invariants
+
+- Never let generated text change cell truth, clues, coordinates, mistake
+  accounting, iris control, or win/loss state.
+- Tile dressing comes from `proceduralTileDressing.ts`. On-device generation
+  supplies iris lines and terminal takeovers on the current gameplay path.
+- Keep both native and JavaScript timeouts around Foundation Models calls.
+- Preserve the per-run director circuit breaker: three consecutive failures
+  open a 12-second cooldown. Non-iOS fallback must not count as a failure.
+- Keep availability caching and foreground invalidation paired. Players can
+  change Apple Intelligence availability while the app is backgrounded.
+- Preserve async dressing invalidation across overlapping reveals, floor
+  transitions, and run restarts.
+- Keep `vite.config.ts` React dedupe entries. The smoke bundle check guards a
+  known duplicate-React crash.
+- Storage names with the legacy `hexpand_` prefix and the `HexpandDB` Dexie
+  name are migration-sensitive. Do not rename them without a data plan.
+
+## Style
 
 Prettier is authoritative: 2-space indentation, semicolons, double quotes,
-trailing commas where valid in ES5, and 80-column print width. TypeScript is
-strict; prefer explicit domain types for game state and bridge payloads. Use
-aliases: `@/` for `client/src`. React components use
-PascalCase, hooks use `useCamelCase`, and utility modules use camelCase
-filenames.
+ES5 trailing commas, and an 80-column print width. TypeScript is strict. Use
+explicit domain types for game state and bridge payloads. Import client code
+through the `@/` alias when it improves clarity.
 
-## Testing Guidelines
+React components use PascalCase, hooks use `useCamelCase`, and utility modules
+use camelCase filenames. Keep reducers and generator logic pure. Add short
+comments only for non-obvious constraints.
 
-Vitest is configured for `client/src/**/*.test.ts` and `client/src/**/*.test.tsx`.
-Place tests next to the behavior they cover and name them `*.test.ts` or `*.spec.ts`.
-Add focused tests for shared logic and pure game rules. Use `pnpm smoke` before
-handing off changes that touch build, iOS bridge registration, React bundling,
-or Capacitor sync.
+Use `LLM`, `language model`, `on-device generation`, or the model/framework
+name in prose. Avoid vague promotional terminology. Credit Luke Steuber in
+published material; do not add tool or assistant attribution.
 
-## Commit & Pull Request Guidelines
+## Testing
 
-Recent commits use short, imperative summaries, often with a scope prefix, for
-example `docs: mark Hexodus decisions resolved` or
-`scripts/smoke.sh: 5-gate pre-commit smoke`. Keep commits narrowly scoped.
-Pull requests should include the user-facing change, commands run, any iOS/Xcode
-impact, and screenshots or recordings for visible UI changes. Link related plans,
-issues, or docs when the change implements a tracked phase.
+Vitest discovers `client/src/**/*.test.ts` and `*.test.tsx`. Keep tests next to
+the behavior they cover. Add focused tests for reducers, deterministic output,
+bridge contracts, scheduler state, and async race handling.
 
-## Agent-Specific Instructions
+Run `pnpm check` and `pnpm test` for documentation-adjacent source changes.
+Run the relevant smoke mode when changing build configuration, native bridge
+registration, React dependencies, async dressing wiring, or Capacitor sync.
+Use `pnpm test:soak` for generator curve or solver-budget changes.
 
-Before editing, check `git status` and preserve unrelated work. Prefer local
-patterns over new abstractions. For frontend work, verify text fits on mobile
-and desktop; for native bridge work, run `pnpm check` and the relevant smoke
-mode.
+Device-only behavior still needs the checklist in `docs/DEVICE_VERIFY.md`.
+Do not claim splash timing, Foundation Models availability, haptics, or touch
+behavior is verified from desktop tests.
+
+## Git and Pull Requests
+
+Check `git status`, `git diff --stat`, and recent commits before staging. Keep
+unrelated work intact and stage only intended files. Commits use short,
+imperative summaries with an optional scope, such as
+`docs: refresh contributor guide`. Do not add `Co-Authored-By` lines.
+
+Pull requests should describe the user-facing effect, verification commands,
+iOS or Xcode impact, and screenshots or recordings for visible UI changes.
+Link the relevant project plan or design doc when implementing a tracked item.
+
+## Documentation Maintenance
+
+Treat `README.md`, `PROJECT_PLAN.md`, and the top-level files in `docs/` as the
+current source of truth. Update them with behavior changes. Avoid phase labels
+that go stale; name the concrete subsystem or invariant instead. Keep manual
+device evidence and open release work explicit rather than marking it complete
+from simulator or web verification.

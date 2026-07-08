@@ -1,4 +1,4 @@
-# Launch go / no-go (post Phase 7.1)
+# Launch go / no-go
 
 Use this checklist before widening TestFlight or App Store submission beyond the inner beta.
 

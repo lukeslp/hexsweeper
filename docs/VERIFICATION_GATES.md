@@ -2,7 +2,7 @@
 
 ## Smoke (`scripts/smoke.sh`)
 
-Five steps (typecheck, tests, FoundationModels plugin registration, **Phase 7 grep invariants** in `GameApp` / `director` / `types`, then Vite build + React dedupe unless `--no-build`):
+Five steps: typecheck, tests, Foundation Models plugin registration, async dressing/director source invariants, then Vite build plus React dedupe unless `--no-build`.
 
 ```bash
 pnpm smoke              # full: includes cap:sync:ios
@@ -12,20 +12,24 @@ pnpm smoke --no-build   # typecheck + tests + greps + plugin line only
 
 ## Automated (Vitest)
 
-| Suite                               | Intent                                                                                                                  |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `generator.test.ts`                 | Solvability budget floors 1–12, **depth sweep 1..500** (one seed per floor), deep multi-seed smoke.                     |
-| `generator.soak.test.ts`            | **Optional** strided deep sweep when `SOAK=1` (see `pnpm test:soak`).                                                   |
-| `solver.test.ts`                    | Solver correctness on generated boards.                                                                                 |
-| `runState.test.ts`                  | Infinite vs finite progression + route salt + milestones.                                                               |
-| `director.test.ts`                  | Procedural tiles + iris-only FM path, **per-runId circuit breaker**, platform short-circuit.                              |
-| `proceduralTileDressing.test.ts`    | Deterministic titles/flavor from floor seed + cell context.                                                               |
-| `foundationModelsPlugin.test.ts`    | Bridge contracts including `tryOnDeviceIrisLineFirst` (tile batch API retained, not on hot path).                         |
-| `cycleOrchestrator.test.ts`         | Deterministic advance + next floor seed wiring + run/floor index sync.                                                  |
-| `replayVerification.test.ts`        | Replay parity + cohort solvability sample.                                                                              |
-| `dressingGenerationGate.test.ts`    | Async dressing generation token semantics.                                                                              |
-| `asyncDressing.integration.test.ts` | Run/floor index sync + async dressing gate pattern used by `GameApp`.                                                   |
-| `dressingOrchestrator.test.ts`      | Stale-guard + rapid-reveal races for `tryDressFloor` (pure async dressing pipeline).                                    |
+| Suite                               | Intent                                                                                              |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `generator.test.ts`                 | Solvability budget floors 1–12, **depth sweep 1..500** (one seed per floor), deep multi-seed smoke. |
+| `generator.soak.test.ts`            | **Optional** strided deep sweep when `SOAK=1` (see `pnpm test:soak`).                               |
+| `solver.test.ts`                    | Solver correctness on generated boards.                                                             |
+| `runState.test.ts`                  | Infinite vs finite progression + route salt + milestones.                                           |
+| `director.test.ts`                  | Procedural tiles + iris-only FM path, **per-runId circuit breaker**, platform short-circuit.        |
+| `proceduralTileDressing.test.ts`    | Deterministic titles/flavor from floor seed + cell context.                                         |
+| `foundationModelsPlugin.test.ts`    | Bridge contracts including `tryOnDeviceIrisLineFirst` (tile batch API retained, not on hot path).   |
+| `cycleOrchestrator.test.ts`         | Deterministic advance + next floor seed wiring + run/floor index sync.                              |
+| `replayVerification.test.ts`        | Replay parity + cohort solvability sample.                                                          |
+| `dressingGenerationGate.test.ts`    | Async dressing generation token semantics.                                                          |
+| `asyncDressing.integration.test.ts` | Run/floor index sync + async dressing gate pattern used by `GameApp`.                               |
+| `dressingOrchestrator.test.ts`      | Stale-guard + rapid-reveal races for `tryDressFloor` (pure async dressing pipeline).                |
+| `terminalLog.test.ts`               | Deterministic terminal event formatting and bounded feed behavior.                                  |
+| `terminalTakeoverScheduler.test.ts` | Takeover cadence, floor transitions, and scheduler reset behavior.                                  |
+| `gameState.test.ts`                 | Reveal/mark rules, failure accounting, completion, and cascade deductions.                          |
+| `sessionDiagLog.test.ts`            | Diagnostic snapshot persistence and bounded history.                                                |
 
 ## Session diagnostics (runtime)
 

@@ -4,7 +4,7 @@
 
 1. **Boot** — player starts a run (`RunState` + `FloorState`).
 2. **Probe** — reveal/mark hex cells; deterministic puzzle truth resolves in `gameState.ts`. After a **correct** reveal or mark, `deriveDeductions` may auto-reveal additional safe unknowns (cascade); `lastCascade` drives staggered UI, then `clearCascade`.
-3. **Dress** — `directExpansion` labels tiles + `irisLine` (never mutates truth).
+3. **Dress** — procedural code labels tiles immediately; `directExpansion` may add an on-device or fallback `irisLine`. Neither path mutates truth.
 4. **Resolve floor** — win = all safe revealed + blocked handled; loss = wrongs or iris pressure.
 5. **Branch** — player picks **Safe / Loot / Risk** lane (`setRouteChoice`) which salts the next floor seed and nudges pressure meters.
 6. **Advance** — `advanceRunAfterFloorWin` increments run floor (infinite by default) and checkpoints.
