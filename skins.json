@@ -1,9 +1,9 @@
 {
   "title": "Hexsweeper Lab",
-  "note": "Dormant prior art: experimental skins over core.js. Production play is index.html with three modes only (White / Fire / Plague) — not this catalog.",
+  "note": "Dormant prior art: experimental skins over core.js. Production play is index.html with five themes (Light / Dark / Fire / Plague / Escape) — not this catalog.",
   "production": {
     "file": "index.html",
-    "modes": ["white", "fire", "plague"],
+    "modes": ["light", "dark", "fire", "plague", "escape"],
     "url": "https://dr.eamer.dev/games/hexsweeper/"
   },
   "skins": [

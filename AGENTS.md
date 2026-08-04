@@ -2,10 +2,12 @@
 
 ## Workspace
 
-Canonical root: `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/`  
+Canonical (live): `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/`  
 (`~/dr.eamer.dev` → `~/www/dr.eamer.dev`)
 
-Saved edits are live on the public site. Prefer small, verified changes; probe `https://dr.eamer.dev/games/hexsweeper/` after UI work.
+Beast mirror: `/Users/luke/workspace/hexsweeper` · remote `lukeslp/hexsweeper`
+
+Saved edits on Drummer are live on the public site. Prefer: edit → verify locally or via public URL → commit → push → `git pull` on Drummer so disk matches git.
 
 ## Product surface
 

@@ -2,7 +2,7 @@
 
 ## Objective
 
-Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, with a clear three-mode product surface and a retained skin lab as dormant prior art.
+Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, with a clear five-theme product surface (Light / Dark / Fire / Plague / Escape) and a retained skin lab as dormant prior art.
 
 ## Architecture
 
@@ -32,6 +32,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Plague colony field: low-frequency growth banding + clustered copper fruiting
 - [x] Escape legibility pass: own cool bloom (was inheriting Soft White's white glow),
       muted digit palette, calmer bevels, one digit reading channel (ticks/glow dropped)
+- [x] Self-hosted IBM Plex (no Google Fonts CDN); fixed font URLs + distinct weights
 - [x] Fire opens large and fills ~98% of the viewport so the pit reads as one composition
 - [x] Progressive empty-cell flood: BFS rings open outward to the numbered boundary
 - [x] Plague irregular face scale + off-center shading; green-forward grid with rose-copper complements
@@ -49,14 +50,18 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 ## Outstanding
 
 - [x] Nested git repo for production folder (commit/push history)
+- [x] Self-hosted fonts committed (`fonts/` + OFL) so GitHub clones match live typography
+- [x] Docs / `skins.json` production surface aligned to five themes
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
 - [ ] Optional: automated smoke (desktop/mobile) in CI — currently manual / browser probes
+- [ ] Phase next: full / comprehensive / impressive cut (see session plan after distill)
 
 ## Risks
 
-- Live static path with no dedicated worktree — bad deploys are immediate.
+- Live static path — bad deploys are immediate; prefer commit → push → `git pull` on Drummer.
 - Mode switch resets the run (infinite vs finite topology).
-- Lab `skins.json` still points some entries at experimental files; do not promote them into production nav without a deliberate product decision.
+- Lab `skins.json` catalog is prior art only; do not promote lab skins into production nav without a deliberate product decision.
+- Beast and Drummer can drift; Drummer remains canonical for the public URL.
 
 ## Acceptance (production)
 

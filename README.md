@@ -5,7 +5,7 @@ Hexagonal minesweeper for [dr.eamer.dev](https://dr.eamer.dev/games/hexsweeper/)
 **Live path:** `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/`  
 **Public URL:** https://dr.eamer.dev/games/hexsweeper/
 
-Edits here are live static deploys (same pattern as `/clocks/`). This folder is its own nested Git worktree.
+Edits on Drummer are live static deploys (same pattern as `/clocks/`). This folder is its own nested Git worktree (`lukeslp/hexsweeper`). Beast mirror: `/Users/luke/workspace/hexsweeper`. Typography is self-hosted IBM Plex under `fonts/` (SIL OFL 1.1 — see `fonts/OFL.txt`; no Google Fonts CDN).
 
 ## Modes (production)
 
@@ -43,7 +43,8 @@ Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Ligh
 |------|------|
 | `index.html` | Production game (modes, renderer, HUD, help) |
 | `core.js` | Shared engine: hex grid, endless growth, input, hooks |
-| `skin-chrome.css` | Shared nav / settings / overlay chrome |
+| `skin-chrome.css` | Shared nav / settings / overlay chrome (lab + classic) |
+| `fonts/` | Self-hosted IBM Plex Sans/Mono + `OFL.txt` |
 | `classic.html` | Lab baseline neumorph skin |
 | `lab.html` + `skins.json` + `skins/` | Dormant visual lab — not linked from production |
 
@@ -70,7 +71,7 @@ Also exported: `Hexsweeper.DEFAULT_THEME`, `DEFAULT_CONFIG`, `SQRT3`.
 
 ## Lab (prior art)
 
-Open `lab.html` locally or by URL path. Ten experimental skins remain under `skins/` for technique reference; production navigation only exposes Light / Dark / Fire / Plague.
+Open `lab.html` locally or by URL path. Experimental skins remain under `skins/` for technique reference; production navigation only exposes Light / Dark / Fire / Plague / Escape.
 
 ## Accessibility
 
