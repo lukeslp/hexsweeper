@@ -2,10 +2,11 @@
  * File Purpose: Shared Hexsweeper game engine (hex grid, endless/finite boards,
  *   dig/flag/chord, drag-pan, wheel/pinch zoom, RAF loop) with skin hooks.
  * Primary Functions/Classes: Cell; boot(); applyViewZoom; exportEndlessState;
- *   applyEndlessState; Hexsweeper.DEFAULT_*.
+ *   applyEndlessState; setFinish; Hexsweeper.DEFAULT_*.
  * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless }).
- * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart,
+ * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
  *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
+ * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
  */
 (function (global) {
   "use strict";
@@ -48,6 +49,7 @@
       this.q = q;
       this.r = r;
       this.isMine = false;
+      this.isFinish = false;
       this.revealed = false;
       this.flagged = false;
       this.neighborMines = 0;
@@ -136,12 +138,14 @@
       centerY: 0,
       boardOffset: { x: 0, y: 0 },
       // Endless / infinite field (Soft White): expand at the frontier, no win
+      // Escape may set finishKey — revealing that hex is a positive exit.
       endless: !!opts.endless,
       mineDensity:
         opts.mineDensity != null && Number.isFinite(opts.mineDensity)
           ? opts.mineDensity
           : ENDLESS_DENSITY.medium,
       maxRadius: opts.maxRadius != null ? opts.maxRadius : ENDLESS_MAX_RADIUS,
+      finishKey: null,
       clearedSafe: 0,
       bestCleared: 0,
       hitMaxRadius: false,
@@ -378,6 +382,13 @@
         gameOver(!!win);
         return true;
       },
+      /**
+       * Escape exit hex (axial). Null clears. Never mined; created on expand if needed.
+       * @returns {string|null} finish key
+       */
+      setFinish(q, r) {
+        return setFinishCell(q, r);
+      },
       /** Debug / skin helper: dig a cell by axial key or Cell. */
       dig(target) {
         if (state.isGameOver) return false;
@@ -409,6 +420,49 @@
       const dq = cell.q - safeQ;
       const dr = cell.r - safeR;
       return hexRing(dq, dr) <= 1;
+    }
+
+    function finishKeyOf(q, r) {
+      return `${q | 0},${r | 0}`;
+    }
+
+    function isFinishCell(cell) {
+      if (!cell) return false;
+      if (cell.isFinish) return true;
+      return !!(state.finishKey && state.finishKey === `${cell.q},${cell.r}`);
+    }
+
+    /** Mark / clear the Escape finish hex; demines if already present. */
+    function setFinishCell(q, r) {
+      if (state.finishKey) {
+        const prev = state.map.get(state.finishKey);
+        if (prev) prev.isFinish = false;
+      }
+      if (q == null || r == null || !Number.isFinite(q) || !Number.isFinite(r)) {
+        state.finishKey = null;
+        return null;
+      }
+      const key = finishKeyOf(q, r);
+      state.finishKey = key;
+      const cell = state.map.get(key);
+      if (cell) stampFinishCell(cell);
+      return key;
+    }
+
+    function stampFinishCell(cell) {
+      if (!cell) return;
+      cell.isFinish = true;
+      if (cell.isMine) {
+        cell.isMine = false;
+        state.mineCount = Math.max(0, (state.mineCount | 0) - 1);
+        recountNeighbors();
+      }
+    }
+
+    function ensureFinishStamp() {
+      if (!state.finishKey) return;
+      const cell = state.map.get(state.finishKey);
+      if (cell) stampFinishCell(cell);
     }
 
     function recountNeighbors() {
@@ -610,6 +664,8 @@
       state.hoveredKey = null;
       state.win = null;
       state.detonator = null;
+      state.endReason = null;
+      state.finishKey = null;
       state.floodPending = 0;
       state._growAfterFlood = false;
       // Endless: mineCount filled after first click by density
@@ -646,7 +702,7 @@
             : ENDLESS_DENSITY.medium;
         for (const key of keys) {
           const cell = state.map.get(key);
-          if (isSafeZone(cell, safeQ, safeR)) continue;
+          if (isSafeZone(cell, safeQ, safeR) || isFinishCell(cell)) continue;
           if (Math.random() < density) {
             cell.isMine = true;
             placed++;
@@ -656,7 +712,9 @@
         if (placed < 3 && keys.length > 12) {
           for (const key of keys) {
             const cell = state.map.get(key);
-            if (cell.isMine || isSafeZone(cell, safeQ, safeR)) continue;
+            if (cell.isMine || isSafeZone(cell, safeQ, safeR) || isFinishCell(cell)) {
+              continue;
+            }
             cell.isMine = true;
             placed++;
             if (placed >= 3) break;
@@ -667,12 +725,13 @@
         for (const key of keys) {
           if (placed >= target) break;
           const cell = state.map.get(key);
-          if (isSafeZone(cell, safeQ, safeR)) continue;
+          if (isSafeZone(cell, safeQ, safeR) || isFinishCell(cell)) continue;
           cell.isMine = true;
           placed++;
         }
       }
       state.mineCount = placed;
+      ensureFinishStamp();
       recountNeighbors();
     }
 
@@ -705,12 +764,14 @@
             if (state.map.has(key)) continue;
             const cell = new Cell(q, r);
             cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
+            if (state.finishKey === key) cell.isFinish = true;
             state.map.set(key, cell);
             fresh.push(cell);
           }
         }
       }
       state.mapRadius = newRadius;
+      ensureFinishStamp();
 
       if (!state.isFirstClick && fresh.length) {
         const density =
@@ -729,6 +790,7 @@
         // as the frontier expands (safe band would otherwise dilute mines).
         const eligible = [];
         for (const cell of fresh) {
+          if (isFinishCell(cell)) continue;
           const touchesOpen = getNeighbors(cell.q, cell.r).some((n) => n.revealed);
           if (!touchesOpen) eligible.push(cell);
         }
@@ -1367,8 +1429,17 @@
     }
 
     function checkWin() {
-      // Endless Soft White: never "wins" — the field keeps expanding
+      // Endless Soft White: no clear-the-board win — the field keeps expanding.
+      // Escape: revealing the finish hex is a positive exit.
       if (state.endless) {
+        if (state.finishKey) {
+          const fin = state.map.get(state.finishKey);
+          if (fin && fin.revealed && !fin.isMine) {
+            state.endReason = "finish";
+            gameOver(true);
+            return;
+          }
+        }
         updateUI();
         return;
       }
@@ -1425,13 +1496,14 @@
      */
     function exportEndlessState() {
       if (!state.endless) return null;
+      ensureFinishStamp();
       const mines = [];
       const revealed = [];
       const flagged = [];
       const torn = [];
       state.map.forEach((c) => {
         const key = `${c.q},${c.r}`;
-        if (c.isMine) mines.push(key);
+        if (c.isMine && !isFinishCell(c)) mines.push(key);
         if (c.revealed) revealed.push(key);
         if (c.flagged) flagged.push(key);
         if (c._riftTorn) torn.push(key);
@@ -1446,6 +1518,7 @@
         over: !!state.isGameOver,
         win: state.win,
         endReason: state.endReason || null,
+        finish: state.finishKey || null,
         cleared: state.clearedSafe | 0,
         flags: state.flagsPlaced | 0,
         mineCount: state.mineCount | 0,
@@ -1523,6 +1596,7 @@
       // Clear defaults then stamp sparse lists
       state.map.forEach((c) => {
         c.isMine = false;
+        c.isFinish = false;
         c.revealed = false;
         c.flagged = false;
         c._riftTorn = false;
@@ -1544,7 +1618,6 @@
         c._riftTorn = true;
         c._blastAlpha = 0.15;
       });
-      recountNeighbors();
 
       state.isFirstClick = !!data.first;
       state.isGameOver = !!data.over;
@@ -1557,6 +1630,15 @@
         : Array.isArray(data.mines)
           ? data.mines.length
           : 0;
+      // Escape finish (axial key) — never a mine; stamp after mineCount restore
+      if (typeof data.finish === "string" && data.finish.includes(",")) {
+        const parts = data.finish.split(",");
+        setFinishCell(parseInt(parts[0], 10), parseInt(parts[1], 10));
+      } else {
+        state.finishKey = null;
+      }
+      ensureFinishStamp();
+      recountNeighbors();
       state.timeElapsed = data.time | 0;
       state.detonator = null;
       state.hitMaxRadius = false;

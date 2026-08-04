@@ -25,6 +25,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Plague / Escape organic lose: hex-graph seep (infection bloom / lens swallow) — no shards
 - [x] Escape rift chase (grace → awaken → continuous crawl → catch)
 - [x] Escape MS-first rethink: dig/flag/chord primary; rift is glacial secondary threat (no dig-budget hex hops)
+- [x] Escape finish tile: offscreen exit hex + edge direction cue; win on reveal (autosaved)
 - [x] Help / metadata describe modes, not the skin lab
 - [x] Bare URL opens infinite Light
 - [x] Light↔Dark keeps the run (cosmetic swap)
@@ -77,4 +78,4 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 
 ## Acceptance (production)
 
-Five themes reachable; Light/Dark/Escape infinite; Fire fits the viewport with a living center boil; Plague reads as a specimen slide with distinguishable tiles; Escape is calm and legible at full-field density; finite themes default to the large board and only they show the size row; welcome once; BR chrome is Appearance sun/moon (Light/Dark only) · Reset · Menu as matching icon buttons; Menu holds scores, modes, play aids, and outbound links; Fire/Plague/Escape Menu panels match theme materials; input and reduced-motion still work.
+Five themes reachable; Light/Dark/Escape infinite; Fire fits the viewport with a living center boil; Plague reads as a specimen slide with distinguishable tiles; Escape is calm and legible at full-field density with an offscreen finish + edge cue (win on reveal); finite themes default to the large board and only they show the size row; welcome once; BR chrome is Appearance sun/moon (Light/Dark only) · Reset · Menu as matching icon buttons; Menu holds scores, modes, play aids, and outbound links; Fire/Plague/Escape Menu panels match theme materials; input and reduced-motion still work.

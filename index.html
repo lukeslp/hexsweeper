@@ -777,7 +777,7 @@ body[data-mode="escape"] .menu-links {
       <li>Right-click or press-and-hold to <strong>flag</strong> mines.</li>
       <li>Use the <strong>numbers</strong> to figure out which hexes are dangerous.</li>
       <li><strong>Clear</strong> every safe cell — don't step on a mine.</li>
-      <li id="welcome-escape-tip" hidden>In <strong>Escape</strong>, play minesweeper as usual — after you open a patch, a slow rift seeps toward your digs. Dig, flag, and chord; the rift is a second threat, not the game.</li>
+      <li id="welcome-escape-tip" hidden>In <strong>Escape</strong>, play minesweeper as usual — dig toward the offscreen exit (edge cue points the way). After you open a patch, a slow rift seeps toward your digs. Reveal the finish hex to escape; mines and the rift still kill.</li>
     </ul>
     <div class="welcome-themes" role="group" aria-label="Theme">
       <button type="button" data-welcome-mode="light" aria-pressed="true">Light</button>
@@ -856,7 +856,7 @@ body[data-mode="escape"] .menu-links {
     <p>Minesweeper on a honeycomb. Six neighbors max, not eight.</p>
 
     <h3>Goal</h3>
-    <p><strong>Light</strong> and <strong>Dark</strong> are an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> is the same minesweeper loop — dig, flag, chord, score cleared cells — with a slow rift that wakes after you open a patch and seeps toward your last dig. Mines still kill on contact; the rift is a second, glacial threat. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
+    <p><strong>Light</strong> and <strong>Dark</strong> are an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> is the same minesweeper loop — dig, flag, chord, score cleared cells — plus a finish hex placed beyond the starting view. An edge cue points toward it; reveal that hex to win. A slow rift wakes after you open a patch and seeps toward your last dig. Mines still kill; the rift is a second, glacial threat. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
 
     <h3>Reveal</h3>
     <p>Click or tap a covered cell. First click is always safe. The number is how many mines sit on the six sides. Empty clears open outward in rings until they hit numbered cells. When the flags around a number match that count, click it again (or double-click) to open the rest. In Light/Dark/Escape, the camera follows your dig and the grid expands so the canvas never runs out of hexes.</p>
@@ -2788,6 +2788,192 @@ body[data-mode="escape"] .menu-links {
     ctx.restore();
   }
 
+  // —— Escape · Finish exit ——————————————————————————————————————————
+  // Positive goal: a safe finish hex beyond the starting viewport.
+  // Reveal it to win. Edge chevron points the way while it's offscreen.
+  function randomHexOnRing(R) {
+    const ring = Math.max(1, R | 0);
+    const dirs = [
+      [1, 0],
+      [0, 1],
+      [-1, 1],
+      [-1, 0],
+      [0, -1],
+      [1, -1],
+    ];
+    const side = Math.floor(Math.random() * 6);
+    const steps = Math.floor(Math.random() * ring);
+    let q = dirs[side][0] * ring;
+    let r = dirs[side][1] * ring;
+    const walk = dirs[(side + 2) % 6];
+    q += walk[0] * steps;
+    r += walk[1] * steps;
+    return { q, r };
+  }
+
+  function parseFinishKey(key) {
+    if (typeof key !== "string" || !key.includes(",")) return null;
+    const parts = key.split(",");
+    const q = parseInt(parts[0], 10);
+    const r = parseInt(parts[1], 10);
+    if (!Number.isFinite(q) || !Number.isFinite(r)) return null;
+    return { q, r };
+  }
+
+  /** Place finish beyond the current viewport so the run starts with an offscreen goal. */
+  function placeEscapeFinish(api) {
+    if (!riftThemeActive() || !api || !api.state || !api.state.endless) return null;
+    if (typeof api.setFinish !== "function") return null;
+    const s = api.state;
+    const size = Math.max(12, s.cellSize || 28);
+    const w = Math.max(320, s.canvas?.width || window.innerWidth || 800);
+    const h = Math.max(320, s.canvas?.height || window.innerHeight || 600);
+    const cornerDist = Math.hypot(w / 2, h / 2);
+    const viewR = Math.ceil(cornerDist / (size * 1.5)) + 2;
+    const ring =
+      Math.max(viewR + 8, (s.mapRadius | 0) + 6) + Math.floor(Math.random() * 6);
+    const { q, r } = randomHexOnRing(ring);
+    return api.setFinish(q, r);
+  }
+
+  /** Screen position of the finish hex (works even before the cell exists in the map). */
+  function finishScreenPos(s) {
+    const coords = parseFinishKey(s && s.finishKey);
+    if (!coords || !s) return null;
+    const SQRT3 = Math.sqrt(3);
+    const size = s.cellSize || 28;
+    const camX = s.camX || 0;
+    const camY = s.camY || 0;
+    const x = (s.canvas.width / 2) + size * SQRT3 * (coords.q + coords.r / 2) - camX;
+    const y = (s.canvas.height / 2) + size * 1.5 * coords.r - camY;
+    return { x, y, q: coords.q, r: coords.r };
+  }
+
+  function drawEscapeFinishMarker(ctx, cell, size, now) {
+    if (!cell || !cell.isFinish) return;
+    const calm =
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pulse = calm ? 0.55 : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(now * 0.003));
+    const ds = size * (cell._depthScale || 1);
+    ctx.save();
+    // Soft teal well — reads as an exit, not a mine or flag
+    const g = ctx.createRadialGradient(cell.x, cell.y, 0, cell.x, cell.y, ds * 0.85);
+    if (cell.revealed) {
+      g.addColorStop(0, `rgba(167,243,208,${0.55 * pulse})`);
+      g.addColorStop(0.45, `rgba(94,234,212,${0.28 * pulse})`);
+      g.addColorStop(1, "transparent");
+    } else {
+      g.addColorStop(0, `rgba(94,234,212,${0.22 * pulse})`);
+      g.addColorStop(0.55, `rgba(56,189,248,${0.12 * pulse})`);
+      g.addColorStop(1, "transparent");
+    }
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cell.x, cell.y, ds * 0.72, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(167,243,208,${0.55 + 0.35 * pulse})`;
+    ctx.lineWidth = Math.max(1.5, size * 0.07);
+    ctx.beginPath();
+    ctx.arc(cell.x, cell.y, ds * (cell.revealed ? 0.38 : 0.32), 0, Math.PI * 2);
+    ctx.stroke();
+    // Tiny chevron / portal slit
+    const h = ds * 0.16;
+    ctx.strokeStyle = `rgba(224,252,255,${0.75 + 0.2 * pulse})`;
+    ctx.lineWidth = Math.max(1.4, size * 0.055);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(cell.x - h * 0.7, cell.y - h * 0.35);
+    ctx.lineTo(cell.x, cell.y + h * 0.55);
+    ctx.lineTo(cell.x + h * 0.7, cell.y - h * 0.35);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
+   * Edge direction cue toward the finish while it's offscreen.
+   * Anchored to viewport rim; steered clear of BR Menu chrome.
+   */
+  function drawEscapeFinishIndicator(ctx, api, now) {
+    if (!riftThemeActive() || !api || !api.state) return;
+    const s = api.state;
+    if (s.isGameOver || !s.finishKey) return;
+    const pos = finishScreenPos(s);
+    if (!pos) return;
+    const w = s.canvas.width;
+    const h = s.canvas.height;
+    const pad = 28;
+    const margin = 40;
+    const inView =
+      pos.x >= -margin &&
+      pos.y >= -margin &&
+      pos.x <= w + margin &&
+      pos.y <= h + margin;
+    // When the finish hex itself is on-screen, the tile marker is enough.
+    if (inView) {
+      const cell = s.map.get(s.finishKey);
+      if (cell && !cell._offscreen) return;
+    }
+
+    const cx = w / 2;
+    const cy = h / 2;
+    let dx = pos.x - cx;
+    let dy = pos.y - cy;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+
+    // Intersect ray from center with inset rectangle
+    const absDx = Math.abs(dx) || 1e-6;
+    const absDy = Math.abs(dy) || 1e-6;
+    const tx = (w / 2 - pad) / absDx;
+    const ty = (h / 2 - pad) / absDy;
+    const tEdge = Math.min(tx, ty);
+    let ix = cx + dx * tEdge;
+    let iy = cy + dy * tEdge;
+
+    // Keep clear of BR chrome (Reset · Menu cluster)
+    const hudSafe = 120;
+    if (ix > w - hudSafe && iy > h - 72) {
+      ix = Math.min(ix, w - hudSafe);
+      iy = Math.min(iy, h - 78);
+    }
+
+    const calm =
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pulse = calm ? 0.7 : 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(now * 0.0028));
+    const ang = Math.atan2(dy, dx);
+    const arm = 11;
+
+    ctx.save();
+    ctx.translate(ix, iy);
+    ctx.rotate(ang);
+    ctx.globalAlpha = 0.55 + 0.35 * pulse;
+    // Soft edge glow behind the chevron
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 22);
+    glow.addColorStop(0, `rgba(94,234,212,${0.35 * pulse})`);
+    glow.addColorStop(1, "transparent");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(167,243,208,0.92)";
+    ctx.fillStyle = "rgba(15,23,32,0.45)";
+    ctx.lineWidth = 2.2;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-arm * 0.35, -arm * 0.75);
+    ctx.lineTo(arm * 0.85, 0);
+    ctx.lineTo(-arm * 0.35, arm * 0.75);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // —— Escape · Rift Chase ————————————————————————————————————————————
   // Minesweeper first; rift is a glacial secondary threat:
   //   • grace until enough digs + exposes (classic opening play)
@@ -2981,7 +3167,11 @@ body[data-mode="escape"] .menu-links {
     if (!data || data.v !== 1 || !data.endless) return false;
     persistSuspended = true;
     const ok = api.applyEndlessState(data);
-    if (ok && th.rift) importRiftBlob(data.rift);
+    if (ok && th.rift) {
+      importRiftBlob(data.rift);
+      // Older Escape saves lack finish — place one beyond the restored view
+      if (!api.state.finishKey) placeEscapeFinish(api);
+    }
     persistSuspended = false;
     if (ok && typeof showToast === "function" && (data.cleared | 0) > 0) {
       showToast(`Restored · ${data.cleared} cleared`);
@@ -3045,7 +3235,10 @@ body[data-mode="escape"] .menu-links {
         if (!api || typeof api.applyEndlessState !== "function") return;
         persistSuspended = true;
         const ok = api.applyEndlessState(data);
-        if (ok && THEMES[themeIndex].rift) importRiftBlob(data.rift);
+        if (ok && THEMES[themeIndex].rift) {
+          importRiftBlob(data.rift);
+          if (!api.state.finishKey) placeEscapeFinish(api);
+        }
         persistSuspended = false;
         if (ok) {
           flushPersist();
@@ -4717,8 +4910,12 @@ body[data-mode="escape"] .menu-links {
       },
       onGameOver(win, api, meta) {
         flushPersist();
-        if (win) startWinBloom(api);
-        else if (meta && meta.reason === "rift") startOrganicSeep(api, meta.detonator, "rift");
+        if (win) {
+          startWinBloom(api);
+          if (meta && meta.reason === "finish" && typeof showToast === "function") {
+            showToast("Escaped");
+          }
+        } else if (meta && meta.reason === "rift") startOrganicSeep(api, meta.detonator, "rift");
         else if (THEMES[themeIndex]?.material === "mycelium") {
           startOrganicSeep(api, meta && meta.detonator, "plague");
         } else if (THEMES[themeIndex]?.rift) {
@@ -4742,8 +4939,12 @@ body[data-mode="escape"] .menu-links {
             c._seepAmt = 0;
             c._seepFruited = false;
             c._offscreen = false;
+            c.isFinish = false;
           });
         }
+        // Escape: seed a fresh offscreen finish (restore may overwrite via applyEndlessState)
+        if (THEMES[themeIndex]?.rift) placeEscapeFinish(api);
+        else if (api && typeof api.setFinish === "function") api.setFinish(null, null);
         // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX
         const th = THEMES[themeIndex];
         if (th && api.state && api.state.canvas) {
@@ -4962,6 +5163,7 @@ body[data-mode="escape"] .menu-links {
         drawBlastShards(ctx);
         drawBlastOverlay(ctx, s, now);
         drawRiftOverlay(ctx, s, now);
+        drawEscapeFinishIndicator(ctx, api, now);
         stepParticles(ctx, s, THEMES[themeIndex]);
         if (BLAST._shaking) {
           ctx.restore();
@@ -5167,6 +5369,9 @@ body[data-mode="escape"] .menu-links {
               drawPlateDigit(ctx, cell, size, th, T);
             }
             ctx.globalAlpha = 1;
+          }
+          if (th.rift && cell.isFinish) {
+            drawEscapeFinishMarker(ctx, cell, size, t);
           }
           if (cell.flagged && !cell.revealed) {
             ctx.strokeStyle = T.flag;
@@ -5713,6 +5918,23 @@ body[data-mode="escape"] .menu-links {
       RIFT.y = origin.y;
       RIFT.radius = s.cellSize * 1.0;
       return true;
+    },
+  };
+  window.__hexFinish = {
+    get key() {
+      return game?.state?.finishKey || null;
+    },
+    get pos() {
+      return parseFinishKey(game?.state?.finishKey);
+    },
+    place() {
+      return placeEscapeFinish(gameApi || game);
+    },
+    /** Dig the finish hex once it exists in the map (debug). */
+    dig() {
+      const api = gameApi || game;
+      if (!api?.state?.finishKey || typeof api.dig !== "function") return false;
+      return api.dig(api.state.finishKey);
     },
   };
 })();
