@@ -20,6 +20,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Biolume recast as Plague (flat, hyphae, spores)
 - [x] Fire magma pit (viewport-fit board, pit tilt, boiling center, contact shadows; no streak rain)
 - [x] Fire shaft camera: hover sinks crust, innie polarity (rim with-tilt / deep floor counter-shear), center-smaller scale, richer rim lip + lava underglow, spite vents up (PRM: static bowl + shading)
+- [x] Fire volcano-mine pass: darker lamp well → center ember, rising heat motes in pit (PRM static), gooier overlapping boil blobs (canvas only; digits stay legible)
 - [x] Fire hover: crust thins / boil wakes / neighbor heat bleed + spite ember orbit & burp (PRM-safe)
 - [x] Shared detonation FX (Fire + Light/Dark plates)
 - [x] Plague / Escape organic lose: hex-graph seep (infection bloom / lens swallow) — no shards

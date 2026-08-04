@@ -1688,8 +1688,8 @@ body[data-mode="escape"] .menu-links {
   }
 
   /**
-   * Magma backdrop: continuous ember void — no boxed plate under the honeycomb.
-   * Center holds a slow boil so the pit reads alive without boxed chrome.
+   * Magma backdrop: volcano-lamp well — dark rim, hot center ember, soft boil.
+   * No boxed plate; heat motes rise in the pit (PRM freezes them).
    */
   function drawMagmaPitWell(ctx, s) {
     const w = s.canvas.width;
@@ -1702,23 +1702,25 @@ body[data-mode="escape"] .menu-links {
     const cy = h / 2 + shiftY * 0.15;
     // Soft hex-ish reach of the lattice (slightly larger than the board)
     const reach = Math.max(s.mapRadius * s.cellSize * 2.05, Math.min(w, h) * 0.42);
+    const far = Math.max(w, h);
 
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
 
-    // Continuous field — same family as covered crust, no shelf / stripe
-    const base = ctx.createRadialGradient(cx, cy, reach * 0.15, cx, cy, Math.max(w, h) * 0.85);
-    base.addColorStop(0, "#24110c");
-    base.addColorStop(0.35, "#160a06");
-    base.addColorStop(0.7, "#0c0503");
-    base.addColorStop(1, "#050201");
+    // Lamp-style well: near-black rim, warm throat, brighter ember core
+    const base = ctx.createRadialGradient(cx, cy, reach * 0.08, cx, cy, far * 0.88);
+    base.addColorStop(0, "#3a160c");
+    base.addColorStop(0.22, "#1c0c08");
+    base.addColorStop(0.5, "#0e0604");
+    base.addColorStop(0.78, "#060201");
+    base.addColorStop(1, "#020100");
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
 
     // Soft crust bloom under the honeycomb so the board doesn't cast a rectangle
-    const under = ctx.createRadialGradient(cx, cy, reach * 0.2, cx, cy, reach * 1.15);
-    under.addColorStop(0, `rgba(52, 22, 14, ${0.62 + pulse * 0.08})`);
-    under.addColorStop(0.55, "rgba(28, 12, 8, 0.34)");
+    const under = ctx.createRadialGradient(cx, cy, reach * 0.18, cx, cy, reach * 1.15);
+    under.addColorStop(0, `rgba(58, 24, 14, ${0.55 + pulse * 0.08})`);
+    under.addColorStop(0.5, "rgba(24, 10, 6, 0.28)");
     under.addColorStop(1, "transparent");
     ctx.fillStyle = under;
     ctx.beginPath();
@@ -1736,18 +1738,19 @@ body[data-mode="escape"] .menu-links {
     // Soft underworld glow in the pit center — no stroke “rain” lines
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    const glow = ctx.createRadialGradient(cx, cy + reach * 0.08, 0, cx, cy, reach * 0.8);
-    glow.addColorStop(0, `rgba(255, 110, 28, ${0.18 + pulse * 0.1})`);
-    glow.addColorStop(0.4, `rgba(210, 55, 8, ${0.09 + pulse * 0.05})`);
+    const glow = ctx.createRadialGradient(cx, cy + reach * 0.06, 0, cx, cy, reach * 0.72);
+    glow.addColorStop(0, `rgba(255, 150, 48, ${0.26 + pulse * 0.12})`);
+    glow.addColorStop(0.28, `rgba(255, 90, 18, ${0.14 + pulse * 0.07})`);
+    glow.addColorStop(0.62, `rgba(180, 40, 6, ${0.06 + pulse * 0.03})`);
     glow.addColorStop(1, "transparent");
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.ellipse(cx, cy + reach * 0.06, reach * 0.68, reach * 0.52, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy + reach * 0.05, reach * 0.58, reach * 0.44, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Boil cells across the pit floor. Big pools breathe slowly; small vents
-    // flicker quicker, so the field never pulses in unison.
-    const boilN = reduceMotion ? 6 : 18;
+    // Boil cells across the pit floor — overlapping soft pools merge into goo
+    // without SVG filters. Big pools breathe slowly; small vents flicker quicker.
+    const boilN = reduceMotion ? 7 : 22;
     for (let i = 0; i < boilN; i++) {
       const u = cellHash(i, 17, 3);
       const v = cellHash(i, 29, 5);
@@ -1757,21 +1760,58 @@ body[data-mode="escape"] .menu-links {
       const phase = reduceMotion ? 0.35 + v * 0.3 : (t * speed + v) % 1;
       const swell = Math.sin(phase * Math.PI); // rise and fade, no popping
       const ang = w2 * Math.PI * 2 + (reduceMotion ? 0 : Math.sin(t * 0.00012 + i) * 0.5);
-      const rad = reach * (0.05 + v * 0.5);
+      // Bias larger blobs toward center so the throat reads as one lava mass
+      const rad = reach * (0.02 + v * 0.42) * (0.55 + (1 - scale) * 0.45);
       const bx = cx + Math.cos(ang) * rad;
-      const by = cy + Math.sin(ang) * rad * 0.7 + reach * 0.04;
-      const br = reach * (0.05 + scale * 0.13) * (0.6 + swell * 0.55);
-      const a = (0.045 + swell * (0.07 + scale * 0.09)) * (0.85 + pulse * 0.22);
+      const by = cy + Math.sin(ang) * rad * 0.68 + reach * 0.03;
+      const br = reach * (0.07 + scale * 0.16) * (0.55 + swell * 0.6);
+      const a = (0.055 + swell * (0.08 + scale * 0.1)) * (0.85 + pulse * 0.22);
       const bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-      bg.addColorStop(0, `rgba(255, 225, 135, ${a * 1.3})`);
-      bg.addColorStop(0.35, `rgba(255, 105, 28, ${a})`);
+      bg.addColorStop(0, `rgba(255, 230, 150, ${a * 1.45})`);
+      bg.addColorStop(0.28, `rgba(255, 120, 32, ${a * 1.05})`);
+      bg.addColorStop(0.65, `rgba(220, 60, 10, ${a * 0.45})`);
       bg.addColorStop(1, "transparent");
       ctx.fillStyle = bg;
       ctx.beginPath();
       ctx.arc(bx, by, br, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Rising heat motes in the pit well (CSS-burn idea, canvas motes only).
+    // PRM: freeze at mid-rise so the volcano still reads without drift.
+    const moteN = reduceMotion ? 5 : 12;
+    for (let i = 0; i < moteN; i++) {
+      const u = cellHash(i, 61, 3);
+      const v = cellHash(i, 73, 9);
+      const w2 = cellHash(i, 89, 5);
+      const life = reduceMotion ? 0.35 + v * 0.35 : (t * (0.00012 + u * 0.0001) + v) % 1;
+      const spiral = reduceMotion ? 0 : Math.sin(t * 0.0004 + i * 1.7) * 0.12;
+      const ang = w2 * Math.PI * 2 + life * 0.9 + spiral;
+      const rad = reach * (0.08 + u * 0.38) * (1 - life * 0.35);
+      const mx = cx + Math.cos(ang) * rad;
+      const my = cy + reach * 0.22 - life * reach * 0.72 + Math.sin(ang) * rad * 0.22;
+      const ma = (1 - life) * (0.14 + v * 0.16) * (0.75 + pulse * 0.25);
+      const mr = (1.2 + (1 - life) * 2.4) * (0.7 + u * 0.6);
+      const mg = ctx.createRadialGradient(mx, my, 0, mx, my, mr * 2.2);
+      mg.addColorStop(0, `rgba(255, 220, 140, ${ma})`);
+      mg.addColorStop(0.4, `rgba(255, 110, 30, ${ma * 0.55})`);
+      mg.addColorStop(1, "transparent");
+      ctx.fillStyle = mg;
+      ctx.beginPath();
+      ctx.arc(mx, my, mr * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
+
+    // Soft ember vignette — frames the volcano without a boxed plate
+    ctx.globalCompositeOperation = "source-over";
+    const vig = ctx.createRadialGradient(cx, cy, reach * 0.35, cx, cy, far * 0.72);
+    vig.addColorStop(0, "transparent");
+    vig.addColorStop(0.55, "transparent");
+    vig.addColorStop(0.82, "rgba(8, 2, 1, 0.28)");
+    vig.addColorStop(1, "rgba(2, 0, 0, 0.55)");
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
 
     ctx.restore();
   }
@@ -4061,29 +4101,33 @@ body[data-mode="escape"] .menu-links {
     ctx.fillStyle = lava;
     ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
 
-    // Bubbling hotspots: open vents / mines always; covered center + hover poke
+    // Bubbling hotspots: open vents / mines always; covered center + hover poke.
+    // Overlapping soft radials merge into a goo boil (no SVG metaball filters).
     if (open || mine || (covered && (centerHeat > 0.28 || heat > 0.2))) {
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       const n =
-        mine ? 6 : open ? 4 : 2 + Math.floor(centerHeat * 2) + (heat > 0.35 ? 2 : 0);
+        mine ? 7 : open ? 5 : 2 + Math.floor(centerHeat * 2) + (heat > 0.35 ? 2 : 0);
       const boilScale =
         open || mine ? 1 : 0.35 + centerHeat * 0.55 + heat * 0.55;
+      // Pull blobs toward cell center so lighter composites read as one lava mass
+      const cluster = open || mine ? 0.55 : 0.72 - centerHeat * 0.2;
       for (let i = 0; i < n; i++) {
         const u = cellHash(cell.q, cell.r, 200 + i);
         const v = cellHash(cell.q, cell.r, 300 + i);
         const bx =
           cell.x +
-          (u - 0.5) * size * 0.85 +
-          (reduceMotion ? 0 : Math.sin(time * (0.0042 + heat * 0.006) + u * 9) * size * 0.09);
+          (u - 0.5) * size * (0.55 + cluster * 0.3) +
+          (reduceMotion ? 0 : Math.sin(time * (0.0042 + heat * 0.006) + u * 9) * size * 0.08);
         const by =
           cell.y +
-          (v - 0.5) * size * 0.85 +
-          (reduceMotion ? 0 : Math.cos(time * (0.0031 + heat * 0.005) + v * 7) * size * 0.07);
-        const br = size * (0.07 + u * 0.12) * (mine ? 1.35 : 1) * boilScale;
+          (v - 0.5) * size * (0.55 + cluster * 0.3) +
+          (reduceMotion ? 0 : Math.cos(time * (0.0031 + heat * 0.005) + v * 7) * size * 0.06);
+        const br = size * (0.1 + u * 0.16) * (mine ? 1.4 : 1.15) * boilScale;
         const bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-        bg.addColorStop(0, `rgba(255,255,210,${(0.5 + pulse * 0.25) * boilScale})`);
-        bg.addColorStop(0.4, `rgba(255,140,35,${0.32 * boilScale})`);
+        bg.addColorStop(0, `rgba(255,255,210,${(0.55 + pulse * 0.28) * boilScale})`);
+        bg.addColorStop(0.32, `rgba(255,150,40,${0.38 * boilScale})`);
+        bg.addColorStop(0.7, `rgba(255,80,16,${0.14 * boilScale})`);
         bg.addColorStop(1, "transparent");
         ctx.fillStyle = bg;
         ctx.beginPath();
@@ -4215,22 +4259,22 @@ body[data-mode="escape"] .menu-links {
     const cy = s.canvas.height / 2 + oy * 0.1 + 22;
     const R = s.mapRadius * s.cellSize;
 
-    // Magma: soft circular ember motes (never stroke-lines)
+    // Magma: sparse ambient ash above the lattice (pit well owns rising heat).
     if (th.material === "magma") {
       if (reduceMotion) return;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const n = 16;
+      const n = 10;
       for (let i = 0; i < n; i++) {
         const u = cellHash(i, 41, 2);
         const v = cellHash(i, 53, 7);
-        const life = (time * 0.00022 + u) % 1;
+        const life = (time * 0.00018 + u) % 1;
         const ex =
           (u * s.canvas.width + ox * 0.8 + Math.sin(time * 0.0008 + v * 6) * 18 + s.canvas.width) %
           s.canvas.width;
-        const ey = s.canvas.height * (0.45 + v * 0.4) - life * s.canvas.height * 0.4;
-        const a = (1 - life) * (0.1 + v * 0.14);
-        const er = 1 + (1 - life) * 2;
+        const ey = s.canvas.height * (0.5 + v * 0.35) - life * s.canvas.height * 0.32;
+        const a = (1 - life) * (0.06 + v * 0.1);
+        const er = 0.9 + (1 - life) * 1.6;
         ctx.globalAlpha = a;
         ctx.fillStyle = i % 3 === 0 ? "#ffb050" : "#ff6818";
         ctx.beginPath();
