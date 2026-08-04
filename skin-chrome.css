@@ -89,6 +89,7 @@
 }
 canvas { display: block; cursor: crosshair; max-width: 100%; }
 
+/* Lab default: bottom-left. Production index.html places stats BL / themes BC / controls BR. */
 .bottom-bar,
 .score-rail {
   position: fixed;

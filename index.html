@@ -2,7 +2,7 @@
 <!--
   File Purpose: Production Hexsweeper — Light / Dark / Escape (infinite), Fire, Plague.
   Primary Functions/Classes: Inline theme model + Canvas renderer; boots Hexsweeper from core.js.
-  Inputs: ?mode=; localStorage mode / welcome; pointer/keyboard/touch.
+  Inputs: ?mode=; localStorage mode / welcome / endless saves; pointer/keyboard/touch.
   Outputs: Live game at /games/hexsweeper/ (bare URL = Light).
 -->
 <html lang="en">
@@ -11,16 +11,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Hexsweeper — Light, Dark, Fire, Plague, Escape</title>
 <meta name="description" content="Hexagonal minesweeper: Light/Dark plates, Fire, Plague, and Escape rift chase.">
-<meta name="theme-color" content="#cfd6e0">
+<meta name="theme-color" content="#e8eaee">
 <link rel="stylesheet" href="skin-chrome.css">
 <style>
 :root {
-  /* Minimalist light first paint */
-  --bg-color: #cfd6e0;
-  --text-main: #2f3a4a;
-  --text-sub: #5c6b7e;
-  --nav-bg: #e8eef5;
-  --nav-ink: #2f3a4a;
+  /* Flat Light first paint */
+  --bg-color: #e8eaee;
+  --text-main: #1a1d23;
+  --text-sub: #6b7280;
+  --nav-bg: #e8eaee;
+  --nav-ink: #1a1d23;
   --hud-gap: 6px;
   --hud-border: transparent;
   --font-ui: "IBM Plex Sans", "Source Sans 3", system-ui, sans-serif;
@@ -28,7 +28,7 @@
 }
 body {
   font-family: var(--font-ui);
-  background: #cfd6e0;
+  background: #e8eaee;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   height: 100vh; margin: 0; overflow: hidden; user-select: none; touch-action: none;
   color: var(--text-main);
@@ -79,34 +79,125 @@ body[data-mode="plague"] canvas {
   to { transform: translate3d(-3%, 2%, 0); }
 }
 
-/* Top-right control stack */
+/* Chrome triad: stats BL · themes BC · controls BR */
+.chrome-glass {
+  background: color-mix(in srgb, var(--nav-bg, #e8eaee) 52%, transparent);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  border: 1px solid color-mix(in srgb, var(--text-main, #1a1d23) 14%, transparent);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 22%, transparent) inset,
+    0 8px 28px color-mix(in srgb, var(--text-main, #1a1d23) 10%, transparent);
+}
+body[data-mode="light"] .chrome-glass {
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(26, 29, 35, 0.12);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 10px 32px rgba(40, 50, 70, 0.1);
+}
+body[data-mode="dark"] .chrome-glass,
+body[data-mode="escape"] .chrome-glass {
+  background: rgba(18, 22, 30, 0.55);
+  border-color: rgba(232, 234, 238, 0.12);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 10px 32px rgba(0, 0, 0, 0.35);
+}
+body[data-mode="fire"] .chrome-glass {
+  background: rgba(28, 12, 8, 0.55);
+  border-color: rgba(255, 140, 60, 0.16);
+  box-shadow:
+    0 1px 0 rgba(255, 160, 80, 0.08) inset,
+    0 10px 32px rgba(0, 0, 0, 0.4);
+}
+body[data-mode="plague"] .chrome-glass {
+  background: rgba(14, 28, 24, 0.55);
+  border-color: rgba(126, 200, 168, 0.16);
+  box-shadow:
+    0 1px 0 rgba(200, 240, 210, 0.06) inset,
+    0 10px 32px rgba(0, 0, 0, 0.38);
+}
+
+.score-rail {
+  position: fixed !important;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  right: auto;
+  top: auto;
+  z-index: 40;
+  display: flex !important;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 8px 14px 7px;
+  border-radius: 18px;
+  pointer-events: none;
+}
+.score-rail .stat-item {
+  align-items: flex-start;
+  text-align: left;
+  font-size: 14px;
+  opacity: 0.7;
+  min-width: 0;
+  padding: 0;
+  pointer-events: auto;
+}
+.score-rail .stat-item.visible { opacity: 0.95; }
+.score-rail .stat-item::after {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  margin-top: 1px;
+}
+
+.skin-nav {
+  position: fixed !important;
+  left: 50% !important;
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  top: auto !important;
+  right: auto !important;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  max-width: min(96vw, 520px);
+  pointer-events: none;
+}
+.skin-nav .mode-switch {
+  pointer-events: auto;
+}
+
 .hud-actions {
   position: fixed;
-  top: max(12px, env(safe-area-inset-top, 0px));
   right: max(12px, env(safe-area-inset-right, 0px));
-  z-index: 30;
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  top: auto;
+  left: auto;
+  z-index: 40;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--hud-gap);
   align-items: center;
+  pointer-events: none;
+  padding: 4px;
+  border-radius: 999px;
 }
+.hud-actions .hud-btn { pointer-events: auto; }
 .hud-btn {
   width: 44px;
   height: 44px;
   border: 0;
-  background: color-mix(in srgb, var(--nav-bg) 55%, transparent);
+  background: transparent;
   color: var(--text-main);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border-radius: 999px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
   padding: 0;
   box-shadow: none;
-  opacity: 0.82;
+  opacity: 0.88;
 }
 .hud-btn svg { width: 20px; height: 20px; stroke-width: 2; }
 .hud-btn:hover { transform: none; opacity: 1; background: color-mix(in srgb, var(--nav-bg) 72%, transparent); }
@@ -127,14 +218,10 @@ body[data-mode="plague"] canvas {
 .mode-switch {
   display: inline-flex;
   gap: 2px;
-  padding: 3px;
+  padding: 4px;
   border: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--nav-bg) 48%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   pointer-events: auto;
-  box-shadow: none;
 }
 .skin-nav .mode-switch button {
   border: 0;
@@ -155,10 +242,11 @@ body[data-mode="plague"] canvas {
   outline: 2px solid var(--nav-ink);
   outline-offset: 2px;
 }
-/* Theme name toast */
+/* Theme name toast — sit above the bottom theme bar */
 .theme-toast {
   position: fixed;
-  top: max(64px, calc(env(safe-area-inset-top, 0px) + 48px));
+  bottom: max(64px, calc(env(safe-area-inset-bottom, 0px) + 56px));
+  top: auto;
   left: 50%;
   z-index: 28;
   font-family: var(--font-mono);
@@ -310,10 +398,43 @@ body[data-mode="plague"] canvas {
   padding-left: 1.15rem;
 }
 .welcome-panel li { margin: 0.35rem 0; }
+.welcome-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 1rem 0 0.25rem;
+}
+.welcome-themes button {
+  appearance: none;
+  border: 1px solid rgba(26, 28, 31, 0.14);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(26, 28, 31, 0.06);
+  color: #1a1c1f;
+}
+.welcome-themes button[aria-pressed="true"] {
+  background: #1a1c1f;
+  color: #f7f4ee;
+  border-color: #1a1c1f;
+}
+.welcome-themes button:focus-visible {
+  outline: 2px solid #1a1c1f;
+  outline-offset: 2px;
+}
+.welcome-theme-note {
+  margin: 0.45rem 0 0 !important;
+  font-size: 0.86rem !important;
+  color: #5a616c !important;
+  min-height: 1.3em;
+}
 .welcome-actions {
   display: flex;
   gap: 10px;
-  margin-top: 1.25rem;
+  margin-top: 1.15rem;
 }
 .welcome-actions button,
 .welcome-play {
@@ -363,9 +484,11 @@ body[data-mode="plague"] canvas {
   color: var(--nav-bg);
 }
 @media (max-width: 660px) {
-  .skin-nav { gap: 5px; }
-  .skin-nav .mode-switch button { padding-inline: 7px; }
+  .skin-nav { max-width: calc(100vw - 120px); }
+  .skin-nav .mode-switch { flex-wrap: wrap; justify-content: center; }
+  .skin-nav .mode-switch button { padding-inline: 7px; font-size: 0.78rem; }
   .hud-btn { width: 44px; height: 44px; }
+  .score-rail .stat-item { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hud-btn, .welcome-overlay { transition: none; }
@@ -378,8 +501,13 @@ body[data-mode="plague"] canvas {
 <body>
 <div class="fx-layer" id="fx" aria-hidden="true"></div>
 
+<div class="score-rail chrome-glass" aria-label="Score">
+  <div id="stats-mines" class="stat-item" data-label="mines" title="Mines remaining">00</div>
+  <div id="stats-time" class="stat-item" data-label="cleared" title="Safe cells cleared">000</div>
+</div>
+
 <nav class="skin-nav" aria-label="Theme">
-  <div class="mode-switch" role="group" aria-label="Theme">
+  <div class="mode-switch chrome-glass" role="group" aria-label="Theme">
     <button type="button" data-mode="light" aria-pressed="true">Light</button>
     <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
     <button type="button" data-mode="fire" aria-pressed="false">Fire</button>
@@ -388,7 +516,7 @@ body[data-mode="plague"] canvas {
   </div>
 </nav>
 
-<div class="hud-actions">
+<div class="hud-actions chrome-glass">
   <button type="button" id="menu-btn" class="hud-btn" aria-label="Settings" title="Settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="3"></circle>
@@ -403,16 +531,19 @@ body[data-mode="plague"] canvas {
   <canvas id="gameCanvas" aria-label="Hexsweeper board"></canvas>
 </div>
 
-<div class="bottom-bar score-rail" aria-label="Score">
-  <div id="stats-mines" class="stat-item" data-label="mines" title="Mines remaining">00</div>
-  <div id="stats-time" class="stat-item" data-label="cleared" title="Safe cells cleared">000</div>
-</div>
-
-<!-- Welcome: minesweeper familiarity -->
+<!-- Welcome: minesweeper familiarity + theme pick -->
 <div id="welcome-overlay" class="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
   <div class="welcome-panel" id="welcome-ask">
     <h2 id="welcome-title">Have you played minesweeper?</h2>
     <p>Hexsweeper is the same puzzle on a honeycomb — six neighbors instead of eight.</p>
+    <div class="welcome-themes" id="welcome-themes" role="group" aria-label="Theme">
+      <button type="button" data-welcome-mode="light" aria-pressed="true">Light</button>
+      <button type="button" data-welcome-mode="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-welcome-mode="fire" aria-pressed="false">Fire</button>
+      <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
+      <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
+    </div>
+    <p class="welcome-theme-note" id="welcome-theme-note">Light — infinite calm plate</p>
     <div class="welcome-actions">
       <button type="button" id="welcome-yes" class="primary">Yes — play</button>
       <button type="button" id="welcome-no">No — refresher</button>
@@ -424,7 +555,15 @@ body[data-mode="plague"] canvas {
       <li>Right-click or press-and-hold to <strong>flag</strong> mines.</li>
       <li>Use the <strong>numbers</strong> to figure out which hexes are dangerous.</li>
       <li><strong>Clear</strong> every safe cell — don't step on a mine.</li>
+      <li id="welcome-escape-tip" hidden>In <strong>Escape</strong>, a rift wakes after you expose enough tiles and crawls toward your digs — keep clearing ahead.</li>
     </ul>
+    <div class="welcome-themes" role="group" aria-label="Theme">
+      <button type="button" data-welcome-mode="light" aria-pressed="true">Light</button>
+      <button type="button" data-welcome-mode="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-welcome-mode="fire" aria-pressed="false">Fire</button>
+      <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
+      <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
+    </div>
     <button type="button" class="welcome-play" id="welcome-play">Got it — play</button>
   </div>
 </div>
@@ -439,14 +578,15 @@ body[data-mode="plague"] canvas {
       </svg>
     </button>
     <div style="height:15px"></div>
-    <div class="modal-row">
+    <!-- Board size only matters on finite boards (Fire / Plague) -->
+    <div class="modal-row" id="size-row">
       <div class="icon-label" title="Board size">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="9" height="9"></rect><rect x="13" y="2" width="9" height="9"></rect><rect x="2" y="13" width="9" height="9"></rect></svg>
       </div>
       <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
-        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small start · lighter density (endless) / fewer mines">S</button>
-        <button type="button" class="diff-option active" data-val="medium" aria-pressed="true" title="Medium start · standard density (endless)">M</button>
-        <button type="button" class="diff-option" data-val="hard" aria-pressed="false" title="Large start · denser field (endless)">L</button>
+        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small board · fewer mines">S</button>
+        <button type="button" class="diff-option" data-val="medium" aria-pressed="false" title="Medium board">M</button>
+        <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" title="Large board · denser field">L</button>
       </div>
     </div>
     <div class="modal-row">
@@ -459,6 +599,11 @@ body[data-mode="plague"] canvas {
       <button type="button" id="flag-btn" aria-pressed="false">Flag mode</button>
       <button type="button" id="help-btn">How to play</button>
     </div>
+    <div class="modal-actions" id="persist-actions">
+      <button type="button" id="export-run-btn" title="Download infinite run as JSON">Export run</button>
+      <button type="button" id="import-run-btn" title="Load a previously exported run">Import run</button>
+    </div>
+    <input type="file" id="import-run-file" accept="application/json,.json" hidden>
     <button id="restart-btn" class="refresh-btn" type="button" aria-label="Restart">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 4 23 10 17 10"></polyline>
@@ -466,7 +611,7 @@ body[data-mode="plague"] canvas {
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <div class="instructions-text">Light / Dark / Escape are infinite · Fire &amp; Plague finite<br>Escape: dig ahead of the rift · Scroll zoom · F flag</div>
+    <div class="instructions-text">Light / Dark / Escape autosave · Export/Import in settings<br>Fire &amp; Plague finite · Scroll zoom · F flag · R new run</div>
   </div>
 </div>
 
@@ -480,7 +625,7 @@ body[data-mode="plague"] canvas {
     <p>Minesweeper on a honeycomb. Six neighbors max, not eight.</p>
 
     <h3>Goal</h3>
-    <p><strong>Light</strong> and <strong>Dark</strong> are an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. <strong>Escape</strong> looks the same at first — then a rift awakens and tears tiles while chasing your clear frontier; keep digging ahead to flee. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
+    <p><strong>Light</strong> and <strong>Dark</strong> are an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> looks the same at first — after enough digs the rift wakes and crawls toward your clears (floods barely feed it); keep digging ahead to flee. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
 
     <h3>Reveal</h3>
     <p>Click or tap a covered cell. First click is always safe. The number is how many mines sit on the six sides. When the flags around a number match that count, click it again (or double-click) to open the rest. In Light/Dark/Escape, the camera follows your dig and the grid expands so the canvas never runs out of hexes.</p>
@@ -497,7 +642,7 @@ body[data-mode="plague"] canvas {
     <h3>Controls</h3>
     <ul>
       <li><strong>Light / Dark / Fire / Plague / Escape</strong> changes theme</li>
-      <li><strong>Gear</strong> holds board size, flag mode, help, restart</li>
+      <li><strong>Gear</strong> holds board size, flag mode, export/import, help, restart</li>
       <li><strong>?</strong> opens this panel</li>
     </ul>
 
@@ -795,7 +940,7 @@ body[data-mode="plague"] canvas {
         reveal: "rgba(255,160,60,0.92)",
         mine: "rgba(255,60,20,0.98)",
         flag: "rgba(255,210,70,0.9)",
-        streaks: true,
+        streaks: false,
       },
     },
   ];
@@ -803,19 +948,19 @@ body[data-mode="plague"] canvas {
   // Production themes: Light / Dark (endless) + Fire / Plague (finite).
   // The larger material library stays as prior art for the renderer.
   const PLATE_LIGHT = {
+    flatPlate: true,
+    flatGrid: true,
     css: {
-      "--bg-color": "#cfd6e0",
-      "--text-main": "#2f3a4a",
-      "--text-sub": "#5c6b7e",
-      "--nav-bg": "#e8eef5",
-      "--nav-ink": "#2f3a4a",
+      "--bg-color": "#e8eaee",
+      "--text-main": "#1a1d23",
+      "--text-sub": "#6b7280",
+      "--nav-bg": "#e8eaee",
+      "--nav-ink": "#1a1d23",
     },
-    bodyBg: "#cfd6e0",
-    fx: {
-      bg: "radial-gradient(ellipse 70% 50% at 50% 40%, rgba(255,255,255,0.55), transparent 55%), linear-gradient(180deg, #dbe2ec, #c4ccd8)",
-    },
+    bodyBg: "#e8eaee",
+    fx: { bg: "#e8eaee" },
     theme: {
-      flag: "#e11d48",
+      flag: "#dc2626",
       text: {
         1: "#1d4ed8",
         2: "#047857",
@@ -823,59 +968,107 @@ body[data-mode="plague"] canvas {
         4: "#6d28d9",
         5: "#b45309",
         6: "#be185d",
-        mine: "#1f2937",
+        mine: "#111827",
       },
     },
     states: {
-      covered:  { h: 214, s: 18, l: 93 },
-      revealed: { h: 216, s: 14, l: 68 },
-      flagged:  { h: 350, s: 70, l: 90 },
+      covered:  { h: 220, s: 6, l: 88 },
+      revealed: { h: 220, s: 4, l: 94 },
+      flagged:  { h: 0, s: 0, l: 88 },
     },
     particles: {
-      count: 36,
-      ambient: "rgba(120,140,165,0.32)",
-      reveal: "rgba(140,160,190,0.55)",
-      mine: "rgba(50,65,90,0.95)",
-      flag: "rgba(225,29,72,0.8)",
+      count: 0,
+      ambient: "rgba(0,0,0,0)",
+      reveal: "rgba(80,90,110,0.35)",
+      mine: "rgba(30,40,55,0.85)",
+      flag: "rgba(220,38,38,0.75)",
     },
   };
   const PLATE_DARK = {
+    flatPlate: true,
+    flatGrid: true,
     css: {
-      "--bg-color": "#14181f",
-      "--text-main": "#e6ebf2",
-      "--text-sub": "#8b95a5",
-      "--nav-bg": "#1c222c",
-      "--nav-ink": "#e6ebf2",
+      "--bg-color": "#0f1115",
+      "--text-main": "#e8eaee",
+      "--text-sub": "#8b919a",
+      "--nav-bg": "#0f1115",
+      "--nav-ink": "#e8eaee",
     },
-    bodyBg: "#10141a",
-    fx: {
-      bg: "radial-gradient(ellipse 70% 50% at 50% 40%, rgba(40,48,62,0.65), transparent 55%), linear-gradient(180deg, #161b24, #0c1016)",
-    },
+    bodyBg: "#0f1115",
+    fx: { bg: "#0f1115" },
     theme: {
-      flag: "#fb7185",
+      flag: "#f43f5e",
       text: {
-        1: "#93c5fd",
-        2: "#6ee7b7",
-        3: "#fca5a5",
-        4: "#c4b5fd",
-        5: "#fcd34d",
-        6: "#f9a8d4",
+        1: "#60a5fa",
+        2: "#34d399",
+        3: "#f87171",
+        4: "#a78bfa",
+        5: "#fbbf24",
+        6: "#f472b6",
         mine: "#f8fafc",
       },
     },
     states: {
-      covered:  { h: 220, s: 14, l: 22 },
-      revealed: { h: 220, s: 12, l: 12 },
-      flagged:  { h: 350, s: 45, l: 28 },
+      // Wider covered↔revealed gap so the lattice still reads when seams thin out
+      covered:  { h: 220, s: 7, l: 22 },
+      revealed: { h: 220, s: 5, l: 8 },
+      flagged:  { h: 0, s: 0, l: 22 },
     },
     particles: {
-      count: 28,
-      ambient: "rgba(140,160,190,0.22)",
-      reveal: "rgba(160,180,210,0.45)",
+      count: 0,
+      ambient: "rgba(0,0,0,0)",
+      reveal: "rgba(160,180,210,0.35)",
       mine: "rgba(230,235,245,0.9)",
-      flag: "rgba(251,113,133,0.85)",
+      flag: "rgba(244,63,94,0.85)",
     },
   };
+
+  /**
+   * Plate-theme danger marks — no pale discs.
+   * Light: classic ink digit. Dark: luminous digit. Escape: dark-haloed digit.
+   */
+  function drawPlateDigit(ctx, cell, size, th, T) {
+    const n = cell.neighborMines;
+    if (!n) return;
+    const digit = String(n);
+    const ty = cell.y + size * 0.04;
+    const color = T.text[n] || (th.id === "light" ? "#1f2937" : "#e6ebf2");
+    const fontPx = Math.max(15, size * (th.rift ? 1.02 : 1.08));
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `800 ${fontPx}px "IBM Plex Sans", system-ui, sans-serif`;
+
+    if (th.rift || th.id === "escape") {
+      // One reading channel only: a dark-haloed glyph. Vertex ticks and glow
+      // both restated the same count and made a full field of digits vibrate.
+      ctx.lineWidth = Math.max(2.6, size * 0.12);
+      ctx.strokeStyle = "rgba(6,10,16,0.9)";
+      ctx.strokeText(digit, cell.x, ty);
+      ctx.fillStyle = color;
+      ctx.fillText(digit, cell.x, ty);
+      return;
+    }
+
+    if (th.id === "dark") {
+      // Luminous glyph on the well — dark stroke for crisp edges
+      ctx.lineWidth = Math.max(3, size * 0.14);
+      ctx.strokeStyle = "rgba(0,0,0,0.92)";
+      ctx.strokeText(digit, cell.x, ty);
+      ctx.shadowColor = color;
+      ctx.shadowBlur = Math.max(5, size * 0.28);
+      ctx.fillStyle = color;
+      ctx.fillText(digit, cell.x, ty);
+      ctx.shadowBlur = 0;
+      return;
+    }
+
+    // Light: classic minesweeper ink — soft white hairline, saturated fill
+    ctx.lineWidth = Math.max(2.8, size * 0.11);
+    ctx.strokeStyle = "rgba(255,255,255,0.72)";
+    ctx.strokeText(digit, cell.x, ty);
+    ctx.fillStyle = color;
+    ctx.fillText(digit, cell.x, ty);
+  }
 
   const THEMES = [
     {
@@ -904,106 +1097,128 @@ body[data-mode="plague"] canvas {
         "--nav-bg": "#151c26",
         "--nav-ink": "#c8e7f5",
       },
-      bodyBg: "#0a0e14",
+      bodyBg: "#0d1219",
       fx: {
         bg:
-          "radial-gradient(ellipse 55% 42% at 50% 45%, rgba(30,70,95,0.28), transparent 62%)," +
-          "radial-gradient(ellipse 80% 60% at 50% 40%, rgba(8,12,18,0.9), transparent 70%)," +
-          "linear-gradient(180deg, #101622, #070a10)",
+          "radial-gradient(ellipse 60% 45% at 50% 45%, rgba(38,74,96,0.22), transparent 66%)," +
+          "linear-gradient(180deg, #141b26, #0c1118)",
       },
+      // Muted cool palette — a whole viewport of neon digits was fatiguing.
       theme: {
-        flag: "#5eead4",
+        flag: "#7fd8c4",
         text: {
-          1: "#7dd3fc",
-          2: "#5eead4",
-          3: "#fda4af",
-          4: "#c4b5fd",
-          5: "#fde68a",
-          6: "#f9a8d4",
-          mine: "#f0f9ff",
+          1: "#9dc4dd",
+          2: "#83c3ae",
+          3: "#dd9099",
+          4: "#aca4d8",
+          5: "#d8bd83",
+          6: "#cf9dbc",
+          mine: "#e6f0f7",
         },
       },
       states: {
-        covered:  { h: 210, s: 16, l: 18 },
-        revealed: { h: 212, s: 14, l: 10 },
-        flagged:  { h: 172, s: 42, l: 22 },
+        covered:  { h: 212, s: 13, l: 24 },
+        revealed: { h: 214, s: 11, l: 14 },
+        flagged:  { h: 172, s: 30, l: 27 },
+      },
+      // Own the board bloom: inheriting Soft White's glow washed the middle of
+      // the field pale and made the seams glare.
+      glow: {
+        colors: ["rgba(46,96,126,0.18)", "rgba(24,52,78,0.1)"],
+        pulse: 0.05,
+        bloom: 1.2,
       },
       particles: {
-        count: 40,
-        ambient: "rgba(80,160,200,0.2)",
-        reveal: "rgba(94,234,212,0.55)",
-        mine: "rgba(125,211,252,0.95)",
-        flag: "rgba(94,234,212,0.85)",
+        count: 28,
+        ambient: "rgba(90,150,180,0.14)",
+        reveal: "rgba(120,200,190,0.4)",
+        mine: "rgba(150,205,235,0.8)",
+        flag: "rgba(127,216,196,0.7)",
       },
     },
     {
       ...MATERIAL_LIBRARY[6],
       id: "fire",
-      name: "Fire · Parallax",
+      name: "Fire · Magma",
+      boardConfig: {
+        easy: { radius: 4, mines: 10, cellSize: 42 },
+        medium: { radius: 7, mines: 35, cellSize: 34 },
+        hard: { radius: 10, mines: 70, cellSize: 28 },
+      },
+      particles: {
+        count: 36,
+        ambient: "rgba(255,120,40,0.22)",
+        reveal: "rgba(255,160,60,0.9)",
+        mine: "rgba(255,60,20,0.98)",
+        flag: "rgba(255,210,70,0.9)",
+        // No streak lines — soft motes only
+        streaks: false,
+      },
     },
     {
       ...MATERIAL_LIBRARY[5],
       id: "plague",
-      name: "Plague · Mycelium",
+      // Materials Lab: Face “Verdigris” + “Moss Archive” + Motions “Copper verdigris”
+      name: "Plague · Specimen",
       css: {
-        "--bg-color": "#0b100a",
-        "--text-main": "#e4f0c0",
-        "--text-sub": "#8aa06a",
-        "--nav-bg": "#141b11",
-        "--nav-ink": "#e4f0c0",
+        "--bg-color": "#141e1c",
+        "--text-main": "#e8f8ee",
+        "--text-sub": "#4a7868",
+        "--nav-bg": "#16201e",
+        "--nav-ink": "#e8f8ee",
       },
-      bodyBg: "#070a06",
+      bodyBg: "#0a100e",
       fx: {
         bg:
-          "radial-gradient(circle at 18% 22%, rgba(183,214,94,0.05) 0 1px, transparent 1.5px)," +
-          "radial-gradient(circle at 76% 68%, rgba(218,230,172,0.04) 0 1px, transparent 1.5px)," +
-          "radial-gradient(ellipse 70% 50% at 50% 45%, rgba(40,55,20,0.35), transparent 65%)," +
-          "linear-gradient(160deg,#0e140c 0%,#070a06 58%,#0c110a 100%)",
+          "radial-gradient(ellipse 85% 60% at 50% 42%, rgba(126,200,168,0.16), transparent 58%)," +
+          "radial-gradient(ellipse 48% 42% at 76% 70%, rgba(201,126,79,0.12), transparent 52%)," +
+          "radial-gradient(circle at 22% 28%, rgba(232,248,238,0.06) 0 1px, transparent 1.6px)," +
+          "radial-gradient(circle at 64% 56%, rgba(201,126,79,0.055) 0 1px, transparent 1.6px)," +
+          "linear-gradient(168deg, #243430 0%, #16221f 40%, #0a100e 100%)",
       },
       theme: {
-        flag: "#e0b54a",
+        flag: "#e0a071",
         text: {
-          1: "#f2ffc8",
-          2: "#c8f06a",
-          3: "#ffe08a",
-          4: "#d8e89a",
-          5: "#fff0a0",
-          6: "#a8e070",
-          mine: "#f7ffe8",
+          1: "#e8f8ee",
+          2: "#7ec8a8",
+          3: "#c97e4f",
+          4: "#90c8b0",
+          5: "#e0a071",
+          6: "#4a7868",
+          mine: "#edf9f2",
         },
       },
       states: {
-        covered:  { h: 88, s: 18, l: 18 },
-        revealed: { h: 92, s: 22, l: 8 },
-        flagged:  { h: 42, s: 72, l: 42 },
+        covered:  { h: 160, s: 20, l: 20 },
+        revealed: { h: 155, s: 28, l: 7 },
+        flagged:  { h: 24, s: 55, l: 42 },
       },
       glow: {
-        colors: ["rgba(179,210,92,0.14)", "rgba(96,130,56,0.08)"],
-        pulse: 0.08,
-        bloom: 1,
+        colors: ["rgba(126,200,168,0.12)", "rgba(201,126,79,0.08)"],
+        pulse: 0.16,
+        bloom: 1.1,
       },
       material: "mycelium",
       flatGrid: true,
-      // Four more rings out from prior specimen; soft fit + pan/zoom for overflow
       boardConfig: {
         easy: { radius: 8, mines: 40, cellSize: 34 },
         medium: { radius: 10, mines: 70, cellSize: 30 },
         hard: { radius: 12, mines: 105, cellSize: 26 },
       },
       particles: {
-        count: 36,
-        ambient: "rgba(190,218,116,0.22)",
-        reveal: "rgba(192,224,112,0.72)",
-        mine: "rgba(220,176,64,0.94)",
-        flag: "rgba(213,166,47,0.82)",
+        count: 56,
+        ambient: "rgba(126,200,168,0.26)",
+        reveal: "rgba(126,200,168,0.72)",
+        mine: "rgba(224,160,113,0.95)",
+        flag: "rgba(224,160,113,0.88)",
       },
     },
   ];
 
   const FINITE_DEFAULT_CONFIG = {
-    easy: { radius: 4, mines: 10, cellSize: 38 },
-    medium: { radius: 7, mines: 35, cellSize: 32 },
-    hard: { radius: 10, mines: 80, cellSize: 26 },
+    easy: { radius: 4, mines: 10, cellSize: 42 },
+    medium: { radius: 7, mines: 35, cellSize: 34 },
+    hard: { radius: 10, mines: 70, cellSize: 28 },
   };
 
   // Bare URL opens Light. Explicit ?mode= deep-links; storage restores last theme.
@@ -1011,6 +1226,11 @@ body[data-mode="plague"] canvas {
   const STORAGE_KEY = "hexsweeper-mode-v3";
   const LEGACY_TONE_KEY = "hexsweeper-minimalist-tone-v1";
   const WELCOME_KEY = "hexsweeper-welcome-v1";
+  /** Autosave lanes: Light↔Dark share one run; Escape keeps its own (rift state). */
+  const PLATE_SAVE_KEY = "hexsweeper-endless-plate-v1";
+  const ESCAPE_SAVE_KEY = "hexsweeper-endless-escape-v1";
+  let persistTimer = 0;
+  let persistSuspended = false;
 
   function resolveThemeId(raw) {
     if (!raw) return null;
@@ -1190,7 +1410,7 @@ body[data-mode="plague"] canvas {
 
   /**
    * Magma backdrop: continuous ember void — no boxed plate under the honeycomb.
-   * Match crust tones in the center so the board AABB doesn't read as a container.
+   * Center holds a slow boil so the pit reads alive without boxed chrome.
    */
   function drawMagmaPitWell(ctx, s) {
     const w = s.canvas.width;
@@ -1234,25 +1454,208 @@ body[data-mode="plague"] canvas {
     ctx.closePath();
     ctx.fill();
 
-    // Sparse ember wisps — only outside / through the field, never a mid-screen band
+    // Soft underworld glow in the pit center — no stroke “rain” lines
     ctx.save();
-    ctx.lineCap = "round";
     ctx.globalCompositeOperation = "lighter";
-    ctx.translate(shiftX, shiftY);
-    for (let i = 0; i < 5; i++) {
-      const seed = cellHash(i, 71, 9);
-      const x0 = seed * w * 0.9 + w * 0.05;
-      const y0 = cellHash(i, 83, 13) * h * 0.7 + h * 0.1;
-      ctx.globalAlpha = 0.08 + seed * 0.1 + pulse * 0.04;
-      ctx.strokeStyle = `rgba(255, ${100 + seed * 60 | 0}, 20, 1)`;
-      ctx.lineWidth = 0.8 + seed;
+    const glow = ctx.createRadialGradient(cx, cy + reach * 0.08, 0, cx, cy, reach * 0.75);
+    glow.addColorStop(0, `rgba(255, 90, 20, ${0.1 + pulse * 0.06})`);
+    glow.addColorStop(0.45, `rgba(180, 40, 0, ${0.055 + pulse * 0.03})`);
+    glow.addColorStop(1, "transparent");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + reach * 0.06, reach * 0.62, reach * 0.48, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Boil cells across the pit floor. Big pools breathe slowly; small vents
+    // flicker quicker, so the field never pulses in unison.
+    const boilN = reduceMotion ? 6 : 18;
+    for (let i = 0; i < boilN; i++) {
+      const u = cellHash(i, 17, 3);
+      const v = cellHash(i, 29, 5);
+      const w2 = cellHash(i, 41, 11);
+      const scale = 0.35 + u * 0.65; // small → large
+      const speed = 0.000075 / (0.22 + scale * 0.9);
+      const phase = reduceMotion ? 0.35 + v * 0.3 : (t * speed + v) % 1;
+      const swell = Math.sin(phase * Math.PI); // rise and fade, no popping
+      const ang = w2 * Math.PI * 2 + (reduceMotion ? 0 : Math.sin(t * 0.00012 + i) * 0.5);
+      const rad = reach * (0.05 + v * 0.5);
+      const bx = cx + Math.cos(ang) * rad;
+      const by = cy + Math.sin(ang) * rad * 0.7 + reach * 0.04;
+      const br = reach * (0.05 + scale * 0.13) * (0.6 + swell * 0.55);
+      const a = (0.03 + swell * (0.05 + scale * 0.07)) * (0.8 + pulse * 0.2);
+      const bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      bg.addColorStop(0, `rgba(255, 225, 135, ${a * 1.3})`);
+      bg.addColorStop(0.35, `rgba(255, 105, 28, ${a})`);
+      bg.addColorStop(1, "transparent");
+      ctx.fillStyle = bg;
       ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.lineTo(x0 + (seed - 0.5) * w * 0.08, y0 + h * (0.18 + seed * 0.12));
-      ctx.stroke();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
 
+    ctx.restore();
+  }
+
+  /**
+   * Plague specimen desk — full-canvas underlay so verdigris/copper read even when
+   * flatGrid skips cast shadows (CSS #fx alone was too faint under the lattice).
+   */
+  function drawPlagueSpecimenField(ctx, s) {
+    const w = s.canvas.width;
+    const h = s.canvas.height;
+    const t = performance.now();
+    const pulse = reduceMotion ? 0.68 : 0.52 + 0.48 * Math.sin(t * 0.00085);
+    const cx = w / 2 + ox * 0.12;
+    const cy = h / 2 + oy * 0.08;
+    const reach = Math.max(s.mapRadius * s.cellSize * 1.35, Math.min(w, h) * 0.4);
+    const far = Math.max(w, h);
+
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+
+    // Damp specimen slide: cool green-black, brightest right under the culture
+    const desk = ctx.createRadialGradient(cx, cy, 0, cx, cy, far * 0.78);
+    desk.addColorStop(0, "#22322d");
+    desk.addColorStop(0.3, "#182622");
+    desk.addColorStop(0.62, "#0e1715");
+    desk.addColorStop(1, "#070c0b");
+    ctx.fillStyle = desk;
+    ctx.fillRect(0, 0, w, h);
+
+    // Culture halo — fully faded before it can show an edge
+    const verd = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach * 1.7);
+    verd.addColorStop(0, `rgba(126, 200, 168, ${0.09 + pulse * 0.04})`);
+    verd.addColorStop(0.3, `rgba(96, 168, 142, ${0.05 + pulse * 0.02})`);
+    verd.addColorStop(0.66, "rgba(52, 104, 90, 0.03)");
+    verd.addColorStop(1, "transparent");
+    ctx.fillStyle = verd;
+    ctx.fillRect(0, 0, w, h);
+
+    // Copper oxidation stains — irregular, off-center, low contrast
+    const stains = [
+      { x: 0.26, y: 0.3, r: 0.3, a: 0.05 },
+      { x: 0.74, y: 0.66, r: 0.36, a: 0.045 },
+      { x: 0.6, y: 0.2, r: 0.22, a: 0.03 },
+    ];
+    for (const st of stains) {
+      const sx = w * st.x + ox * 0.06;
+      const sy = h * st.y + oy * 0.05;
+      const sr = far * st.r;
+      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+      g.addColorStop(0, `rgba(201, 126, 79, ${st.a * (0.8 + pulse * 0.4)})`);
+      g.addColorStop(0.5, `rgba(140, 84, 52, ${st.a * 0.35})`);
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // Slide grain — fixed speckle so the field reads as a surface, not a gradient
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 90; i++) {
+      const u = cellHash(i, 7, 2);
+      const v = cellHash(i, 13, 6);
+      const gx = u * w;
+      const gy = v * h;
+      ctx.globalAlpha = 0.015 + cellHash(i, 23, 4) * 0.03;
+      ctx.fillStyle = i % 5 === 0 ? "#c97e4f" : "#7ec8a8";
+      ctx.beginPath();
+      ctx.arc(gx, gy, 0.6 + cellHash(i, 31, 9) * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (!reduceMotion) {
+      // Spore loft — slow upward drift
+      for (let i = 0; i < 26; i++) {
+        const u = cellHash(i, 11, 4);
+        const v = cellHash(i, 19, 8);
+        const drift = (t * (0.000008 + u * 0.000012) + v) % 1;
+        const x = (u * w + Math.sin(t * 0.00018 + i) * 16 + w) % w;
+        const y = h * (1.02 - drift * 1.08);
+        ctx.globalAlpha = 0.02 + (1 - drift) * (0.05 + v * 0.05);
+        ctx.fillStyle = i % 4 === 0 ? "#e0a071" : "#a8dcc4";
+        ctx.beginPath();
+        ctx.arc(x, y, 0.7 + u * 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Edge damp so the slide falls off toward the frame
+    ctx.globalCompositeOperation = "source-over";
+    const vig = ctx.createRadialGradient(cx, cy, far * 0.3, cx, cy, far * 0.78);
+    vig.addColorStop(0, "transparent");
+    vig.addColorStop(1, "rgba(4, 8, 7, 0.55)");
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.restore();
+  }
+
+  /**
+   * Magma depth without relying on pointer parallax alone:
+   * contact shadows under hexes (deeper center = softer/larger) + rim cast.
+   */
+  function drawMagmaDepthShadows(ctx, s) {
+    const cells = Array.from(s.map.values()).filter((c) => !c._offscreen);
+    if (!cells.length) return;
+    const maxR = Math.max(1, s.mapRadius);
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    // Sort deep-to-shallow so rim sits over the pit floor
+    cells.sort((a, b) => a.ring - b.ring);
+    for (const cell of cells) {
+      const d = cell.ring / maxR; // 0 center (deep) → 1 rim
+      const depth = 1 - d;
+      // Footprints sit under the painted faces (tilted lattice), not the calm ground plane
+      const gx = cell.x;
+      const gy = cell.y;
+      const ba = cell._blastAlpha != null ? cell._blastAlpha : 1;
+      if (ba < 0.15) continue;
+      // Deeper cells: larger soft pool. Rim: harder cast toward the light.
+      const rx = s.cellSize * (0.42 + depth * 0.38) * (cell._depthScale || 1);
+      const ry = s.cellSize * (0.16 + depth * 0.22) * (cell._depthScale || 1);
+      const cast = s.cellSize * (0.12 + d * 0.55);
+      const sx = gx + light.sdx * cast;
+      const sy = gy + light.sdy * cast + s.cellSize * (0.08 + depth * 0.12);
+      const a = (0.1 + depth * 0.28 + d * 0.1) * ba;
+      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, rx);
+      g.addColorStop(0, `rgba(0,0,0,${a})`);
+      g.addColorStop(0.55, `rgba(0,0,0,${a * 0.45})`);
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Far-side crust lip — a static occluding crescent that reads as pit depth
+    const cx = s.canvas.width / 2 + ox * 0.15;
+    const cy = s.canvas.height / 2 + oy * 0.1 + s.cellSize * 0.35;
+    const reach = s.mapRadius * s.cellSize * 1.85;
+    const lip = ctx.createRadialGradient(
+      cx - light.sdx * s.cellSize * 1.2,
+      cy - light.sdy * s.cellSize * 1.4,
+      reach * 0.35,
+      cx,
+      cy,
+      reach * 1.15
+    );
+    lip.addColorStop(0, "transparent");
+    lip.addColorStop(0.55, "transparent");
+    lip.addColorStop(0.78, "rgba(0,0,0,0.22)");
+    lip.addColorStop(1, "rgba(0,0,0,0.42)");
+    ctx.fillStyle = lip;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const ang = (Math.PI / 180) * (30 + 60 * i);
+      const x = cx + Math.cos(ang) * reach;
+      const y = cy + Math.sin(ang) * reach * 0.9;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
 
@@ -1260,6 +1663,10 @@ body[data-mode="plague"] canvas {
   function drawBoardGroundShadow(ctx, s, th, flat) {
     if (th.material === "magma") {
       drawMagmaPitWell(ctx, s);
+      return;
+    }
+    if (th.material === "mycelium") {
+      drawPlagueSpecimenField(ctx, s);
       return;
     }
     if (flat) return;
@@ -1340,13 +1747,34 @@ body[data-mode="plague"] canvas {
     BLAST.shake = 0;
     BLAST.shards.length = 0;
     BLAST.poppedMines = new Set();
+    BLAST._shaking = false;
+    BLAST.lastT = 0;
     if (s && s.map) {
       s.map.forEach((c) => {
         c._blast = null;
         c._blastRot = 0;
         c._blastAlpha = 1;
+        // Tear / scatter residue must not survive a new organism
+        if (c._riftTorn) c._riftTorn = false;
       });
     }
+  }
+
+  /**
+   * When the blast timer ends, restore tile draw state fully.
+   * Leaving faded/rotated corpses while beforeFrame snaps positions back
+   * is what made hexes “come back broken” after the cycle.
+   * Game-over / revealed mines stay; only cosmetic scatter is cleared.
+   */
+  function settleBlastCycle(s) {
+    clearBlast(s);
+    // Drop burst motes; keep ambient reseeded for the live theme
+    for (let i = particles.length - 1; i >= 0; i--) {
+      if (!particles[i].ambient) particles.splice(i, 1);
+    }
+    streaks.length = 0;
+    BLAST.shake = 0;
+    RIFT.shake = 0;
   }
 
   function spawnHexShards(cell, size, force, material) {
@@ -1551,7 +1979,7 @@ body[data-mode="plague"] canvas {
         cell.y += (dy / r) * wave;
         cell._depthScale = (cell._depthScale || 1) * (1 + wave * 0.002);
       });
-      if (elapsed > BLAST.duration) BLAST.active = false;
+      if (elapsed > BLAST.duration) settleBlastCycle(s);
       return;
     }
 
@@ -1662,8 +2090,9 @@ body[data-mode="plague"] canvas {
       if (sh.life <= 0) BLAST.shards.splice(i, 1);
     }
 
-    if (elapsed > BLAST.duration && BLAST.shards.length === 0) {
-      BLAST.active = false;
+    // Always settle after duration — corpse alphas/rot stay until restart clears them
+    if (elapsed > BLAST.duration) {
+      settleBlastCycle(s);
     }
   }
 
@@ -1838,16 +2267,19 @@ body[data-mode="plague"] canvas {
   }
 
   // —— Escape · Rift Chase ————————————————————————————————————————————
-  // Starts as a dark plate. After grace, a cyan-indigo lens tear awakens at
-  // the first dig and hunts the clear frontier. Dig ahead or get caught.
+  // Tile-budget pressure, not a wall-clock sprinter:
+  //   • grace until enough digs + exposes
+  //   • each dig/flood adds budget (floods are cheap)
+  //   • rift spends budget to walk one hex at a time toward your tip
   const RIFT = {
     phase: "idle", // idle | grace | awaken | chase | catch
     t0: 0,
     lastT: 0,
-    graceMs: 7000,
-    awakenMs: 900,
+    awakenMs: 1100,
     x: 0,
     y: 0,
+    q: 0,
+    r: 0,
     radius: 0,
     intensity: 0,
     firstKey: null,
@@ -1857,8 +2289,19 @@ body[data-mode="plague"] canvas {
     telegraphUntil: 0,
     catchKey: null,
     shake: 0,
-    clearsAtAwaken: 0,
-    chaseArmedAt: 0,
+    digClicks: 0,
+    exposed: 0,
+    budget: 0,
+    stepCooldown: 0,
+    // Awaken once the player has committed a few digs and opened a patch.
+    awakenDigs: 3,
+    awakenExposed: 45,
+    // Budget weights — a 200-cell flood ≈ 10 hexes of pressure, not a wipe.
+    weightDig: 0.85,
+    weightChord: 0.45,
+    weightFlood: 0.05,
+    // Tiny AFK trickle so freezing still loses, very slowly (~1 hex / 5s).
+    idleBudgetPerSec: 0.2,
   };
 
   function resetRift() {
@@ -1867,6 +2310,8 @@ body[data-mode="plague"] canvas {
     RIFT.lastT = 0;
     RIFT.x = 0;
     RIFT.y = 0;
+    RIFT.q = 0;
+    RIFT.r = 0;
     RIFT.radius = 0;
     RIFT.intensity = 0;
     RIFT.firstKey = null;
@@ -1876,8 +2321,10 @@ body[data-mode="plague"] canvas {
     RIFT.telegraphUntil = 0;
     RIFT.catchKey = null;
     RIFT.shake = 0;
-    RIFT.clearsAtAwaken = 0;
-    RIFT.chaseArmedAt = 0;
+    RIFT.digClicks = 0;
+    RIFT.exposed = 0;
+    RIFT.budget = 0;
+    RIFT.stepCooldown = 0;
   }
   resetRift();
 
@@ -1886,22 +2333,311 @@ body[data-mode="plague"] canvas {
     return !!(th && th.rift);
   }
 
-  function noteRiftReveal(cell, api) {
+  function persistLaneKey(th) {
+    const theme = th || THEMES[themeIndex];
+    if (!theme || !theme.endless) return null;
+    return theme.rift ? ESCAPE_SAVE_KEY : PLATE_SAVE_KEY;
+  }
+
+  function exportRiftBlob(force) {
+    if (!force && !riftThemeActive()) return null;
+    return {
+      phase: RIFT.phase,
+      digClicks: RIFT.digClicks,
+      exposed: RIFT.exposed,
+      budget: RIFT.budget,
+      q: RIFT.q,
+      r: RIFT.r,
+      firstKey: RIFT.firstKey,
+      lastDigKey: RIFT.lastDigKey,
+      torn: RIFT.torn ? Array.from(RIFT.torn) : [],
+      intensity: RIFT.intensity,
+      radius: RIFT.radius,
+    };
+  }
+
+  function importRiftBlob(blob) {
+    resetRift();
+    if (!blob || typeof blob !== "object") return;
+    RIFT.phase = blob.phase || "idle";
+    RIFT.digClicks = blob.digClicks | 0;
+    RIFT.exposed = blob.exposed | 0;
+    RIFT.budget = Number(blob.budget) || 0;
+    RIFT.q = blob.q | 0;
+    RIFT.r = blob.r | 0;
+    RIFT.firstKey = blob.firstKey || null;
+    RIFT.lastDigKey = blob.lastDigKey || null;
+    RIFT.torn = new Set(Array.isArray(blob.torn) ? blob.torn : []);
+    RIFT.intensity = Number(blob.intensity) || 0;
+    RIFT.radius = Number(blob.radius) || 0;
+    RIFT.lastT = performance.now();
+    if (RIFT.phase === "idle") return;
+    // Re-enter chase/grace without replaying awaken toast
+    if (RIFT.phase === "awaken") RIFT.phase = "chase";
+  }
+
+  function buildPersistPayload() {
+    const api = gameApi || game;
+    if (!api || typeof api.exportEndlessState !== "function") return null;
+    const th = THEMES[themeIndex];
+    if (!th?.endless || !api.state?.endless) return null;
+    // Skip empty unused boards (never dug)
+    if (api.state.isFirstClick && !(api.state.clearedSafe > 0)) return null;
+    const data = api.exportEndlessState();
+    if (!data) return null;
+    data.mode = th.id;
+    data.savedAt = Date.now();
+    if (th.rift) data.rift = exportRiftBlob();
+    return data;
+  }
+
+  function flushPersist() {
+    if (persistSuspended) return false;
+    const key = persistLaneKey();
+    const data = buildPersistPayload();
+    if (!key) return false;
+    // Fresh unused board: drop stale autosave so it can't resurrect later
+    if (!data) {
+      try {
+        localStorage.removeItem(key);
+      } catch (_) {}
+      return false;
+    }
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      return true;
+    } catch (err) {
+      if (typeof showToast === "function") {
+        showToast("Autosave full — export run instead");
+      }
+      return false;
+    }
+  }
+
+  function schedulePersist() {
+    if (persistSuspended) return;
+    const th = THEMES[themeIndex];
+    if (!th?.endless) return;
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => flushPersist(), 450);
+  }
+
+  function clearLanePersist(th) {
+    const key = persistLaneKey(th);
+    if (!key) return;
+    try {
+      localStorage.removeItem(key);
+    } catch (_) {}
+  }
+
+  function tryRestoreEndless() {
+    const api = gameApi || game;
+    const th = THEMES[themeIndex];
+    const key = persistLaneKey(th);
+    if (!api || !th?.endless || !key || typeof api.applyEndlessState !== "function") {
+      return false;
+    }
+    let raw;
+    try {
+      raw = localStorage.getItem(key);
+    } catch (_) {
+      return false;
+    }
+    if (!raw) return false;
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (_) {
+      return false;
+    }
+    if (!data || data.v !== 1 || !data.endless) return false;
+    persistSuspended = true;
+    const ok = api.applyEndlessState(data);
+    if (ok && th.rift) importRiftBlob(data.rift);
+    persistSuspended = false;
+    if (ok && typeof showToast === "function" && (data.cleared | 0) > 0) {
+      showToast(`Restored · ${data.cleared} cleared`);
+    }
+    return ok;
+  }
+
+  function downloadPersistExport() {
+    const data = buildPersistPayload();
+    if (!data) {
+      // Allow exporting mid-run even if first-click skipped guard — force snapshot
+      const api = gameApi || game;
+      if (!api?.state?.endless) {
+        showToast("Export is for infinite runs");
+        return;
+      }
+      const forced = api.exportEndlessState();
+      if (!forced) return;
+      forced.mode = THEMES[themeIndex].id;
+      forced.savedAt = Date.now();
+      if (THEMES[themeIndex].rift) forced.rift = exportRiftBlob();
+      return downloadJson(forced);
+    }
+    downloadJson(data);
+  }
+
+  function downloadJson(data) {
+    const th = THEMES[themeIndex];
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const name = `hexsweeper-${th.id}-${stamp}.json`;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Run exported");
+  }
+
+  function importPersistFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(String(reader.result || ""));
+        if (!data || data.v !== 1 || !data.endless) {
+          showToast("Not a Hexsweeper run file");
+          return;
+        }
+        // Switch to matching infinite theme when possible
+        const want =
+          data.mode === "escape" || data.rift
+            ? "escape"
+            : data.mode === "dark"
+              ? "dark"
+              : "light";
+        const idx = THEMES.findIndex((t) => t.id === want);
+        if (idx >= 0 && idx !== themeIndex) applyTheme(idx, { toast: false });
+        const api = gameApi || game;
+        if (!api || typeof api.applyEndlessState !== "function") return;
+        persistSuspended = true;
+        const ok = api.applyEndlessState(data);
+        if (ok && THEMES[themeIndex].rift) importRiftBlob(data.rift);
+        persistSuspended = false;
+        if (ok) {
+          flushPersist();
+          showToast("Run imported");
+        } else showToast("Import failed");
+      } catch (_) {
+        showToast("Import failed");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function syncRiftScreenPos(s) {
+    const cell = s.map.get(`${RIFT.q},${RIFT.r}`);
+    if (cell) {
+      RIFT.x = cell.x;
+      RIFT.y = cell.y;
+    }
+  }
+
+  function noteRiftReveal(cell, api, meta) {
     if (!riftThemeActive() || !cell || cell.isMine) return;
     const key = `${cell.q},${cell.r}`;
     const now = performance.now();
-    RIFT.lastDigKey = key;
-    RIFT.lastDigAt = now;
+    const source = (meta && meta.source) || "dig";
+    RIFT.exposed += 1;
+    if (source === "dig") {
+      RIFT.digClicks += 1;
+      RIFT.lastDigKey = key;
+      RIFT.lastDigAt = now;
+    } else if (source === "chord") {
+      RIFT.lastDigKey = key;
+      RIFT.lastDigAt = now;
+    } else if (source === "flood") {
+      // Tip rides the flood frontier so the rift must crawl the cleared patch
+      RIFT.lastDigKey = key;
+    }
+
     if (RIFT.phase === "idle") {
       RIFT.phase = "grace";
       RIFT.t0 = now;
       RIFT.firstKey = key;
+      RIFT.q = cell.q;
+      RIFT.r = cell.r;
       RIFT.x = cell.x;
       RIFT.y = cell.y;
-      const calm = typeof reduceMotion !== "undefined" && reduceMotion;
-      RIFT.graceMs = calm ? 12000 : 7000;
-      if (typeof showToast === "function") showToast("Something wakes…");
+      if (typeof showToast === "function") showToast("Something stirs…");
     }
+
+    // Pressure only after the rift is hunting — floods stay cheap.
+    if (RIFT.phase === "chase" || RIFT.phase === "awaken") {
+      const w =
+        source === "dig"
+          ? RIFT.weightDig
+          : source === "chord"
+            ? RIFT.weightChord
+            : RIFT.weightFlood;
+      RIFT.budget += w;
+    }
+  }
+
+  function tryAwakenRift(now, s) {
+    if (RIFT.phase !== "grace") return;
+    if (RIFT.digClicks < RIFT.awakenDigs || RIFT.exposed < RIFT.awakenExposed) {
+      // Soft progress pulse during grace
+      const digU = Math.min(1, RIFT.digClicks / RIFT.awakenDigs);
+      const expU = Math.min(1, RIFT.exposed / RIFT.awakenExposed);
+      RIFT.intensity = 0.15 + 0.55 * Math.min(digU, expU);
+      return;
+    }
+    RIFT.phase = "awaken";
+    RIFT.t0 = now;
+    RIFT.radius = s.cellSize * 0.9;
+    RIFT.budget = 0; // start clean — pressure comes from future digs
+    if (typeof showToast === "function") showToast("Flee the rift");
+  }
+
+  /** Walk one axial step toward the dig tip; tear that hex. */
+  function stepRiftTowardTip(api) {
+    const s = api.state;
+    const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
+    if (!tip) return false;
+    const here = s.map.get(`${RIFT.q},${RIFT.r}`);
+    if (!here) {
+      RIFT.q = tip.q;
+      RIFT.r = tip.r;
+      return false;
+    }
+    if (RIFT.q === tip.q && RIFT.r === tip.r) return true;
+
+    const neighbors = api.getNeighbors(RIFT.q, RIFT.r);
+    if (!neighbors.length) return false;
+    let best = null;
+    let bestD = Infinity;
+    for (const n of neighbors) {
+      const dq = n.q - tip.q;
+      const dr = n.r - tip.r;
+      const ds = -n.q - n.r - (-tip.q - tip.r);
+      const d = (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
+      // Prefer untorn / revealed trail so it follows the cleared path
+      const bias = n._riftTorn ? 0.35 : n.revealed ? 0 : 0.15;
+      if (d + bias < bestD) {
+        bestD = d + bias;
+        best = n;
+      }
+    }
+    if (!best) return false;
+    RIFT.q = best.q;
+    RIFT.r = best.r;
+    syncRiftScreenPos(s);
+    tearRiftCell(best, s, 4.2 + Math.random() * 2);
+    // Soft splash on one extra neighbor for readability, not a wipe
+    const splash = api.getNeighbors(best.q, best.r);
+    if (splash.length && Math.random() < 0.35) {
+      const pick = splash[(Math.random() * splash.length) | 0];
+      if (pick && !pick._riftTorn && pick.revealed) {
+        tearRiftCell(pick, s, 3 + Math.random() * 1.5);
+      }
+    }
+    return RIFT.q === tip.q && RIFT.r === tip.r;
   }
 
   function tearRiftCell(cell, s, force) {
@@ -1995,68 +2731,67 @@ body[data-mode="plague"] canvas {
     const s = api.state;
     if (s.isGameOver) return;
     const calm = typeof reduceMotion !== "undefined" && reduceMotion;
-    const dt = Math.min(32, Math.max(8, now - (RIFT.lastT || now))) / 16.67;
+    const dtSec = Math.min(0.05, Math.max(0.008, (now - (RIFT.lastT || now)) / 1000));
+    const dt = dtSec * 60; // ~frames @60 for shard step
     RIFT.lastT = now;
     RIFT.shake *= Math.pow(0.9, dt);
+    RIFT.stepCooldown = Math.max(0, RIFT.stepCooldown - dtSec);
 
     const first = RIFT.firstKey && s.map.get(RIFT.firstKey);
     const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
+    syncRiftScreenPos(s);
 
     if (RIFT.phase === "grace") {
       if (first) {
+        RIFT.q = first.q;
+        RIFT.r = first.r;
         RIFT.x = first.x;
         RIFT.y = first.y;
       }
-      RIFT.intensity = Math.min(1, (now - RIFT.t0) / RIFT.graceMs);
-      // Soft breath on the origin hex during grace
-      if (first && !first._riftTorn) {
+      tryAwakenRift(now, s);
+      if (first && !first._riftTorn && RIFT.phase === "grace") {
         const u = RIFT.intensity;
-        const breath = Math.sin(now * 0.004) * s.cellSize * 0.04 * u;
-        first._depthScale = (first._depthScale || 1) * (1 + 0.06 * u);
-        first.x += (Math.random() - 0.5) * breath * 0.15;
-        first.y += (Math.random() - 0.5) * breath * 0.15;
+        const breath = Math.sin(now * 0.0035) * s.cellSize * 0.03 * u;
+        first._depthScale = (first._depthScale || 1) * (1 + 0.05 * u);
+        first.x += (Math.random() - 0.5) * breath * 0.12;
+        first.y += (Math.random() - 0.5) * breath * 0.12;
       }
-      if (now - RIFT.t0 >= RIFT.graceMs) {
-        RIFT.phase = "awaken";
-        RIFT.t0 = now;
-        RIFT.clearsAtAwaken = s.clearedSafe || 0;
-        RIFT.radius = s.cellSize * 0.85;
-        if (typeof showToast === "function") showToast("Flee the rift");
-      }
-      return;
+      if (RIFT.phase === "grace") return;
+      // fall through into awaken same frame
     }
 
     if (RIFT.phase === "awaken") {
       const u = Math.min(1, (now - RIFT.t0) / RIFT.awakenMs);
-      RIFT.intensity = u;
+      RIFT.intensity = 0.45 + 0.55 * u;
       if (first) {
-        RIFT.x = first.x;
-        RIFT.y = first.y;
+        RIFT.q = first.q;
+        RIFT.r = first.r;
       }
-      RIFT.radius = s.cellSize * (0.85 + u * 1.4);
-      // Breach: shear nearby hexes + cyan rim crawl
+      syncRiftScreenPos(s);
+      RIFT.radius = s.cellSize * (0.75 + u * 0.55);
+      // Local breach only — origin hex + immediate neighbors
       s.map.forEach((cell) => {
         if (cell._offscreen || cell._riftTorn) return;
         const dx = cell.x - RIFT.x;
         const dy = cell.y - RIFT.y;
         const r = Math.hypot(dx, dy) || 0.001;
-        const near = Math.exp(-(r * r) / (s.cellSize * s.cellSize * 10));
-        const shear = (calm ? 0.02 : 0.07) * u * near * s.cellSize;
+        const near = Math.exp(-(r * r) / (s.cellSize * s.cellSize * 4.5));
+        if (near < 0.08) return;
+        const shear = (calm ? 0.015 : 0.05) * u * near * s.cellSize;
         cell.x += (dx / r) * shear;
         cell.y += (dy / r) * shear;
-        cell._depthScale = (cell._depthScale || 1) * (1 + 0.1 * u * near);
-        if (u > 0.55 && r < RIFT.radius * 1.05) {
-          tearRiftCell(cell, s, 4.5 + Math.random() * 2);
-        }
+        cell._depthScale = (cell._depthScale || 1) * (1 + 0.08 * u * near);
       });
+      if (u > 0.6 && first && !first._riftTorn) {
+        tearRiftCell(first, s, 4 + Math.random() * 2);
+      }
       stepRiftShards(dt);
       if (u >= 1) {
         RIFT.phase = "chase";
         RIFT.t0 = now;
-        // Head start: can't be caught until the hunt has actually run.
-        RIFT.chaseArmedAt = now + (calm ? 1800 : 2800);
         RIFT.telegraphUntil = 0;
         RIFT.catchKey = null;
+        RIFT.radius = s.cellSize * 1.05;
       }
       return;
     }
@@ -2064,55 +2799,48 @@ body[data-mode="plague"] canvas {
     if (RIFT.phase === "chase") {
       const tipCell = tip || first;
       if (!tipCell) return;
-      const chaseX = tipCell.x;
-      const chaseY = tipCell.y;
-      const elapsedSec = Math.max(0.5, (now - RIFT.t0) / 1000);
-      const clears = Math.max(0, (s.clearedSafe || 0) - RIFT.clearsAtAwaken);
-      const clearRate = clears / elapsedSec; // cells/s
-      // hex/s → px/s (~ cellSize * 1.1)
-      const hexPerSec = Math.min(3.5, Math.max(calm ? 0.7 : 1.15, clearRate * 0.85 || 1.2));
-      const speed = hexPerSec * s.cellSize * 0.085 * dt; // per-frame step
-      const dx = chaseX - RIFT.x;
-      const dy = chaseY - RIFT.y;
-      const dist = Math.hypot(dx, dy) || 0.001;
-      const step = Math.min(dist, speed);
-      RIFT.x += (dx / dist) * step;
-      RIFT.y += (dy / dist) * step;
-      RIFT.radius = Math.min(s.cellSize * 3.2, RIFT.radius + s.cellSize * 0.0022 * dt);
-      RIFT.intensity = Math.min(1.2, 0.55 + clears * 0.004);
 
-      // Lens warp + tear inside radius
+      // AFK trickle — slow enough that active play is about digs, not the clock
+      const idleSec = (now - RIFT.lastDigAt) / 1000;
+      if (idleSec > 1.2) {
+        RIFT.budget += RIFT.idleBudgetPerSec * dtSec * (calm ? 0.55 : 1);
+      }
+
+      // Spend budget: at most one hex step every ~280ms so the crawl is readable
+      const stepGap = calm ? 0.45 : 0.28;
+      if (RIFT.budget >= 1 && RIFT.stepCooldown <= 0) {
+        RIFT.budget -= 1;
+        RIFT.stepCooldown = stepGap;
+        stepRiftTowardTip(api);
+      }
+
+      syncRiftScreenPos(s);
+      RIFT.intensity = Math.min(1.15, 0.5 + RIFT.torn.size * 0.012 + RIFT.budget * 0.04);
+      RIFT.radius = s.cellSize * (0.95 + Math.min(0.35, RIFT.torn.size * 0.008));
+
+      // Gentle lens near the core only (no radius wipe)
       s.map.forEach((cell) => {
-        if (cell._offscreen) return;
+        if (cell._offscreen || cell._riftTorn) return;
         const cx = cell.x - RIFT.x;
         const cy = cell.y - RIFT.y;
         const r = Math.hypot(cx, cy) || 0.001;
-        const ux = cx / r;
-        const uy = cy / r;
-        const sigma = s.cellSize * 2.6;
-        const lens = 1 / (1 + (r / sigma) * (r / sigma));
-        // Outward tear stretch (not implode — distinct from mine death)
-        const stretch = s.cellSize * 0.22 * RIFT.intensity * lens;
-        if (!cell._riftTorn) {
-          cell.x += ux * stretch * 0.35;
-          cell.y += uy * stretch * 0.35;
-          cell._depthScale = (cell._depthScale || 1) * (1 + 0.08 * lens * RIFT.intensity);
-        }
-        if (!cell._riftTorn && r < RIFT.radius) {
-          tearRiftCell(cell, s, 5 + Math.random() * 3.5);
-        }
+        if (r > s.cellSize * 3.5) return;
+        const lens = 1 / (1 + (r / (s.cellSize * 1.8)) * (r / (s.cellSize * 1.8)));
+        const stretch = s.cellSize * 0.12 * RIFT.intensity * lens;
+        cell.x += (cx / r) * stretch * 0.3;
+        cell.y += (cy / r) * stretch * 0.3;
+        cell._depthScale = (cell._depthScale || 1) * (1 + 0.05 * lens * RIFT.intensity);
       });
 
       stepRiftShards(dt);
 
-      // Catch: after head start, rift reaches a dig tip that sits still
-      const tipDist = Math.hypot(chaseX - RIFT.x, chaseY - RIFT.y);
+      // Catch when the rift occupies your dig tip
+      const onTip = RIFT.q === tipCell.q && RIFT.r === tipCell.r;
       const tipKey = `${tipCell.q},${tipCell.r}`;
-      const idleMs = now - RIFT.lastDigAt;
-      const armed = now >= (RIFT.chaseArmedAt || 0);
-      if (armed && tipDist < s.cellSize * 0.95 && idleMs > 420) {
+      const tipTorn = tipCell._riftTorn || RIFT.torn.has(tipKey);
+      if (onTip || tipTorn) {
         if (!RIFT.telegraphUntil) {
-          RIFT.telegraphUntil = now + (calm ? 220 : 480);
+          RIFT.telegraphUntil = now + (calm ? 280 : 550);
           RIFT.catchKey = tipKey;
         } else if (now >= RIFT.telegraphUntil) {
           RIFT.phase = "catch";
@@ -2126,21 +2854,21 @@ body[data-mode="plague"] canvas {
             startRiftCatch(api, tipCell);
           }
         }
-      } else if (tipDist > s.cellSize * 1.6) {
+      } else {
         RIFT.telegraphUntil = 0;
         RIFT.catchKey = null;
       }
 
-      // Pressure shake when close
-      if (tipDist < s.cellSize * 3.2) {
-        RIFT.shake = Math.max(RIFT.shake, (1 - tipDist / (s.cellSize * 3.2)) * 5);
+      const tipDist = Math.hypot(tipCell.x - RIFT.x, tipCell.y - RIFT.y);
+      if (tipDist < s.cellSize * 4) {
+        RIFT.shake = Math.max(RIFT.shake, (1 - tipDist / (s.cellSize * 4)) * 3.5);
       }
     }
   }
 
   function drawRiftOverlay(ctx, s, now) {
     if (!riftThemeActive() || RIFT.phase === "idle") return;
-    if (RIFT.phase === "grace" && RIFT.intensity < 0.08) return;
+    if (RIFT.phase === "grace" && RIFT.intensity < 0.12) return;
     const cx = RIFT.x;
     const cy = RIFT.y;
     const pulse = 0.55 + 0.45 * Math.sin(now * 0.005);
@@ -2386,7 +3114,11 @@ body[data-mode="plague"] canvas {
       fx.style.background = t.fx.bg;
       fx.classList.toggle(
         "fx-quiet",
-        !!(t.flatGrid || t.material === "neumorph" || t.material === "magma")
+        !!(
+          t.material === "neumorph" ||
+          t.material === "magma" ||
+          (t.flatGrid && t.material !== "mycelium")
+        )
       );
     }
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.css["--bg-color"]);
@@ -2394,9 +3126,31 @@ body[data-mode="plague"] canvas {
     document.querySelectorAll("[data-mode]").forEach((button) => {
       button.setAttribute("aria-pressed", button.dataset.mode === t.id ? "true" : "false");
     });
+    syncWelcomeThemes(t.id);
     const w = gameApi?.state?.canvas?.width || window.innerWidth;
     const h = gameApi?.state?.canvas?.height || window.innerHeight;
     seedAmbient(t, w, h);
+  }
+
+  const WELCOME_THEME_NOTES = {
+    light: "Light — flat infinite field",
+    dark: "Dark — flat infinite field, night",
+    fire: "Fire — finite magma pit",
+    plague: "Plague — verdigris mycelium specimen",
+    escape: "Escape — dig enough and a rift crawls toward you",
+  };
+
+  function syncWelcomeThemes(modeId) {
+    document.querySelectorAll("[data-welcome-mode]").forEach((button) => {
+      button.setAttribute(
+        "aria-pressed",
+        button.dataset.welcomeMode === modeId ? "true" : "false"
+      );
+    });
+    const note = document.getElementById("welcome-theme-note");
+    if (note) note.textContent = WELCOME_THEME_NOTES[modeId] || "";
+    const tip = document.getElementById("welcome-escape-tip");
+    if (tip) tip.hidden = modeId !== "escape";
   }
 
   function showToast(name) {
@@ -2432,8 +3186,10 @@ body[data-mode="plague"] canvas {
       } else if (typeof Hexsweeper !== "undefined" && Hexsweeper.DEFAULT_CONFIG) {
         live.state.config = Hexsweeper.DEFAULT_CONFIG;
       }
+      // Fire and Plague open at the large board; the rebuild below picks this up.
+      if (!t.endless && live.state.config.hard) live.state.currentDifficulty = "hard";
     }
-    // Light↔Dark keeps the run; Escape / finite swaps rebuild.
+    // Light↔Dark keeps the run; Escape / finite swaps rebuild (no persist wipe).
     if (game && typeof game.setEndless === "function") {
       const wantEndless = !!t.endless;
       const wasEndless = !!(game.state && game.state.endless);
@@ -2446,18 +3202,41 @@ body[data-mode="plague"] canvas {
         t.material === "neumorph" &&
         prev.material === "neumorph";
       let rebuilt = false;
+      // Flush the lane we're leaving (plate↔escape) before rebuild
+      if (previousIndex !== themeIndex && prev?.endless && !plateSwap) {
+        const prevKey = persistLaneKey(prev);
+        if (prevKey && game.state?.endless) {
+          try {
+            const snap = game.exportEndlessState?.();
+            if (snap && !snap.first) {
+              snap.mode = prev.id;
+              snap.savedAt = Date.now();
+              if (prev.rift) snap.rift = exportRiftBlob(true);
+              localStorage.setItem(prevKey, JSON.stringify(snap));
+            }
+          } catch (_) {}
+        }
+      }
       if (wantEndless !== wasEndless) {
+        persistSuspended = true;
         game.setEndless(wantEndless);
+        persistSuspended = false;
         rebuilt = true;
       } else if (previousIndex !== themeIndex && !plateSwap && typeof game.restart === "function") {
-        game.restart();
+        persistSuspended = true;
+        game.restart({ clearPersist: false });
+        persistSuspended = false;
         rebuilt = true;
       }
       // Deep-link / first paint: apply Plague's larger board even if mode didn't change.
       if (!rebuilt && t.boardConfig && !wantEndless && typeof game.restart === "function") {
-        game.restart();
+        game.restart({ clearPersist: false });
+        rebuilt = true;
       }
+      if (rebuilt && wantEndless) tryRestoreEndless();
+      else if (plateSwap && previousIndex !== themeIndex) schedulePersist();
     }
+    syncSettingsRows();
     try {
       const url = new URL(location.href);
       url.searchParams.delete("theme");
@@ -2469,6 +3248,18 @@ body[data-mode="plague"] canvas {
       localStorage.setItem(STORAGE_KEY, t.id);
     } catch (_) {}
     if (toast) showToast(t.name);
+  }
+
+  /**
+   * Settings rows that only apply to one board topology:
+   * Export/Import needs an infinite lane; board size needs a finite board.
+   */
+  function syncSettingsRows() {
+    const endless = !!THEMES[themeIndex]?.endless;
+    const persistRow = document.getElementById("persist-actions");
+    if (persistRow) persistRow.hidden = !endless;
+    const sizeRow = document.getElementById("size-row");
+    if (sizeRow) sizeRow.hidden = endless;
   }
 
   function cycleTheme() {
@@ -2498,8 +3289,16 @@ body[data-mode="plague"] canvas {
     const pulse = reduceMotion ? 0.72 : 0.58 + 0.42 * Math.sin(time * 0.0038 + h * 9);
     const swayX = reduceMotion ? 0 : Math.sin(time * 0.0021 + cell.q * 1.15) * size * 0.16;
     const swayY = reduceMotion ? 0 : Math.cos(time * 0.0017 + cell.r * 0.95) * size * 0.12;
-    // Numbered: keep underworld dim so digits sit on a calm face
-    const intensity = open || mine ? 1 : numbered ? 0.22 : 0.22 + hover * 0.18;
+    // Center of the pit runs hotter — covered crust thins so boil shows through
+    const maxR = Math.max(1, gameApi?.state?.mapRadius || 6);
+    const centerHeat = Math.pow(Math.max(0, 1 - (cell.ring || 0) / maxR), 1.4);
+    // Numbered: keep underworld dim so digits stay legible
+    const intensity =
+      open || mine
+        ? 1
+        : numbered
+          ? 0.22
+          : 0.2 + hover * 0.16 + centerHeat * 0.38;
 
     // Living magma underlayer (pit floor)
     const lava = ctx.createRadialGradient(
@@ -2518,11 +3317,12 @@ body[data-mode="plague"] canvas {
     ctx.fillStyle = lava;
     ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
 
-    // Bubbling hotspots on open vents / detonated mines only
-    if (open || mine) {
+    // Bubbling hotspots: open vents / mines always; covered center crust softly
+    if (open || mine || (covered && centerHeat > 0.28)) {
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const n = mine ? 6 : 4;
+      const n = mine ? 6 : open ? 4 : 2 + Math.floor(centerHeat * 2);
+      const boilScale = open || mine ? 1 : 0.35 + centerHeat * 0.55;
       for (let i = 0; i < n; i++) {
         const u = cellHash(cell.q, cell.r, 200 + i);
         const v = cellHash(cell.q, cell.r, 300 + i);
@@ -2534,10 +3334,10 @@ body[data-mode="plague"] canvas {
           cell.y +
           (v - 0.5) * size * 0.85 +
           (reduceMotion ? 0 : Math.cos(time * 0.0031 + v * 7) * size * 0.07);
-        const br = size * (0.07 + u * 0.12) * (mine ? 1.35 : 1);
+        const br = size * (0.07 + u * 0.12) * (mine ? 1.35 : 1) * boilScale;
         const bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-        bg.addColorStop(0, `rgba(255,255,210,${0.5 + pulse * 0.25})`);
-        bg.addColorStop(0.4, `rgba(255,140,35,${0.32})`);
+        bg.addColorStop(0, `rgba(255,255,210,${(0.5 + pulse * 0.25) * boilScale})`);
+        bg.addColorStop(0.4, `rgba(255,140,35,${0.32 * boilScale})`);
         bg.addColorStop(1, "transparent");
         ctx.fillStyle = bg;
         ctx.beginPath();
@@ -2553,7 +3353,7 @@ body[data-mode="plague"] canvas {
         ? 0.94
         : stateKey === "flagged"
           ? 0.72
-          : 0.9 - hover * 0.08;
+          : 0.9 - hover * 0.08 - centerHeat * 0.28;
       // Inset well: dark center, slightly lighter only at the far rim (not a raised pillow)
       const crust = ctx.createRadialGradient(
         cell.x + size * 0.18,
@@ -2590,14 +3390,15 @@ body[data-mode="plague"] canvas {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
         ctx.lineCap = "round";
-        for (let i = 0; i < 2; i++) {
+        const cracks = centerHeat > 0.45 ? 3 : 2;
+        for (let i = 0; i < cracks; i++) {
           const u = cellHash(cell.q, cell.r, 90 + i);
           const v = cellHash(cell.q, cell.r, 110 + i);
           const u2 = cellHash(cell.q, cell.r, 130 + i);
           const v2 = cellHash(cell.q, cell.r, 150 + i);
-          const glow = 0.38 + pulse * 0.22;
-          ctx.strokeStyle = `rgba(255, ${90 + i * 35}, 18, ${glow})`;
-          ctx.lineWidth = 1.1;
+          const glow = 0.38 + pulse * 0.22 + centerHeat * 0.28;
+          ctx.strokeStyle = `rgba(255, ${90 + i * 35}, 18, ${Math.min(0.95, glow)})`;
+          ctx.lineWidth = 1.1 + centerHeat * 0.5;
           ctx.beginPath();
           ctx.moveTo(cell.x + (u - 0.5) * size * 0.35, cell.y + (v - 0.5) * size * 0.35);
           ctx.quadraticCurveTo(
@@ -2651,50 +3452,36 @@ body[data-mode="plague"] canvas {
     const cy = s.canvas.height / 2 + oy * 0.1 + 22;
     const R = s.mapRadius * s.cellSize;
 
-    // Magma: ash motes drifting up from fissures (points, not a board-shaped glow)
+    // Magma: soft circular ember motes (never stroke-lines)
     if (th.material === "magma") {
       if (reduceMotion) return;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const n = 18;
+      const n = 14;
       for (let i = 0; i < n; i++) {
         const u = cellHash(i, 41, 2);
         const v = cellHash(i, 53, 7);
-        const life = (time * 0.00028 + u) % 1;
-        // Spawn along full width, drift upward with slight wander
-        const ex = (u * s.canvas.width + ox * 1.2 + Math.sin(time * 0.001 + v * 8) * 12) % s.canvas.width;
-        const ey = s.canvas.height * (0.35 + v * 0.55) - life * s.canvas.height * 0.55;
-        const a = (1 - life) * (0.12 + v * 0.2);
-        const er = 0.8 + (1 - life) * 1.6;
+        const life = (time * 0.00022 + u) % 1;
+        const ex =
+          (u * s.canvas.width + ox * 0.8 + Math.sin(time * 0.0008 + v * 6) * 18 + s.canvas.width) %
+          s.canvas.width;
+        const ey = s.canvas.height * (0.45 + v * 0.4) - life * s.canvas.height * 0.4;
+        const a = (1 - life) * (0.08 + v * 0.12);
+        const er = 0.9 + (1 - life) * 1.8;
         ctx.globalAlpha = a;
-        ctx.fillStyle = i % 3 === 0 ? "#ffc060" : "#ff6a18";
-        ctx.fillRect(ex, ey, er, er * (1.2 + v));
+        ctx.fillStyle = i % 3 === 0 ? "#ffb050" : "#ff6818";
+        ctx.beginPath();
+        ctx.arc(ex, ey, er, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.globalAlpha = 1;
       ctx.restore();
       return;
     }
 
-    if (th.material === "mycelium") {
-      // Sparse drifting spores: the board carries the plague, not a glowing backdrop.
-      if (reduceMotion) return;
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      for (let i = 0; i < 28; i++) {
-        const u = cellHash(i, 29, 3);
-        const v = cellHash(i, 47, 9);
-        const drift = (time * (0.000018 + u * 0.000022) + v) % 1;
-        const x = (u * s.canvas.width + Math.sin(time * 0.0004 + i) * 10 + s.canvas.width) % s.canvas.width;
-        const y = s.canvas.height * (1.08 - drift * 1.18);
-        ctx.globalAlpha = 0.05 + (1 - drift) * 0.14;
-        ctx.fillStyle = i % 4 === 0 ? "#e5edbf" : "#a9cf59";
-        ctx.beginPath();
-        ctx.arc(x, y, 0.6 + u * 1.3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-      return;
-    }
+    // Plague: the specimen slide (drawPlagueSpecimenField) owns the whole field,
+    // so there is no second bloom pass here.
+    if (th.material === "mycelium") return;
 
     if (th.material === "opal") {
       ctx.save();
@@ -2724,8 +3511,8 @@ body[data-mode="plague"] canvas {
   }
 
   /**
-   * Plague: soft hyphae between revealed safe cells (drawn under faces).
-   * Connection weight = shared danger — thicker toward higher mine counts.
+   * Plague hyphal mat (motifs/mycelium-network): dense links, recursive tips,
+   * nutrient beads — weight by shared danger.
    */
   function drawPlagueGrowth(ctx, api) {
     const s = api.state;
@@ -2734,39 +3521,86 @@ body[data-mode="plague"] canvas {
     s.map.forEach((c) => {
       if (c.revealed && !c.isMine) revealed.push(c);
     });
-    if (revealed.length < 2) return;
+    if (!revealed.length) return;
     ctx.save();
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    // Soft infection bloom under the cleared colony
+    if (revealed.length >= 3) {
+      let ax = 0;
+      let ay = 0;
+      for (const c of revealed) {
+        ax += c.x;
+        ay += c.y;
+      }
+      ax /= revealed.length;
+      ay /= revealed.length;
+      const pulse = reduceMotion ? 0.65 : 0.5 + 0.5 * Math.sin(time * 0.0014);
+      const g = ctx.createRadialGradient(ax, ay, 0, ax, ay, s.cellSize * (2.2 + revealed.length * 0.04));
+      g.addColorStop(0, `rgba(126, 200, 168, ${0.06 + pulse * 0.05})`);
+      g.addColorStop(0.55, "rgba(20, 52, 47, 0.14)");
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(ax, ay, s.cellSize * (2.4 + Math.min(8, revealed.length) * 0.08), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (revealed.length < 2) {
+      ctx.restore();
+      return;
+    }
+
     ctx.globalCompositeOperation = "lighter";
     for (const c of revealed) {
       for (const n of api.getNeighbors(c.q, c.r)) {
         if (!n.revealed || n.isMine) continue;
         if (n.q < c.q || (n.q === c.q && n.r < c.r)) continue;
         const maturity = Math.min(c.animReveal || 1, n.animReveal || 1);
-        if (maturity < 0.08) continue;
+        if (maturity < 0.06) continue;
         const danger = Math.max(c.neighborMines || 0, n.neighborMines || 0);
-        const weight = 0.55 + danger * 0.35;
-        ctx.globalAlpha = (0.08 + maturity * 0.22) * Math.min(1, 0.55 + danger * 0.12);
-        ctx.strokeStyle = danger >= 3 ? "#e8f5a0" : "#9fc85a";
-        ctx.lineWidth = (0.55 + maturity * 0.9) * weight;
+        const weight = 0.7 + danger * 0.4;
+        const mx = (c.x + n.x) / 2 + Math.sin((c.q + n.r) * 1.7) * (3.5 + danger);
+        const my = (c.y + n.y) / 2 + Math.cos((c.r + n.q) * 1.3) * (3.5 + danger);
+
+        // Primary hypha — Verdigris filaments, copper on high danger
+        ctx.globalAlpha = (0.14 + maturity * 0.38) * Math.min(1, 0.55 + danger * 0.14);
+        ctx.strokeStyle = danger >= 3 ? "#c97e4f" : danger >= 1 ? "#7ec8a8" : "#4a7868";
+        ctx.lineWidth = (0.85 + maturity * 1.35) * weight;
         ctx.beginPath();
         ctx.moveTo(c.x, c.y);
-        const mx = (c.x + n.x) / 2 + Math.sin((c.q + n.r) * 1.7) * 3;
-        const my = (c.y + n.y) / 2 + Math.cos((c.r + n.q) * 1.3) * 3;
         ctx.quadraticCurveTo(mx, my, n.x, n.y);
         ctx.stroke();
 
-        if (maturity > 0.4 && danger > 0) {
+        // Secondary branch tips (recursive grammar, short)
+        if (maturity > 0.35) {
+          const tipSeed = cellHash(c.q, n.r, 11);
+          const ang = Math.atan2(n.y - c.y, n.x - c.x) + (tipSeed - 0.5) * 1.2;
+          const len = s.cellSize * (0.22 + tipSeed * 0.28) * maturity;
+          const bx = mx + Math.cos(ang) * len;
+          const by = my + Math.sin(ang) * len;
+          ctx.globalAlpha = 0.1 + maturity * 0.22;
+          ctx.strokeStyle = danger >= 2 ? "#e0a071" : "#90c8b0";
+          ctx.lineWidth = 0.7 + maturity * 0.6;
+          ctx.beginPath();
+          ctx.moveTo(mx, my);
+          ctx.lineTo(bx, by);
+          ctx.stroke();
+        }
+
+        // Nutrient / fruiting bead along the strand
+        if (maturity > 0.28) {
           const phase = reduceMotion
-            ? 0.5
-            : (time * (0.00008 + cellHash(c.r, n.q, 23) * 0.00007) + cellHash(c.q, n.r, 31)) % 1;
+            ? 0.45
+            : (time * (0.0001 + cellHash(c.r, n.q, 23) * 0.00009) + cellHash(c.q, n.r, 31)) % 1;
           const u = 1 - phase;
           const px = u * u * c.x + 2 * u * phase * mx + phase * phase * n.x;
           const py = u * u * c.y + 2 * u * phase * my + phase * phase * n.y;
-          ctx.globalAlpha = 0.22 + maturity * 0.28;
-          ctx.fillStyle = "#eef6c8";
+          ctx.globalAlpha = 0.35 + maturity * 0.4;
+          ctx.fillStyle = danger >= 2 ? "#e0a071" : "#e8f8ee";
           ctx.beginPath();
-          ctx.arc(px, py, 0.6 + maturity * 0.55 + danger * 0.12, 0, Math.PI * 2);
+          ctx.arc(px, py, 0.85 + maturity * 0.75 + danger * 0.15, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -2936,49 +3770,173 @@ body[data-mode="plague"] canvas {
         ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
       }
     } else if (th.material === "mycelium") {
-      const pulse = reduceMotion ? 0.7 : 0.55 + 0.45 * Math.sin(time * 0.003 + h * 12);
+      // Specimen: Verdigris desk blotches + Moss face + Copper fruiting nodes
+      const pulse = reduceMotion ? 0.7 : 0.55 + 0.45 * Math.sin(time * 0.0028 + h * 12);
+      const danger = cell.neighborMines || 0;
+
       if (stateKey === "covered" || stateKey === "flagged") {
+        // Low-frequency colony field: per-cell noise alone made the whole slide
+        // one uniform mass, so growth is banded into thick and thin regions.
+        const colony = Math.min(
+          1,
+          Math.max(
+            0,
+            0.5 +
+              0.34 * Math.sin(cell.q * 0.23 + cell.r * 0.11) +
+              0.26 * Math.cos(cell.r * 0.19 - cell.q * 0.07)
+          )
+        );
+        const lift = colony * 38;
+        // Decay gradient: Moss Archive → Verdigris blotches eating inward
+        const decay = ctx.createRadialGradient(
+          cell.x + (h - 0.5) * size * 0.25,
+          cell.y + (h2 - 0.5) * size * 0.2,
+          0,
+          cell.x,
+          cell.y,
+          size
+        );
+        decay.addColorStop(
+          0,
+          `rgba(${30 + lift | 0},${46 + lift * 1.1 | 0},${41 + lift * 0.85 | 0},${0.72 + pulse * 0.1})`
+        );
+        decay.addColorStop(
+          0.45,
+          `rgba(${22 + lift * 0.7 | 0},${34 + lift * 0.78 | 0},${31 + lift * 0.6 | 0},0.84)`
+        );
+        decay.addColorStop(1, "rgba(16,28,24,0.96)");
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = decay;
+        ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
+        ctx.globalAlpha = 1;
+        // Irregular rot pockets; sparse copper freckles (not a center stamp on every hex)
+        for (let i = 0; i < 6; i++) {
+          const u = cellHash(cell.q, cell.r, 90 + i);
+          const v = cellHash(cell.q, cell.r, 110 + i);
+          ctx.fillStyle =
+            u > 0.5
+              ? `rgba(5,14,11,${(0.4 + v * 0.25) * (1.25 - colony * 0.5)})`
+              : `rgba(74,120,104,${(0.16 + u * 0.22) * (0.6 + colony * 0.8)})`;
+          ctx.beginPath();
+          ctx.ellipse(
+            cell.x + (u - 0.5) * size * 1.2,
+            cell.y + (v - 0.5) * size * 1.2,
+            size * (0.1 + u * 0.2),
+            size * (0.07 + v * 0.16),
+            u * 5,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        }
+        // Copper fruiting specks cluster where the colony is thickest
+        if (cellHash(cell.q, cell.r, 201) > 0.92 - colony * 0.22) {
+          const cu = cellHash(cell.q, cell.r, 203);
+          const cv = cellHash(cell.q, cell.r, 205);
+          const ang = cu * Math.PI * 2;
+          ctx.fillStyle = `rgba(201,126,79,${0.22 + cv * 0.2})`;
+          ctx.beginPath();
+          ctx.arc(
+            cell.x + Math.cos(ang) * size * (0.35 + cv * 0.35),
+            cell.y + Math.sin(ang) * size * (0.35 + cu * 0.3),
+            size * (0.04 + cv * 0.05),
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        }
+        // Embedded hyphae under the skin (teal desk filaments)
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.lineCap = "round";
+        for (let i = 0; i < 4; i++) {
+          const u = cellHash(cell.q, cell.r, 50 + i);
+          const v = cellHash(cell.q, cell.r, 60 + i);
+          ctx.globalAlpha = (0.12 + pulse * 0.16) * (stateKey === "flagged" ? 1.4 : 1);
+          ctx.strokeStyle = stateKey === "flagged" ? "#e0a071" : i === 0 ? "#7ec8a8" : "#4a7868";
+          ctx.lineWidth = 0.65 + u * 0.95;
+          ctx.beginPath();
+          ctx.moveTo(cell.x + (u - 0.5) * size * 0.25, cell.y + (v - 0.5) * size * 0.25);
+          ctx.quadraticCurveTo(
+            cell.x + (u - 0.5) * size * 0.95,
+            cell.y + (cellHash(cell.q, cell.r, 70 + i) - 0.5) * size,
+            cell.x + (cellHash(cell.q, cell.r, 80 + i) - 0.5) * size * 1.2,
+            cell.y + (v - 0.5) * size * 1.2
+          );
+          ctx.stroke();
+        }
+        ctx.restore();
         const glow = ctx.createRadialGradient(cell.x, cell.y, 0, cell.x, cell.y, size * 0.95);
-        glow.addColorStop(0, `hsla(${st.h}, 52%, 42%, ${(stateKey === "flagged" ? 0.4 : 0.18) * pulse + hover * 0.1})`);
-        glow.addColorStop(0.55, `hsla(${st.h}, 45%, 30%, 0.08)`);
+        glow.addColorStop(
+          0,
+          `hsla(${st.h}, 35%, 32%, ${(stateKey === "flagged" ? 0.38 : 0.14) * pulse + hover * 0.1})`
+        );
+        glow.addColorStop(0.55, "rgba(20,52,47,0.12)");
         glow.addColorStop(1, "transparent");
         ctx.fillStyle = glow;
         ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
       }
-      // Empty cells become pale fungal colonies with a dark rot boundary.
+
       if (openEmpty) {
+        // Open lesion: dark moss well + fruiting copper/verdigris nodes
         const well = ctx.createRadialGradient(cell.x, cell.y, 0, cell.x, cell.y, size);
-        well.addColorStop(0, `hsla(76, 46%, 62%, ${0.28 + pulse * 0.16})`);
-        well.addColorStop(0.48, "hsla(88, 34%, 22%, 0.72)");
-        well.addColorStop(1, "hsla(94, 28%, 5%, 0.96)");
+        well.addColorStop(0, `rgba(126, 200, 168, ${0.16 + pulse * 0.14})`);
+        well.addColorStop(0.3, "rgba(74, 120, 104, 0.45)");
+        well.addColorStop(0.65, "rgba(20, 52, 47, 0.85)");
+        well.addColorStop(1, "rgba(9, 18, 14, 0.98)");
         ctx.fillStyle = well;
         ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
           const u = cellHash(cell.q, cell.r, 50 + i);
           const v = cellHash(cell.q, cell.r, 70 + i);
           const sx =
             cell.x +
-            (u - 0.5) * size * 0.9 +
-            (reduceMotion ? 0 : Math.sin(time * 0.0025 + u * 10) * size * 0.12);
+            (u - 0.5) * size * 0.98 +
+            (reduceMotion ? 0 : Math.sin(time * 0.0022 + u * 10) * size * 0.1);
           const sy =
             cell.y +
-            (v - 0.5) * size * 0.9 +
-            (reduceMotion ? 0 : Math.cos(time * 0.002 + v * 8) * size * 0.1);
-          const sr = size * (0.04 + u * 0.06);
-          ctx.globalAlpha = 0.4 + pulse * 0.35;
-          ctx.fillStyle = i % 2 ? "#dce9ad" : "#9fc34f";
+            (v - 0.5) * size * 0.98 +
+            (reduceMotion ? 0 : Math.cos(time * 0.0018 + v * 8) * size * 0.09);
+          const sr = size * (0.04 + u * 0.08);
+          ctx.globalAlpha = 0.32 + pulse * 0.4;
+          ctx.fillStyle = i % 4 === 0 ? "#e0a071" : i % 2 ? "#e8f8ee" : "#7ec8a8";
           ctx.beginPath();
           ctx.arc(sx, sy, sr, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.restore();
-      } else {
-        ctx.globalAlpha = 0.3 * pulse;
-        ctx.strokeStyle = `hsla(${st.h}, 48%, 64%, 0.7)`;
-        ctx.lineWidth = 0.8;
-        for (let i = 0; i < 2; i++) {
+      } else if (stateKey === "revealed" && !cell.isMine) {
+        // Numbered cells: infection ring; copper bloom scales with danger
+        const ring = ctx.createRadialGradient(cell.x, cell.y, size * 0.12, cell.x, cell.y, size);
+        ring.addColorStop(0, `rgba(126, 200, 168, ${0.07 + danger * 0.035})`);
+        ring.addColorStop(0.5, `rgba(20, 52, 47, ${0.4 + danger * 0.05})`);
+        ring.addColorStop(1, "rgba(9, 18, 14, 0.95)");
+        ctx.fillStyle = ring;
+        ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
+        if (danger >= 2) {
+          ctx.globalAlpha = 0.1 + danger * 0.04;
+          ctx.fillStyle = "rgba(201,126,79,0.55)";
+          ctx.beginPath();
+          ctx.ellipse(
+            cell.x + (h - 0.5) * size * 0.3,
+            cell.y + (h2 - 0.5) * size * 0.25,
+            size * (0.18 + danger * 0.04),
+            size * 0.12,
+            h * 3,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = danger >= 3 ? "#e0a071" : "#7ec8a8";
+        ctx.lineWidth = 0.95 + danger * 0.18;
+        ctx.globalAlpha = 0.22 + pulse * 0.28 + danger * 0.06;
+        for (let i = 0; i < 2 + Math.min(3, danger); i++) {
           const u = cellHash(cell.q, cell.r, 50 + i);
           ctx.beginPath();
           ctx.moveTo(cell.x, cell.y);
@@ -2990,7 +3948,7 @@ body[data-mode="plague"] canvas {
           );
           ctx.stroke();
         }
-        ctx.globalAlpha = 1;
+        ctx.restore();
       }
     }
 
@@ -3141,9 +4099,10 @@ body[data-mode="plague"] canvas {
         if (th.flatGrid) return a.y - b.y || a.x - b.x;
         return a.ring - b.ring || a.y - b.y;
       },
-      onReveal(cell, api) {
+      onReveal(cell, api, meta) {
         const th = THEMES[themeIndex];
-        if (th.rift) noteRiftReveal(cell, api);
+        if (th.rift) noteRiftReveal(cell, api, meta);
+        schedulePersist();
         if (!isFxTheme(th)) return;
         const p = th.particles;
         const color = cell.isMine ? p.mine : p.reveal;
@@ -3157,11 +4116,13 @@ body[data-mode="plague"] canvas {
         emit(cell.x, cell.y, n, color);
       },
       onFlag(cell) {
+        schedulePersist();
         const th = THEMES[themeIndex];
         if (!isFxTheme(th) || !cell.flagged) return;
         emit(cell.x, cell.y, th.material === "neumorph" ? 5 : 8, th.particles.flag);
       },
       onGameOver(win, api, meta) {
+        flushPersist();
         if (win) startWinBloom(api);
         else if (meta && meta.reason === "rift") startRiftCatch(api, meta.detonator);
         else startDetonation(api, meta && meta.detonator);
@@ -3169,17 +4130,35 @@ body[data-mode="plague"] canvas {
       onReset(api) {
         clearBlast(api.state);
         resetRift();
+        particles.length = 0;
+        streaks.length = 0;
+        lastAmbientThemeId = null;
         if (api && api.state && api.state.map) {
           api.state.map.forEach((c) => {
             c._riftTorn = false;
+            c._blast = null;
+            c._blastRot = 0;
+            c._blastAlpha = 1;
+            c._offscreen = false;
           });
         }
+        // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX
+        const th = THEMES[themeIndex];
+        if (th && api.state && api.state.canvas) {
+          seedAmbient(th, api.state.canvas.width, api.state.canvas.height);
+        }
+      },
+      onClearPersist() {
+        clearLanePersist();
+      },
+      onPersistTick() {
+        schedulePersist();
       },
       onFlagMode(on) {
         syncFlagButton(on);
       },
       onExpand(api, info) {
-        // Quiet mid-game: score HUD is the feedback. Cap toast is onMaxRadius.
+        schedulePersist();
         void info;
       },
       onMaxRadius(api, info) {
@@ -3199,9 +4178,9 @@ body[data-mode="plague"] canvas {
         const flat = !!th.flatGrid;
         const inset = th.material === "magma";
         const endless = !!(th.endless || s.endless);
-        // Plague is a fixed 2D specimen. Fire gets full parallax; White stays calm.
-        const panX = flat ? 0 : endless ? 12 : 20;
-        const panY = flat ? 0 : endless ? 9 : 16;
+        // Plague flat; Fire gets a stronger pit tilt; endless plates stay calm.
+        const panX = flat ? 0 : inset ? 34 : endless ? 12 : 20;
+        const panY = flat ? 0 : inset ? 26 : endless ? 9 : 16;
         tx = (s.pointer.nx || 0) * panX;
         ty = (s.pointer.ny || 0) * panY;
         ox += (tx - ox) * 0.08;
@@ -3274,20 +4253,20 @@ body[data-mode="plague"] canvas {
             cell.y = baseY + oy * 0.22 + lift;
             cell._depthScale = 0.96;
           } else if (inset) {
-            // Magma pit: full ring parallax, but "into the mine" not floating out.
-            // Rim (d→1) is nearer the crust → stronger shear / larger scale.
-            // Center (d→0) is deeper → weaker shear, sunk down the page.
-            // Shared board sink so the *whole* lattice sits below the crust lip.
+            // Magma pit: deeper bowl + stronger rim shear so tilt reads even at rest.
+            // Contact shadows (drawMagmaDepthShadows) carry depth when parallax is small.
             const near = d; // 0 far/deep center → 1 near rim
-            const gMult = 0.32;
-            cell._gx = baseX + ox * gMult * 0.85;
-            cell._gy = baseY + oy * gMult * 0.65 + s.cellSize * 0.08;
-            const mult = 0.22 + near * 0.95; // less edge fly-out; more bowl
-            const boardSink = s.cellSize * 0.38; // deeper shared drop into the shaft
-            const bowlSink = (1 - near) * s.cellSize * 0.55 + elev * s.cellSize * 0.12;
+            const gMult = 0.42;
+            cell._gx = baseX + ox * gMult * 0.9;
+            cell._gy = baseY + oy * gMult * 0.7 + s.cellSize * 0.12;
+            const mult = 0.38 + near * 1.35;
+            const boardSink = s.cellSize * 0.58;
+            const bowlSink = (1 - near) * s.cellSize * 0.95 + elev * s.cellSize * 0.2;
+            // Slight fixed “camera pitch” so depth shows without pointer motion
+            const pitch = s.cellSize * (0.08 + (1 - near) * 0.22);
             cell.x = baseX + ox * mult;
-            cell.y = baseY + oy * mult + boardSink + bowlSink;
-            cell._depthScale = 0.8 + near * 0.18 - elev * 0.04;
+            cell.y = baseY + oy * mult + boardSink + bowlSink + pitch;
+            cell._depthScale = 0.7 + near * 0.32 - elev * 0.06;
           } else {
             // Desk lattice (gentle board drift) vs elevated face (stronger parallax)
             // Shadows use _gx/_gy so they never paint on faces below.
@@ -3325,10 +4304,17 @@ body[data-mode="plague"] canvas {
         }
 
         // Desk: ambient pool, then per-tile ground shadows, then faces on top
-        drawBoardGroundShadow(ctx, s, th, flat);
-        drawGlowPlate(ctx, s, th, t);
-        drawThemeAtmosphere(ctx, s, th, t);
-        drawAllGroundShadows(ctx, s, th);
+        // Light/Dark: no desk shading — flat field only
+        if (!th.flatPlate) {
+          drawBoardGroundShadow(ctx, s, th, flat);
+          drawGlowPlate(ctx, s, th, t);
+          drawThemeAtmosphere(ctx, s, th, t);
+          if (th.material === "magma") drawMagmaDepthShadows(ctx, s);
+          else drawAllGroundShadows(ctx, s, th);
+        } else {
+          ctx.fillStyle = th.bodyBg || th.css["--bg-color"] || "#e8eaee";
+          ctx.fillRect(0, 0, s.canvas.width, s.canvas.height);
+        }
         // Hyphae under faces/numbers so digits stay readable
         if (th.material === "mycelium" && !BLAST.active) drawPlagueGrowth(ctx, api);
       },
@@ -3378,9 +4364,70 @@ body[data-mode="plague"] canvas {
 
         // Ground shadows already painted in beforeFrame (desk plane only).
 
-        // —— Minimalist: neumorph faces + extruded sides + bevel (light/dark) ——
+        // —— Light/Dark: ultra-flat plate (no bevel, extrusion, or soft shading) ——
+        if (neo && th.flatPlate) {
+          const path = cell.hexPath(size, 0.96);
+          const stateKey = cell.flagged && !cell.revealed ? "flagged" : cell.revealed ? "revealed" : "covered";
+          const st = (th.states && th.states[stateKey]) || { h: 220, s: 4, l: 90 };
+          const dark = th.id === "dark";
+          ctx.fillStyle = `hsl(${st.h} ${st.s}% ${st.l}%)`;
+          ctx.fill(path);
+          // Floor stroke width in CSS pixels so zoomed-out lattices don't disappear
+          // into sub-pixel hairlines (the failure mode in Dark floods).
+          const seam = Math.max(1.75, size * 0.065);
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
+          ctx.lineWidth = seam;
+          if (dark) {
+            ctx.strokeStyle = cell.revealed
+              ? "rgba(255,255,255,0.2)"
+              : "rgba(255,255,255,0.28)";
+            ctx.stroke(path);
+            ctx.lineWidth = Math.max(1.15, size * 0.04);
+            ctx.strokeStyle = cell.revealed
+              ? "rgba(0,0,0,0.65)"
+              : "rgba(0,0,0,0.4)";
+            ctx.stroke(path);
+          } else {
+            ctx.strokeStyle = cell.revealed
+              ? "rgba(0,0,0,0.22)"
+              : "rgba(0,0,0,0.3)";
+            ctx.stroke(path);
+            ctx.lineWidth = Math.max(1.1, size * 0.035);
+            ctx.strokeStyle = cell.revealed
+              ? "rgba(255,255,255,0.5)"
+              : "rgba(255,255,255,0.4)";
+            ctx.stroke(path);
+          }
+          if (cell.animReveal > 0.1) {
+            ctx.globalAlpha = cell.animReveal;
+            if (cell.isMine) {
+              ctx.fillStyle = T.text.mine || (dark ? "#f8fafc" : "#111827");
+              ctx.beginPath();
+              ctx.arc(cell.x, cell.y, size * 0.28, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (cell.neighborMines > 0) {
+              drawPlateDigit(ctx, cell, size, th, T);
+            }
+            ctx.globalAlpha = 1;
+          }
+          if (cell.flagged && !cell.revealed) {
+            ctx.strokeStyle = T.flag;
+            ctx.lineWidth = Math.max(2, size * 0.09);
+            ctx.stroke(path);
+            ctx.fillStyle = T.flag;
+            ctx.font = `700 ${size * 0.9}px "IBM Plex Sans", system-ui, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("!", cell.x, cell.y + size * 0.08);
+          }
+          if (ba < 0.999 || spun) ctx.restore();
+          return;
+        }
+
+        // —— Escape (and other neumorph): extruded faces + bevel ——
         if (neo) {
-          const darkPlate = th.id === "dark" || th.id === "escape";
+          const darkPlate = th.id === "escape" || th.id === "dark";
           const scale = (cell._depthScale || 1) * (0.93 + cell.animHover * 0.04);
           const path = cell.hexPath(size, scale);
           const ds = size * scale;
@@ -3433,9 +4480,11 @@ body[data-mode="plague"] canvas {
             ctx.stroke();
           };
           if (!cell.revealed) {
-            drawFace(3, 5, darkPlate ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.95)");
-            drawFace(0, 2, darkPlate ? "rgba(0,0,0,0.55)" : "rgba(110,128,150,0.95)");
-            ctx.strokeStyle = darkPlate ? "rgba(255,255,255,0.1)" : "rgba(90,110,135,0.28)";
+            // Dark plates keep a whisper of bevel: at full-viewport tile counts,
+            // strong highlights turn the field into glare.
+            drawFace(3, 5, darkPlate ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.95)");
+            drawFace(0, 2, darkPlate ? "rgba(0,0,0,0.34)" : "rgba(110,128,150,0.95)");
+            ctx.strokeStyle = darkPlate ? "rgba(255,255,255,0.05)" : "rgba(90,110,135,0.28)";
             ctx.lineWidth = Math.max(1, size * 0.045);
             ctx.stroke(path);
             const spec = ctx.createRadialGradient(
@@ -3446,8 +4495,8 @@ body[data-mode="plague"] canvas {
               cell.y,
               ds
             );
-            spec.addColorStop(0, darkPlate ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.4)");
-            spec.addColorStop(0.45, darkPlate ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)");
+            spec.addColorStop(0, darkPlate ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.4)");
+            spec.addColorStop(0.45, darkPlate ? "rgba(255,255,255,0.015)" : "rgba(255,255,255,0.08)");
             spec.addColorStop(1, "transparent");
             ctx.fillStyle = spec;
             ctx.fill(path);
@@ -3457,9 +4506,9 @@ body[data-mode="plague"] canvas {
             well.addColorStop(1, `hsl(${st.h} ${Math.max(10, st.s - 2)}% ${Math.max(darkPlate ? 6 : 48, L - 14)}%)`);
             ctx.fillStyle = well;
             ctx.fill(path);
-            drawFace(3, 5, darkPlate ? "rgba(0,0,0,0.65)" : "rgba(90,110,135,0.85)");
-            drawFace(0, 2, darkPlate ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.55)");
-            ctx.strokeStyle = darkPlate ? "rgba(255,255,255,0.08)" : "rgba(70,90,115,0.35)";
+            drawFace(3, 5, darkPlate ? "rgba(0,0,0,0.42)" : "rgba(90,110,135,0.85)");
+            drawFace(0, 2, darkPlate ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.55)");
+            ctx.strokeStyle = darkPlate ? "rgba(255,255,255,0.05)" : "rgba(70,90,115,0.35)";
             ctx.lineWidth = Math.max(1, size * 0.04);
             ctx.stroke(path);
           }
@@ -3472,18 +4521,7 @@ body[data-mode="plague"] canvas {
               ctx.arc(cell.x, cell.y, size * 0.32, 0, Math.PI * 2);
               ctx.fill();
             } else if (cell.neighborMines > 0) {
-              const digit = String(cell.neighborMines);
-              const ty = cell.y + size * 0.04;
-              ctx.font = `700 ${Math.max(12, size * 0.88)}px "IBM Plex Sans", system-ui, sans-serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              // Soft dark plate under the digit — readable without a thick white halo
-              ctx.fillStyle = "rgba(255,255,255,0.55)";
-              ctx.beginPath();
-              ctx.arc(cell.x, ty, size * 0.34, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.fillStyle = T.text[cell.neighborMines] || "#1f2937";
-              ctx.fillText(digit, cell.x, ty);
+              drawPlateDigit(ctx, cell, size, th, T);
             }
             ctx.globalAlpha = 1;
           }
@@ -3712,10 +4750,16 @@ body[data-mode="plague"] canvas {
           ctx.stroke(path);
           ctx.restore();
         } else if (flatTile) {
+          // Plague specimen lattice: dark seam under a verdigris rim so covered
+          // cells read as separate specimens instead of one dark mass.
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = "rgba(4,10,8,0.75)";
+          ctx.lineWidth = Math.max(2, size * 0.09);
+          ctx.stroke(path);
+          ctx.lineWidth = Math.max(1.2, size * 0.05);
           ctx.strokeStyle = cell.revealed
-            ? "rgba(202,224,143,0.28)"
-            : "rgba(210,230,160,0.22)";
-          ctx.lineWidth = Math.max(1.1, size * 0.05);
+            ? "rgba(126,200,168,0.3)"
+            : "rgba(140,206,178,0.5)";
           ctx.stroke(path);
         } else {
           // Rim / edge light (raised themes)
@@ -3779,7 +4823,7 @@ body[data-mode="plague"] canvas {
             const plague = th.material === "mycelium";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.font = `800 ${Math.max(16, size * (plague ? 1.2 : 0.92))}px "IBM Plex Sans", system-ui, sans-serif`;
+            ctx.font = `800 ${Math.max(15, size * (plague ? 1.02 : 0.92))}px "IBM Plex Sans", system-ui, sans-serif`;
             if (plague) {
               // Dark spore well + bright digit; ticks mark neighbor mine count
               ctx.fillStyle = "rgba(2,6,1,0.82)";
@@ -3850,6 +4894,24 @@ body[data-mode="plague"] canvas {
     game.toggleFlagMode();
   });
 
+  // Infinite-run autosave + export/import
+  gameApi = game;
+  syncSettingsRows();
+  if (THEMES[themeIndex]?.endless) tryRestoreEndless();
+  document.getElementById("export-run-btn")?.addEventListener("click", () => {
+    downloadPersistExport();
+  });
+  document.getElementById("import-run-btn")?.addEventListener("click", () => {
+    document.getElementById("import-run-file")?.click();
+  });
+  document.getElementById("import-run-file")?.addEventListener("change", (e) => {
+    const file = e.target?.files && e.target.files[0];
+    importPersistFile(file);
+    e.target.value = "";
+  });
+  window.addEventListener("pagehide", () => flushPersist());
+  window.addEventListener("beforeunload", () => flushPersist());
+
   // —— Welcome modal (once) ——
   const welcomeOverlay = document.getElementById("welcome-overlay");
   const welcomeAsk = document.getElementById("welcome-ask");
@@ -3871,14 +4933,22 @@ body[data-mode="plague"] canvas {
     welcomeOverlay.hidden = false;
     if (welcomeAsk) welcomeAsk.hidden = false;
     if (welcomeRefresher) welcomeRefresher.hidden = true;
+    syncWelcomeThemes(THEMES[themeIndex]?.id || "light");
     document.body.classList.add("welcome-open");
     requestAnimationFrame(() => welcomeOverlay.classList.add("open"));
     document.getElementById("welcome-yes")?.focus();
   }
+  document.querySelectorAll("[data-welcome-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const i = THEMES.findIndex((theme) => theme.id === button.dataset.welcomeMode);
+      if (i >= 0) applyTheme(i, { toast: true });
+    });
+  });
   document.getElementById("welcome-yes")?.addEventListener("click", closeWelcome);
   document.getElementById("welcome-no")?.addEventListener("click", () => {
     if (welcomeAsk) welcomeAsk.hidden = true;
     if (welcomeRefresher) welcomeRefresher.hidden = false;
+    syncWelcomeThemes(THEMES[themeIndex]?.id || "light");
     document.getElementById("welcome-play")?.focus();
   });
   document.getElementById("welcome-play")?.addEventListener("click", closeWelcome);
@@ -3891,7 +4961,9 @@ body[data-mode="plague"] canvas {
     game.setEndless(true);
   }
   try {
-    if (!localStorage.getItem(WELCOME_KEY)) openWelcome();
+    // ?welcome=0 skips first-visit modal (smoke / agent probes)
+    const skipWelcome = /(?:\?|&)welcome=0(?:&|$)/.test(location.search);
+    if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openWelcome();
   } catch (_) {
     openWelcome();
   }
@@ -3940,14 +5012,20 @@ body[data-mode="plague"] canvas {
     get torn() {
       return RIFT.torn ? RIFT.torn.size : 0;
     },
-    get intensity() {
-      return RIFT.intensity;
+    get budget() {
+      return RIFT.budget;
+    },
+    get exposed() {
+      return RIFT.exposed;
+    },
+    get digs() {
+      return RIFT.digClicks;
     },
     digCenter() {
       if (!game || typeof game.dig !== "function") return false;
       return game.dig("0,0");
     },
-    /** Skip grace / jump straight to chase for local probes. */
+    /** Force awaken thresholds for local probes. */
     awakenNow() {
       if (!riftThemeActive() || !game) return false;
       const s = game.state;
@@ -3956,20 +5034,22 @@ body[data-mode="plague"] canvas {
       const tip =
         (RIFT.lastDigKey && s.map.get(RIFT.lastDigKey)) || origin;
       if (!origin) return false;
-      if (RIFT.phase === "idle") {
+      if (RIFT.phase === "idle" || RIFT.phase === "grace") {
         RIFT.phase = "grace";
         RIFT.firstKey = `${origin.q},${origin.r}`;
         RIFT.lastDigKey = tip ? `${tip.q},${tip.r}` : RIFT.firstKey;
         RIFT.lastDigAt = performance.now();
+        RIFT.q = origin.q;
+        RIFT.r = origin.r;
+        RIFT.digClicks = Math.max(RIFT.digClicks, RIFT.awakenDigs);
+        RIFT.exposed = Math.max(RIFT.exposed, RIFT.awakenExposed);
       }
       RIFT.phase = "awaken";
       RIFT.t0 = performance.now() - RIFT.awakenMs + 80;
-      // Spawn at origin (first dig), not on the tip — otherwise instant catch.
       RIFT.x = origin.x;
       RIFT.y = origin.y;
-      RIFT.radius = s.cellSize * 1.2;
-      RIFT.clearsAtAwaken = s.clearedSafe || 0;
-      RIFT.chaseArmedAt = 0;
+      RIFT.radius = s.cellSize * 1.0;
+      RIFT.budget = 0;
       return true;
     },
   };

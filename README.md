@@ -11,15 +11,17 @@ Edits here are live static deploys (same pattern as `/clocks/`). This folder is 
 
 | Theme | Board | Feel |
 |------|--------|------|
-| **Light** | Infinite | Soft neumorph plate; default at bare URL |
-| **Dark** | Infinite | Same endless plate, dark tone |
-| **Fire** | Finite | Magma / basalt with inset parallax |
-| **Plague** | Finite | Larger mycelium specimen; hyphae + digit ticks |
-| **Escape** | Infinite | Dark plate → cyan rift chase; dig ahead or get torn |
+| **Light** | Infinite | Flat minimal field; default at bare URL |
+| **Dark** | Infinite | Flat minimal field, night |
+| **Fire** | Finite | Magma pit — bowl tilt, boiling center, ember crust |
+| **Plague** | Finite | Specimen slide — verdigris colony field, copper fruiting, hyphal mat |
+| **Escape** | Infinite | Calm slate plate → rift wakes after digs/exposes; crawls on a tile budget |
+
+Fire and Plague open on the **large** board; board size (S·M·L) lives in Settings and only appears for those two, since the infinite themes have no fixed board.
 
 Cycle with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`). Preference key: `hexsweeper-mode-v3`.
 
-First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome outside the board is the five themes + settings gear; score sits bottom-left.
+First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome triad: stats lower-left, themes center-bottom, settings lower-right — with subtle glass (strongest on Light).
 
 ### Interaction
 
@@ -30,7 +32,10 @@ First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome 
 | Pan | Drag · Space-drag · middle-drag |
 | Zoom | Scroll · pinch · `+` / `−` (persists as `hexsweeper-zoom-v1`) |
 | Chord | Click a revealed number whose neighbor flags match the count |
-| Restart | `R` or Settings → restart |
+| Restart / size | `R`, Restart, or S·M·L (finite only) — each clears that lane’s autosave |
+| Export / Import | Settings → Export run / Import run (infinite Light/Dark/Escape JSON) |
+
+Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Light/Dark, `hexsweeper-endless-escape-v1` for Escape).
 
 ## Layout
 
@@ -77,4 +82,4 @@ Open `lab.html` locally or by URL path. Ten experimental skins remain under `ski
 
 - Games index: `/games/` (icon: `/games/icons/hexsweeper.svg`)
 - Three-mode cut plan: `~/craft/reports/by-date/2026-07-26/discuss-hexsweeper-three-modes.md`
-- Screenshots (home): `~/hexsweeper-{white,fire,plague,mobile-*}.png`
+- Screenshots (home): `~/hexsweeper-{light,dark,fire,plague,escape,white,mobile-*}.png`

@@ -1,9 +1,11 @@
 /**
  * File Purpose: Shared Hexsweeper game engine (hex grid, endless/finite boards,
  *   dig/flag/chord, drag-pan, wheel/pinch zoom, RAF loop) with skin hooks.
- * Primary Functions/Classes: Cell; boot(); applyViewZoom; Hexsweeper.DEFAULT_*.
+ * Primary Functions/Classes: Cell; boot(); applyViewZoom; exportEndlessState;
+ *   applyEndlessState; Hexsweeper.DEFAULT_*.
  * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless }).
- * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, …) on window.Hexsweeper.
+ * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart,
+ *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
  */
 (function (global) {
   "use strict";
@@ -197,6 +199,22 @@
       });
     }
 
+    /**
+     * Start a clean board. Endless lanes must drop autosave here — otherwise
+     * S/M/L or Restart would paint a fresh field while the old run still
+     * resurrected on the next load.
+     */
+    function beginFreshRun(level, { clearPersist = true } = {}) {
+      if (
+        clearPersist &&
+        state.endless &&
+        typeof state.hooks.onClearPersist === "function"
+      ) {
+        state.hooks.onClearPersist(api);
+      }
+      setDifficulty(level || state.currentDifficulty);
+    }
+
     if (diffOptions.length) {
       syncDiffButtons();
       diffOptions.forEach((opt) => {
@@ -206,7 +224,7 @@
           const level = opt.dataset.val;
           if (!level || !state.config[level]) return;
           // Always rebuild so S/M/L is never a no-op highlight-only change.
-          setDifficulty(level);
+          beginFreshRun(level);
           closeModal();
         });
       });
@@ -236,7 +254,7 @@
     if (restartBtn) {
       restartBtn.addEventListener("click", () => {
         closeModal();
-        setDifficulty(state.currentDifficulty);
+        beginFreshRun(state.currentDifficulty);
       });
     }
 
@@ -307,8 +325,23 @@
           state.camY = wy;
         }
       },
-      restart() {
-        setDifficulty(state.currentDifficulty);
+      /**
+       * @param {{ clearPersist?: boolean }} [opts]
+       * clearPersist defaults true (R / Restart). Theme swaps pass false so
+       * the destination lane's autosave can be restored.
+       */
+      restart(opts = {}) {
+        beginFreshRun(state.currentDifficulty, {
+          clearPersist: opts.clearPersist !== false,
+        });
+      },
+      /** Snapshot infinite-field run (mines / revealed / flags / camera). */
+      exportEndlessState() {
+        return exportEndlessState();
+      },
+      /** Restore a snapshot from exportEndlessState / autosave. */
+      applyEndlessState(data) {
+        return applyEndlessState(data);
       },
       toggleFlag(cell) {
         if (cell) toggleFlag(cell);
@@ -409,23 +442,22 @@
         const phone = window.innerWidth < 500;
         cellSize = phone ? 26 : Math.max(26, conf.cellSize + 4);
       } else {
-        // Prefer configured sizes. Soft fit only — pan/zoom handle overflow on full-bleed.
-        const maxW = Math.max(280, window.innerWidth - 16);
-        const maxH = Math.max(280, window.innerHeight - 72);
+        // Scale finite boards to fill most of the viewport (Fire/Plague).
+        // Pan/zoom still work when the lattice spills after tilt.
+        const maxW = Math.max(280, window.innerWidth - 20);
+        const maxH = Math.max(280, window.innerHeight - 64);
         const naturalW = (mapRadius * 2 + 1) * SQRT3 * cellSize;
         const naturalH = (mapRadius * 2 + 1) * 1.5 * cellSize + 0.5 * cellSize;
-        if (naturalW > maxW * 1.08 || naturalH > maxH * 1.08) {
-          const scale = Math.min(maxW / naturalW, maxH / naturalH);
-          // Keep hexes readable; user can zoom out if the board spills.
-          cellSize = Math.max(22, cellSize * Math.max(scale, 0.72));
-        }
-        if (window.innerWidth < 500) {
-          const phoneFit = (window.innerWidth - 12) / ((mapRadius * 2 + 1) * SQRT3);
-          if (phoneFit < cellSize) cellSize = Math.max(20, phoneFit);
+        // Fit the lattice inside the viewport with breathing room, and let the
+        // large board stay large instead of clamping into an overflow.
+        const fill = window.innerWidth < 500 ? 0.9 : 0.85;
+        if (naturalW > 0 && naturalH > 0) {
+          const scale = Math.min((maxW * fill) / naturalW, (maxH * fill) / naturalH);
+          cellSize = Math.max(15, Math.min(46, cellSize * scale));
         }
       }
       const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
-      return Math.max(12, Math.min(64, cellSize * zoom));
+      return Math.max(12, Math.min(72, cellSize * zoom));
     }
 
     /**
@@ -984,7 +1016,11 @@
       digSession = null;
       state.panning = false;
       syncCursor();
-      if (wasPan) return;
+      if (wasPan) {
+        // Camera moved — let endless autosave capture the new viewport
+        if (typeof state.hooks.onPersistTick === "function") state.hooks.onPersistTick(api);
+        return;
+      }
       if (state.isGameOver) return;
       if (e.button !== 0 || e.ctrlKey || e.metaKey || state.spaceDown) return;
       const cell = getCellAtInput(e);
@@ -1105,6 +1141,9 @@
         return;
       }
       if (suppressTapReveal || touchFlagged || touchMoved) {
+        if (touchMoved && typeof state.hooks.onPersistTick === "function") {
+          state.hooks.onPersistTick(api);
+        }
         suppressTapReveal = false;
         touchFlagged = false;
         touchMoved = false;
@@ -1147,7 +1186,9 @@
       }
       cell.revealed = true;
       if (!cell.isMine) noteCleared(1);
-      if (typeof state.hooks.onReveal === "function") state.hooks.onReveal(cell, api);
+      if (typeof state.hooks.onReveal === "function") {
+        state.hooks.onReveal(cell, api, { source: "dig" });
+      }
       api.focusOnCell(cell, false);
       if (cell.isMine) {
         state.detonator = cell;
@@ -1186,7 +1227,9 @@
             visited.add(k);
             n.revealed = true;
             noteCleared(1);
-            if (typeof state.hooks.onReveal === "function") state.hooks.onReveal(n, api);
+            if (typeof state.hooks.onReveal === "function") {
+              state.hooks.onReveal(n, api, { source: "flood" });
+            }
             if (n.neighborMines === 0) stack.push(n);
           }
         }
@@ -1210,7 +1253,9 @@
           if (!n.revealed && !n.flagged && !n._riftTorn) {
             n.revealed = true;
             if (!n.isMine) noteCleared(1);
-            if (typeof state.hooks.onReveal === "function") state.hooks.onReveal(n, api);
+            if (typeof state.hooks.onReveal === "function") {
+              state.hooks.onReveal(n, api, { source: "chord" });
+            }
             if (n.isMine) {
               hitMine = true;
               if (!state.detonator) state.detonator = n;
@@ -1262,17 +1307,181 @@
       }
     }
 
-    function startTimer() {
+    function startTimer(resumeAt) {
       if (state.timerInterval) return;
-      state.timeElapsed = 0;
+      if (Number.isFinite(resumeAt)) state.timeElapsed = Math.max(0, resumeAt | 0);
+      else state.timeElapsed = 0;
       state.timerInterval = setInterval(() => {
         state.timeElapsed++;
         updateUI();
+        if (typeof state.hooks.onPersistTick === "function") {
+          state.hooks.onPersistTick(api);
+        }
       }, 1000);
     }
     function stopTimer() {
       clearInterval(state.timerInterval);
       state.timerInterval = null;
+    }
+
+    /**
+     * Pack an endless run for localStorage / file export.
+     * Only stores mines, revealed, flagged, torn — sparse vs full map.
+     */
+    function exportEndlessState() {
+      if (!state.endless) return null;
+      const mines = [];
+      const revealed = [];
+      const flagged = [];
+      const torn = [];
+      state.map.forEach((c) => {
+        const key = `${c.q},${c.r}`;
+        if (c.isMine) mines.push(key);
+        if (c.revealed) revealed.push(key);
+        if (c.flagged) flagged.push(key);
+        if (c._riftTorn) torn.push(key);
+      });
+      return {
+        v: 1,
+        endless: true,
+        difficulty: state.currentDifficulty,
+        density: state.mineDensity,
+        radius: state.mapRadius,
+        first: !!state.isFirstClick,
+        over: !!state.isGameOver,
+        win: state.win,
+        endReason: state.endReason || null,
+        cleared: state.clearedSafe | 0,
+        flags: state.flagsPlaced | 0,
+        mineCount: state.mineCount | 0,
+        time: state.timeElapsed | 0,
+        cam: [state.camX || 0, state.camY || 0],
+        zoom: Number.isFinite(state.viewZoom) ? state.viewZoom : 1,
+        mines,
+        revealed,
+        flagged,
+        torn,
+      };
+    }
+
+    function buildMapToRadius(radius) {
+      const R = Math.max(1, radius | 0);
+      state.map.clear();
+      state.centerX = canvas.width / 2 + state.boardOffset.x;
+      state.centerY = canvas.height / 2 + state.boardOffset.y;
+      for (let q = -R; q <= R; q++) {
+        const r1 = Math.max(-R, -q - R);
+        const r2 = Math.min(R, -q + R);
+        for (let r = r1; r <= r2; r++) {
+          const cell = new Cell(q, r);
+          cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
+          state.map.set(`${q},${r}`, cell);
+        }
+      }
+      state.mapRadius = R;
+    }
+
+    function applyKeyList(list, fn) {
+      if (!Array.isArray(list)) return;
+      for (const key of list) {
+        if (typeof key !== "string") continue;
+        let cell = state.map.get(key);
+        if (!cell) {
+          const parts = key.split(",");
+          const q = parseInt(parts[0], 10);
+          const r = parseInt(parts[1], 10);
+          if (!Number.isFinite(q) || !Number.isFinite(r)) continue;
+          cell = new Cell(q, r);
+          cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
+          state.map.set(key, cell);
+          state.mapRadius = Math.max(state.mapRadius, cell.ring);
+        }
+        fn(cell);
+      }
+    }
+
+    /**
+     * Restore an endless snapshot. Returns false if payload is unusable.
+     */
+    function applyEndlessState(data) {
+      if (!data || data.v !== 1 || !data.endless) return false;
+      stopTimer();
+      state.endless = true;
+      if (data.difficulty && state.config[data.difficulty]) {
+        state.currentDifficulty = data.difficulty;
+      }
+      if (Number.isFinite(data.density)) {
+        state.mineDensity = data.density;
+        state._densityLocked = true;
+      }
+      const conf = state.config[state.currentDifficulty];
+      state.cellSize = computeCellSize(
+        state.currentDifficulty,
+        Math.max(conf?.radius || 6, data.radius | 0)
+      );
+      applyLayout();
+      syncDiffButtons();
+
+      const R = Math.max(conf?.radius || 6, data.radius | 0);
+      buildMapToRadius(R);
+
+      // Clear defaults then stamp sparse lists
+      state.map.forEach((c) => {
+        c.isMine = false;
+        c.revealed = false;
+        c.flagged = false;
+        c._riftTorn = false;
+        c.neighborMines = 0;
+        c.animReveal = 0;
+      });
+      applyKeyList(data.mines, (c) => {
+        c.isMine = true;
+      });
+      applyKeyList(data.revealed, (c) => {
+        c.revealed = true;
+        c.animReveal = 1;
+      });
+      applyKeyList(data.flagged, (c) => {
+        c.flagged = true;
+      });
+      applyKeyList(data.torn, (c) => {
+        c._riftTorn = true;
+        c._blastAlpha = 0.15;
+      });
+      recountNeighbors();
+
+      state.isFirstClick = !!data.first;
+      state.isGameOver = !!data.over;
+      state.win = data.win == null ? null : !!data.win;
+      state.endReason = data.endReason || null;
+      state.clearedSafe = data.cleared | 0;
+      state.flagsPlaced = data.flags | 0;
+      state.mineCount = Number.isFinite(data.mineCount)
+        ? data.mineCount | 0
+        : Array.isArray(data.mines)
+          ? data.mines.length
+          : 0;
+      state.timeElapsed = data.time | 0;
+      state.detonator = null;
+      state.hitMaxRadius = false;
+      if (Array.isArray(data.cam) && data.cam.length >= 2) {
+        state.camX = Number(data.cam[0]) || 0;
+        state.camY = Number(data.cam[1]) || 0;
+        state.camTX = state.camX;
+        state.camTY = state.camY;
+      }
+      if (Number.isFinite(data.zoom)) {
+        applyViewZoom(Math.max(0.55, Math.min(1.9, data.zoom)));
+      }
+
+      updateUI();
+      if (!state.isFirstClick && !state.isGameOver) {
+        startTimer(state.timeElapsed);
+      }
+      if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
+      // Grow if viewport needs more than the saved radius
+      if (!state.isGameOver) ensureWorldCoverage(true);
+      return true;
     }
 
     function updateUI() {
@@ -1492,7 +1701,7 @@
       }
       if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey) {
         if (!modal || !modal.classList.contains("open")) {
-          setDifficulty(state.currentDifficulty);
+          api.restart();
         }
       }
     });
