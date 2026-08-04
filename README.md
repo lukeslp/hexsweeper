@@ -15,13 +15,13 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 | **Dark** | Infinite | Flat minimal field, night |
 | **Fire** | Finite | Magma pit — large fill, bowl tilt, boiling center |
 | **Plague** | Finite | Green specimen tiles (irregular faces) + hyphal mat |
-| **Escape** | Infinite | Calm slate plate → rift wakes after digs/exposes; crawls on a tile budget |
+| **Escape** | Infinite | Calm slate plate → classic dig/flag/chord; a glacial rift seeps toward your digs |
 
 Fire and Plague open on the **large** board; board size (S·M·L) lives in Settings and only appears for those two, since the infinite themes have no fixed board.
 
 Cycle with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`). Preference key: `hexsweeper-mode-v3`.
 
-First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome triad: stats lower-left, themes center-bottom, settings lower-right — with subtle glass (strongest on Light).
+First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome: lower-right **Light/Dark · Reset · Menu** (hex icon). Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
 
 ### Interaction
 

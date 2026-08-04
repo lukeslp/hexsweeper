@@ -1,9 +1,9 @@
 /*
- * File Purpose: Shared HUD chrome for Hexsweeper production + lab skins
- *   (nav pills, settings button, overlays, reduced-motion helpers).
- * Primary Classes: .skin-nav, .settings-btn, .fx-layer, overlay / dialog bits.
+ * File Purpose: Shared HUD chrome for Hexsweeper lab skins (+ helpers for production).
+ * Primary Classes: .skin-nav, .hud-actions, .hud-btn, .menu-stats, .menu-links, .fx-layer, overlays.
  * Inputs: CSS variables --nav-bg, --nav-ink, --bg-color, --text-main, --text-sub.
  * Outputs: Visual chrome only; no game logic.
+ * Chrome: BR Reset · hex Menu; scores + outbound links live in Menu (no BL score rail).
  */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -53,30 +53,79 @@
   opacity: 0.55;
 }
 
-.settings-btn {
+/* Lab + production BR cluster: Reset · Menu */
+.hud-actions {
   position: fixed;
-  top: max(16px, env(safe-area-inset-top, 0px));
-  right: max(16px, env(safe-area-inset-right, 0px));
-  width: 48px;
-  height: 48px;
-  border: none;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+  pointer-events: none;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--nav-bg, #e0e5ec) 52%, transparent);
+  backdrop-filter: blur(16px) saturate(1.1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  border: 1px solid color-mix(in srgb, var(--text-main, #4a5568) 12%, transparent);
+}
+.hud-actions > * { pointer-events: auto; }
+.hud-btn {
+  width: 44px;
+  height: 44px;
+  border: 0;
   background: transparent;
   color: var(--text-main, #4a5568);
+  border-radius: 999px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  outline: none;
-  z-index: 20;
-  border-radius: 12px;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+  padding: 0;
+  opacity: 0.88;
 }
-.settings-btn svg { width: 26px; height: 26px; stroke-width: 2; }
-.settings-btn:hover { opacity: 0.75; }
-.settings-btn:active { transform: scale(0.88); }
-.settings-btn:focus-visible {
-  outline: 2px solid var(--text-main, #4a5568);
+.hud-btn svg { width: 20px; height: 20px; stroke-width: 2; }
+.hud-btn:hover { opacity: 1; background: color-mix(in srgb, var(--nav-bg, #e0e5ec) 72%, transparent); }
+.hud-btn:active { transform: scale(0.94); }
+.hud-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main, #4a5568) 55%, transparent);
   outline-offset: 2px;
+}
+.menu-title {
+  margin: 0 0 12px;
+  font: 700 1.05rem/1.2 "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--text-main, #4a5568);
+  text-align: left;
+}
+.menu-stats {
+  display: flex;
+  gap: 18px;
+  width: 100%;
+  padding: 2px 0;
+}
+.menu-stats .stat-item {
+  opacity: 0.95;
+  min-width: 0;
+  align-items: flex-start;
+  text-align: left;
+  font-size: 1.1rem;
+}
+.modal-section-label {
+  width: 100%;
+  margin: 0 0 6px;
+  font: 700 0.68rem/1 "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-sub, #a0aec0);
+  text-align: left;
+}
+#run-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
 }
 .canvas-container {
   flex: 1;
@@ -89,41 +138,9 @@
 }
 canvas { display: block; cursor: crosshair; max-width: 100%; }
 
-/* Lab default: bottom-left. Production index.html places stats BL / themes BC / controls BR. */
+/* Legacy lab score rail — unused after Menu chrome; kept inert if referenced. */
 .bottom-bar,
-.score-rail {
-  position: fixed;
-  left: max(12px, env(safe-area-inset-left, 0px));
-  right: auto;
-  bottom: max(16px, env(safe-area-inset-bottom, 0px));
-  transform: none;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 2px;
-  padding: 6px 10px;
-  z-index: 22;
-  pointer-events: none;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-}
-.score-rail .stat-item {
-  font-size: 14px;
-  min-width: 0;
-  align-items: flex-start;
-  text-align: left;
-  opacity: 0.55;
-}
-.score-rail .stat-item.visible { opacity: 0.78; }
-.score-rail .stat-item::after {
-  font-size: 8px;
-  letter-spacing: 0.1em;
-}
+.score-rail { display: none !important; }
 .stat-item {
   font-family: "IBM Plex Mono", "Segoe UI Mono", "Roboto Mono", monospace;
   font-size: 18px;
@@ -186,10 +203,10 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
 .modal-overlay.open .modal-content { transform: scale(1); }
 .close-btn {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 30px;
-  height: 30px;
+  top: 10px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   color: var(--text-sub, #a0aec0);
@@ -197,8 +214,13 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 10px;
 }
 .close-btn:hover { color: var(--text-main, #4a5568); }
+.close-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main, #4a5568) 55%, transparent);
+  outline-offset: 2px;
+}
 .modal-row {
   display: flex;
   align-items: center;
@@ -295,6 +317,39 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   color: var(--text-sub, #a0aec0);
   line-height: 1.5;
   text-align: center;
+}
+.menu-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--text-main, #4a5568) 12%, transparent);
+  font: 600 0.78rem/1.3 "IBM Plex Sans", system-ui, sans-serif;
+}
+.menu-links a {
+  color: var(--text-sub, #a0aec0);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+  border-radius: 4px;
+}
+.menu-links a:hover { color: var(--text-main, #4a5568); }
+.menu-links a:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main, #4a5568) 55%, transparent);
+  outline-offset: 3px;
+}
+.menu-links-sep {
+  color: color-mix(in srgb, var(--text-sub, #a0aec0) 70%, transparent);
+  user-select: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-content,
+  .hud-btn { transition: none; }
+  .modal-overlay.open .modal-content { transform: none; }
 }
 
 .fx-layer {

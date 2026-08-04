@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  Quick Take: Hexsweeper — Escape (Infinite). Calm slate until the rift wakes and crawls on a dig budget.
+  Quick Take: Hexsweeper — Escape (Infinite). Minesweeper on slate — a glacial rift wakes and seeps toward your digs.
   Stack: Vanilla HTML, CSS, and JavaScript; Canvas 2D; no external libraries.
   Source: https://dr.eamer.dev/games/hexsweeper/collection/theme-escape.html
   License: MIT
@@ -13,16 +13,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Hexsweeper — Escape</title>
-<meta name="description" content="Hexagonal minesweeper one-pager: Escape — Calm slate until the rift wakes and crawls on a dig budget.">
+<meta name="description" content="Hexagonal minesweeper one-pager: Escape — Minesweeper on slate — a glacial rift wakes and seeps toward your digs.">
 <meta name="theme-color" content="#e8eaee">
 <style>
 /* skin-chrome.css */
 /*
- * File Purpose: Shared HUD chrome for Hexsweeper production + lab skins
- *   (nav pills, settings button, overlays, reduced-motion helpers).
- * Primary Classes: .skin-nav, .settings-btn, .fx-layer, overlay / dialog bits.
+ * File Purpose: Shared HUD chrome for Hexsweeper lab skins (+ helpers for production).
+ * Primary Classes: .skin-nav, .hud-actions, .hud-btn, .menu-stats, .menu-links, .fx-layer, overlays.
  * Inputs: CSS variables --nav-bg, --nav-ink, --bg-color, --text-main, --text-sub.
  * Outputs: Visual chrome only; no game logic.
+ * Chrome: BR Reset · hex Menu; scores + outbound links live in Menu (no BL score rail).
  */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -72,30 +72,79 @@
   opacity: 0.55;
 }
 
-.settings-btn {
+/* Lab + production BR cluster: Reset · Menu */
+.hud-actions {
   position: fixed;
-  top: max(16px, env(safe-area-inset-top, 0px));
-  right: max(16px, env(safe-area-inset-right, 0px));
-  width: 48px;
-  height: 48px;
-  border: none;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+  pointer-events: none;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--nav-bg, #e0e5ec) 52%, transparent);
+  backdrop-filter: blur(16px) saturate(1.1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  border: 1px solid color-mix(in srgb, var(--text-main, #4a5568) 12%, transparent);
+}
+.hud-actions > * { pointer-events: auto; }
+.hud-btn {
+  width: 44px;
+  height: 44px;
+  border: 0;
   background: transparent;
   color: var(--text-main, #4a5568);
+  border-radius: 999px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  outline: none;
-  z-index: 20;
-  border-radius: 12px;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+  padding: 0;
+  opacity: 0.88;
 }
-.settings-btn svg { width: 26px; height: 26px; stroke-width: 2; }
-.settings-btn:hover { opacity: 0.75; }
-.settings-btn:active { transform: scale(0.88); }
-.settings-btn:focus-visible {
-  outline: 2px solid var(--text-main, #4a5568);
+.hud-btn svg { width: 20px; height: 20px; stroke-width: 2; }
+.hud-btn:hover { opacity: 1; background: color-mix(in srgb, var(--nav-bg, #e0e5ec) 72%, transparent); }
+.hud-btn:active { transform: scale(0.94); }
+.hud-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main, #4a5568) 55%, transparent);
   outline-offset: 2px;
+}
+.menu-title {
+  margin: 0 0 12px;
+  font: 700 1.05rem/1.2 "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--text-main, #4a5568);
+  text-align: left;
+}
+.menu-stats {
+  display: flex;
+  gap: 18px;
+  width: 100%;
+  padding: 2px 0;
+}
+.menu-stats .stat-item {
+  opacity: 0.95;
+  min-width: 0;
+  align-items: flex-start;
+  text-align: left;
+  font-size: 1.1rem;
+}
+.modal-section-label {
+  width: 100%;
+  margin: 0 0 6px;
+  font: 700 0.68rem/1 "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-sub, #a0aec0);
+  text-align: left;
+}
+#run-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
 }
 .canvas-container {
   flex: 1;
@@ -108,41 +157,9 @@
 }
 canvas { display: block; cursor: crosshair; max-width: 100%; }
 
-/* Lab default: bottom-left. Production index.html places stats BL / themes BC / controls BR. */
+/* Legacy lab score rail — unused after Menu chrome; kept inert if referenced. */
 .bottom-bar,
-.score-rail {
-  position: fixed;
-  left: max(12px, env(safe-area-inset-left, 0px));
-  right: auto;
-  bottom: max(16px, env(safe-area-inset-bottom, 0px));
-  transform: none;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 2px;
-  padding: 6px 10px;
-  z-index: 22;
-  pointer-events: none;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-}
-.score-rail .stat-item {
-  font-size: 14px;
-  min-width: 0;
-  align-items: flex-start;
-  text-align: left;
-  opacity: 0.55;
-}
-.score-rail .stat-item.visible { opacity: 0.78; }
-.score-rail .stat-item::after {
-  font-size: 8px;
-  letter-spacing: 0.1em;
-}
+.score-rail { display: none !important; }
 .stat-item {
   font-family: "IBM Plex Mono", "Segoe UI Mono", "Roboto Mono", monospace;
   font-size: 18px;
@@ -205,10 +222,10 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
 .modal-overlay.open .modal-content { transform: scale(1); }
 .close-btn {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 30px;
-  height: 30px;
+  top: 10px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   color: var(--text-sub, #a0aec0);
@@ -216,8 +233,13 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 10px;
 }
 .close-btn:hover { color: var(--text-main, #4a5568); }
+.close-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main, #4a5568) 55%, transparent);
+  outline-offset: 2px;
+}
 .modal-row {
   display: flex;
   align-items: center;
@@ -315,6 +337,39 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   line-height: 1.5;
   text-align: center;
 }
+.menu-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--text-main, #4a5568) 12%, transparent);
+  font: 600 0.78rem/1.3 "IBM Plex Sans", system-ui, sans-serif;
+}
+.menu-links a {
+  color: var(--text-sub, #a0aec0);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+  border-radius: 4px;
+}
+.menu-links a:hover { color: var(--text-main, #4a5568); }
+.menu-links a:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main, #4a5568) 55%, transparent);
+  outline-offset: 3px;
+}
+.menu-links-sep {
+  color: color-mix(in srgb, var(--text-sub, #a0aec0) 70%, transparent);
+  user-select: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-content,
+  .hud-btn { transition: none; }
+  .modal-overlay.open .modal-content { transform: none; }
+}
 
 .fx-layer {
   position: fixed;
@@ -348,7 +403,8 @@ body {
 body.flag-mode { cursor: cell; }
 body.welcome-open { overflow: hidden; }
 /* Collection one-pagers: strict = one theme; scoped = allowModes only (e.g. Light/Dark) */
-body.onepager-locked .mode-switch { display: none !important; }
+body.onepager-locked #plate-toggle,
+body.onepager-locked #mode-row { display: none !important; }
 body.onepager-locked .welcome-overlay,
 body.onepager-scoped .welcome-overlay { display: none !important; }
 /* All production modes: full-bleed canvas so zoom/pan never hits a board box */
@@ -394,7 +450,7 @@ body[data-mode="plague"] canvas {
   to { transform: translate3d(-3%, 2%, 0); }
 }
 
-/* Chrome triad: stats BL · themes BC · controls BR */
+/* Chrome: quiet board · BR plate / Reset / Menu */
 .chrome-glass {
   background: color-mix(in srgb, var(--nav-bg, #e8eaee) 52%, transparent);
   backdrop-filter: blur(16px) saturate(1.15);
@@ -434,54 +490,6 @@ body[data-mode="plague"] .chrome-glass {
     0 10px 32px rgba(0, 0, 0, 0.38);
 }
 
-.score-rail {
-  position: fixed !important;
-  left: max(12px, env(safe-area-inset-left, 0px));
-  bottom: max(14px, env(safe-area-inset-bottom, 0px));
-  right: auto;
-  top: auto;
-  z-index: 40;
-  display: flex !important;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 8px 14px 7px;
-  border-radius: 18px;
-  pointer-events: none;
-}
-.score-rail .stat-item {
-  align-items: flex-start;
-  text-align: left;
-  font-size: 14px;
-  opacity: 0.7;
-  min-width: 0;
-  padding: 0;
-  pointer-events: auto;
-}
-.score-rail .stat-item.visible { opacity: 0.95; }
-.score-rail .stat-item::after {
-  font-size: 8px;
-  letter-spacing: 0.1em;
-  margin-top: 1px;
-}
-
-.skin-nav {
-  position: fixed !important;
-  left: 50% !important;
-  bottom: max(14px, env(safe-area-inset-bottom, 0px));
-  top: auto !important;
-  right: auto !important;
-  transform: translateX(-50%);
-  z-index: 40;
-  display: flex;
-  justify-content: center;
-  max-width: min(96vw, 520px);
-  pointer-events: none;
-}
-.skin-nav .mode-switch {
-  pointer-events: auto;
-}
-
 .hud-actions {
   position: fixed;
   right: max(12px, env(safe-area-inset-right, 0px));
@@ -497,7 +505,7 @@ body[data-mode="plague"] .chrome-glass {
   padding: 4px;
   border-radius: 999px;
 }
-.hud-actions .hud-btn { pointer-events: auto; }
+.hud-actions > * { pointer-events: auto; }
 .hud-btn {
   width: 44px;
   height: 44px;
@@ -521,46 +529,109 @@ body[data-mode="plague"] .chrome-glass {
   outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent);
   outline-offset: 2px;
 }
-.hud-btn .label-dot {
-  position: absolute;
-  font-size: 9px;
-  font-family: ui-monospace, monospace;
-  letter-spacing: 0.04em;
-  opacity: 0.75;
-  bottom: 4px;
-  pointer-events: none;
-}
-.mode-switch {
+.plate-toggle {
   display: inline-flex;
   gap: 2px;
-  padding: 4px;
-  border: 0;
+  padding: 3px;
   border-radius: 999px;
-  pointer-events: auto;
+  background: color-mix(in srgb, var(--nav-bg) 35%, transparent);
 }
-.skin-nav .mode-switch button {
+.plate-toggle[hidden] { display: none !important; }
+.plate-toggle button {
+  min-width: 44px;
+  min-height: 44px;
   border: 0;
   background: transparent;
-  padding: 6px 8px;
-  opacity: 0.55;
-  font-weight: 600;
+  padding: 0 10px;
+  border-radius: 999px;
+  font: 600 0.78rem var(--font-ui);
   color: var(--nav-ink);
-  font-size: 0.84rem;
+  opacity: 0.55;
+  cursor: pointer;
 }
-.skin-nav .mode-switch button:hover { transform: none; opacity: 0.88; }
-.skin-nav .mode-switch button[aria-pressed="true"] {
+.plate-toggle button:hover { opacity: 0.9; }
+.plate-toggle button[aria-pressed="true"] {
   color: var(--nav-bg);
   background: color-mix(in srgb, var(--nav-ink) 88%, transparent);
   opacity: 1;
 }
-.skin-nav .mode-switch button:focus-visible {
+.plate-toggle button:focus-visible {
   outline: 2px solid var(--nav-ink);
   outline-offset: 2px;
 }
-/* Theme name toast — sit above the bottom theme bar */
+.mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
+.mode-switch button {
+  flex: 1 1 auto;
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  border-radius: 12px;
+  padding: 0 10px;
+  font: 600 0.82rem var(--font-ui);
+  color: var(--text-main);
+  opacity: 0.72;
+  cursor: pointer;
+}
+.mode-switch button:hover { opacity: 1; }
+.mode-switch button[aria-pressed="true"] {
+  opacity: 1;
+  background: color-mix(in srgb, var(--text-main) 12%, transparent);
+  border-color: color-mix(in srgb, var(--text-main) 28%, transparent);
+}
+.mode-switch button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent);
+  outline-offset: 2px;
+}
+.mode-switch button[hidden] { display: none !important; }
+.menu-title {
+  margin: 0 0 12px;
+  font: 700 1.05rem/1.2 var(--font-ui);
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+.menu-stats {
+  display: flex;
+  gap: 18px;
+  width: 100%;
+  padding: 4px 2px 2px;
+}
+.menu-stats .stat-item {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  opacity: 0.95;
+}
+.menu-stats .stat-item::after {
+  content: attr(data-label);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+  margin-top: 4px;
+  font-weight: 600;
+}
+.modal-section-label {
+  width: 100%;
+  margin: 4px 0 6px;
+  font: 700 0.68rem/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+/* Theme name toast — sit above the BR chrome cluster */
 .theme-toast {
   position: fixed;
-  bottom: max(64px, calc(env(safe-area-inset-bottom, 0px) + 56px));
+  bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 64px));
   top: auto;
   left: 50%;
   z-index: 28;
@@ -662,11 +733,195 @@ body[data-mode="plague"] .chrome-glass {
 }
 .help-close:hover { color: var(--text-main); }
 
-/* Settings modal inherits skin-chrome; widen slightly for theme list note */
-.modal-content .instructions-text { margin-top: 18px; }
+/* Menu modal inherits skin-chrome; production widens + left-aligns */
+.modal-content {
+  width: min(340px, calc(100vw - 2.5rem));
+  text-align: left;
+  padding: 28px 24px 22px;
+}
+.modal-content .instructions-text {
+  margin-top: 16px;
+  text-align: left;
+}
+.modal-content .modal-row { align-items: flex-start; }
+#mode-row { flex-direction: column; align-items: stretch; gap: 6px; }
+#run-row { flex-direction: column; align-items: stretch; gap: 6px; }
+.modal-actions { justify-content: flex-start; }
+.close-btn {
+  width: 44px;
+  height: 44px;
+  top: 8px;
+  right: 8px;
+  border-radius: 10px;
+}
+.close-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent);
+  outline-offset: 2px;
+}
 
-.skin-nav .meta { display: none; }
-.skin-nav > a { display: none; }
+/* Theme-aware Menu — Fire / Plague / Escape leave soft OS pill chrome behind */
+body[data-mode="fire"] .modal-overlay {
+  background: rgba(8, 3, 2, 0.82);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+body[data-mode="fire"] .modal-content {
+  background:
+    linear-gradient(168deg, #2a1610 0%, #160a08 55%, #0e0604 100%);
+  color: #ffe8d8;
+  border: 1px solid rgba(255, 120, 50, 0.32);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 0 rgba(255, 160, 80, 0.12) inset,
+    0 22px 56px rgba(0, 0, 0, 0.58),
+    0 0 36px rgba(255, 70, 10, 0.1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body[data-mode="fire"] .menu-title { color: #ffe8d8; }
+body[data-mode="fire"] .modal-section-label {
+  color: #c07850;
+  letter-spacing: 0.12em;
+}
+body[data-mode="fire"] .close-btn {
+  color: #c07850;
+  border: 1px solid rgba(255, 140, 70, 0.28);
+  background: rgba(40, 16, 10, 0.55);
+}
+body[data-mode="fire"] .close-btn:hover {
+  color: #ffe8d8;
+  border-color: rgba(255, 160, 80, 0.45);
+  background: rgba(60, 24, 14, 0.7);
+}
+body[data-mode="fire"] .mode-switch button,
+body[data-mode="fire"] .modal-actions button,
+body[data-mode="fire"] .diff-option {
+  border-radius: 8px;
+  border-color: rgba(255, 140, 70, 0.28);
+  background: rgba(255, 100, 40, 0.08);
+  color: #ffe8d8;
+}
+body[data-mode="fire"] .mode-switch button[aria-pressed="true"],
+body[data-mode="fire"] .modal-actions button[aria-pressed="true"],
+body[data-mode="fire"] .diff-option.active,
+body[data-mode="fire"] .diff-option[aria-pressed="true"] {
+  background: linear-gradient(180deg, #ff7a28, #d94812);
+  border-color: #ff9a40;
+  color: #1a0804;
+}
+body[data-mode="fire"] .mode-switch button:focus-visible,
+body[data-mode="fire"] .modal-actions button:focus-visible,
+body[data-mode="fire"] .diff-option:focus-visible,
+body[data-mode="fire"] .close-btn:focus-visible {
+  outline-color: #ff9a40;
+}
+body[data-mode="fire"] .instructions-text,
+body[data-mode="fire"] .menu-links a { color: #b07058; }
+body[data-mode="fire"] .menu-links a:hover { color: #ffb070; }
+body[data-mode="fire"] .menu-links a:focus-visible { outline-color: #ff9a40; }
+
+body[data-mode="plague"] .modal-overlay {
+  background: rgba(6, 12, 10, 0.8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+body[data-mode="plague"] .modal-content {
+  background:
+    linear-gradient(172deg, #1c2a26 0%, #121c1a 48%, #0c1412 100%);
+  color: #e8f8ee;
+  border: 1px solid rgba(126, 200, 168, 0.34);
+  border-radius: 6px;
+  box-shadow:
+    0 1px 0 rgba(200, 240, 210, 0.08) inset,
+    0 22px 56px rgba(0, 0, 0, 0.55),
+    0 0 28px rgba(126, 200, 168, 0.08);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body[data-mode="plague"] .menu-title { color: #e8f8ee; }
+body[data-mode="plague"] .modal-section-label {
+  color: #5a8f78;
+  letter-spacing: 0.14em;
+}
+body[data-mode="plague"] .close-btn {
+  color: #5a8f78;
+  border: 1px solid rgba(126, 200, 168, 0.28);
+  background: rgba(16, 32, 28, 0.55);
+  border-radius: 4px;
+}
+body[data-mode="plague"] .close-btn:hover {
+  color: #e8f8ee;
+  border-color: rgba(143, 212, 176, 0.5);
+  background: rgba(28, 48, 42, 0.72);
+}
+body[data-mode="plague"] .mode-switch button,
+body[data-mode="plague"] .modal-actions button,
+body[data-mode="plague"] .diff-option {
+  border-radius: 4px;
+  border-color: rgba(126, 200, 168, 0.28);
+  background: rgba(126, 200, 168, 0.08);
+  color: #e8f8ee;
+}
+body[data-mode="plague"] .mode-switch button[aria-pressed="true"],
+body[data-mode="plague"] .modal-actions button[aria-pressed="true"],
+body[data-mode="plague"] .diff-option.active,
+body[data-mode="plague"] .diff-option[aria-pressed="true"] {
+  background: color-mix(in srgb, #7ec8a8 78%, #0a100e);
+  border-color: #8fd4b0;
+  color: #0a1210;
+}
+body[data-mode="plague"] .mode-switch button:focus-visible,
+body[data-mode="plague"] .modal-actions button:focus-visible,
+body[data-mode="plague"] .diff-option:focus-visible,
+body[data-mode="plague"] .close-btn:focus-visible {
+  outline-color: #8fd4b0;
+}
+body[data-mode="plague"] .instructions-text,
+body[data-mode="plague"] .menu-links a { color: #5a8f78; }
+body[data-mode="plague"] .menu-links a:hover { color: #a8e0c4; }
+body[data-mode="plague"] .menu-links a:focus-visible { outline-color: #8fd4b0; }
+
+body[data-mode="escape"] .modal-overlay {
+  background: rgba(8, 12, 18, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+body[data-mode="escape"] .modal-content {
+  background:
+    linear-gradient(170deg, #182230 0%, #101820 55%, #0c1218 100%);
+  color: #d7e6f2;
+  border: 1px solid rgba(127, 216, 196, 0.22);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 rgba(200, 230, 245, 0.06) inset,
+    0 22px 52px rgba(0, 0, 0, 0.5);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body[data-mode="escape"] .close-btn {
+  color: #6e8499;
+  border: 1px solid rgba(157, 196, 221, 0.22);
+  background: rgba(20, 28, 38, 0.55);
+  border-radius: 8px;
+}
+body[data-mode="escape"] .close-btn:hover {
+  color: #d7e6f2;
+  border-color: rgba(127, 216, 196, 0.4);
+}
+body[data-mode="escape"] .mode-switch button,
+body[data-mode="escape"] .modal-actions button,
+body[data-mode="escape"] .diff-option {
+  border-radius: 8px;
+}
+body[data-mode="escape"] .mode-switch button[aria-pressed="true"],
+body[data-mode="escape"] .modal-actions button[aria-pressed="true"] {
+  background: color-mix(in srgb, #7fd8c4 22%, transparent);
+  border-color: rgba(127, 216, 196, 0.45);
+  color: #e8f8f4;
+}
+body[data-mode="escape"] .menu-links a:hover { color: #7fd8c4; }
+body[data-mode="escape"] .menu-links a:focus-visible { outline-color: #7fd8c4; }
+
 .welcome-overlay {
   position: fixed;
   inset: 0;
@@ -798,15 +1053,57 @@ body[data-mode="plague"] .chrome-glass {
   background: var(--nav-ink);
   color: var(--nav-bg);
 }
+.modal-actions button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent);
+  outline-offset: 2px;
+}
+.menu-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  font: 600 0.78rem/1.3 var(--font-ui);
+}
+.menu-links a {
+  color: var(--text-sub);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+  border-radius: 4px;
+}
+.menu-links a:hover { color: var(--text-main); }
+.menu-links a:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent);
+  outline-offset: 3px;
+}
+.menu-links-sep {
+  color: color-mix(in srgb, var(--text-sub) 70%, transparent);
+  user-select: none;
+}
+body[data-mode="fire"] .menu-links {
+  border-top-color: rgba(255, 120, 50, 0.22);
+}
+body[data-mode="plague"] .menu-links {
+  border-top-color: rgba(126, 200, 168, 0.22);
+}
+body[data-mode="escape"] .menu-links {
+  border-top-color: rgba(127, 216, 196, 0.18);
+}
 @media (max-width: 660px) {
-  .skin-nav { max-width: calc(100vw - 120px); }
-  .skin-nav .mode-switch { flex-wrap: wrap; justify-content: center; }
-  .skin-nav .mode-switch button { padding-inline: 7px; font-size: 0.78rem; }
   .hud-btn { width: 44px; height: 44px; }
-  .score-rail .stat-item { font-size: 12px; }
+  .plate-toggle button { padding-inline: 8px; font-size: 0.72rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hud-btn, .welcome-overlay { transition: none; }
+  .hud-btn,
+  .welcome-overlay,
+  .modal-overlay,
+  .modal-content,
+  .help-overlay,
+  .theme-toast { transition: none; }
+  .modal-overlay.open .modal-content { transform: none; }
 }
 </style>
 <style>
@@ -863,26 +1160,21 @@ body[data-mode="plague"] .chrome-glass {
 <body>
 <div class="fx-layer" id="fx" aria-hidden="true"></div>
 
-<div class="score-rail chrome-glass" aria-label="Score">
-  <div id="stats-mines" class="stat-item" data-label="mines" title="Mines remaining">00</div>
-  <div id="stats-time" class="stat-item" data-label="cleared" title="Safe cells cleared">000</div>
-</div>
-
-<nav class="skin-nav" aria-label="Theme">
-  <div class="mode-switch chrome-glass" role="group" aria-label="Theme">
+<div class="hud-actions chrome-glass" role="toolbar" aria-label="Game controls">
+  <div id="plate-toggle" class="plate-toggle" role="group" aria-label="Appearance">
     <button type="button" data-mode="light" aria-pressed="true">Light</button>
     <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
-    <button type="button" data-mode="fire" aria-pressed="false">Fire</button>
-    <button type="button" data-mode="plague" aria-pressed="false">Plague</button>
-    <button type="button" data-mode="escape" aria-pressed="false">Escape</button>
   </div>
-</nav>
-
-<div class="hud-actions chrome-glass">
-  <button type="button" id="menu-btn" class="hud-btn" aria-label="Settings" title="Settings">
+  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="3"></circle>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  </button>
+  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu" title="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 2.5 19.5 7v10L12 21.5 4.5 17V7L12 2.5z"></path>
     </svg>
   </button>
 </div>
@@ -917,7 +1209,7 @@ body[data-mode="plague"] .chrome-glass {
       <li>Right-click or press-and-hold to <strong>flag</strong> mines.</li>
       <li>Use the <strong>numbers</strong> to figure out which hexes are dangerous.</li>
       <li><strong>Clear</strong> every safe cell — don't step on a mine.</li>
-      <li id="welcome-escape-tip" hidden>In <strong>Escape</strong>, a rift wakes after you expose enough tiles and crawls toward your digs — keep clearing ahead.</li>
+      <li id="welcome-escape-tip" hidden>In <strong>Escape</strong>, play minesweeper as usual — after you open a patch, a slow rift seeps toward your digs. Dig, flag, and chord; the rift is a second threat, not the game.</li>
     </ul>
     <div class="welcome-themes" role="group" aria-label="Theme">
       <button type="button" data-welcome-mode="light" aria-pressed="true">Light</button>
@@ -930,8 +1222,8 @@ body[data-mode="plague"] .chrome-glass {
   </div>
 </div>
 
-<!-- Settings: everything except the four themes -->
-<div id="modal-overlay" class="modal-overlay">
+<!-- Menu: scores, modes, board, play aids, save -->
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
   <div class="modal-content">
     <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -939,7 +1231,24 @@ body[data-mode="plague"] .chrome-glass {
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     </button>
-    <div style="height:15px"></div>
+    <h2 id="menu-title" class="menu-title">Menu</h2>
+    <div class="modal-row" id="run-row">
+      <div class="modal-section-label">Run</div>
+      <div class="menu-stats" aria-label="Score">
+        <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
+        <div id="stats-time" class="stat-item visible" data-label="cleared" title="Safe cells cleared">000</div>
+      </div>
+    </div>
+    <div class="modal-row" id="mode-row">
+      <div class="modal-section-label">Mode</div>
+      <div class="mode-switch" role="group" aria-label="Mode">
+        <button type="button" data-mode="light" aria-pressed="true">Light</button>
+        <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
+        <button type="button" data-mode="fire" aria-pressed="false">Fire</button>
+        <button type="button" data-mode="plague" aria-pressed="false">Plague</button>
+        <button type="button" data-mode="escape" aria-pressed="false">Escape</button>
+      </div>
+    </div>
     <!-- Board size only matters on finite boards (Fire / Plague) -->
     <div class="modal-row" id="size-row">
       <div class="icon-label" title="Board size">
@@ -951,12 +1260,6 @@ body[data-mode="plague"] .chrome-glass {
         <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" title="Large board · denser field">L</button>
       </div>
     </div>
-    <div class="modal-row">
-      <div class="icon-label" title="Show score">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-      </div>
-      <div id="stats-toggle" class="toggle-switch" role="switch" aria-checked="false" aria-label="Show stats"><div class="toggle-knob"></div></div>
-    </div>
     <div class="modal-actions">
       <button type="button" id="flag-btn" aria-pressed="false">Flag mode</button>
       <button type="button" id="help-btn">How to play</button>
@@ -966,14 +1269,12 @@ body[data-mode="plague"] .chrome-glass {
       <button type="button" id="import-run-btn" title="Load a previously exported run">Import run</button>
     </div>
     <input type="file" id="import-run-file" accept="application/json,.json" hidden>
-    <button id="restart-btn" class="refresh-btn" type="button" aria-label="Restart">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="23 4 23 10 17 10"></polyline>
-        <polyline points="1 20 1 14 7 14"></polyline>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-      </svg>
-    </button>
-    <div class="instructions-text">Light / Dark / Escape autosave · Export/Import in settings<br>Fire &amp; Plague finite · Scroll zoom · F flag · R new run</div>
+    <div class="instructions-text">Menu holds scores, modes, and play aids<br>Light/Dark toggle · Reset on the board · R new run · F flag</div>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">Luke Steuber</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">Data Poems</a>
+    </nav>
   </div>
 </div>
 
@@ -987,7 +1288,7 @@ body[data-mode="plague"] .chrome-glass {
     <p>Minesweeper on a honeycomb. Six neighbors max, not eight.</p>
 
     <h3>Goal</h3>
-    <p><strong>Light</strong> and <strong>Dark</strong> are an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> looks the same at first — after enough digs the rift wakes and crawls toward your clears (floods barely feed it); keep digging ahead to flee. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
+    <p><strong>Light</strong> and <strong>Dark</strong> are an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> is the same minesweeper loop — dig, flag, chord, score cleared cells — with a slow rift that wakes after you open a patch and seeps toward your last dig. Mines still kill on contact; the rift is a second, glacial threat. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
 
     <h3>Reveal</h3>
     <p>Click or tap a covered cell. First click is always safe. The number is how many mines sit on the six sides. Empty clears open outward in rings until they hit numbered cells. When the flags around a number match that count, click it again (or double-click) to open the rest. In Light/Dark/Escape, the camera follows your dig and the grid expands so the canvas never runs out of hexes.</p>
@@ -996,20 +1297,20 @@ body[data-mode="plague"] .chrome-glass {
     <p>Drag to pan. Scroll or pinch to zoom. <kbd>+</kbd> / <kbd>−</kbd> also zoom. Space-drag or middle-drag pans.</p>
 
     <h3>Mine death</h3>
-    <p>Stepping on a mine charges the board, then blows tiles apart with a shock ring, flying shards, and screen shake. Press <kbd>R</kbd> or use Restart when you're ready.</p>
+    <p>Stepping on a mine charges the board, then blows tiles apart with a shock ring, flying shards, and screen shake. Press <kbd>R</kbd> or use Reset when you're ready.</p>
 
     <h3>Flag</h3>
     <p>Right-click, Ctrl-click (or ⌘-click), press and hold on a phone, or turn on <strong>Flag mode</strong> (<kbd>F</kbd>) so every tap plants a flag.</p>
 
     <h3>Controls</h3>
     <ul>
-      <li><strong>Light / Dark / Fire / Plague / Escape</strong> changes theme</li>
-      <li><strong>Gear</strong> holds board size, flag mode, export/import, help, restart</li>
-      <li><strong>?</strong> opens this panel</li>
+      <li><strong>Light / Dark</strong> on the board toggles plate look (same run)</li>
+      <li><strong>Menu</strong> (hex) holds scores, modes, board size, flag, help, export/import</li>
+      <li><strong>Reset</strong> starts a fresh run · <strong>?</strong> opens this panel</li>
     </ul>
 
     <h3>Keys</h3>
-    <p><kbd>?</kbd> help · <kbd>t</kbd> mode · <kbd>f</kbd> flag · <kbd>r</kbd> restart · <kbd>+</kbd>/<kbd>−</kbd> zoom · <kbd>Esc</kbd> closes panels</p>
+    <p><kbd>?</kbd> help · <kbd>t</kbd> mode · <kbd>f</kbd> flag · <kbd>r</kbd> reset · <kbd>+</kbd>/<kbd>−</kbd> zoom · <kbd>Esc</kbd> closes panels</p>
   </div>
 </div>
 
@@ -1201,7 +1502,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     const statsTime = document.getElementById("stats-time");
     const menuBtn = document.getElementById("menu-btn");
     const closeBtn = document.getElementById("close-modal-btn");
-    const restartBtn = document.getElementById("restart-btn");
+    // Production uses #reset-btn on the HUD; lab skins still use #restart-btn in the modal.
+    const restartBtn =
+      document.getElementById("restart-btn") || document.getElementById("reset-btn");
 
     function openModal() {
       if (modal) modal.classList.add("open");
@@ -1269,8 +1572,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
     function updateStatsVisibility() {
       if (!statsMines || !statsTime) return;
-      // Endless score is gameplay-critical — keep it visible even if the toggle is off.
-      const show = state.showStats || state.endless;
+      // Menu-embedded stats (no .score-rail) stay visible; lab score rails still honor the toggle.
+      const inRail = !!(statsMines.closest(".score-rail") || statsTime.closest(".score-rail"));
+      const show = !inRail || state.showStats || state.endless;
       statsMines.classList.toggle("visible", show);
       statsTime.classList.toggle("visible", show);
       if (statsToggle) {
@@ -3499,6 +3803,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       document.querySelectorAll("[data-mode]").forEach((button) => {
         if (!ONEPAGER_MODES.includes(button.dataset.mode)) button.hidden = true;
       });
+      // Plate one-pager: keep BR Light/Dark; hide Mode list extras already filtered above.
     } else {
       const params = new URLSearchParams(location.search);
       const q = params.get("mode") || params.get("theme");
@@ -4505,10 +4810,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
 
   // —— Escape · Rift Chase ————————————————————————————————————————————
-  // Tile-budget pressure, not a wall-clock sprinter:
-  //   • grace until enough digs + exposes
-  //   • each dig/flood adds budget (floods are cheap)
-  //   • rift spends budget to walk one hex at a time toward your tip
+  // Minesweeper first; rift is a glacial secondary threat:
+  //   • grace until enough digs + exposes (classic opening play)
+  //   • tip tracks intentional digs/chords only (floods do not yank the target)
+  //   • continuous fractional-axial crawl — organic, never hex hops
+  //   • catch by proximity to your tip; mines still kill on dig
   const RIFT = {
     phase: "idle", // idle | grace | awaken | chase | catch
     t0: 0,
@@ -4518,6 +4824,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     y: 0,
     q: 0,
     r: 0,
+    /** Continuous axial position (fractional) — the crawl lives here. */
+    fq: 0,
+    fr: 0,
     radius: 0,
     intensity: 0,
     firstKey: null,
@@ -4529,17 +4838,14 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     shake: 0,
     digClicks: 0,
     exposed: 0,
-    budget: 0,
-    stepCooldown: 0,
     // Awaken once the player has committed a few digs and opened a patch.
     awakenDigs: 3,
-    awakenExposed: 45,
-    // Budget weights — a 200-cell flood ≈ 10 hexes of pressure, not a wipe.
-    weightDig: 0.85,
-    weightChord: 0.45,
-    weightFlood: 0.05,
-    // Tiny AFK trickle so freezing still loses, very slowly (~1 hex / 5s).
-    idleBudgetPerSec: 0.2,
+    awakenExposed: 50,
+    // Glacial crawl in hexes/sec (~6s per hex at base; mild hunger over time).
+    crawlHexPerSec: 0.16,
+    crawlHexPerSecCalm: 0.09,
+    crawlHungerPerSec: 0.0055,
+    crawlHungerCap: 1.5,
   };
 
   function resetRift() {
@@ -4550,6 +4856,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     RIFT.y = 0;
     RIFT.q = 0;
     RIFT.r = 0;
+    RIFT.fq = 0;
+    RIFT.fr = 0;
     RIFT.radius = 0;
     RIFT.intensity = 0;
     RIFT.firstKey = null;
@@ -4561,8 +4869,6 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     RIFT.shake = 0;
     RIFT.digClicks = 0;
     RIFT.exposed = 0;
-    RIFT.budget = 0;
-    RIFT.stepCooldown = 0;
   }
   resetRift();
 
@@ -4583,14 +4889,16 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       phase: RIFT.phase,
       digClicks: RIFT.digClicks,
       exposed: RIFT.exposed,
-      budget: RIFT.budget,
       q: RIFT.q,
       r: RIFT.r,
+      fq: RIFT.fq,
+      fr: RIFT.fr,
       firstKey: RIFT.firstKey,
       lastDigKey: RIFT.lastDigKey,
       torn: RIFT.torn ? Array.from(RIFT.torn) : [],
       intensity: RIFT.intensity,
       radius: RIFT.radius,
+      t0: RIFT.t0,
     };
   }
 
@@ -4600,14 +4908,17 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     RIFT.phase = blob.phase || "idle";
     RIFT.digClicks = blob.digClicks | 0;
     RIFT.exposed = blob.exposed | 0;
-    RIFT.budget = Number(blob.budget) || 0;
     RIFT.q = blob.q | 0;
     RIFT.r = blob.r | 0;
+    // Continuous crawl pos; older dig-budget saves only had integer q/r.
+    RIFT.fq = Number.isFinite(blob.fq) ? Number(blob.fq) : RIFT.q;
+    RIFT.fr = Number.isFinite(blob.fr) ? Number(blob.fr) : RIFT.r;
     RIFT.firstKey = blob.firstKey || null;
     RIFT.lastDigKey = blob.lastDigKey || null;
     RIFT.torn = new Set(Array.isArray(blob.torn) ? blob.torn : []);
     RIFT.intensity = Number(blob.intensity) || 0;
     RIFT.radius = Number(blob.radius) || 0;
+    RIFT.t0 = Number(blob.t0) || performance.now();
     RIFT.lastT = performance.now();
     if (RIFT.phase === "idle") return;
     // Re-enter chase/grace without replaying awaken toast
@@ -4768,12 +5079,46 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     reader.readAsText(file);
   }
 
-  function syncRiftScreenPos(s) {
-    const cell = s.map.get(`${RIFT.q},${RIFT.r}`);
-    if (cell) {
-      RIFT.x = cell.x;
-      RIFT.y = cell.y;
+  function riftAxialDist(aq, ar, bq, br) {
+    return (Math.abs(aq - bq) + Math.abs(aq + ar - (bq + br)) + Math.abs(ar - br)) / 2;
+  }
+
+  function riftHexRound(q, r) {
+    let s = -q - r;
+    let rq = Math.round(q);
+    let rr = Math.round(r);
+    let rs = Math.round(s);
+    const qDiff = Math.abs(rq - q);
+    const rDiff = Math.abs(rr - r);
+    const sDiff = Math.abs(rs - s);
+    if (qDiff > rDiff && qDiff > sDiff) rq = -rr - rs;
+    else if (rDiff > sDiff) rr = -rq - rs;
+    return { q: rq, r: rr };
+  }
+
+  /** Project continuous axial → screen (matches Escape plate layout + light parallax). */
+  function syncRiftScreenPos(s, now, withWobble) {
+    const SQRT3 = Math.sqrt(3);
+    const camX = s.camX || 0;
+    const camY = s.camY || 0;
+    const fq = Number.isFinite(RIFT.fq) ? RIFT.fq : RIFT.q;
+    const fr = Number.isFinite(RIFT.fr) ? RIFT.fr : RIFT.r;
+    const baseX = s.canvas.width / 2 + s.cellSize * SQRT3 * (fq + fr / 2) - camX;
+    const baseY = s.canvas.height / 2 + s.cellSize * 1.5 * fr - camY;
+    let x = baseX + ox * 0.28;
+    let y = baseY + oy * 0.22;
+    if (withWobble && now) {
+      // Slow organic breath — never a grid step
+      const calm = typeof reduceMotion !== "undefined" && reduceMotion;
+      const amp = s.cellSize * (calm ? 0.02 : 0.07) * Math.max(0.25, RIFT.intensity);
+      x += Math.sin(now * 0.00085) * amp;
+      y += Math.cos(now * 0.00068) * amp * 0.85;
     }
+    RIFT.x = x;
+    RIFT.y = y;
+    const rounded = riftHexRound(fq, fr);
+    RIFT.q = rounded.q;
+    RIFT.r = rounded.r;
   }
 
   function noteRiftReveal(cell, api, meta) {
@@ -4782,6 +5127,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     const now = performance.now();
     const source = (meta && meta.source) || "dig";
     RIFT.exposed += 1;
+    // Tip = last intentional dig/chord only. Floods must not yank the chase target
+    // (that made Escape feel like a runner, not minesweeper).
     if (source === "dig") {
       RIFT.digClicks += 1;
       RIFT.lastDigKey = key;
@@ -4789,9 +5136,6 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     } else if (source === "chord") {
       RIFT.lastDigKey = key;
       RIFT.lastDigAt = now;
-    } else if (source === "flood") {
-      // Tip rides the flood frontier so the rift must crawl the cleared patch
-      RIFT.lastDigKey = key;
     }
 
     if (RIFT.phase === "idle") {
@@ -4800,20 +5144,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       RIFT.firstKey = key;
       RIFT.q = cell.q;
       RIFT.r = cell.r;
+      RIFT.fq = cell.q;
+      RIFT.fr = cell.r;
       RIFT.x = cell.x;
       RIFT.y = cell.y;
       if (typeof showToast === "function") showToast("Something stirs…");
-    }
-
-    // Pressure only after the rift is hunting — floods stay cheap.
-    if (RIFT.phase === "chase" || RIFT.phase === "awaken") {
-      const w =
-        source === "dig"
-          ? RIFT.weightDig
-          : source === "chord"
-            ? RIFT.weightChord
-            : RIFT.weightFlood;
-      RIFT.budget += w;
     }
   }
 
@@ -4829,53 +5164,34 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     RIFT.phase = "awaken";
     RIFT.t0 = now;
     RIFT.radius = s.cellSize * 0.9;
-    RIFT.budget = 0; // start clean — pressure comes from future digs
-    if (typeof showToast === "function") showToast("Flee the rift");
+    if (typeof showToast === "function") showToast("The rift wakes");
   }
 
-  /** Walk one axial step toward the dig tip; tear that hex. */
-  function stepRiftTowardTip(api) {
+  /** Glacial continuous crawl toward tip; tear hexes the lens passes through. */
+  function crawlRiftTowardTip(api, now, dtSec, calm) {
     const s = api.state;
     const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
-    if (!tip) return false;
+    if (!tip) return Infinity;
+    const dist = riftAxialDist(RIFT.fq, RIFT.fr, tip.q, tip.r);
+    if (dist > 1e-4) {
+      const chaseAge = Math.max(0, (now - RIFT.t0) / 1000);
+      const hunger = Math.min(RIFT.crawlHungerCap, 1 + chaseAge * RIFT.crawlHungerPerSec);
+      const hexPerSec = (calm ? RIFT.crawlHexPerSecCalm : RIFT.crawlHexPerSec) * hunger;
+      const step = Math.min(dist, hexPerSec * dtSec);
+      const inv = 1 / dist;
+      RIFT.fq += (tip.q - RIFT.fq) * inv * step;
+      RIFT.fr += (tip.r - RIFT.fr) * inv * step;
+    }
+    syncRiftScreenPos(s, now, true);
+    // Tear as the lens seeps through a hex — trail, not hop-and-shatter
     const here = s.map.get(`${RIFT.q},${RIFT.r}`);
-    if (!here) {
-      RIFT.q = tip.q;
-      RIFT.r = tip.r;
-      return false;
-    }
-    if (RIFT.q === tip.q && RIFT.r === tip.r) return true;
-
-    const neighbors = api.getNeighbors(RIFT.q, RIFT.r);
-    if (!neighbors.length) return false;
-    let best = null;
-    let bestD = Infinity;
-    for (const n of neighbors) {
-      const dq = n.q - tip.q;
-      const dr = n.r - tip.r;
-      const ds = -n.q - n.r - (-tip.q - tip.r);
-      const d = (Math.abs(dq) + Math.abs(dr) + Math.abs(ds)) / 2;
-      // Prefer untorn / revealed trail so it follows the cleared path
-      const bias = n._riftTorn ? 0.35 : n.revealed ? 0 : 0.15;
-      if (d + bias < bestD) {
-        bestD = d + bias;
-        best = n;
+    if (here && !here._riftTorn) {
+      const dPx = Math.hypot(here.x - RIFT.x, here.y - RIFT.y);
+      if (dPx < s.cellSize * 0.7) {
+        tearRiftCell(here, s, 2.2 + Math.random() * 1.2);
       }
     }
-    if (!best) return false;
-    RIFT.q = best.q;
-    RIFT.r = best.r;
-    syncRiftScreenPos(s);
-    tearRiftCell(best, s, 4.2 + Math.random() * 2);
-    // Soft splash on one extra neighbor for readability, not a wipe
-    const splash = api.getNeighbors(best.q, best.r);
-    if (splash.length && Math.random() < 0.35) {
-      const pick = splash[(Math.random() * splash.length) | 0];
-      if (pick && !pick._riftTorn && pick.revealed) {
-        tearRiftCell(pick, s, 3 + Math.random() * 1.5);
-      }
-    }
-    return RIFT.q === tip.q && RIFT.r === tip.r;
+    return riftAxialDist(RIFT.fq, RIFT.fr, tip.q, tip.r);
   }
 
   function tearRiftCell(cell, s, force) {
@@ -4973,18 +5289,17 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     const dt = dtSec * 60; // ~frames @60 for shard step
     RIFT.lastT = now;
     RIFT.shake *= Math.pow(0.9, dt);
-    RIFT.stepCooldown = Math.max(0, RIFT.stepCooldown - dtSec);
 
     const first = RIFT.firstKey && s.map.get(RIFT.firstKey);
     const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
-    syncRiftScreenPos(s);
 
     if (RIFT.phase === "grace") {
       if (first) {
         RIFT.q = first.q;
         RIFT.r = first.r;
-        RIFT.x = first.x;
-        RIFT.y = first.y;
+        RIFT.fq = first.q;
+        RIFT.fr = first.r;
+        syncRiftScreenPos(s, now, false);
       }
       tryAwakenRift(now, s);
       if (first && !first._riftTorn && RIFT.phase === "grace") {
@@ -5004,8 +5319,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (first) {
         RIFT.q = first.q;
         RIFT.r = first.r;
+        RIFT.fq = first.q;
+        RIFT.fr = first.r;
       }
-      syncRiftScreenPos(s);
+      syncRiftScreenPos(s, now, true);
       RIFT.radius = s.cellSize * (0.75 + u * 0.55);
       // Local breach only — origin hex + immediate neighbors
       s.map.forEach((cell) => {
@@ -5021,7 +5338,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         cell._depthScale = (cell._depthScale || 1) * (1 + 0.08 * u * near);
       });
       if (u > 0.6 && first && !first._riftTorn) {
-        tearRiftCell(first, s, 4 + Math.random() * 2);
+        tearRiftCell(first, s, 3 + Math.random() * 1.5);
       }
       stepRiftShards(dt);
       if (u >= 1) {
@@ -5030,6 +5347,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         RIFT.telegraphUntil = 0;
         RIFT.catchKey = null;
         RIFT.radius = s.cellSize * 1.05;
+        if (first) {
+          RIFT.fq = first.q;
+          RIFT.fr = first.r;
+        }
       }
       return;
     }
@@ -5037,23 +5358,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (RIFT.phase === "chase") {
       const tipCell = tip || first;
       if (!tipCell) return;
+      if (!RIFT.lastDigKey && first) RIFT.lastDigKey = `${first.q},${first.r}`;
 
-      // AFK trickle — slow enough that active play is about digs, not the clock
-      const idleSec = (now - RIFT.lastDigAt) / 1000;
-      if (idleSec > 1.2) {
-        RIFT.budget += RIFT.idleBudgetPerSec * dtSec * (calm ? 0.55 : 1);
-      }
-
-      // Spend budget: at most one hex step every ~280ms so the crawl is readable
-      const stepGap = calm ? 0.45 : 0.28;
-      if (RIFT.budget >= 1 && RIFT.stepCooldown <= 0) {
-        RIFT.budget -= 1;
-        RIFT.stepCooldown = stepGap;
-        stepRiftTowardTip(api);
-      }
-
-      syncRiftScreenPos(s);
-      RIFT.intensity = Math.min(1.15, 0.5 + RIFT.torn.size * 0.012 + RIFT.budget * 0.04);
+      const tipDistAx = crawlRiftTowardTip(api, now, dtSec, calm);
+      RIFT.intensity = Math.min(1.15, 0.55 + RIFT.torn.size * 0.01 + Math.min(0.25, (now - RIFT.t0) / 180000));
       RIFT.radius = s.cellSize * (0.95 + Math.min(0.35, RIFT.torn.size * 0.008));
 
       // Gentle lens near the core only (no radius wipe)
@@ -5064,21 +5372,22 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         const r = Math.hypot(cx, cy) || 0.001;
         if (r > s.cellSize * 3.5) return;
         const lens = 1 / (1 + (r / (s.cellSize * 1.8)) * (r / (s.cellSize * 1.8)));
-        const stretch = s.cellSize * 0.12 * RIFT.intensity * lens;
-        cell.x += (cx / r) * stretch * 0.3;
-        cell.y += (cy / r) * stretch * 0.3;
-        cell._depthScale = (cell._depthScale || 1) * (1 + 0.05 * lens * RIFT.intensity);
+        const stretch = s.cellSize * 0.1 * RIFT.intensity * lens;
+        cell.x += (cx / r) * stretch * 0.28;
+        cell.y += (cy / r) * stretch * 0.28;
+        cell._depthScale = (cell._depthScale || 1) * (1 + 0.045 * lens * RIFT.intensity);
       });
 
       stepRiftShards(dt);
 
-      // Catch when the rift occupies your dig tip
-      const onTip = RIFT.q === tipCell.q && RIFT.r === tipCell.r;
+      // Catch when the slow lens reaches your dig tip (proximity, not a hop)
       const tipKey = `${tipCell.q},${tipCell.r}`;
       const tipTorn = tipCell._riftTorn || RIFT.torn.has(tipKey);
-      if (onTip || tipTorn) {
+      const tipDistPx = Math.hypot(tipCell.x - RIFT.x, tipCell.y - RIFT.y);
+      const onTip = tipDistAx < 0.42 || tipDistPx < s.cellSize * 0.55 || tipTorn;
+      if (onTip) {
         if (!RIFT.telegraphUntil) {
-          RIFT.telegraphUntil = now + (calm ? 280 : 550);
+          RIFT.telegraphUntil = now + (calm ? 320 : 700);
           RIFT.catchKey = tipKey;
         } else if (now >= RIFT.telegraphUntil) {
           RIFT.phase = "catch";
@@ -5097,9 +5406,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         RIFT.catchKey = null;
       }
 
-      const tipDist = Math.hypot(tipCell.x - RIFT.x, tipCell.y - RIFT.y);
-      if (tipDist < s.cellSize * 4) {
-        RIFT.shake = Math.max(RIFT.shake, (1 - tipDist / (s.cellSize * 4)) * 3.5);
+      if (tipDistPx < s.cellSize * 4) {
+        RIFT.shake = Math.max(RIFT.shake, (1 - tipDistPx / (s.cellSize * 4)) * 2.8);
       }
     }
   }
@@ -5375,7 +5683,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     dark: "Dark — flat infinite field, night",
     fire: "Fire — finite magma pit",
     plague: "Plague — verdigris mycelium specimen",
-    escape: "Escape — dig enough and a rift crawls toward you",
+    escape: "Escape — minesweeper with a slow rift behind you",
   };
 
   function syncWelcomeThemes(modeId) {
@@ -5495,12 +5803,32 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
    * Settings rows that only apply to one board topology:
    * Export/Import needs an infinite lane; board size needs a finite board.
    */
+  function syncPlateToggle() {
+    const el = document.getElementById("plate-toggle");
+    if (!el) return;
+    if (ONEPAGER_STRICT) {
+      el.hidden = true;
+      return;
+    }
+    const t = THEMES[themeIndex];
+    // Light↔Dark cosmetics only — hide on Fire / Plague / Escape.
+    const onPlate =
+      !!t &&
+      (t.id === "light" || t.id === "dark") &&
+      !!t.endless &&
+      !t.rift;
+    el.hidden = !onPlate;
+  }
+
   function syncSettingsRows() {
     const endless = !!THEMES[themeIndex]?.endless;
     const persistRow = document.getElementById("persist-actions");
     if (persistRow) persistRow.hidden = !endless;
     const sizeRow = document.getElementById("size-row");
     if (sizeRow) sizeRow.hidden = endless;
+    const modeRow = document.getElementById("mode-row");
+    if (modeRow) modeRow.hidden = ONEPAGER_STRICT;
+    syncPlateToggle();
   }
 
   function cycleTheme() {
@@ -6316,7 +6644,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (ONEPAGER_STRICT) return;
       if (ONEPAGER_ACTIVE && !ONEPAGER_MODES.includes(button.dataset.mode)) return;
       const i = THEMES.findIndex((theme) => theme.id === button.dataset.mode);
-      if (i >= 0 && i !== themeIndex) applyTheme(i);
+      if (i >= 0 && i !== themeIndex) {
+        applyTheme(i);
+        // Mode picks from Menu should reveal the board immediately.
+        if (button.closest("#mode-row")) {
+          document.getElementById("modal-overlay")?.classList.remove("open");
+        }
+      }
     });
   });
 
@@ -7286,8 +7620,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     get torn() {
       return RIFT.torn ? RIFT.torn.size : 0;
     },
-    get budget() {
-      return RIFT.budget;
+    get pos() {
+      return { fq: RIFT.fq, fr: RIFT.fr, q: RIFT.q, r: RIFT.r };
     },
     get exposed() {
       return RIFT.exposed;
@@ -7315,15 +7649,18 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         RIFT.lastDigAt = performance.now();
         RIFT.q = origin.q;
         RIFT.r = origin.r;
+        RIFT.fq = origin.q;
+        RIFT.fr = origin.r;
         RIFT.digClicks = Math.max(RIFT.digClicks, RIFT.awakenDigs);
         RIFT.exposed = Math.max(RIFT.exposed, RIFT.awakenExposed);
       }
       RIFT.phase = "awaken";
       RIFT.t0 = performance.now() - RIFT.awakenMs + 80;
+      RIFT.fq = origin.q;
+      RIFT.fr = origin.r;
       RIFT.x = origin.x;
       RIFT.y = origin.y;
       RIFT.radius = s.cellSize * 1.0;
-      RIFT.budget = 0;
       return true;
     },
   };

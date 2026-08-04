@@ -60,19 +60,22 @@ body {
   <canvas id="gameCanvas"></canvas>
 </div>
 
-<button id="menu-btn" class="settings-btn" type="button" aria-label="Settings" title="Settings">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="3"></circle>
-    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
-  </svg>
-</button>
-
-<div class="bottom-bar">
-  <div id="stats-mines" class="stat-item">00</div>
-  <div id="stats-time" class="stat-item">000</div>
+<div class="hud-actions" role="toolbar" aria-label="Game controls">
+  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  </button>
+  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu" title="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 2.5 19.5 7v10L12 21.5 4.5 17V7L12 2.5z"></path>
+    </svg>
+  </button>
 </div>
 
-<div id="modal-overlay" class="modal-overlay">
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
   <div class="modal-content">
     <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -80,9 +83,16 @@ body {
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     </button>
-    <div style="height:15px"></div>
+    <h2 id="menu-title" class="menu-title">Menu</h2>
+    <div class="modal-row" id="run-row">
+      <div class="modal-section-label">Run</div>
+      <div class="menu-stats" aria-label="Score">
+        <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
+        <div id="stats-time" class="stat-item visible" data-label="cleared" title="Safe cells cleared">000</div>
+      </div>
+    </div>
     <div class="modal-row">
-      <div class="icon-label">
+      <div class="icon-label" title="Board size">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="9" height="9"></rect><rect x="13" y="2" width="9" height="9"></rect><rect x="2" y="13" width="9" height="9"></rect></svg>
       </div>
       <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
@@ -91,20 +101,12 @@ body {
         <button type="button" class="diff-option" data-val="hard" aria-pressed="false" title="Large · 80 mines">L</button>
       </div>
     </div>
-    <div class="modal-row">
-      <div class="icon-label">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-      </div>
-      <div id="stats-toggle" class="toggle-switch"><div class="toggle-knob"></div></div>
-    </div>
-    <button id="restart-btn" class="refresh-btn" type="button" aria-label="Restart">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="23 4 23 10 17 10"></polyline>
-        <polyline points="1 20 1 14 7 14"></polyline>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-      </svg>
-    </button>
-    <div class="instructions-text">Tap to reveal · flag: right-click, Ctrl-click, or long-hold<br>Double-tap to chord · ← → skins</div>
+    <div class="instructions-text">Tap to reveal · flag: right-click, Ctrl-click, or long-hold<br>Menu holds scores · Reset on the board · ← → skins</div>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">Luke Steuber</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">Data Poems</a>
+    </nav>
   </div>
 </div>
 

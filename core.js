@@ -177,7 +177,9 @@
     const statsTime = document.getElementById("stats-time");
     const menuBtn = document.getElementById("menu-btn");
     const closeBtn = document.getElementById("close-modal-btn");
-    const restartBtn = document.getElementById("restart-btn");
+    // Production uses #reset-btn on the HUD; lab skins still use #restart-btn in the modal.
+    const restartBtn =
+      document.getElementById("restart-btn") || document.getElementById("reset-btn");
 
     function openModal() {
       if (modal) modal.classList.add("open");
@@ -245,8 +247,9 @@
 
     function updateStatsVisibility() {
       if (!statsMines || !statsTime) return;
-      // Endless score is gameplay-critical — keep it visible even if the toggle is off.
-      const show = state.showStats || state.endless;
+      // Menu-embedded stats (no .score-rail) stay visible; lab score rails still honor the toggle.
+      const inRail = !!(statsMines.closest(".score-rail") || statsTime.closest(".score-rail"));
+      const show = !inRail || state.showStats || state.endless;
       statsMines.classList.toggle("visible", show);
       statsTime.classList.toggle("visible", show);
       if (statsToggle) {

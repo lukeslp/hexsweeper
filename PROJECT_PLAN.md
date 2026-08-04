@@ -20,12 +20,14 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Biolume recast as Plague (flat, hyphae, spores)
 - [x] Fire magma pit (viewport-fit board, pit tilt, boiling center, contact shadows; no streak rain)
 - [x] Shared detonation FX
-- [x] Escape rift chase (grace → awaken → tear/chase → catch burst)
+- [x] Escape rift chase (grace → awaken → continuous crawl → catch burst)
+- [x] Escape MS-first rethink: dig/flag/chord primary; rift is glacial secondary threat (no dig-budget hex hops)
 - [x] Help / metadata describe modes, not the skin lab
 - [x] Bare URL opens infinite Light
 - [x] Light↔Dark keeps the run (cosmetic swap)
 - [x] First-visit welcome: “Have you played minesweeper?” + refresher
-- [x] Chrome triad: stats lower-left · themes center-bottom · controls lower-right (+ glass, esp. Light)
+- [x] Chrome: BR plate toggle · Reset · hex Menu; scores/modes/help inside Menu
+- [x] Menu theme chrome for Fire / Plague / Escape + outbound links (lukesteuber.com · datapoems.io)
 - [x] Blast cycle settle resets alphas/shards/particles (no broken corpses)
 - [x] Plague specimen: Verdigris / Moss / Copper verdigris materials language
 - [x] Plague specimen slide underlay — soft, edge-free field (no hex-shaped halo)
@@ -55,6 +57,8 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Collection one-pagers: `collection/theme-*.html` + Copy HTML desk + `tools/export-collection.py`
 - [x] Production `HEXSWEEPER_ONEPAGER` (strict single theme, or scoped `allowModes` for Light/Dark plate)
 - [x] Light/Dark collection cut is one file (`theme-plate.html`) with in-file toggle
+- [x] Production chrome: BR plate · Reset · hex Menu (scores/modes/links inside Menu)
+- [x] Lab skins + classic: same BR Reset · hex Menu; scores + outbound links in Menu (no BL rail / gear)
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
 - [ ] Optional: automated smoke (desktop/mobile) in CI — currently manual / browser probes
 - [ ] Optional: `export-collection.py --check` in CI; CodePen push via codepen-prefill when published
@@ -69,4 +73,4 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 
 ## Acceptance (production)
 
-Five themes reachable; Light/Dark/Escape infinite; Fire fits the viewport with a living center boil; Plague reads as a specimen slide with distinguishable tiles; Escape is calm and legible at full-field density; finite themes default to the large board and only they show the size row; welcome once; chrome triad (stats / themes / controls); settings holds everything but themes; input and reduced-motion still work.
+Five themes reachable; Light/Dark/Escape infinite; Fire fits the viewport with a living center boil; Plague reads as a specimen slide with distinguishable tiles; Escape is calm and legible at full-field density; finite themes default to the large board and only they show the size row; welcome once; BR chrome is plate toggle (Light/Dark only) · Reset · Menu; Menu holds scores, modes, play aids, and outbound links; Fire/Plague/Escape Menu panels match theme materials; input and reduced-motion still work.
