@@ -1,0 +1,1522 @@
+/**
+ * File Purpose: Shared Hexsweeper game engine (hex grid, endless/finite boards,
+ *   dig/flag/chord, drag-pan, wheel/pinch zoom, RAF loop) with skin hooks.
+ * Primary Functions/Classes: Cell; boot(); applyViewZoom; Hexsweeper.DEFAULT_*.
+ * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless }).
+ * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, …) on window.Hexsweeper.
+ */
+(function (global) {
+  "use strict";
+
+  const SQRT3 = Math.sqrt(3);
+
+  const DEFAULT_CONFIG = {
+    easy: { radius: 4, mines: 10, cellSize: 35 },
+    medium: { radius: 7, mines: 35, cellSize: 28 },
+    hard: { radius: 10, mines: 80, cellSize: 22 },
+  };
+
+  /** Endless Soft White defaults — density by starting difficulty. */
+  const ENDLESS_DENSITY = { easy: 0.13, medium: 0.155, hard: 0.18 };
+  /** Soft cap only — viewport-driven growth; not a fixed board size. */
+  const ENDLESS_MAX_RADIUS = 160;
+  /** Extra rings beyond the camera frustum so edges never show void. */
+  const ENDLESS_VIEW_BUFFER = 4;
+
+  const DEFAULT_THEME = {
+    bg: "#e0e5ec",
+    shadowLight: "#ffffff",
+    shadowDark: "#a3b1c6",
+    covered: "#e0e5ec",
+    revealed: "#e0e5ec",
+    flag: "#ef4444",
+    text: {
+      1: "#3b82f6",
+      2: "#10b981",
+      3: "#ef4444",
+      4: "#8b5cf6",
+      5: "#f59e0b",
+      6: "#ec4899",
+      mine: "#333",
+    },
+  };
+
+  class Cell {
+    constructor(q, r) {
+      this.q = q;
+      this.r = r;
+      this.isMine = false;
+      this.revealed = false;
+      this.flagged = false;
+      this.neighborMines = 0;
+      this.x = 0;
+      this.y = 0;
+      this.path = null;
+      this.animHover = 0;
+      this.animReveal = 0;
+      this.ring = 0;
+    }
+
+    calcGeometry(centerX, centerY, size) {
+      this.x = centerX + size * SQRT3 * (this.q + this.r / 2);
+      this.y = centerY + size * 1.5 * this.r;
+      this.ring = (Math.abs(this.q) + Math.abs(this.q + this.r) + Math.abs(this.r)) / 2;
+      this.path = new Path2D();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 180) * (30 + 60 * i);
+        const vx = this.x + size * Math.cos(angle);
+        const vy = this.y + size * Math.sin(angle);
+        if (i === 0) this.path.moveTo(vx, vy);
+        else this.path.lineTo(vx, vy);
+      }
+      this.path.closePath();
+    }
+
+    hexPath(size, scale = 1) {
+      const drawSize = size * scale;
+      const p = new Path2D();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 180) * (30 + 60 * i);
+        const vx = this.x + drawSize * Math.cos(angle);
+        const vy = this.y + drawSize * Math.sin(angle);
+        if (i === 0) p.moveTo(vx, vy);
+        else p.lineTo(vx, vy);
+      }
+      p.closePath();
+      return p;
+    }
+  }
+
+  function boot(userOpts = {}) {
+    const opts = {
+      canvasId: "gameCanvas",
+      difficulty: "medium",
+      showStats: false,
+      config: DEFAULT_CONFIG,
+      theme: { ...DEFAULT_THEME, ...(userOpts.theme || {}) },
+      hooks: userOpts.hooks || {},
+      ...userOpts,
+    };
+    if (userOpts.theme && userOpts.theme.text) {
+      opts.theme.text = { ...DEFAULT_THEME.text, ...userOpts.theme.text };
+    }
+
+    const canvas = document.getElementById(opts.canvasId);
+    if (!canvas) throw new Error("Hexsweeper: canvas not found");
+    const ctx = canvas.getContext("2d");
+
+    const state = {
+      canvas,
+      ctx,
+      map: new Map(),
+      mapRadius: 0,
+      mineCount: 0,
+      cellSize: 0,
+      isGameOver: false,
+      isFirstClick: true,
+      flagsPlaced: 0,
+      timeElapsed: 0,
+      timerInterval: null,
+      hoveredKey: null,
+      currentDifficulty: opts.difficulty,
+      showStats: opts.showStats,
+      theme: opts.theme,
+      config: opts.config,
+      hooks: opts.hooks,
+      pointer: { x: 0, y: 0, nx: 0, ny: 0, active: false },
+      t0: performance.now(),
+      now: 0,
+      win: null,
+      detonator: null, // cell that triggered a loss (for blast FX)
+      centerX: 0,
+      centerY: 0,
+      boardOffset: { x: 0, y: 0 },
+      // Endless / infinite field (Soft White): expand at the frontier, no win
+      endless: !!opts.endless,
+      mineDensity:
+        opts.mineDensity != null && Number.isFinite(opts.mineDensity)
+          ? opts.mineDensity
+          : ENDLESS_DENSITY.medium,
+      maxRadius: opts.maxRadius != null ? opts.maxRadius : ENDLESS_MAX_RADIUS,
+      clearedSafe: 0,
+      bestCleared: 0,
+      hitMaxRadius: false,
+      // Camera (world → screen). Skins read these when positioning cells.
+      camX: 0,
+      camY: 0,
+      camTX: 0,
+      camTY: 0,
+      focusCell: null,
+      // Interaction: zoom (multiplies base cell size), dig vs flag, pan locks.
+      viewZoom: 1,
+      flagMode: false,
+      panning: false,
+      spaceDown: false,
+    };
+
+    try {
+      const z = parseFloat(localStorage.getItem("hexsweeper-zoom-v1") || "1");
+      if (Number.isFinite(z) && z >= 0.55 && z <= 1.9) state.viewZoom = z;
+    } catch (_) {}
+
+    try {
+      const storedBest = parseInt(localStorage.getItem("hexsweeper-endless-best") || "0", 10);
+      if (Number.isFinite(storedBest) && storedBest > 0) state.bestCleared = storedBest;
+    } catch (_) {}
+
+    const modal = document.getElementById("modal-overlay");
+    const diffOptions = document.querySelectorAll(".diff-option");
+    const statsToggle = document.getElementById("stats-toggle");
+    const statsMines = document.getElementById("stats-mines");
+    const statsTime = document.getElementById("stats-time");
+    const menuBtn = document.getElementById("menu-btn");
+    const closeBtn = document.getElementById("close-modal-btn");
+    const restartBtn = document.getElementById("restart-btn");
+
+    function openModal() {
+      if (modal) modal.classList.add("open");
+    }
+    function closeModal() {
+      if (modal) modal.classList.remove("open");
+    }
+
+    if (menuBtn) menuBtn.addEventListener("click", openModal);
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    function syncDiffButtons() {
+      if (!diffOptions.length) return;
+      diffOptions.forEach((opt) => {
+        const on = opt.dataset.val === state.currentDifficulty;
+        opt.classList.toggle("active", on);
+        opt.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+
+    if (diffOptions.length) {
+      syncDiffButtons();
+      diffOptions.forEach((opt) => {
+        opt.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const level = opt.dataset.val;
+          if (!level || !state.config[level]) return;
+          // Always rebuild so S/M/L is never a no-op highlight-only change.
+          setDifficulty(level);
+          closeModal();
+        });
+      });
+    }
+
+    if (statsToggle) {
+      statsToggle.classList.toggle("active", state.showStats);
+      statsToggle.addEventListener("click", () => {
+        state.showStats = !state.showStats;
+        statsToggle.classList.toggle("active", state.showStats);
+        updateStatsVisibility();
+      });
+    }
+
+    function updateStatsVisibility() {
+      if (!statsMines || !statsTime) return;
+      // Endless score is gameplay-critical — keep it visible even if the toggle is off.
+      const show = state.showStats || state.endless;
+      statsMines.classList.toggle("visible", show);
+      statsTime.classList.toggle("visible", show);
+      if (statsToggle) {
+        statsToggle.classList.toggle("active", state.showStats);
+        statsToggle.setAttribute("aria-checked", state.showStats ? "true" : "false");
+      }
+    }
+
+    if (restartBtn) {
+      restartBtn.addEventListener("click", () => {
+        closeModal();
+        setDifficulty(state.currentDifficulty);
+      });
+    }
+
+    function getNeighbors(q, r) {
+      const directions = [
+        { dq: 1, dr: 0 },
+        { dq: 1, dr: -1 },
+        { dq: 0, dr: -1 },
+        { dq: -1, dr: 0 },
+        { dq: -1, dr: 1 },
+        { dq: 0, dr: 1 },
+      ];
+      const neighbors = [];
+      for (const d of directions) {
+        const nKey = `${q + d.dq},${r + d.dr}`;
+        if (state.map.has(nKey)) neighbors.push(state.map.get(nKey));
+      }
+      return neighbors;
+    }
+
+    const api = {
+      get state() {
+        return state;
+      },
+      getNeighbors,
+      hexPath(cell, size, scale) {
+        return cell.hexPath(size, scale);
+      },
+      drawDefaultCell(cell, size) {
+        drawDefaultCell(cell, size);
+      },
+      setBoardOffset(x, y) {
+        state.boardOffset.x = x;
+        state.boardOffset.y = y;
+      },
+      setEndless(on, density) {
+        state.endless = !!on;
+        // Preserve an explicit density (including 0) across setDifficulty.
+        if (density != null && Number.isFinite(density)) {
+          state.mineDensity = density;
+          state._densityLocked = true;
+        } else if (state.endless) {
+          state._densityLocked = false;
+          state.mineDensity =
+            ENDLESS_DENSITY[state.currentDifficulty] != null
+              ? ENDLESS_DENSITY[state.currentDifficulty]
+              : ENDLESS_DENSITY.medium;
+        } else {
+          state._densityLocked = false;
+        }
+        setDifficulty(state.currentDifficulty);
+      },
+      setCamera(x, y) {
+        state.camX = x;
+        state.camY = y;
+        state.camTX = x;
+        state.camTY = y;
+      },
+      focusOnCell(cell, snap) {
+        if (!cell) return;
+        state.focusCell = cell;
+        const wx = state.cellSize * SQRT3 * (cell.q + cell.r / 2);
+        const wy = state.cellSize * 1.5 * cell.r;
+        state.camTX = wx;
+        state.camTY = wy;
+        if (snap) {
+          state.camX = wx;
+          state.camY = wy;
+        }
+      },
+      restart() {
+        setDifficulty(state.currentDifficulty);
+      },
+      toggleFlag(cell) {
+        if (cell) toggleFlag(cell);
+      },
+      setZoom(z, anchor) {
+        return applyViewZoom(z, anchor);
+      },
+      adjustZoom(factor, anchor) {
+        return applyViewZoom(state.viewZoom * factor, anchor);
+      },
+      setFlagMode(on) {
+        state.flagMode = !!on;
+        document.body.classList.toggle("flag-mode", state.flagMode);
+        syncCursor();
+        if (typeof state.hooks.onFlagMode === "function") state.hooks.onFlagMode(state.flagMode, api);
+        return state.flagMode;
+      },
+      toggleFlagMode() {
+        return api.setFlagMode(!state.flagMode);
+      },
+      /** Skin-driven loss/win (e.g. Escape rift catch). */
+      endGame(win, meta) {
+        if (state.isGameOver) return false;
+        if (meta && meta.detonator) state.detonator = meta.detonator;
+        if (meta && meta.reason) state.endReason = meta.reason;
+        else state.endReason = win ? "win" : "mine";
+        gameOver(!!win);
+        return true;
+      },
+      /** Debug / skin helper: dig a cell by axial key or Cell. */
+      dig(target) {
+        if (state.isGameOver) return false;
+        let cell = target;
+        if (typeof target === "string") cell = state.map.get(target);
+        else if (target && typeof target.q === "number") {
+          cell = state.map.get(`${target.q},${target.r}`) || target;
+        }
+        if (!cell || cell.revealed || cell.flagged || cell._riftTorn) return false;
+        reveal(cell);
+        return true;
+      },
+    };
+
+    function hexRing(q, r) {
+      return (Math.abs(q) + Math.abs(q + r) + Math.abs(r)) / 2;
+    }
+
+    function shuffleInPlace(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function isSafeZone(cell, safeQ, safeR) {
+      if (cell.q === safeQ && cell.r === safeR) return true;
+      const dq = cell.q - safeQ;
+      const dr = cell.r - safeR;
+      return hexRing(dq, dr) <= 1;
+    }
+
+    function recountNeighbors() {
+      state.map.forEach((cell) => {
+        if (!cell.isMine) {
+          cell.neighborMines = getNeighbors(cell.q, cell.r).filter((n) => n.isMine).length;
+        } else {
+          cell.neighborMines = 0;
+        }
+      });
+    }
+
+    function applyLayout() {
+      if (typeof state.hooks.layout === "function") {
+        state.hooks.layout(api);
+      } else if (state.endless) {
+        // Full-window viewport; camera pans the field
+        canvas.width = Math.max(320, window.innerWidth);
+        canvas.height = Math.max(320, window.innerHeight);
+      } else {
+        const boardWidth = (state.mapRadius * 2 + 1) * SQRT3 * state.cellSize;
+        const boardHeight =
+          (state.mapRadius * 2 + 1) * 1.5 * state.cellSize + 0.5 * state.cellSize;
+        canvas.width = Math.ceil(boardWidth + 40);
+        canvas.height = Math.ceil(boardHeight + 40);
+      }
+      state.centerX = canvas.width / 2 + state.boardOffset.x;
+      state.centerY = canvas.height / 2 + state.boardOffset.y;
+    }
+
+    /** Cell size for current difficulty / mode (does not mutate radius). */
+    function computeCellSize(level, mapRadius) {
+      const conf = state.config[level];
+      if (!conf) return state.cellSize || 28;
+      let cellSize = conf.cellSize;
+      if (state.endless) {
+        // Readable base size; user zoom multiplies. Pan instead of shrinking the world.
+        const phone = window.innerWidth < 500;
+        cellSize = phone ? 26 : Math.max(26, conf.cellSize + 4);
+      } else {
+        // Prefer configured sizes. Soft fit only — pan/zoom handle overflow on full-bleed.
+        const maxW = Math.max(280, window.innerWidth - 16);
+        const maxH = Math.max(280, window.innerHeight - 72);
+        const naturalW = (mapRadius * 2 + 1) * SQRT3 * cellSize;
+        const naturalH = (mapRadius * 2 + 1) * 1.5 * cellSize + 0.5 * cellSize;
+        if (naturalW > maxW * 1.08 || naturalH > maxH * 1.08) {
+          const scale = Math.min(maxW / naturalW, maxH / naturalH);
+          // Keep hexes readable; user can zoom out if the board spills.
+          cellSize = Math.max(22, cellSize * Math.max(scale, 0.72));
+        }
+        if (window.innerWidth < 500) {
+          const phoneFit = (window.innerWidth - 12) / ((mapRadius * 2 + 1) * SQRT3);
+          if (phoneFit < cellSize) cellSize = Math.max(20, phoneFit);
+        }
+      }
+      const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
+      return Math.max(12, Math.min(64, cellSize * zoom));
+    }
+
+    /**
+     * Zoom the board. When `anchor` is a canvas pixel, keep that world point under the cursor.
+     */
+    function applyViewZoom(nextZoom, anchor) {
+      const lo = 0.55;
+      const hi = 1.9;
+      const z = Math.max(lo, Math.min(hi, nextZoom));
+      if (Math.abs(z - state.viewZoom) < 0.001) return state.viewZoom;
+      const oldSize = state.cellSize || 28;
+      let worldUnder = null;
+      if (anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y) && state.endless) {
+        const wx = anchor.x - canvas.width / 2 + state.camX;
+        const wy = anchor.y - canvas.height / 2 + state.camY;
+        worldUnder = { wx, wy };
+      }
+      state.viewZoom = z;
+      try {
+        localStorage.setItem("hexsweeper-zoom-v1", String(Math.round(z * 100) / 100));
+      } catch (_) {}
+      const level = state.currentDifficulty;
+      state.cellSize = computeCellSize(level, state.mapRadius);
+      // Keep camera focus coherent when cell size changes
+      if (worldUnder && oldSize > 0) {
+        const ratio = state.cellSize / oldSize;
+        const wx = worldUnder.wx * ratio;
+        const wy = worldUnder.wy * ratio;
+        state.camX = wx - (anchor.x - canvas.width / 2);
+        state.camY = wy - (anchor.y - canvas.height / 2);
+        state.camTX = state.camX;
+        state.camTY = state.camY;
+      } else if (state.focusCell && oldSize > 0) {
+        const ratio = state.cellSize / oldSize;
+        state.camX *= ratio;
+        state.camY *= ratio;
+        state.camTX = state.camX;
+        state.camTY = state.camY;
+      }
+      state.map.forEach((cell) => {
+        cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
+      });
+      if (state.endless) ensureWorldCoverage(true);
+      if (typeof state.hooks.onZoom === "function") state.hooks.onZoom(api, { zoom: state.viewZoom });
+      syncCursor();
+      return state.viewZoom;
+    }
+
+    function syncCursor() {
+      if (!canvas) return;
+      if (state.panning) canvas.style.cursor = "grabbing";
+      else if (state.flagMode) canvas.style.cursor = "cell";
+      else if (state.hoveredKey) canvas.style.cursor = "pointer";
+      else canvas.style.cursor = state.endless ? "grab" : "crosshair";
+    }
+
+    /**
+     * Resize / reflow without wiping the run.
+     * Window resize used to call setDifficulty → full reset (fatal for endless).
+     */
+    function relayout() {
+      const level = state.currentDifficulty;
+      const conf = state.config[level];
+      if (!conf) return;
+      // Endless: keep world scale stable mid-run (only canvas / camera frame changes).
+      // Finite: may shrink slightly if the viewport got smaller.
+      if (!state.endless || state.isFirstClick) {
+        state.cellSize = computeCellSize(level, state.mapRadius || conf.radius);
+      }
+      applyLayout();
+      // Geometry is recomputed every frame by skins (beforeFrame); keep base paths
+      // coherent for any default draw / debug paths.
+      state.map.forEach((cell) => {
+        cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
+      });
+      if (state.endless) ensureWorldCoverage(true);
+      if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
+    }
+
+    function setDifficulty(level) {
+      const conf = state.config[level];
+      if (!conf) {
+        console.warn("Hexsweeper: unknown difficulty", level);
+        return;
+      }
+      state.currentDifficulty = level;
+      // Finite modes use configured radius; endless starts small then fills the viewport.
+      state.mapRadius = state.endless ? Math.max(6, conf.radius) : conf.radius;
+      state.mineCount = conf.mines;
+      if (state.endless) {
+        if (!state._densityLocked) {
+          state.mineDensity =
+            ENDLESS_DENSITY[level] != null ? ENDLESS_DENSITY[level] : ENDLESS_DENSITY.medium;
+        }
+        // Score / mines matter in endless — surface the stats strip
+        if (!state.showStats) {
+          state.showStats = true;
+          if (statsToggle) {
+            statsToggle.classList.add("active");
+            statsToggle.setAttribute("aria-checked", "true");
+          }
+          updateStatsVisibility();
+        }
+      }
+      state.cellSize = computeCellSize(level, state.mapRadius);
+
+      applyLayout();
+      syncDiffButtons();
+      resetGame();
+      // Endless: grow the honeycomb until it fills the canvas (+ buffer)
+      if (state.endless) ensureWorldCoverage(true);
+    }
+
+    function resetGame() {
+      state.map.clear();
+      state.camX = 0;
+      state.camY = 0;
+      state.camTX = 0;
+      state.camTY = 0;
+      state.focusCell = null;
+      state.clearedSafe = 0;
+      state.hitMaxRadius = false;
+      state.centerX = canvas.width / 2 + state.boardOffset.x;
+      state.centerY = canvas.height / 2 + state.boardOffset.y;
+
+      for (let q = -state.mapRadius; q <= state.mapRadius; q++) {
+        const r1 = Math.max(-state.mapRadius, -q - state.mapRadius);
+        const r2 = Math.min(state.mapRadius, -q + state.mapRadius);
+        for (let r = r1; r <= r2; r++) {
+          const cell = new Cell(q, r);
+          cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
+          state.map.set(`${q},${r}`, cell);
+        }
+      }
+
+      state.isGameOver = false;
+      state.isFirstClick = true;
+      state.flagsPlaced = 0;
+      state.timeElapsed = 0;
+      state.hoveredKey = null;
+      state.win = null;
+      state.detonator = null;
+      // Endless: mineCount filled after first click by density
+      if (state.endless) state.mineCount = 0;
+      else {
+        const conf = state.config[state.currentDifficulty];
+        if (conf) state.mineCount = conf.mines;
+      }
+      stopTimer();
+      updateUI();
+      if (typeof state.hooks.onReset === "function") state.hooks.onReset(api);
+    }
+
+    function noteCleared(n) {
+      if (n <= 0) return;
+      state.clearedSafe += n;
+      if (state.endless && state.clearedSafe > state.bestCleared) {
+        state.bestCleared = state.clearedSafe;
+        try {
+          localStorage.setItem("hexsweeper-endless-best", String(state.bestCleared));
+        } catch (_) {}
+      }
+    }
+
+    function placeMines(safeQ, safeR) {
+      const keys = Array.from(state.map.keys());
+      shuffleInPlace(keys);
+      let placed = 0;
+
+      if (state.endless) {
+        const density =
+          state.mineDensity != null && Number.isFinite(state.mineDensity)
+            ? state.mineDensity
+            : ENDLESS_DENSITY.medium;
+        for (const key of keys) {
+          const cell = state.map.get(key);
+          if (isSafeZone(cell, safeQ, safeR)) continue;
+          if (Math.random() < density) {
+            cell.isMine = true;
+            placed++;
+          }
+        }
+        // Guarantee at least a few mines on tiny boards
+        if (placed < 3 && keys.length > 12) {
+          for (const key of keys) {
+            const cell = state.map.get(key);
+            if (cell.isMine || isSafeZone(cell, safeQ, safeR)) continue;
+            cell.isMine = true;
+            placed++;
+            if (placed >= 3) break;
+          }
+        }
+      } else {
+        const target = state.mineCount;
+        for (const key of keys) {
+          if (placed >= target) break;
+          const cell = state.map.get(key);
+          if (isSafeZone(cell, safeQ, safeR)) continue;
+          cell.isMine = true;
+          placed++;
+        }
+      }
+      state.mineCount = placed;
+      recountNeighbors();
+    }
+
+    /**
+     * Grow the hex field by one or more rings (endless mode).
+     * New cells get mines at mineDensity; neighbor counts refresh.
+     */
+    function expandMap(newRadius) {
+      const cap = state.maxRadius || ENDLESS_MAX_RADIUS;
+      const wanted = newRadius;
+      newRadius = Math.min(newRadius, cap);
+      if (newRadius <= state.mapRadius) {
+        if (wanted > cap && !state.hitMaxRadius) {
+          state.hitMaxRadius = true;
+          if (typeof state.hooks.onMaxRadius === "function") {
+            state.hooks.onMaxRadius(api, { radius: state.mapRadius, cap });
+          }
+        }
+        return 0;
+      }
+      const oldR = state.mapRadius;
+      const fresh = [];
+      for (let R = oldR + 1; R <= newRadius; R++) {
+        for (let q = -R; q <= R; q++) {
+          const r1 = Math.max(-R, -q - R);
+          const r2 = Math.min(R, -q + R);
+          for (let r = r1; r <= r2; r++) {
+            if (hexRing(q, r) !== R) continue;
+            const key = `${q},${r}`;
+            if (state.map.has(key)) continue;
+            const cell = new Cell(q, r);
+            cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
+            state.map.set(key, cell);
+            fresh.push(cell);
+          }
+        }
+      }
+      state.mapRadius = newRadius;
+
+      if (!state.isFirstClick && fresh.length) {
+        const density =
+          state.mineDensity != null && Number.isFinite(state.mineDensity)
+            ? state.mineDensity
+            : ENDLESS_DENSITY.medium;
+        let added = 0;
+        // Freeze numbers on already-revealed cells: never place a mine adjacent
+        // to a revealed cell, and only recount unrevealed cells afterward.
+        const revealedKeys = new Set();
+        state.map.forEach((c, k) => {
+          if (c.revealed) revealedKeys.add(k);
+        });
+        // Eligible = not touching open (safe-band cells are forced clean).
+        // Boost density on the rest so overall field density does not drift down
+        // as the frontier expands (safe band would otherwise dilute mines).
+        const eligible = [];
+        for (const cell of fresh) {
+          const touchesOpen = getNeighbors(cell.q, cell.r).some((n) => n.revealed);
+          if (!touchesOpen) eligible.push(cell);
+        }
+        const safeBand = fresh.length - eligible.length;
+        const boost =
+          eligible.length > 0 && safeBand > 0
+            ? Math.min(0.42, density * (1 + (safeBand / fresh.length) * 1.35))
+            : density;
+        shuffleInPlace(eligible);
+        for (const cell of eligible) {
+          if (Math.random() < boost) {
+            cell.isMine = true;
+            added++;
+          }
+        }
+        state.mineCount += added;
+        // Recount only cells that were not revealed before this expand
+        state.map.forEach((cell, key) => {
+          if (revealedKeys.has(key)) return;
+          if (!cell.isMine) {
+            cell.neighborMines = getNeighbors(cell.q, cell.r).filter((n) => n.isMine).length;
+          } else {
+            cell.neighborMines = 0;
+          }
+        });
+      }
+
+      if (newRadius >= cap && !state.hitMaxRadius) {
+        state.hitMaxRadius = true;
+        if (typeof state.hooks.onMaxRadius === "function") {
+          state.hooks.onMaxRadius(api, { radius: state.mapRadius, cap });
+        }
+      }
+
+      if (typeof state.hooks.onExpand === "function") {
+        state.hooks.onExpand(api, { oldRadius: oldR, newRadius, added: fresh.length });
+      }
+      updateUI();
+      return fresh.length;
+    }
+
+    /**
+     * Minimum map radius so every screen corner (plus buffer) has hex cells.
+     * This is what makes the field feel infinite on the canvas — not a floating disc.
+     */
+    function radiusNeededForViewport() {
+      const size = state.cellSize || 28;
+      if (size <= 0) return state.mapRadius || 8;
+      const w = Math.max(320, canvas.width || window.innerWidth || 800);
+      const h = Math.max(320, canvas.height || window.innerHeight || 600);
+      const camX = state.camX || 0;
+      const camY = state.camY || 0;
+      const pad = size * (ENDLESS_VIEW_BUFFER + 1);
+      const samples = [
+        [pad, pad],
+        [w * 0.5, pad],
+        [w - pad, pad],
+        [pad, h * 0.5],
+        [w - pad, h * 0.5],
+        [pad, h - pad],
+        [w * 0.5, h - pad],
+        [w - pad, h - pad],
+      ];
+      let need = 0;
+      for (const [sx, sy] of samples) {
+        // Inverse of beforeFrame endless layout (no parallax): world = screen - center + cam
+        const wx = sx - w / 2 + camX;
+        const wy = sy - h / 2 + camY;
+        const rFloat = wy / (size * 1.5);
+        const qFloat = wx / (size * SQRT3) - rFloat / 2;
+        const hr = hexRound(qFloat, rFloat);
+        need = Math.max(need, hexRing(hr.q, hr.r));
+      }
+      return need + ENDLESS_VIEW_BUFFER;
+    }
+
+    /**
+     * Grow the world until the viewport (and optionally the dig frontier) is covered.
+     * @param {boolean} fillHard — allow larger jumps (boot / resize)
+     */
+    function ensureWorldCoverage(fillHard) {
+      if (!state.endless || state.isGameOver) return 0;
+      let want = radiusNeededForViewport();
+      // Also keep headroom past any revealed cell so dig never hits a hard rim
+      if (!state.isFirstClick) {
+        state.map.forEach((c) => {
+          if (c.revealed) want = Math.max(want, c.ring + ENDLESS_VIEW_BUFFER);
+        });
+      }
+      if (want <= state.mapRadius) return 0;
+      const cap = state.maxRadius || ENDLESS_MAX_RADIUS;
+      const step = fillHard ? 8 : 4;
+      let added = 0;
+      let guard = 0;
+      while (state.mapRadius < want && state.mapRadius < cap && guard < 24) {
+        const next = Math.min(want, state.mapRadius + step, cap);
+        added += expandMap(next);
+        guard++;
+        if (state.mapRadius < next) break; // hit expand no-op
+      }
+      return added;
+    }
+
+    /** @deprecated path — use ensureWorldCoverage; kept as alias for clarity */
+    function maybeExpandFrontier() {
+      ensureWorldCoverage(false);
+    }
+
+    function stepCamera() {
+      if (!state.endless) return;
+      // Smooth pan toward focus (last reveal / click)
+      state.camX += (state.camTX - state.camX) * 0.08;
+      state.camY += (state.camTY - state.camY) * 0.08;
+      // As the camera moves, grow the honeycomb so the canvas never shows empty space
+      if (Math.abs(state.camTX - state.camX) > 0.5 || Math.abs(state.camTY - state.camY) > 0.5) {
+        ensureWorldCoverage(false);
+      }
+    }
+
+    function pixelToHex(x, y) {
+      const px = x - state.centerX;
+      const py = y - state.centerY;
+      const q_float = ((SQRT3 / 3) * px - (1 / 3) * py) / state.cellSize;
+      const r_float = ((2 / 3) * py) / state.cellSize;
+      return hexRound(q_float, r_float);
+    }
+
+    function hexRound(q, r) {
+      let s = -q - r;
+      let rq = Math.round(q);
+      let rr = Math.round(r);
+      let rs = Math.round(s);
+      const q_diff = Math.abs(rq - q);
+      const r_diff = Math.abs(rr - r);
+      const s_diff = Math.abs(rs - s);
+      if (q_diff > r_diff && q_diff > s_diff) rq = -rr - rs;
+      else if (r_diff > s_diff) rr = -rq - rs;
+      return { q: rq, r: rr };
+    }
+
+    function canvasPointFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      let clientX = e.clientX;
+      let clientY = e.clientY;
+      if (clientX == null && e.touches && e.touches[0]) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+      let x = (clientX - rect.left) * scaleX;
+      let y = (clientY - rect.top) * scaleY;
+      if (typeof state.hooks.transformPoint === "function") {
+        const t = state.hooks.transformPoint({ x, y }, api);
+        if (t) {
+          x = t.x;
+          y = t.y;
+        }
+      }
+      return { x, y };
+    }
+
+    function cellAtPixel(x, y) {
+      if (typeof state.hooks.hitTest === "function") {
+        return state.hooks.hitTest(x, y, api);
+      }
+      // Path hit-test when skins move cells (parallax / warp)
+      if (state.hooks.usePathHitTest) {
+        let cells = Array.from(state.map.values());
+        if (state.endless && cells.length > 200) {
+          const pad = state.cellSize * 3;
+          cells = cells.filter(
+            (c) =>
+              !c._offscreen &&
+              c.x > x - pad &&
+              c.x < x + pad &&
+              c.y > y - pad &&
+              c.y < y + pad
+          );
+        }
+        // front-to-back: higher ring first
+        cells.sort((a, b) => b.ring - a.ring || b.y - a.y);
+        for (const cell of cells) {
+          if (cell._riftTorn) continue;
+          const scale = cell._depthScale || 1;
+          const path = cell.hexPath(state.cellSize, scale);
+          if (ctx.isPointInPath(path, x, y)) return cell;
+        }
+        return null;
+      }
+      const coords = pixelToHex(x, y);
+      return state.map.get(`${coords.q},${coords.r}`) || null;
+    }
+
+    function getCellAtInput(e) {
+      const p = canvasPointFromEvent(e);
+      state.pointer.x = p.x;
+      state.pointer.y = p.y;
+      state.pointer.nx = (p.x / canvas.width) * 2 - 1;
+      state.pointer.ny = (p.y / canvas.height) * 2 - 1;
+      state.pointer.active = true;
+      return cellAtPixel(p.x, p.y);
+    }
+
+    let lastClickTime = 0;
+    let lastClickKey = null;
+    let suppressTapReveal = false;
+    let digSession = null; // { x, y, camX, camY, button, panned }
+    let pinchStartDist = 0;
+    let pinchStartZoom = 1;
+
+    function handleMouseDown(e) {
+      if (state.isGameOver && e.button === 0 && !state.spaceDown) return;
+      const p = canvasPointFromEvent(e);
+      state.pointer.x = p.x;
+      state.pointer.y = p.y;
+      state.pointer.nx = (p.x / canvas.width) * 2 - 1;
+      state.pointer.ny = (p.y / canvas.height) * 2 - 1;
+      state.pointer.active = true;
+
+      // Middle-click or Space+drag → pan. Right / Ctrl / Cmd → flag.
+      if (e.button === 1 || (e.button === 0 && state.spaceDown)) {
+        e.preventDefault();
+        digSession = {
+          x: e.clientX,
+          y: e.clientY,
+          camX: state.camX,
+          camY: state.camY,
+          button: e.button,
+          panned: true,
+          forcePan: true,
+        };
+        state.panning = true;
+        syncCursor();
+        return;
+      }
+      if (e.button === 2 || (e.button === 0 && (e.ctrlKey || e.metaKey))) {
+        e.preventDefault();
+        const cell = cellAtPixel(p.x, p.y);
+        if (cell) toggleFlag(cell);
+        return;
+      }
+      if (e.button !== 0) return;
+      digSession = {
+        x: e.clientX,
+        y: e.clientY,
+        camX: state.camX,
+        camY: state.camY,
+        button: 0,
+        panned: false,
+        forcePan: false,
+      };
+    }
+
+    function handleMouseMove(e) {
+      const p = canvasPointFromEvent(e);
+      state.pointer.x = p.x;
+      state.pointer.y = p.y;
+      state.pointer.nx = (p.x / canvas.width) * 2 - 1;
+      state.pointer.ny = (p.y / canvas.height) * 2 - 1;
+      state.pointer.active = true;
+
+      if (digSession && (e.buttons & 1 || digSession.forcePan || digSession.button === 1)) {
+        const dx = e.clientX - digSession.x;
+        const dy = e.clientY - digSession.y;
+        const dist = Math.hypot(dx, dy);
+        const panThreshold = digSession.forcePan || state.endless ? 8 : 18;
+        if (digSession.panned || dist > panThreshold) {
+          if (!digSession.panned) {
+            digSession.panned = true;
+            state.panning = true;
+            state.hoveredKey = null;
+            syncCursor();
+          }
+          // Absolute pan from drag origin (stable, no acceleration drift)
+          state.camX = digSession.camX - dx;
+          state.camY = digSession.camY - dy;
+          state.camTX = state.camX;
+          state.camTY = state.camY;
+          state.focusCell = null;
+          if (state.endless) ensureWorldCoverage(false);
+          return;
+        }
+      }
+
+      if (state.isGameOver) {
+        syncCursor();
+        return;
+      }
+      const cell = cellAtPixel(p.x, p.y);
+      state.hoveredKey = cell ? `${cell.q},${cell.r}` : null;
+      syncCursor();
+    }
+
+    function handleMouseUp(e) {
+      const wasPan = digSession && digSession.panned;
+      digSession = null;
+      state.panning = false;
+      syncCursor();
+      if (wasPan) return;
+      if (state.isGameOver) return;
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || state.spaceDown) return;
+      const cell = getCellAtInput(e);
+      if (!cell) return;
+      const now = Date.now();
+      const key = `${cell.q},${cell.r}`;
+      if (state.flagMode) {
+        if (!cell.revealed) toggleFlag(cell);
+        return;
+      }
+      // Chord only when double-clicking the *same* revealed cell
+      if (now - lastClickTime < 300 && cell.revealed && key === lastClickKey) chord(cell);
+      else if (!cell.revealed && !cell.flagged) reveal(cell);
+      else if (cell.revealed) {
+        // Single click on a satisfied number also chords (faster than double-click)
+        const flags = getNeighbors(cell.q, cell.r).filter((n) => n.flagged).length;
+        if (flags === cell.neighborMines && cell.neighborMines > 0) chord(cell);
+      }
+      lastClickTime = now;
+      lastClickKey = key;
+    }
+
+    let longPressTimer;
+    let touchStartPos;
+    let touchStartKey = null;
+    let touchMoved = false;
+    let touchFlagged = false;
+    let touchPanOrigin = null;
+
+    function handleTouchStart(e) {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        clearTimeout(longPressTimer);
+        const a = e.touches[0];
+        const b = e.touches[1];
+        pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+        pinchStartZoom = state.viewZoom;
+        touchMoved = true;
+        suppressTapReveal = true;
+        touchStartPos = null;
+        return;
+      }
+      if (state.isGameOver) return;
+      touchFlagged = false;
+      touchMoved = false;
+      suppressTapReveal = false;
+      const cell = getCellAtInput(e);
+      touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      touchPanOrigin = { camX: state.camX, camY: state.camY };
+      if (cell) {
+        touchStartKey = `${cell.q},${cell.r}`;
+        state.hoveredKey = touchStartKey;
+        // Long-press flags on touch (no separate mode required)
+        longPressTimer = setTimeout(() => {
+          if (navigator.vibrate) navigator.vibrate(50);
+          toggleFlag(cell);
+          touchFlagged = true;
+          suppressTapReveal = true;
+          state.hoveredKey = null;
+        }, 420);
+      } else {
+        touchStartKey = null;
+      }
+    }
+    function handleTouchMove(e) {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        clearTimeout(longPressTimer);
+        const a = e.touches[0];
+        const b = e.touches[1];
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+        const mid = canvasPointFromEvent({
+          clientX: (a.clientX + b.clientX) / 2,
+          clientY: (a.clientY + b.clientY) / 2,
+        });
+        applyViewZoom(pinchStartZoom * (dist / pinchStartDist), mid);
+        touchMoved = true;
+        suppressTapReveal = true;
+        state.panning = false;
+        return;
+      }
+      if (!touchStartPos) return;
+      const dx = e.touches[0].clientX - touchStartPos.x;
+      const dy = e.touches[0].clientY - touchStartPos.y;
+      if (Math.hypot(dx, dy) > 10) {
+        touchMoved = true;
+        clearTimeout(longPressTimer);
+        state.hoveredKey = null;
+        state.panning = true;
+        // Pan the camera (endless + finite Fire full-bleed both benefit)
+        if (touchPanOrigin) {
+          state.camX = touchPanOrigin.camX - dx;
+          state.camY = touchPanOrigin.camY - dy;
+          state.camTX = state.camX;
+          state.camTY = state.camY;
+          state.focusCell = null;
+          if (state.endless) ensureWorldCoverage(false);
+        }
+        const p = canvasPointFromEvent(e);
+        state.pointer.x = p.x;
+        state.pointer.y = p.y;
+        state.pointer.nx = (p.x / canvas.width) * 2 - 1;
+        state.pointer.ny = (p.y / canvas.height) * 2 - 1;
+        state.pointer.active = true;
+        syncCursor();
+        return;
+      }
+      handleMouseMove(e);
+    }
+    function handleTouchEnd(e) {
+      e.preventDefault();
+      clearTimeout(longPressTimer);
+      state.panning = false;
+      syncCursor();
+      if (e.touches && e.touches.length > 0) {
+        // Still one finger down after pinch — ignore residual tap
+        suppressTapReveal = true;
+        return;
+      }
+      if (suppressTapReveal || touchFlagged || touchMoved) {
+        suppressTapReveal = false;
+        touchFlagged = false;
+        touchMoved = false;
+        state.hoveredKey = null;
+        touchStartPos = null;
+        touchStartKey = null;
+        touchPanOrigin = null;
+        return;
+      }
+      const key = touchStartKey || state.hoveredKey;
+      if (key && !state.isGameOver) {
+        const cell = state.map.get(key);
+        if (cell) {
+          if (state.flagMode) {
+            if (!cell.revealed) toggleFlag(cell);
+          } else if (!cell.flagged && !cell.revealed) reveal(cell);
+          else if (cell.revealed) chord(cell);
+        }
+      }
+      state.hoveredKey = null;
+      touchStartPos = null;
+      touchStartKey = null;
+      touchPanOrigin = null;
+      touchMoved = false;
+    }
+
+    function handleWheel(e) {
+      e.preventDefault();
+      const anchor = canvasPointFromEvent(e);
+      const factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+      applyViewZoom(state.viewZoom * factor, anchor);
+    }
+
+    function reveal(cell) {
+      if (!cell || cell._riftTorn) return;
+      if (state.isFirstClick) {
+        startTimer();
+        placeMines(cell.q, cell.r);
+        state.isFirstClick = false;
+      }
+      cell.revealed = true;
+      if (!cell.isMine) noteCleared(1);
+      if (typeof state.hooks.onReveal === "function") state.hooks.onReveal(cell, api);
+      api.focusOnCell(cell, false);
+      if (cell.isMine) {
+        state.detonator = cell;
+        gameOver(false);
+      } else {
+        openFrontier(cell);
+        checkWin();
+      }
+    }
+
+    /** Flood empties, then grow the infinite field and re-flood into new rings. */
+    function openFrontier(seed) {
+      if (seed && seed.neighborMines === 0) floodFrom(seed);
+      if (!state.endless) return;
+      for (let i = 0; i < 8; i++) {
+        const r0 = state.mapRadius;
+        ensureWorldCoverage(false);
+        if (state.mapRadius === r0) break;
+        // New empty cells adjacent to opened zeros should keep cascading
+        const seeds = [];
+        state.map.forEach((c) => {
+          if (c.revealed && !c.isMine && c.neighborMines === 0) seeds.push(c);
+        });
+        for (const s of seeds) floodFrom(s);
+      }
+    }
+
+    function floodFrom(startCell) {
+      const stack = [startCell];
+      const visited = new Set([`${startCell.q},${startCell.r}`]);
+      while (stack.length > 0) {
+        const current = stack.pop();
+        for (const n of getNeighbors(current.q, current.r)) {
+          const k = `${n.q},${n.r}`;
+          if (!visited.has(k) && !n.revealed && !n.flagged && !n.isMine && !n._riftTorn) {
+            visited.add(k);
+            n.revealed = true;
+            noteCleared(1);
+            if (typeof state.hooks.onReveal === "function") state.hooks.onReveal(n, api);
+            if (n.neighborMines === 0) stack.push(n);
+          }
+        }
+      }
+    }
+
+    function toggleFlag(cell) {
+      if (!cell || cell.revealed || cell._riftTorn) return;
+      cell.flagged = !cell.flagged;
+      state.flagsPlaced += cell.flagged ? 1 : -1;
+      updateUI();
+      if (typeof state.hooks.onFlag === "function") state.hooks.onFlag(cell, api);
+    }
+
+    function chord(cell) {
+      const neighbors = getNeighbors(cell.q, cell.r);
+      const flagged = neighbors.filter((n) => n.flagged).length;
+      if (flagged === cell.neighborMines) {
+        let hitMine = false;
+        for (const n of neighbors) {
+          if (!n.revealed && !n.flagged && !n._riftTorn) {
+            n.revealed = true;
+            if (!n.isMine) noteCleared(1);
+            if (typeof state.hooks.onReveal === "function") state.hooks.onReveal(n, api);
+            if (n.isMine) {
+              hitMine = true;
+              if (!state.detonator) state.detonator = n;
+            } else if (n.neighborMines === 0) floodFrom(n);
+          }
+        }
+        api.focusOnCell(cell, false);
+        if (hitMine) gameOver(false);
+        else {
+          openFrontier(null);
+          checkWin();
+        }
+      }
+    }
+
+    function checkWin() {
+      // Endless Soft White: never "wins" — the field keeps expanding
+      if (state.endless) {
+        updateUI();
+        return;
+      }
+      let revealed = 0;
+      state.map.forEach((c) => {
+        if (c.revealed) revealed++;
+      });
+      if (revealed === state.map.size - state.mineCount) gameOver(true);
+    }
+
+    function gameOver(win) {
+      state.isGameOver = true;
+      state.win = win;
+      stopTimer();
+      const reason = state.endReason || (win ? "win" : "mine");
+      // Rift catch: don't spoil the board with revealed mines — the tear is the death.
+      if (!win && reason !== "rift")
+        state.map.forEach((c) => {
+          if (c.isMine && !c.flagged) c.revealed = true;
+        });
+      else if (win) {
+        state.map.forEach((c) => {
+          if (c.isMine) c.flagged = true;
+        });
+        state.flagsPlaced = state.mineCount;
+        updateUI();
+        state.detonator = null;
+      }
+      if (typeof state.hooks.onGameOver === "function") {
+        state.hooks.onGameOver(win, api, { detonator: state.detonator, reason });
+      }
+    }
+
+    function startTimer() {
+      if (state.timerInterval) return;
+      state.timeElapsed = 0;
+      state.timerInterval = setInterval(() => {
+        state.timeElapsed++;
+        updateUI();
+      }, 1000);
+    }
+    function stopTimer() {
+      clearInterval(state.timerInterval);
+      state.timerInterval = null;
+    }
+
+    function updateUI() {
+      if (!statsMines || !statsTime) return;
+      if (state.endless) {
+        // Mines left · cells cleared (score); title includes best
+        const left = Math.max(0, state.mineCount - state.flagsPlaced);
+        statsMines.innerText = left >= 100 ? String(left) : left.toString().padStart(2, "0");
+        const score = state.clearedSafe || 0;
+        statsTime.innerText =
+          score >= 1000 ? String(score) : score.toString().padStart(3, "0");
+        statsMines.title = "Mines remaining (unflagged estimate)";
+        statsMines.setAttribute("data-label", "mines");
+        const best = state.bestCleared || 0;
+        statsTime.title =
+          best > score
+            ? `Safe cells cleared · best ${best}`
+            : best > 0
+              ? `Safe cells cleared · best ${best}`
+              : "Safe cells cleared (score)";
+        statsTime.setAttribute("data-label", best > 0 ? `best ${best}` : "cleared");
+      } else {
+        const left = Math.max(0, state.mineCount - state.flagsPlaced);
+        statsMines.innerText = left.toString().padStart(2, "0");
+        statsTime.innerText = Math.min(999, state.timeElapsed).toString().padStart(3, "0");
+        statsMines.title = "Mines remaining";
+        statsTime.title = "Time";
+        statsMines.setAttribute("data-label", "mines");
+        statsTime.setAttribute("data-label", "time");
+      }
+    }
+
+    function drawDefaultCell(cell, size) {
+      const T = state.theme;
+      const scale = 0.92 + cell.animHover * 0.05;
+      const drawPath = cell.hexPath(size, scale);
+      const drawSize = size * scale;
+
+      ctx.fillStyle = cell.revealed ? T.revealed || T.covered : T.covered;
+      ctx.fill(drawPath);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      if (cell.animReveal < 0.99) {
+        const opacity = 1 - cell.animReveal;
+        ctx.globalAlpha = opacity;
+        ctx.strokeStyle = T.shadowLight;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 3; i <= 5; i++) {
+          const angle = (Math.PI / 180) * (30 + 60 * i);
+          const vx = cell.x + drawSize * Math.cos(angle);
+          const vy = cell.y + drawSize * Math.sin(angle);
+          if (i === 3) ctx.moveTo(vx, vy);
+          else ctx.lineTo(vx, vy);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = T.shadowDark;
+        ctx.beginPath();
+        for (let i = 0; i <= 2; i++) {
+          const angle = (Math.PI / 180) * (30 + 60 * i);
+          const vx = cell.x + drawSize * Math.cos(angle);
+          const vy = cell.y + drawSize * Math.sin(angle);
+          if (i === 0) ctx.moveTo(vx, vy);
+          else ctx.lineTo(vx, vy);
+        }
+        ctx.stroke();
+      }
+
+      if (cell.animReveal > 0.01) {
+        ctx.globalAlpha = cell.animReveal;
+        ctx.strokeStyle = T.pressedDark || "#c8d0d9";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 3; i <= 5; i++) {
+          const angle = (Math.PI / 180) * (30 + 60 * i);
+          const vx = cell.x + drawSize * Math.cos(angle);
+          const vy = cell.y + drawSize * Math.sin(angle);
+          if (i === 3) ctx.moveTo(vx, vy);
+          else ctx.lineTo(vx, vy);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = T.pressedLight || "#ffffff";
+        ctx.beginPath();
+        for (let i = 0; i <= 2; i++) {
+          const angle = (Math.PI / 180) * (30 + 60 * i);
+          const vx = cell.x + drawSize * Math.cos(angle);
+          const vy = cell.y + drawSize * Math.sin(angle);
+          if (i === 0) ctx.moveTo(vx, vy);
+          else ctx.lineTo(vx, vy);
+        }
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 1;
+
+      if (cell.animReveal > 0.1) {
+        ctx.globalAlpha = cell.animReveal;
+        if (cell.isMine) {
+          ctx.fillStyle = T.text.mine;
+          ctx.beginPath();
+          ctx.arc(cell.x, cell.y, size * 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (cell.neighborMines > 0) {
+          ctx.fillStyle = T.text[cell.neighborMines] || "#333";
+          ctx.font = `700 ${size}px "Segoe UI", system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(cell.neighborMines, cell.x, cell.y + size * 0.05);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      if (cell.flagged && !cell.revealed) {
+        ctx.fillStyle = T.flag;
+        ctx.font = `bold ${size}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("!", cell.x, cell.y + size * 0.1);
+      }
+    }
+
+    function updateCell(cell) {
+      const isHovered = state.hoveredKey === `${cell.q},${cell.r}` && !state.isGameOver;
+      cell.animHover += ((isHovered ? 1 : 0) - cell.animHover) * 0.2;
+      cell.animReveal += ((cell.revealed ? 1 : 0) - cell.animReveal) * 0.15;
+    }
+
+    function gameLoop(ts) {
+      state.now = ts - state.t0;
+      stepCamera();
+      // Periodic coverage check (camera settled / first frames after boot)
+      if (state.endless && (ts | 0) % 8 === 0) ensureWorldCoverage(false);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (typeof state.hooks.beforeFrame === "function") state.hooks.beforeFrame(ctx, api);
+
+      // Draw far rings first for depth skins that sort
+      let cells = Array.from(state.map.values());
+      // Endless: skip off-screen tiles for perf when the field gets huge.
+      // beforeFrame already set screen-space x/y (camera-adjusted).
+      if (state.endless && cells.length > 200) {
+        const pad = state.cellSize * 4;
+        const w = canvas.width;
+        const h = canvas.height;
+        cells = cells.filter(
+          (c) => c.x > -pad && c.y > -pad && c.x < w + pad && c.y < h + pad
+        );
+      }
+      if (state.hooks.sortCells) cells.sort(state.hooks.sortCells);
+      else cells.sort((a, b) => a.ring - b.ring || a.y - b.y);
+
+      for (const cell of cells) {
+        updateCell(cell);
+        if (typeof state.hooks.drawCell === "function") state.hooks.drawCell(ctx, cell, state.cellSize, api);
+        else drawDefaultCell(cell, state.cellSize);
+        if (typeof state.hooks.decorateCell === "function")
+          state.hooks.decorateCell(ctx, cell, state.cellSize, api);
+      }
+
+      if (typeof state.hooks.afterFrame === "function") state.hooks.afterFrame(ctx, api);
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("mouseup", (e) => {
+      if (digSession) handleMouseUp(e);
+    });
+    canvas.addEventListener("mouseout", () => {
+      if (!digSession) {
+        state.hoveredKey = null;
+        state.pointer.active = false;
+        syncCursor();
+      }
+    });
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+    canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+    canvas.addEventListener("touchcancel", handleTouchEnd, { passive: false });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+    // Never reset the run on viewport change — endless depends on this.
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => relayout(), 80);
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+      if (e.code === "Space") {
+        state.spaceDown = true;
+        if (!e.repeat) e.preventDefault();
+        syncCursor();
+      }
+      if (e.key === "Escape") {
+        closeModal();
+      }
+      if ((e.key === "+" || e.key === "=") && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        applyViewZoom(state.viewZoom * 1.1, {
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+        });
+      }
+      if ((e.key === "-" || e.key === "_") && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        applyViewZoom(state.viewZoom / 1.1, {
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+        });
+      }
+      if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey) {
+        api.toggleFlagMode();
+      }
+      if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey) {
+        if (!modal || !modal.classList.contains("open")) {
+          setDifficulty(state.currentDifficulty);
+        }
+      }
+    });
+    window.addEventListener("keyup", (e) => {
+      if (e.code === "Space") {
+        state.spaceDown = false;
+        syncCursor();
+      }
+    });
+
+    updateStatsVisibility();
+    setDifficulty(state.currentDifficulty);
+    // Re-apply persisted zoom after first layout
+    if (Math.abs(state.viewZoom - 1) > 0.01) {
+      applyViewZoom(state.viewZoom);
+    }
+    syncCursor();
+    requestAnimationFrame(gameLoop);
+
+    // Expose relayout for skins / debug
+    api.relayout = relayout;
+
+    return api;
+  }
+
+  global.Hexsweeper = { boot, DEFAULT_THEME, DEFAULT_CONFIG, SQRT3 };
+})(typeof window !== "undefined" ? window : globalThis);

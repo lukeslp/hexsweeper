@@ -1,0 +1,91 @@
+{
+  "title": "Hexsweeper Lab",
+  "note": "Dormant prior art: experimental skins over core.js. Production play is index.html with three modes only (White / Fire / Plague) — not this catalog.",
+  "production": {
+    "file": "index.html",
+    "modes": ["white", "fire", "plague"],
+    "url": "https://dr.eamer.dev/games/hexsweeper/"
+  },
+  "skins": [
+    {
+      "id": "classic",
+      "file": "classic.html",
+      "name": "Classic Neumorph",
+      "tag": "baseline",
+      "blurb": "Original soft raised honeycomb — the control sample.",
+      "techniques": ["neumorphism", "hover scale", "reveal press"]
+    },
+    {
+      "id": "particle-bloom",
+      "file": "skins/particle-bloom.html",
+      "name": "Particle Bloom",
+      "tag": "particles",
+      "blurb": "Ambient dust field; cells burst seed particles on reveal.",
+      "techniques": ["particle field", "emit on reveal", "additive bloom"]
+    },
+    {
+      "id": "glass-lens",
+      "file": "skins/glass-lens.html",
+      "name": "Glass Magnifier",
+      "tag": "lensing",
+      "blurb": "Frostpane tokens + cursor-following glass lens with radial distortion.",
+      "techniques": ["backdrop blur", "magnifier lens", "frosted glass materials"]
+    },
+    {
+      "id": "parallax-depth",
+      "file": "skins/parallax-depth.html",
+      "name": "Parallax Rings",
+      "tag": "depth",
+      "blurb": "Lab copy of ring-depth + pointer parallax. Production Fire mode lives in index.html.",
+      "techniques": ["ring depth", "pointer parallax", "theme cycle", "sorted draw order"]
+    },
+    {
+      "id": "brass-plaque",
+      "file": "skins/brass-plaque.html",
+      "name": "Brass Plaque",
+      "tag": "materials",
+      "blurb": "Finish tokens from materials/brass — warm ceramic-metal desk.",
+      "techniques": ["material tokens", "metal gradient cells", "desk atmosphere"]
+    },
+    {
+      "id": "frostpane",
+      "file": "skins/frostpane.html",
+      "name": "Frostpane Night",
+      "tag": "materials",
+      "blurb": "Dark frosted glass: cyan–violet glow, translucent faces, rim light.",
+      "techniques": ["frosted-glass pack", "luminous mist", "glass fill"]
+    },
+    {
+      "id": "paper-relief",
+      "file": "skins/paper-relief.html",
+      "name": "Paper Relief",
+      "tag": "materials",
+      "blurb": "Paper-systems cream stock with multi-shadow emboss depth.",
+      "techniques": ["paper tokens", "soft multi-shadow", "score ink"]
+    },
+    {
+      "id": "comet-void",
+      "file": "skins/comet-void.html",
+      "name": "Comet Void",
+      "tag": "particles",
+      "blurb": "Shader-comet palette: void black, ember sparks, meteor streaks.",
+      "techniques": ["meteor sky motif", "spark particles", "trail streaks"]
+    },
+    {
+      "id": "mycelium",
+      "file": "skins/mycelium.html",
+      "name": "Mycelium Web",
+      "tag": "organic",
+      "blurb": "Hyphal links grow between revealed cells; nutrient particles flow.",
+      "techniques": ["seeded growth", "network edges", "nutrient flow"]
+    },
+    {
+      "id": "caustic-lens",
+      "file": "skins/caustic-lens.html",
+      "name": "Caustic Lens",
+      "tag": "lensing",
+      "blurb": "Under-board light caustics + hover refraction bulge.",
+      "techniques": ["caustic field", "refraction warp", "specular ridge"]
+    }
+  ]
+}
