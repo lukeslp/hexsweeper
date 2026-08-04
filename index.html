@@ -628,7 +628,7 @@ body[data-mode="plague"] .chrome-glass {
     <p><strong>Light</strong> and <strong>Dark</strong> are an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> looks the same at first — after enough digs the rift wakes and crawls toward your clears (floods barely feed it); keep digging ahead to flee. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
 
     <h3>Reveal</h3>
-    <p>Click or tap a covered cell. First click is always safe. The number is how many mines sit on the six sides. When the flags around a number match that count, click it again (or double-click) to open the rest. In Light/Dark/Escape, the camera follows your dig and the grid expands so the canvas never runs out of hexes.</p>
+    <p>Click or tap a covered cell. First click is always safe. The number is how many mines sit on the six sides. Empty clears open outward in rings until they hit numbered cells. When the flags around a number match that count, click it again (or double-click) to open the rest. In Light/Dark/Escape, the camera follows your dig and the grid expands so the canvas never runs out of hexes.</p>
 
     <h3>Move &amp; zoom</h3>
     <p>Drag to pan. Scroll or pinch to zoom. <kbd>+</kbd> / <kbd>−</kbd> also zoom. Space-drag or middle-drag pans.</p>
@@ -1141,9 +1141,10 @@ body[data-mode="plague"] .chrome-glass {
       id: "fire",
       name: "Fire · Magma",
       boardConfig: {
-        easy: { radius: 4, mines: 10, cellSize: 42 },
-        medium: { radius: 7, mines: 35, cellSize: 34 },
-        hard: { radius: 10, mines: 70, cellSize: 28 },
+        viewportFill: 0.98,
+        easy: { radius: 4, mines: 10, cellSize: 52 },
+        medium: { radius: 7, mines: 35, cellSize: 44 },
+        hard: { radius: 10, mines: 70, cellSize: 38 },
       },
       particles: {
         count: 36,
@@ -1177,48 +1178,51 @@ body[data-mode="plague"] .chrome-glass {
           "linear-gradient(168deg, #243430 0%, #16221f 40%, #0a100e 100%)",
       },
       theme: {
-        flag: "#e0a071",
+        // Green grid primary; dusty rose / copper as complements for danger + flag
+        flag: "#d4a08c",
         text: {
-          1: "#e8f8ee",
-          2: "#7ec8a8",
-          3: "#c97e4f",
-          4: "#90c8b0",
-          5: "#e0a071",
-          6: "#4a7868",
+          1: "#d8f5e4",
+          2: "#8fd4b0",
+          3: "#d4a08c",
+          4: "#6bb89a",
+          5: "#e0b89a",
+          6: "#c48a9a",
           mine: "#edf9f2",
         },
       },
       states: {
-        covered:  { h: 160, s: 20, l: 20 },
-        revealed: { h: 155, s: 28, l: 7 },
-        flagged:  { h: 24, s: 55, l: 42 },
+        covered:  { h: 152, s: 28, l: 22 },
+        revealed: { h: 155, s: 32, l: 8 },
+        flagged:  { h: 18, s: 42, l: 48 },
       },
       glow: {
-        colors: ["rgba(126,200,168,0.12)", "rgba(201,126,79,0.08)"],
-        pulse: 0.16,
+        colors: ["rgba(110,190,150,0.14)", "rgba(196,138,154,0.06)"],
+        pulse: 0.14,
         bloom: 1.1,
       },
       material: "mycelium",
       flatGrid: true,
       boardConfig: {
+        viewportFill: 0.9,
         easy: { radius: 8, mines: 40, cellSize: 34 },
         medium: { radius: 10, mines: 70, cellSize: 30 },
         hard: { radius: 12, mines: 105, cellSize: 26 },
       },
       particles: {
         count: 56,
-        ambient: "rgba(126,200,168,0.26)",
+        ambient: "rgba(110,190,150,0.28)",
         reveal: "rgba(126,200,168,0.72)",
-        mine: "rgba(224,160,113,0.95)",
-        flag: "rgba(224,160,113,0.88)",
+        mine: "rgba(212,160,140,0.95)",
+        flag: "rgba(212,160,140,0.88)",
       },
     },
   ];
 
   const FINITE_DEFAULT_CONFIG = {
-    easy: { radius: 4, mines: 10, cellSize: 42 },
-    medium: { radius: 7, mines: 35, cellSize: 34 },
-    hard: { radius: 10, mines: 70, cellSize: 28 },
+    viewportFill: 0.94,
+    easy: { radius: 4, mines: 10, cellSize: 48 },
+    medium: { radius: 7, mines: 35, cellSize: 40 },
+    hard: { radius: 10, mines: 70, cellSize: 34 },
   };
 
   // Bare URL opens Light. Explicit ?mode= deep-links; storage restores last theme.
@@ -3787,25 +3791,29 @@ body[data-mode="plague"] .chrome-glass {
           )
         );
         const lift = colony * 38;
+        // Off-center well so neighboring specimens don't share a stamp
+        const oxShade = (h - 0.5) * size * (0.22 + cellHash(cell.q, cell.r, 31) * 0.28);
+        const oyShade = (h2 - 0.5) * size * (0.18 + cellHash(cell.q, cell.r, 37) * 0.26);
+        const wellR = size * (0.78 + cellHash(cell.q, cell.r, 41) * 0.28);
         // Decay gradient: Moss Archive → Verdigris blotches eating inward
         const decay = ctx.createRadialGradient(
-          cell.x + (h - 0.5) * size * 0.25,
-          cell.y + (h2 - 0.5) * size * 0.2,
+          cell.x + oxShade,
+          cell.y + oyShade,
           0,
-          cell.x,
-          cell.y,
-          size
+          cell.x + oxShade * 0.35,
+          cell.y + oyShade * 0.35,
+          wellR
         );
         decay.addColorStop(
           0,
-          `rgba(${30 + lift | 0},${46 + lift * 1.1 | 0},${41 + lift * 0.85 | 0},${0.72 + pulse * 0.1})`
+          `rgba(${34 + lift | 0},${58 + lift * 1.15 | 0},${48 + lift * 0.9 | 0},${0.78 + pulse * 0.1})`
         );
         decay.addColorStop(
           0.45,
-          `rgba(${22 + lift * 0.7 | 0},${34 + lift * 0.78 | 0},${31 + lift * 0.6 | 0},0.84)`
+          `rgba(${24 + lift * 0.7 | 0},${42 + lift * 0.85 | 0},${36 + lift * 0.65 | 0},0.86)`
         );
-        decay.addColorStop(1, "rgba(16,28,24,0.96)");
-        ctx.globalAlpha = 0.92;
+        decay.addColorStop(1, "rgba(12,26,20,0.97)");
+        ctx.globalAlpha = 0.94;
         ctx.fillStyle = decay;
         ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
         ctx.globalAlpha = 1;
@@ -3815,37 +3823,37 @@ body[data-mode="plague"] .chrome-glass {
           const v = cellHash(cell.q, cell.r, 110 + i);
           ctx.fillStyle =
             u > 0.5
-              ? `rgba(5,14,11,${(0.4 + v * 0.25) * (1.25 - colony * 0.5)})`
-              : `rgba(74,120,104,${(0.16 + u * 0.22) * (0.6 + colony * 0.8)})`;
+              ? `rgba(5,18,12,${(0.42 + v * 0.25) * (1.25 - colony * 0.5)})`
+              : `rgba(70,130,108,${(0.18 + u * 0.24) * (0.6 + colony * 0.8)})`;
           ctx.beginPath();
           ctx.ellipse(
             cell.x + (u - 0.5) * size * 1.2,
             cell.y + (v - 0.5) * size * 1.2,
-            size * (0.1 + u * 0.2),
-            size * (0.07 + v * 0.16),
-            u * 5,
+            size * (0.08 + u * 0.22),
+            size * (0.06 + v * 0.18),
+            u * 5.2,
             0,
             Math.PI * 2
           );
           ctx.fill();
         }
-        // Copper fruiting specks cluster where the colony is thickest
+        // Fruiting specks cluster where the colony is thickest (rose-copper complement)
         if (cellHash(cell.q, cell.r, 201) > 0.92 - colony * 0.22) {
           const cu = cellHash(cell.q, cell.r, 203);
           const cv = cellHash(cell.q, cell.r, 205);
           const ang = cu * Math.PI * 2;
-          ctx.fillStyle = `rgba(201,126,79,${0.22 + cv * 0.2})`;
+          ctx.fillStyle = `rgba(212,160,140,${0.24 + cv * 0.22})`;
           ctx.beginPath();
           ctx.arc(
-            cell.x + Math.cos(ang) * size * (0.35 + cv * 0.35),
-            cell.y + Math.sin(ang) * size * (0.35 + cu * 0.3),
-            size * (0.04 + cv * 0.05),
+            cell.x + Math.cos(ang) * size * (0.3 + cv * 0.4),
+            cell.y + Math.sin(ang) * size * (0.3 + cu * 0.35),
+            size * (0.035 + cv * 0.055),
             0,
             Math.PI * 2
           );
           ctx.fill();
         }
-        // Embedded hyphae under the skin (teal desk filaments)
+        // Embedded hyphae under the skin (green filaments)
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
         ctx.lineCap = "round";
@@ -3853,7 +3861,7 @@ body[data-mode="plague"] .chrome-glass {
           const u = cellHash(cell.q, cell.r, 50 + i);
           const v = cellHash(cell.q, cell.r, 60 + i);
           ctx.globalAlpha = (0.12 + pulse * 0.16) * (stateKey === "flagged" ? 1.4 : 1);
-          ctx.strokeStyle = stateKey === "flagged" ? "#e0a071" : i === 0 ? "#7ec8a8" : "#4a7868";
+          ctx.strokeStyle = stateKey === "flagged" ? "#d4a08c" : i === 0 ? "#8fd4b0" : "#4a8a70";
           ctx.lineWidth = 0.65 + u * 0.95;
           ctx.beginPath();
           ctx.moveTo(cell.x + (u - 0.5) * size * 0.25, cell.y + (v - 0.5) * size * 0.25);
@@ -3866,12 +3874,19 @@ body[data-mode="plague"] .chrome-glass {
           ctx.stroke();
         }
         ctx.restore();
-        const glow = ctx.createRadialGradient(cell.x, cell.y, 0, cell.x, cell.y, size * 0.95);
+        const glow = ctx.createRadialGradient(
+          cell.x + oxShade * 0.5,
+          cell.y + oyShade * 0.5,
+          0,
+          cell.x,
+          cell.y,
+          size * 0.95
+        );
         glow.addColorStop(
           0,
-          `hsla(${st.h}, 35%, 32%, ${(stateKey === "flagged" ? 0.38 : 0.14) * pulse + hover * 0.1})`
+          `hsla(${st.h}, 38%, 34%, ${(stateKey === "flagged" ? 0.38 : 0.14) * pulse + hover * 0.1})`
         );
-        glow.addColorStop(0.55, "rgba(20,52,47,0.12)");
+        glow.addColorStop(0.55, "rgba(20,52,40,0.12)");
         glow.addColorStop(1, "transparent");
         ctx.fillStyle = glow;
         ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
@@ -4668,7 +4683,14 @@ body[data-mode="plague"] .chrome-glass {
         }
 
         // —— Depth themes ——
-        const scale = (cell._depthScale || 1) * (0.92 + cell.animHover * 0.06);
+        // Plague: lattice spacing stays uniform; the face itself jitters so
+        // cells read as irregular specimens rather than stamped tiles.
+        const faceJitter =
+          th.material === "mycelium"
+            ? 0.84 + cellHash(cell.q, cell.r, 17) * 0.14
+            : 1;
+        const scale =
+          (cell._depthScale || 1) * (0.92 + cell.animHover * 0.06) * faceJitter;
         const path = cell.hexPath(size, scale);
         const ds = size * scale;
         const wall = Math.max(0.8, elev * size * 0.28);
@@ -4750,16 +4772,16 @@ body[data-mode="plague"] .chrome-glass {
           ctx.stroke(path);
           ctx.restore();
         } else if (flatTile) {
-          // Plague specimen lattice: dark seam under a verdigris rim so covered
-          // cells read as separate specimens instead of one dark mass.
+          // Plague specimen lattice: dark seam under a green rim; face scale
+          // already jitters so seams stay even while interiors feel uneven.
           ctx.lineJoin = "round";
-          ctx.strokeStyle = "rgba(4,10,8,0.75)";
+          ctx.strokeStyle = "rgba(4,14,10,0.78)";
           ctx.lineWidth = Math.max(2, size * 0.09);
           ctx.stroke(path);
-          ctx.lineWidth = Math.max(1.2, size * 0.05);
+          ctx.lineWidth = Math.max(1.15, size * 0.048);
           ctx.strokeStyle = cell.revealed
-            ? "rgba(126,200,168,0.3)"
-            : "rgba(140,206,178,0.5)";
+            ? "rgba(126,200,168,0.28)"
+            : "rgba(120,198,160,0.52)";
           ctx.stroke(path);
         } else {
           // Rim / edge light (raised themes)

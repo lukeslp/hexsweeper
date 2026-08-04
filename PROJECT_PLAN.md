@@ -32,7 +32,9 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Plague colony field: low-frequency growth banding + clustered copper fruiting
 - [x] Escape legibility pass: own cool bloom (was inheriting Soft White's white glow),
       muted digit palette, calmer bevels, one digit reading channel (ticks/glow dropped)
-- [x] Finite themes open on the large board; size row hidden for infinite themes
+- [x] Fire opens large and fills ~98% of the viewport so the pit reads as one composition
+- [x] Progressive empty-cell flood: BFS rings open outward to the numbered boundary
+- [x] Plague irregular face scale + off-center shading; green-forward grid with rose-copper complements
 - [x] Plague board radii +4 (easy 8 / medium 10 / hard 12)
 - [x] Project README + this plan + file banners
 - [x] Drag pan · wheel/pinch zoom (persisted) · flag mode in settings

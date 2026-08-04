@@ -13,8 +13,8 @@ Edits here are live static deploys (same pattern as `/clocks/`). This folder is 
 |------|--------|------|
 | **Light** | Infinite | Flat minimal field; default at bare URL |
 | **Dark** | Infinite | Flat minimal field, night |
-| **Fire** | Finite | Magma pit — bowl tilt, boiling center, ember crust |
-| **Plague** | Finite | Specimen slide — verdigris colony field, copper fruiting, hyphal mat |
+| **Fire** | Finite | Magma pit — large fill, bowl tilt, boiling center |
+| **Plague** | Finite | Green specimen tiles (irregular faces) + hyphal mat |
 | **Escape** | Infinite | Calm slate plate → rift wakes after digs/exposes; crawls on a tile budget |
 
 Fire and Plague open on the **large** board; board size (S·M·L) lives in Settings and only appears for those two, since the infinite themes have no fixed board.
@@ -27,7 +27,7 @@ First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome 
 
 | Action | How |
 |--------|-----|
-| Dig | Click / tap |
+| Dig | Click / tap — empty floods open outward in rings |
 | Flag | Right-click, Ctrl/⌘-click, long-hold, or Settings → Flag mode (`F`) |
 | Pan | Drag · Space-drag · middle-drag |
 | Zoom | Scroll · pinch · `+` / `−` (persists as `hexsweeper-zoom-v1`) |

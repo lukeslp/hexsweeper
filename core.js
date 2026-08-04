@@ -57,6 +57,8 @@
       this.animHover = 0;
       this.animReveal = 0;
       this.ring = 0;
+      this._pendingReveal = false;
+      this.revealDue = 0;
     }
 
     calcGeometry(centerX, centerY, size) {
@@ -154,6 +156,8 @@
       flagMode: false,
       panning: false,
       spaceDown: false,
+      floodPending: 0,
+      _growAfterFlood: false,
     };
 
     try {
@@ -448,12 +452,15 @@
         const maxH = Math.max(280, window.innerHeight - 64);
         const naturalW = (mapRadius * 2 + 1) * SQRT3 * cellSize;
         const naturalH = (mapRadius * 2 + 1) * 1.5 * cellSize + 0.5 * cellSize;
-        // Fit the lattice inside the viewport with breathing room, and let the
-        // large board stay large instead of clamping into an overflow.
-        const fill = window.innerWidth < 500 ? 0.9 : 0.85;
+        // Fire fills the viewport so the pit reads as one composition;
+        // Plague keeps a little desk margin around the specimen.
+        const fillDefault = window.innerWidth < 500 ? 0.92 : 0.88;
+        const fill = Number.isFinite(state.config.viewportFill)
+          ? state.config.viewportFill
+          : fillDefault;
         if (naturalW > 0 && naturalH > 0) {
           const scale = Math.min((maxW * fill) / naturalW, (maxH * fill) / naturalH);
-          cellSize = Math.max(15, Math.min(46, cellSize * scale));
+          cellSize = Math.max(15, Math.min(62, cellSize * scale));
         }
       }
       const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
@@ -600,6 +607,8 @@
       state.hoveredKey = null;
       state.win = null;
       state.detonator = null;
+      state.floodPending = 0;
+      state._growAfterFlood = false;
       // Endless: mineCount filled after first click by density
       if (state.endless) state.mineCount = 0;
       else {
@@ -1178,7 +1187,7 @@
     }
 
     function reveal(cell) {
-      if (!cell || cell._riftTorn) return;
+      if (!cell || cell._riftTorn || cell._pendingReveal) return;
       if (state.isFirstClick) {
         startTimer();
         placeMines(cell.q, cell.r);
@@ -1195,14 +1204,27 @@
         gameOver(false);
       } else {
         openFrontier(cell);
-        checkWin();
+        if (!state.floodPending) checkWin();
       }
     }
 
     /** Flood empties, then grow the infinite field and re-flood into new rings. */
     function openFrontier(seed) {
       if (seed && seed.neighborMines === 0) floodFrom(seed);
-      if (!state.endless) return;
+      if (!state.endless) {
+        // Finite: win check runs when the reveal wave settles.
+        if (!state.floodPending) checkWin();
+        return;
+      }
+      if (state.floodPending > 0) {
+        // Grow after the wave finishes so new rings can cascade.
+        state._growAfterFlood = true;
+        return;
+      }
+      growEndlessFrontier();
+    }
+
+    function growEndlessFrontier() {
       for (let i = 0; i < 8; i++) {
         const r0 = state.mapRadius;
         ensureWorldCoverage(false);
@@ -1213,31 +1235,101 @@
           if (c.revealed && !c.isMine && c.neighborMines === 0) seeds.push(c);
         });
         for (const s of seeds) floodFrom(s);
+        if (state.floodPending > 0) {
+          state._growAfterFlood = true;
+          return;
+        }
+      }
+      checkWin();
+    }
+
+    /**
+     * Classic empty-cell flood, but cells open in BFS rings from the dig so
+     * the clearing reads as a wave out to the numbered boundary — not a poof.
+     */
+    function floodFrom(startCell) {
+      const queue = [{ cell: startCell, dist: 0 }];
+      const visited = new Set([`${startCell.q},${startCell.r}`]);
+      const wave = [];
+      while (queue.length > 0) {
+        const { cell: current, dist } = queue.shift();
+        for (const n of getNeighbors(current.q, current.r)) {
+          const k = `${n.q},${n.r}`;
+          if (
+            visited.has(k) ||
+            n.revealed ||
+            n._pendingReveal ||
+            n.flagged ||
+            n.isMine ||
+            n._riftTorn
+          ) {
+            continue;
+          }
+          visited.add(k);
+          const nextDist = dist + 1;
+          wave.push({ cell: n, dist: nextDist });
+          if (n.neighborMines === 0) queue.push({ cell: n, dist: nextDist });
+        }
+      }
+      if (!wave.length) return;
+
+      const reduceMotion =
+        typeof matchMedia === "function" &&
+        matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const now = performance.now();
+      // Pace by ring distance; cap so huge clears still finish in about a second.
+      const stepMs = reduceMotion ? 0 : 32;
+      for (const { cell, dist } of wave) {
+        cell._pendingReveal = true;
+        cell.revealDue = now + Math.min(dist * stepMs, reduceMotion ? 0 : 920);
+        cell.animReveal = 0;
+      }
+      state.floodPending = (state.floodPending || 0) + wave.length;
+      stepRevealWave();
+    }
+
+    function commitFloodReveal(cell) {
+      if (!cell || cell.revealed) {
+        if (cell && cell._pendingReveal) {
+          cell._pendingReveal = false;
+          state.floodPending = Math.max(0, (state.floodPending || 1) - 1);
+        }
+        return;
+      }
+      cell.revealed = true;
+      cell._pendingReveal = false;
+      cell.revealDue = 0;
+      cell.animReveal = 0;
+      state.floodPending = Math.max(0, (state.floodPending || 1) - 1);
+      if (!cell.isMine) noteCleared(1);
+      if (typeof state.hooks.onReveal === "function") {
+        state.hooks.onReveal(cell, api, { source: "flood" });
       }
     }
 
-    function floodFrom(startCell) {
-      const stack = [startCell];
-      const visited = new Set([`${startCell.q},${startCell.r}`]);
-      while (stack.length > 0) {
-        const current = stack.pop();
-        for (const n of getNeighbors(current.q, current.r)) {
-          const k = `${n.q},${n.r}`;
-          if (!visited.has(k) && !n.revealed && !n.flagged && !n.isMine && !n._riftTorn) {
-            visited.add(k);
-            n.revealed = true;
-            noteCleared(1);
-            if (typeof state.hooks.onReveal === "function") {
-              state.hooks.onReveal(n, api, { source: "flood" });
-            }
-            if (n.neighborMines === 0) stack.push(n);
-          }
+    function stepRevealWave() {
+      if (!state.floodPending) return;
+      const now = performance.now();
+      let opened = 0;
+      state.map.forEach((c) => {
+        if (c._pendingReveal && now >= (c.revealDue || 0)) {
+          commitFloodReveal(c);
+          opened++;
         }
+      });
+      if (!opened) return;
+      updateUI();
+      if (state.floodPending > 0) return;
+      if (state._growAfterFlood) {
+        state._growAfterFlood = false;
+        growEndlessFrontier();
+      } else {
+        checkWin();
       }
     }
 
     function toggleFlag(cell) {
-      if (!cell || cell.revealed || cell._riftTorn) return;
+      if (!cell || cell.revealed || cell._pendingReveal || cell._riftTorn) return;
       cell.flagged = !cell.flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
@@ -1266,7 +1358,7 @@
         if (hitMine) gameOver(false);
         else {
           openFrontier(null);
-          checkWin();
+          if (!state.floodPending) checkWin();
         }
       }
     }
@@ -1440,6 +1532,7 @@
       applyKeyList(data.revealed, (c) => {
         c.revealed = true;
         c.animReveal = 1;
+        c._pendingReveal = false;
       });
       applyKeyList(data.flagged, (c) => {
         c.flagged = true;
@@ -1612,6 +1705,7 @@
 
     function gameLoop(ts) {
       state.now = ts - state.t0;
+      stepRevealWave();
       stepCamera();
       // Periodic coverage check (camera settled / first frames after boot)
       if (state.endless && (ts | 0) % 8 === 0) ensureWorldCoverage(false);
