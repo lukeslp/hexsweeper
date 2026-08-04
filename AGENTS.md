@@ -27,7 +27,7 @@ After changing `index.html`, `core.js`, `skin-chrome.css`, or `fonts/`, regenera
 python3 tools/export-collection.py
 ```
 
-Do not hand-edit `collection/theme-*.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`).
+Do not hand-edit `collection/theme-*.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`). Light/Dark ship as `theme-plate.html` with `allowModes`; do not re-split them into separate pens.
 
 ## Safety
 

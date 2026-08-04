@@ -2,12 +2,13 @@
 # File Purpose: Build CodePen-ready Hexsweeper theme one-pagers under collection/.
 # Primary Functions/Classes: export_theme, inline_assets, write_collection_index.
 # Inputs: ../index.html, ../core.js, ../skin-chrome.css, ../fonts/*; CLI --check.
-# Outputs: collection/theme-*.html + regenerates collection/index.html tile list marker.
+# Outputs: collection/theme-*.html + regenerates collection/index.html.
 
 from __future__ import annotations
 
 import argparse
 import base64
+import json
 import mimetypes
 import re
 import sys
@@ -17,22 +18,17 @@ ROOT = Path(__file__).resolve().parents[1]
 COLLECTION = ROOT / "collection"
 PUBLIC_BASE = "https://dr.eamer.dev/games/hexsweeper/collection"
 
+# Four pasteable files: Light/Dark share one infinite plate with an in-file toggle.
 THEMES = [
     {
-        "id": "light",
-        "title": "Light",
-        "tag": "Infinite",
-        "blurb": "Flat pale honeycomb; infinite plate, default at the bare URL.",
-        "filter": "light infinite pale honeycomb plate flat",
-        "swatch": ("#e8eaee", "#dce2ea", "#1d4ed8", "#dc2626"),
-    },
-    {
-        "id": "dark",
-        "title": "Dark",
-        "tag": "Infinite",
-        "blurb": "Same lattice at night; cosmetic swap keeps the Light/Dark run.",
-        "filter": "dark infinite night lattice plate",
-        "swatch": ("#0f1115", "#2a3038", "#60a5fa", "#f43f5e"),
+        "id": "plate",
+        "title": "Light / Dark",
+        "tag": "Infinite · toggle",
+        "blurb": "One infinite plate — Light and Dark swap cosmetics and keep the run.",
+        "filter": "light dark infinite pale honeycomb plate night toggle",
+        "swatch": ("#e8eaee", "#0f1115", "#1d4ed8", "#60a5fa"),
+        "mode": "light",
+        "allowModes": ["light", "dark"],
     },
     {
         "id": "fire",
@@ -41,6 +37,7 @@ THEMES = [
         "blurb": "Magma pit — large fill, bowl tilt, boiling center.",
         "filter": "fire finite magma pit boil bowl",
         "swatch": ("#1c120c", "#ff6400", "#ffd24a", "#ff3c14"),
+        "mode": "fire",
     },
     {
         "id": "plague",
@@ -49,6 +46,7 @@ THEMES = [
         "blurb": "Specimen slide; irregular verdigris faces and hyphal mat.",
         "filter": "plague finite specimen verdigris mycelium",
         "swatch": ("#141e1c", "#7ec8a8", "#d4a08c", "#8fd4b0"),
+        "mode": "plague",
     },
     {
         "id": "escape",
@@ -57,6 +55,7 @@ THEMES = [
         "blurb": "Calm slate until the rift wakes and crawls on a dig budget.",
         "filter": "escape infinite rift chase slate",
         "swatch": ("#0e1218", "#263a50", "#7fd8c4", "#9dc4dd"),
+        "mode": "escape",
     },
 ]
 
@@ -88,7 +87,7 @@ def safe_script(text: str) -> str:
     return text.replace("</script", "<\\/script")
 
 
-def banner(theme: dict[str, str]) -> str:
+def banner(theme: dict) -> str:
     return "\n".join(
         (
             "<!--",
@@ -104,13 +103,27 @@ def banner(theme: dict[str, str]) -> str:
     )
 
 
-def export_theme(theme: dict[str, str], source: str) -> str:
-    mode = theme["id"]
+def onepager_boot(theme: dict) -> str:
+    payload = {
+        "mode": theme["mode"],
+        "skipWelcome": True,
+    }
+    if theme.get("allowModes"):
+        payload["allowModes"] = list(theme["allowModes"])
+    body = json.dumps(payload, indent=2)
+    return (
+        "<script>\n"
+        f"window.HEXSWEEPER_ONEPAGER = {body};\n"
+        "window.HEXSWEEPER_COLLECTION_EXPORT = true;\n"
+        "</script>\n"
+    )
+
+
+def export_theme(theme: dict, source: str) -> str:
     title = f"Hexsweeper — {theme['title']}"
     description = f"Hexagonal minesweeper one-pager: {theme['title']} — {theme['blurb']}"
 
     markup = source
-    # Strip production file banner; collection banner goes first.
     markup = re.sub(
         r"<!DOCTYPE html>\s*<!--.*?-->\s*<html",
         "<!DOCTYPE html>\n<html",
@@ -156,29 +169,17 @@ def export_theme(theme: dict[str, str], source: str) -> str:
     )
 
     core = safe_script((ROOT / "core.js").read_text(encoding="utf-8"))
-    lock = (
-        "<script>\n"
-        "window.HEXSWEEPER_ONEPAGER = {\n"
-        f'  mode: "{mode}",\n'
-        "  skipWelcome: true,\n"
-        "  hideThemeSwitch: true,\n"
-        "};\n"
-        "window.HEXSWEEPER_COLLECTION_EXPORT = true;\n"
-        "</script>\n"
-    )
     markup = re.sub(
         r'<script src="core\.js"></script>\s*',
-        f"{lock}<script>\n/* core.js */\n{core}\n</script>\n",
+        f"{onepager_boot(theme)}<script>\n/* core.js */\n{core}\n</script>\n",
         markup,
         count=1,
     )
-
-    # Mark html for embed detection / future tooling.
-    markup = markup.replace("<html lang=\"en\">", '<html lang="en" class="collection-export">', 1)
+    markup = markup.replace('<html lang="en">', '<html lang="en" class="collection-export">', 1)
     return markup
 
 
-def tile_html(theme: dict[str, str]) -> str:
+def tile_html(theme: dict) -> str:
     a, b, c, d = theme["swatch"]
     file = f"theme-{theme['id']}.html"
     return f"""      <article class="study" data-filter="{theme['filter']}" style="--swatch-bg:{a};--swatch-a:{b};--swatch-b:{c};--swatch-c:{d}">
@@ -259,7 +260,7 @@ footer a{{color:var(--accent)}}
   <a class="back" href="../">&lsaquo; Play Hexsweeper</a>
   <header>
     <h1>Hexsweeper Collection</h1>
-    <p class="lede">Five theme one-pagers — each a complete, copy-ready HTML file for CodePen or local paste. The live multi-theme game stays on the Play link.</p>
+    <p class="lede">Four copy-ready HTML files for CodePen or local paste. Light and Dark share one infinite plate with an in-file toggle; Fire, Plague, and Escape each stand alone. The live multi-theme game stays on the Play link.</p>
     <p id="status" role="status" aria-live="polite"></p>
   </header>
   <!-- generated-hexsweeper-collection:begin -->
@@ -320,8 +321,8 @@ def main() -> int:
     )
     args = parser.parse_args()
     source = (ROOT / "index.html").read_text(encoding="utf-8")
-    if "HEXSWEEPER_ONEPAGER" not in source:
-        print("error: index.html missing HEXSWEEPER_ONEPAGER lock hook", file=sys.stderr)
+    if "allowModes" not in source or "ONEPAGER_MODES" not in source:
+        print("error: index.html missing HEXSWEEPER_ONEPAGER allowModes support", file=sys.stderr)
         return 2
 
     COLLECTION.mkdir(parents=True, exist_ok=True)
@@ -330,6 +331,13 @@ def main() -> int:
         path = COLLECTION / f"theme-{theme['id']}.html"
         planned[path] = export_theme(theme, source)
     planned[COLLECTION / "index.html"] = write_index()
+
+    expected_names = {p.name for p in planned}
+    orphans = sorted(
+        p
+        for p in COLLECTION.glob("theme-*.html")
+        if p.name not in expected_names
+    )
 
     dirty = False
     for path, body in planned.items():
@@ -340,6 +348,14 @@ def main() -> int:
             continue
         path.write_text(body, encoding="utf-8")
         print(f"wrote {path.relative_to(ROOT)} ({len(body):,} bytes)")
+
+    for orphan in orphans:
+        if args.check:
+            print(f"orphan: {orphan.relative_to(ROOT)}")
+            dirty = True
+            continue
+        orphan.unlink()
+        print(f"removed {orphan.relative_to(ROOT)}")
 
     if args.check:
         return 1 if dirty else 0

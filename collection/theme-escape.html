@@ -347,9 +347,10 @@ body {
 }
 body.flag-mode { cursor: cell; }
 body.welcome-open { overflow: hidden; }
-/* Collection one-pagers: single theme, no mode chrome */
+/* Collection one-pagers: strict = one theme; scoped = allowModes only (e.g. Light/Dark) */
 body.onepager-locked .mode-switch { display: none !important; }
-body.onepager-locked .welcome-overlay { display: none !important; }
+body.onepager-locked .welcome-overlay,
+body.onepager-scoped .welcome-overlay { display: none !important; }
 /* All production modes: full-bleed canvas so zoom/pan never hits a board box */
 body[data-mode="light"] .canvas-container,
 body[data-mode="dark"] .canvas-container,
@@ -1014,9 +1015,8 @@ body[data-mode="plague"] .chrome-glass {
 
 <script>
 window.HEXSWEEPER_ONEPAGER = {
-  mode: "escape",
-  skipWelcome: true,
-  hideThemeSwitch: true,
+  "mode": "escape",
+  "skipWelcome": true
 };
 window.HEXSWEEPER_COLLECTION_EXPORT = true;
 </script>
@@ -3423,12 +3423,12 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   };
 
   // Bare URL opens Light. Explicit ?mode= deep-links; storage restores last theme.
-  // Collection exports set window.HEXSWEEPER_ONEPAGER = { mode, skipWelcome, hideThemeSwitch }.
+  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome }.
+  // allowModes: ["light","dark"] keeps the plate toggle; omit for a single locked theme.
   const ONEPAGER =
     typeof window !== "undefined" && window.HEXSWEEPER_ONEPAGER
       ? window.HEXSWEEPER_ONEPAGER
       : null;
-  const ONEPAGER_LOCKED = !!(ONEPAGER && ONEPAGER.mode);
   const HOME_THEME_ID = "light";
   const STORAGE_KEY = "hexsweeper-mode-v3";
   const LEGACY_TONE_KEY = "hexsweeper-minimalist-tone-v1";
@@ -3465,15 +3465,40 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     return THEMES.some((t) => t.id === id) ? id : null;
   }
 
+  function resolveOnepagerModes() {
+    if (!ONEPAGER) return null;
+    const listed = Array.isArray(ONEPAGER.allowModes) ? ONEPAGER.allowModes : null;
+    if (listed && listed.length) {
+      const ids = [];
+      for (const raw of listed) {
+        const id = resolveThemeId(raw);
+        if (id && !ids.includes(id)) ids.push(id);
+      }
+      return ids.length ? ids : null;
+    }
+    const single = resolveThemeId(ONEPAGER.mode);
+    return single ? [single] : null;
+  }
+
+  const ONEPAGER_MODES = resolveOnepagerModes();
+  const ONEPAGER_ACTIVE = !!(ONEPAGER_MODES && ONEPAGER_MODES.length);
+  const ONEPAGER_STRICT = ONEPAGER_ACTIVE && ONEPAGER_MODES.length === 1;
+
   let themeIndex = Math.max(
     0,
     THEMES.findIndex((t) => t.id === HOME_THEME_ID)
   );
   try {
-    const locked = ONEPAGER_LOCKED ? resolveThemeId(ONEPAGER.mode) : null;
-    if (locked) {
-      themeIndex = THEMES.findIndex((t) => t.id === locked);
-      document.body.classList.add("onepager-locked");
+    if (ONEPAGER_ACTIVE) {
+      const start =
+        resolveThemeId(ONEPAGER.mode) ||
+        ONEPAGER_MODES[0];
+      const startId = ONEPAGER_MODES.includes(start) ? start : ONEPAGER_MODES[0];
+      themeIndex = THEMES.findIndex((t) => t.id === startId);
+      document.body.classList.add(ONEPAGER_STRICT ? "onepager-locked" : "onepager-scoped");
+      document.querySelectorAll("[data-mode]").forEach((button) => {
+        if (!ONEPAGER_MODES.includes(button.dataset.mode)) button.hidden = true;
+      });
     } else {
       const params = new URLSearchParams(location.search);
       const q = params.get("mode") || params.get("theme");
@@ -5450,7 +5475,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       else if (plateSwap && previousIndex !== themeIndex) schedulePersist();
     }
     syncSettingsRows();
-    if (!ONEPAGER_LOCKED) {
+    if (!ONEPAGER_ACTIVE) {
       try {
         const url = new URL(location.href);
         url.searchParams.delete("theme");
@@ -5462,7 +5487,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         localStorage.setItem(STORAGE_KEY, t.id);
       } catch (_) {}
     }
-    if (toast && !ONEPAGER_LOCKED) showToast(t.name);
+    // Plate one-pager may toast on Light↔Dark; strict exports stay quiet.
+    if (toast && !ONEPAGER_STRICT) showToast(t.name);
   }
 
   /**
@@ -5478,7 +5504,15 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
 
   function cycleTheme() {
-    if (ONEPAGER_LOCKED) return;
+    if (ONEPAGER_STRICT) return;
+    if (ONEPAGER_ACTIVE) {
+      const cur = THEMES[themeIndex]?.id;
+      const i = Math.max(0, ONEPAGER_MODES.indexOf(cur));
+      const nextId = ONEPAGER_MODES[(i + 1) % ONEPAGER_MODES.length];
+      const next = THEMES.findIndex((theme) => theme.id === nextId);
+      if (next >= 0) applyTheme(next);
+      return;
+    }
     applyTheme(themeIndex + 1);
   }
 
@@ -6279,7 +6313,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {
-      if (ONEPAGER_LOCKED) return;
+      if (ONEPAGER_STRICT) return;
+      if (ONEPAGER_ACTIVE && !ONEPAGER_MODES.includes(button.dataset.mode)) return;
       const i = THEMES.findIndex((theme) => theme.id === button.dataset.mode);
       if (i >= 0 && i !== themeIndex) applyTheme(i);
     });
@@ -7200,11 +7235,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     // Collection one-pagers always skip (HEXSWEEPER_ONEPAGER.skipWelcome).
     const skipWelcome =
       (ONEPAGER && ONEPAGER.skipWelcome !== false) ||
-      ONEPAGER_LOCKED ||
+      ONEPAGER_ACTIVE ||
       /(?:\?|&)welcome=0(?:&|$)/.test(location.search);
     if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openWelcome();
   } catch (_) {
-    if (!ONEPAGER_LOCKED) openWelcome();
+    if (!ONEPAGER_ACTIVE) openWelcome();
   }
 
   // Test/debug: window.__hexBlast.force() after first click places mines

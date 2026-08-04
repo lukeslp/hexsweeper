@@ -52,13 +52,12 @@ Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Ligh
 
 ## Collection (one-pagers)
 
-Five self-contained theme files for paste into CodePen (or anywhere HTML runs):
+Four self-contained files for paste into CodePen (or anywhere HTML runs):
 
 | File | Theme |
 |------|--------|
 | [`collection/`](collection/) | Desk with **Open** + **Copy HTML** |
-| `collection/theme-light.html` | Light · Infinite |
-| `collection/theme-dark.html` | Dark · Infinite |
+| `collection/theme-plate.html` | Light / Dark · Infinite (in-file toggle; keeps the run) |
 | `collection/theme-fire.html` | Fire · Finite |
 | `collection/theme-plague.html` | Plague · Finite |
 | `collection/theme-escape.html` | Escape · Infinite |
@@ -70,7 +69,7 @@ python3 tools/export-collection.py
 python3 tools/export-collection.py --check   # CI / drift guard
 ```
 
-Exports inline `core.js`, chrome CSS, and IBM Plex (base64 woff2). Each file sets `window.HEXSWEEPER_ONEPAGER` so the theme is locked and welcome/theme chrome stay hidden. The live multi-theme game remains `index.html`.
+Exports inline `core.js`, chrome CSS, and IBM Plex (base64 woff2). Each file sets `window.HEXSWEEPER_ONEPAGER` (`allowModes: ["light","dark"]` on the plate; single `mode` on the others). Welcome stays hidden; Fire/Plague/Escape hide the theme switch. The live multi-theme game remains `index.html`.
 
 ## Engine API
 

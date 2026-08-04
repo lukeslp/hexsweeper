@@ -53,7 +53,8 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Self-hosted fonts committed (`fonts/` + OFL) so GitHub clones match live typography
 - [x] Docs / `skins.json` production surface aligned to five themes
 - [x] Collection one-pagers: `collection/theme-*.html` + Copy HTML desk + `tools/export-collection.py`
-- [x] Production `HEXSWEEPER_ONEPAGER` lock (theme fixed, welcome/theme switch suppressed)
+- [x] Production `HEXSWEEPER_ONEPAGER` (strict single theme, or scoped `allowModes` for Light/Dark plate)
+- [x] Light/Dark collection cut is one file (`theme-plate.html`) with in-file toggle
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
 - [ ] Optional: automated smoke (desktop/mobile) in CI — currently manual / browser probes
 - [ ] Optional: `export-collection.py --check` in CI; CodePen push via codepen-prefill when published
