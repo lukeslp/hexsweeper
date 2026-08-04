@@ -3393,9 +3393,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       fx: {
         // Soft ember void — no stripe bands, no boxed plate
         bg:
-          "radial-gradient(ellipse 80% 55% at 50% 42%, rgba(255,90,20,0.07), transparent 62%)," +
-          "radial-gradient(ellipse 50% 40% at 78% 70%, rgba(255,40,0,0.05), transparent 55%)," +
-          "linear-gradient(180deg, #120806 0%, #0a0402 48%, #060201 100%)",
+          "radial-gradient(ellipse 80% 55% at 50% 42%, rgba(255,100,24,0.11), transparent 62%)," +
+          "radial-gradient(ellipse 50% 40% at 78% 70%, rgba(255,50,0,0.07), transparent 55%)," +
+          "linear-gradient(180deg, #160a06 0%, #0c0503 48%, #060201 100%)",
       },
       theme: {
         flag: "#ffcc40",
@@ -3811,6 +3811,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     // Shadow direction = away from light. Parallax ox/oy tilt the key light.
     let sdx = 0.48 - ox * 0.028;
     let sdy = 0.78 - oy * 0.022;
+    if (th.material === "magma") {
+      // Shaft: hotter key so rim lips catch ember; cast still falls into the well.
+      sdx = 0.55 - ox * 0.036;
+      sdy = 0.7 - oy * 0.028;
+    }
     const len = Math.hypot(sdx, sdy) || 1;
     light = {
       sdx: sdx / len,
@@ -3828,13 +3833,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     const d = depthOf(cell.ring, maxR);
     if (inset) {
       // Shaft camera: higher e = farther into the pit (not a raised tile)
-      let e = 0.88 - d * 0.24; // center deeper than rim
+      let e = 0.96 - d * 0.3; // center deeper than rim
       // Poke = floor gives way — sink, never lift toward the user
-      e += (cell.animHover || 0) * 0.34;
+      e += (cell.animHover || 0) * 0.38;
       // Opened cells dig a little further into the underworld
-      e += (cell.animReveal || 0) * 0.22;
+      e += (cell.animReveal || 0) * 0.24;
       if (cell.flagged && !cell.revealed) e *= 0.9;
-      return Math.max(0.35, e);
+      return Math.max(0.38, e);
     }
     let e = flat ? 0.22 : 0.32 + d * 1.35;
     e += (cell.animHover || 0) * 0.5;
@@ -3950,17 +3955,17 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
     // Continuous field — same family as covered crust, no shelf / stripe
     const base = ctx.createRadialGradient(cx, cy, reach * 0.15, cx, cy, Math.max(w, h) * 0.85);
-    base.addColorStop(0, "#1a0c08");
-    base.addColorStop(0.35, "#120806");
-    base.addColorStop(0.7, "#0a0402");
+    base.addColorStop(0, "#24110c");
+    base.addColorStop(0.35, "#160a06");
+    base.addColorStop(0.7, "#0c0503");
     base.addColorStop(1, "#050201");
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
 
     // Soft crust bloom under the honeycomb so the board doesn't cast a rectangle
     const under = ctx.createRadialGradient(cx, cy, reach * 0.2, cx, cy, reach * 1.15);
-    under.addColorStop(0, `rgba(42, 18, 12, ${0.55 + pulse * 0.06})`);
-    under.addColorStop(0.55, "rgba(22, 10, 6, 0.28)");
+    under.addColorStop(0, `rgba(52, 22, 14, ${0.62 + pulse * 0.08})`);
+    under.addColorStop(0.55, "rgba(28, 12, 8, 0.34)");
     under.addColorStop(1, "transparent");
     ctx.fillStyle = under;
     ctx.beginPath();
@@ -3978,13 +3983,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     // Soft underworld glow in the pit center — no stroke “rain” lines
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    const glow = ctx.createRadialGradient(cx, cy + reach * 0.08, 0, cx, cy, reach * 0.75);
-    glow.addColorStop(0, `rgba(255, 90, 20, ${0.1 + pulse * 0.06})`);
-    glow.addColorStop(0.45, `rgba(180, 40, 0, ${0.055 + pulse * 0.03})`);
+    const glow = ctx.createRadialGradient(cx, cy + reach * 0.08, 0, cx, cy, reach * 0.8);
+    glow.addColorStop(0, `rgba(255, 110, 28, ${0.18 + pulse * 0.1})`);
+    glow.addColorStop(0.4, `rgba(210, 55, 8, ${0.09 + pulse * 0.05})`);
     glow.addColorStop(1, "transparent");
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.ellipse(cx, cy + reach * 0.06, reach * 0.62, reach * 0.48, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy + reach * 0.06, reach * 0.68, reach * 0.52, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Boil cells across the pit floor. Big pools breathe slowly; small vents
@@ -4003,7 +4008,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       const bx = cx + Math.cos(ang) * rad;
       const by = cy + Math.sin(ang) * rad * 0.7 + reach * 0.04;
       const br = reach * (0.05 + scale * 0.13) * (0.6 + swell * 0.55);
-      const a = (0.03 + swell * (0.05 + scale * 0.07)) * (0.8 + pulse * 0.2);
+      const a = (0.045 + swell * (0.07 + scale * 0.09)) * (0.85 + pulse * 0.22);
       const bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
       bg.addColorStop(0, `rgba(255, 225, 135, ${a * 1.3})`);
       bg.addColorStop(0.35, `rgba(255, 105, 28, ${a})`);
@@ -4167,6 +4172,31 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     lip.addColorStop(0.78, "rgba(0,0,0,0.22)");
     lip.addColorStop(1, "rgba(0,0,0,0.42)");
     ctx.fillStyle = lip;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const ang = (Math.PI / 180) * (30 + 60 * i);
+      const x = cx + Math.cos(ang) * reach;
+      const y = cy + Math.sin(ang) * reach * 0.9;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Light-facing rim catch — warm lip without washing the well floor
+    ctx.globalCompositeOperation = "lighter";
+    const catchG = ctx.createRadialGradient(
+      cx + light.sdx * s.cellSize * 1.6,
+      cy + light.sdy * s.cellSize * 1.1,
+      reach * 0.2,
+      cx,
+      cy,
+      reach * 1.05
+    );
+    catchG.addColorStop(0, "rgba(255, 140, 40, 0.1)");
+    catchG.addColorStop(0.45, "rgba(255, 80, 16, 0.04)");
+    catchG.addColorStop(1, "transparent");
+    ctx.fillStyle = catchG;
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const ang = (Math.PI / 180) * (30 + 60 * i);
@@ -6069,8 +6099,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       open || mine
         ? 1
         : numbered
-          ? 0.22 + hover * 0.08
-          : 0.2 + heat * 0.42 + centerHeat * 0.38;
+          ? 0.16 + hover * 0.06
+          : 0.28 + heat * 0.46 + centerHeat * 0.44;
 
     // Living magma underlayer (pit floor)
     const lava = ctx.createRadialGradient(
@@ -6218,10 +6248,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       // Hot lip bloom at the shaft edge
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const lip = ctx.createRadialGradient(cell.x, cell.y, size * 0.5, cell.x, cell.y, size * 0.95);
+      const lip = ctx.createRadialGradient(cell.x, cell.y, size * 0.48, cell.x, cell.y, size * 0.98);
       lip.addColorStop(0, "transparent");
-      lip.addColorStop(0.7, `rgba(255, 120, 20, ${0.08 + pulse * 0.08})`);
-      lip.addColorStop(1, `rgba(255, 60, 0, ${0.18 + pulse * 0.1})`);
+      lip.addColorStop(0.65, `rgba(255, 140, 30, ${0.12 + pulse * 0.1})`);
+      lip.addColorStop(1, `rgba(255, 70, 8, ${0.28 + pulse * 0.14})`);
       ctx.fillStyle = lip;
       ctx.fillRect(cell.x - size * 2, cell.y - size * 2, size * 4, size * 4);
       ctx.restore();
@@ -6248,7 +6278,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (reduceMotion) return;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const n = 14;
+      const n = 16;
       for (let i = 0; i < n; i++) {
         const u = cellHash(i, 41, 2);
         const v = cellHash(i, 53, 7);
@@ -6257,8 +6287,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
           (u * s.canvas.width + ox * 0.8 + Math.sin(time * 0.0008 + v * 6) * 18 + s.canvas.width) %
           s.canvas.width;
         const ey = s.canvas.height * (0.45 + v * 0.4) - life * s.canvas.height * 0.4;
-        const a = (1 - life) * (0.08 + v * 0.12);
-        const er = 0.9 + (1 - life) * 1.8;
+        const a = (1 - life) * (0.1 + v * 0.14);
+        const er = 1 + (1 - life) * 2;
         ctx.globalAlpha = a;
         ctx.fillStyle = i % 3 === 0 ? "#ffb050" : "#ff6818";
         ctx.beginPath();
@@ -7076,24 +7106,27 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             cell.y = baseY + oy * 0.22 + lift;
             cell._depthScale = 0.96;
           } else if (inset) {
-            // Magma shaft: rim stays stabler; deep center shears under the crust.
-            // Contact shadows (drawMagmaDepthShadows) carry depth when parallax is small.
+            // Shaft innie polarity (inverse of raised outie lattice above):
+            // Outie: near rings shear WITH ox/oy more and scale up (pop toward camera).
+            // Innie: rim (near) follows tilt; deep floor COUNTER-shears under the lip
+            // so pointer reads as looking into the hole, not pushing the board at you.
+            // Contact shadows (drawMagmaDepthShadows) reinforce depth when parallax is small.
             const near = d; // 0 far/deep center → 1 near rim
-            const gMult = 0.36;
-            cell._gx = baseX + ox * gMult * 0.85;
-            cell._gy = baseY + oy * gMult * 0.65 + s.cellSize * 0.14;
-            // Center shears more; rim mult stays lower (stable lip)
-            const mult = 1.42 - near * 1.05;
-            // Deep rings drift opposite the rim so the floor slides under the lip
-            const shearOx = ox * mult + ox * (1 - near) * -0.42;
-            const shearOy = oy * mult + oy * (1 - near) * -0.28;
-            const boardSink = s.cellSize * 0.62;
-            const bowlSink = (1 - near) * s.cellSize * 1.12 + elev * s.cellSize * 0.28;
+            const deep = 1 - near;
+            const gMult = 0.32;
+            cell._gx = baseX + ox * gMult * 0.8;
+            cell._gy = baseY + oy * gMult * 0.6 + s.cellSize * 0.16;
+            // Rim with-tilt; deep floor opposite / under the lip
+            const shearOx = ox * (0.18 + near * 0.52) - ox * deep * 0.92;
+            const shearOy = oy * (0.14 + near * 0.4) - oy * deep * 0.7;
+            const boardSink = s.cellSize * 0.68;
+            const bowlSink = deep * s.cellSize * 1.38 + elev * s.cellSize * 0.34;
             // Fixed camera pitch — depth reads at rest (PRM keeps this + shading)
-            const pitch = s.cellSize * (0.1 + (1 - near) * 0.28);
+            const pitch = s.cellSize * (0.12 + deep * 0.34);
             cell.x = baseX + shearOx;
             cell.y = baseY + shearOy + boardSink + bowlSink + pitch;
-            cell._depthScale = 0.62 + near * 0.36 - elev * 0.1;
+            // Center smaller (farther); rim nearer — floor clamped so digs stay hittable
+            cell._depthScale = Math.max(0.54, 0.52 + near * 0.46 - elev * 0.06);
           } else {
             // Desk lattice (gentle board drift) vs elevated face (stronger parallax)
             // Shadows use _gx/_gy so they never paint on faces below.
@@ -7598,28 +7631,28 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             ctx.stroke();
           };
           // Shadow lip — light-facing edges sit deeper / occluded
-          drawInsetFace(3, 5, "rgba(0,0,0,0.84)", 2.8);
-          drawInsetFace(3, 5, "rgba(12,4,2,0.7)", 1.7);
-          // Warm far catch — muted so crust doesn't read as a raised coin
-          drawInsetFace(0, 2, "rgba(255,90,24,0.16)", 1.35);
-          drawInsetFace(0, 2, "rgba(255,140,50,0.07)", 0.9);
+          drawInsetFace(3, 5, "rgba(0,0,0,0.86)", 2.9);
+          drawInsetFace(3, 5, "rgba(12,4,2,0.72)", 1.75);
+          // Warm far catch — richer rim lip (still reads as recess, not a raised coin)
+          drawInsetFace(0, 2, "rgba(255,120,32,0.3)", 1.55);
+          drawInsetFace(0, 2, "rgba(255,165,70,0.14)", 1.05);
 
           // AO well — stronger occluding rim, transparent under digit ink
           const well = ctx.createRadialGradient(cell.x, cell.y, ds * 0.08, cell.x, cell.y, ds * 1.06);
           well.addColorStop(0, "transparent");
           well.addColorStop(0.48, "transparent");
-          well.addColorStop(1, `rgba(0,0,0,${0.4 + elev * 0.16})`);
+          well.addColorStop(1, `rgba(0,0,0,${0.42 + elev * 0.18})`);
           ctx.fillStyle = well;
           ctx.fill(path);
 
-          // Crust rim: dark seam + quiet ember lip (void separation, not highlight)
+          // Crust rim: dark seam + ember lip (void separation; numbered stays dark via paint)
           ctx.strokeStyle = "rgba(0,0,0,0.94)";
           ctx.lineWidth = Math.max(1.8, size * 0.075);
           ctx.stroke(path);
           ctx.strokeStyle = cell.revealed
-            ? "rgba(255,100,30,0.14)"
-            : "rgba(255,95,28,0.28)";
-          ctx.lineWidth = Math.max(1, size * 0.04);
+            ? "rgba(255,120,36,0.22)"
+            : "rgba(255,120,36,0.42)";
+          ctx.lineWidth = Math.max(1.05, size * 0.042);
           ctx.stroke(path);
           ctx.restore();
         } else if (flatTile) {
