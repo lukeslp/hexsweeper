@@ -530,6 +530,11 @@ body[data-mode="plague"] .chrome-glass {
   outline-offset: 2px;
 }
 #plate-toggle[hidden] { display: none !important; }
+/* SVG [hidden] is unreliable inside flex buttons — drive visibility from body mode. */
+#plate-toggle .plate-icon-sun,
+#plate-toggle .plate-icon-moon { display: none !important; }
+body[data-mode="light"] #plate-toggle .plate-icon-sun { display: block !important; }
+body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !important; }
 .mode-switch {
   display: flex;
   flex-wrap: wrap;
@@ -1136,7 +1141,7 @@ body[data-mode="escape"] .menu-links {
       <circle cx="12" cy="12" r="4"></circle>
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
     </svg>
-    <svg class="plate-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+    <svg class="plate-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"></path>
     </svg>
   </button>
@@ -6008,11 +6013,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     el.hidden = !onPlate;
     if (!onPlate) return;
     const isDark = t.id === "dark";
-    const sun = el.querySelector(".plate-icon-sun");
-    const moon = el.querySelector(".plate-icon-moon");
-    if (sun) sun.hidden = isDark;
-    if (moon) moon.hidden = !isDark;
-    // Icon = current plate; label = next action (matches Reset/Menu as one 44px control).
+    // Icons swap via CSS body[data-mode]; only labels stay in sync here.
     el.setAttribute(
       "aria-label",
       isDark ? "Switch to Light" : "Switch to Dark"
