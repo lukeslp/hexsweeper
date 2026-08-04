@@ -1372,7 +1372,9 @@ body[data-mode="escape"] .menu-links {
       id: "fire",
       name: "Fire · Magma",
       boardConfig: {
+        // Outer hex ≈ 98% of the live window; light pad for residual innie sink.
         viewportFill: 0.98,
+        viewportPadCells: 0.35,
         easy: { radius: 4, mines: 10, cellSize: 52 },
         medium: { radius: 7, mines: 35, cellSize: 44 },
         hard: { radius: 10, mines: 70, cellSize: 38 },
@@ -1699,9 +1701,10 @@ body[data-mode="escape"] .menu-links {
     const shiftX = ox * 0.4;
     const shiftY = oy * 0.3;
     const cx = w / 2 + shiftX * 0.2;
-    const cy = h / 2 + shiftY * 0.15;
+    // Match beforeFrame pitRecenter so the lamp throat sits under the honeycomb
+    const cy = h / 2 + shiftY * 0.15 - s.cellSize * 0.35;
     // Soft hex-ish reach of the lattice (slightly larger than the board)
-    const reach = Math.max(s.mapRadius * s.cellSize * 2.05, Math.min(w, h) * 0.42);
+    const reach = Math.max(s.mapRadius * s.cellSize * 2.05, Math.min(w, h) * 0.48);
     const far = Math.max(w, h);
 
     ctx.save();
@@ -1817,8 +1820,10 @@ body[data-mode="escape"] .menu-links {
   }
 
   /**
-   * Plague specimen desk — full-canvas underlay so verdigris/copper read even when
-   * flatGrid skips cast shadows (CSS #fx alone was too faint under the lattice).
+   * Plague specimen desk — full-canvas culture-slide underlay.
+   * Soft infection blooms, hyphal filaments, and nutrient beads across the whole
+   * field (not only revealed tiles), at low opacity so covered hexes + digits stay
+   * readable. Motifs echo exposed-tile mycelium; not a stamped wallpaper.
    */
   function drawPlagueSpecimenField(ctx, s) {
     const w = s.canvas.width;
@@ -1829,83 +1834,161 @@ body[data-mode="escape"] .menu-links {
     const cy = h / 2 + oy * 0.08;
     const reach = Math.max(s.mapRadius * s.cellSize * 1.35, Math.min(w, h) * 0.4);
     const far = Math.max(w, h);
+    const short = Math.min(w, h);
 
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
 
-    // Damp specimen slide: cool green-black, brightest right under the culture
+    // Damp specimen slide: cool green-black, brightest under the culture
     const desk = ctx.createRadialGradient(cx, cy, 0, cx, cy, far * 0.78);
-    desk.addColorStop(0, "#22322d");
-    desk.addColorStop(0.3, "#182622");
-    desk.addColorStop(0.62, "#0e1715");
+    desk.addColorStop(0, "#243430");
+    desk.addColorStop(0.28, "#1a2824");
+    desk.addColorStop(0.58, "#101c19");
     desk.addColorStop(1, "#070c0b");
     ctx.fillStyle = desk;
     ctx.fillRect(0, 0, w, h);
 
-    // Culture halo — fully faded before it can show an edge
-    const verd = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach * 1.7);
-    verd.addColorStop(0, `rgba(126, 200, 168, ${0.09 + pulse * 0.04})`);
-    verd.addColorStop(0.3, `rgba(96, 168, 142, ${0.05 + pulse * 0.02})`);
-    verd.addColorStop(0.66, "rgba(52, 104, 90, 0.03)");
-    verd.addColorStop(1, "transparent");
-    ctx.fillStyle = verd;
-    ctx.fillRect(0, 0, w, h);
-
-    // Copper oxidation stains — irregular, off-center, low contrast
-    const stains = [
-      { x: 0.26, y: 0.3, r: 0.3, a: 0.05 },
-      { x: 0.74, y: 0.66, r: 0.36, a: 0.045 },
-      { x: 0.6, y: 0.2, r: 0.22, a: 0.03 },
+    // Soft infection blooms — whole-field culture, not a board-only halo
+    const blooms = [
+      { x: 0.5, y: 0.46, r: 0.55, a: 0.11, copper: false },
+      { x: 0.22, y: 0.28, r: 0.34, a: 0.07, copper: false },
+      { x: 0.78, y: 0.62, r: 0.38, a: 0.065, copper: true },
+      { x: 0.64, y: 0.22, r: 0.26, a: 0.05, copper: true },
+      { x: 0.34, y: 0.72, r: 0.3, a: 0.055, copper: false },
+      { x: 0.12, y: 0.55, r: 0.22, a: 0.04, copper: true },
+      { x: 0.88, y: 0.35, r: 0.24, a: 0.045, copper: false },
     ];
-    for (const st of stains) {
-      const sx = w * st.x + ox * 0.06;
-      const sy = h * st.y + oy * 0.05;
-      const sr = far * st.r;
-      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
-      g.addColorStop(0, `rgba(201, 126, 79, ${st.a * (0.8 + pulse * 0.4)})`);
-      g.addColorStop(0.5, `rgba(140, 84, 52, ${st.a * 0.35})`);
+    for (const bl of blooms) {
+      const bx = w * bl.x + ox * 0.07;
+      const by = h * bl.y + oy * 0.05;
+      const br = short * bl.r;
+      const breathe = reduceMotion ? 1 : 0.88 + 0.12 * Math.sin(t * 0.00055 + bl.x * 9);
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      if (bl.copper) {
+        g.addColorStop(0, `rgba(201, 126, 79, ${bl.a * breathe * (0.85 + pulse * 0.25)})`);
+        g.addColorStop(0.45, `rgba(140, 84, 52, ${bl.a * 0.4 * breathe})`);
+      } else {
+        g.addColorStop(0, `rgba(126, 200, 168, ${bl.a * breathe * (0.9 + pulse * 0.2)})`);
+        g.addColorStop(0.4, `rgba(72, 140, 118, ${bl.a * 0.45 * breathe})`);
+      }
       g.addColorStop(1, "transparent");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Slide grain — fixed speckle so the field reads as a surface, not a gradient
+    // Low-frequency colony banding — reads as living culture, not flat desk paint
+    ctx.save();
+    ctx.globalAlpha = 0.045 + pulse * 0.015;
+    for (let i = 0; i < 5; i++) {
+      const u = cellHash(i, 3, 11);
+      const v = cellHash(i, 7, 17);
+      const band = ctx.createRadialGradient(
+        w * (0.2 + u * 0.6),
+        h * (0.2 + v * 0.6),
+        0,
+        w * (0.2 + u * 0.6),
+        h * (0.2 + v * 0.6),
+        short * (0.35 + u * 0.4)
+      );
+      band.addColorStop(0, i % 2 ? "rgba(90, 160, 130, 0.55)" : "rgba(40, 80, 68, 0.7)");
+      band.addColorStop(1, "transparent");
+      ctx.fillStyle = band;
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.restore();
+
+    // Sparse hyphal filaments across the slide (hash-stable; PRM freezes sway)
+    ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    for (let i = 0; i < 90; i++) {
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const filamentN = 28;
+    for (let i = 0; i < filamentN; i++) {
+      const u = cellHash(i, 41, 2);
+      const v = cellHash(i, 43, 5);
+      const u2 = cellHash(i, 47, 9);
+      const v2 = cellHash(i, 53, 13);
+      const sway = reduceMotion
+        ? 0
+        : Math.sin(t * 0.00022 + i * 0.7) * short * 0.012;
+      const x0 = u * w;
+      const y0 = v * h;
+      const x1 = u2 * w;
+      const y1 = v2 * h;
+      const mx = (x0 + x1) / 2 + (cellHash(i, 59, 3) - 0.5) * short * 0.18 + sway;
+      const my = (y0 + y1) / 2 + (cellHash(i, 61, 7) - 0.5) * short * 0.16;
+      const copper = i % 5 === 0;
+      ctx.globalAlpha = 0.03 + cellHash(i, 67, 11) * 0.05;
+      ctx.strokeStyle = copper ? "#c97e4f" : i % 3 === 0 ? "#8fd4b0" : "#4a7868";
+      ctx.lineWidth = 0.55 + cellHash(i, 71, 4) * 1.15;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo(mx, my, x1, y1);
+      ctx.stroke();
+      // Short recursive tip — same grammar as revealed hyphae, quieter
+      if (cellHash(i, 73, 8) > 0.35) {
+        const ang = Math.atan2(y1 - y0, x1 - x0) + (cellHash(i, 79, 1) - 0.5) * 1.1;
+        const len = short * (0.03 + cellHash(i, 83, 6) * 0.05);
+        ctx.globalAlpha *= 0.75;
+        ctx.lineWidth *= 0.7;
+        ctx.beginPath();
+        ctx.moveTo(mx, my);
+        ctx.lineTo(mx + Math.cos(ang) * len, my + Math.sin(ang) * len);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    // Nutrient / fruiting beads + slide grain
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 120; i++) {
       const u = cellHash(i, 7, 2);
       const v = cellHash(i, 13, 6);
       const gx = u * w;
       const gy = v * h;
-      ctx.globalAlpha = 0.015 + cellHash(i, 23, 4) * 0.03;
-      ctx.fillStyle = i % 5 === 0 ? "#c97e4f" : "#7ec8a8";
+      const fruit = i % 7 === 0;
+      ctx.globalAlpha = fruit
+        ? 0.04 + cellHash(i, 23, 4) * 0.06
+        : 0.018 + cellHash(i, 23, 4) * 0.035;
+      ctx.fillStyle = fruit ? "#e0a071" : i % 5 === 0 ? "#c97e4f" : "#7ec8a8";
       ctx.beginPath();
-      ctx.arc(gx, gy, 0.6 + cellHash(i, 31, 9) * 1.1, 0, Math.PI * 2);
+      ctx.arc(gx, gy, (fruit ? 1.1 : 0.55) + cellHash(i, 31, 9) * (fruit ? 1.6 : 1.1), 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    if (!reduceMotion) {
-      // Spore loft — slow upward drift
-      for (let i = 0; i < 26; i++) {
-        const u = cellHash(i, 11, 4);
-        const v = cellHash(i, 19, 8);
-        const drift = (t * (0.000008 + u * 0.000012) + v) % 1;
-        const x = (u * w + Math.sin(t * 0.00018 + i) * 16 + w) % w;
-        const y = h * (1.02 - drift * 1.08);
-        ctx.globalAlpha = 0.02 + (1 - drift) * (0.05 + v * 0.05);
-        ctx.fillStyle = i % 4 === 0 ? "#e0a071" : "#a8dcc4";
-        ctx.beginPath();
-        ctx.arc(x, y, 0.7 + u * 1.4, 0, Math.PI * 2);
-        ctx.fill();
+    // Spore loft — slow drift; PRM parks a static dusting
+    const sporeN = reduceMotion ? 18 : 34;
+    for (let i = 0; i < sporeN; i++) {
+      const u = cellHash(i, 11, 4);
+      const v = cellHash(i, 19, 8);
+      let x;
+      let y;
+      let a;
+      if (reduceMotion) {
+        x = u * w;
+        y = v * h;
+        a = 0.025 + v * 0.04;
+      } else {
+        const drift = (t * (0.000007 + u * 0.000011) + v) % 1;
+        x = (u * w + Math.sin(t * 0.00016 + i) * 14 + w) % w;
+        y = h * (1.02 - drift * 1.08);
+        a = 0.02 + (1 - drift) * (0.055 + v * 0.05);
       }
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = i % 4 === 0 ? "#e0a071" : "#a8dcc4";
+      ctx.beginPath();
+      ctx.arc(x, y, 0.7 + u * 1.5, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.globalAlpha = 1;
 
-    // Edge damp so the slide falls off toward the frame
+    // Soft edge damp — keep culture alive near the frame (no hard plate edge)
     ctx.globalCompositeOperation = "source-over";
-    const vig = ctx.createRadialGradient(cx, cy, far * 0.3, cx, cy, far * 0.78);
+    const vig = ctx.createRadialGradient(cx, cy, far * 0.38, cx, cy, far * 0.85);
     vig.addColorStop(0, "transparent");
-    vig.addColorStop(1, "rgba(4, 8, 7, 0.55)");
+    vig.addColorStop(0.65, "transparent");
+    vig.addColorStop(1, "rgba(4, 8, 7, 0.42)");
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, w, h);
 
@@ -4286,8 +4369,8 @@ body[data-mode="escape"] .menu-links {
       return;
     }
 
-    // Plague: the specimen slide (drawPlagueSpecimenField) owns the whole field,
-    // so there is no second bloom pass here.
+    // Plague: drawPlagueSpecimenField owns the whole-field culture slide
+    // (blooms / filaments / beads); avoid a second competing bloom pass.
     if (th.material === "mycelium") return;
 
     if (th.material === "opal") {
@@ -5113,12 +5196,14 @@ body[data-mode="escape"] .menu-links {
             // Rim with-tilt; deep floor opposite / under the lip
             const shearOx = ox * (0.18 + near * 0.52) - ox * deep * 0.92;
             const shearOy = oy * (0.14 + near * 0.4) - oy * deep * 0.7;
-            const boardSink = s.cellSize * 0.68;
-            const bowlSink = deep * s.cellSize * 1.38 + elev * s.cellSize * 0.34;
-            // Fixed camera pitch — depth reads at rest (PRM keeps this + shading)
-            const pitch = s.cellSize * (0.12 + deep * 0.34);
+            // Tighter bowl than the old 0.68/1.38 sink — that dropped the honeycomb
+            // into a letterbox under a huge dark top margin. Recenter keeps pit feel.
+            const boardSink = s.cellSize * 0.22;
+            const bowlSink = deep * s.cellSize * 1.05 + elev * s.cellSize * 0.28;
+            const pitch = s.cellSize * (0.08 + deep * 0.28);
+            const pitRecenter = -s.cellSize * (0.55 + deep * 0.35);
             cell.x = baseX + shearOx;
-            cell.y = baseY + shearOy + boardSink + bowlSink + pitch;
+            cell.y = baseY + shearOy + boardSink + bowlSink + pitch + pitRecenter;
             // Center smaller (farther); rim nearer — floor clamped so digs stay hittable
             cell._depthScale = Math.max(0.54, 0.52 + near * 0.46 - elev * 0.06);
           } else {

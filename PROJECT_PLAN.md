@@ -42,6 +42,8 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
       muted digit palette, calmer bevels, one digit reading channel (ticks/glow dropped)
 - [x] Self-hosted IBM Plex (no Google Fonts CDN); fixed font URLs + distinct weights
 - [x] Fire opens large and fills ~98% of the viewport so the pit reads as one composition
+- [x] Fire viewport fill: no chrome-stolen padding / cellSize cap; innie shaft recentered (no letterbox gaps)
+- [x] Plague full-field culture-slide slime (blooms / filaments / beads under the lattice)
 - [x] Progressive empty-cell flood: BFS rings open outward to the numbered boundary
 - [x] Plague irregular face scale + off-center shading; green-forward grid with rose-copper complements
 - [x] Plague board radii +4 (easy 8 / medium 10 / hard 12)

@@ -503,25 +503,31 @@
         const phone = window.innerWidth < 500;
         cellSize = phone ? 26 : Math.max(26, conf.cellSize + 4);
       } else {
-        // Scale finite boards to fill most of the viewport (Fire/Plague).
-        // Pan/zoom still work when the lattice spills after tilt.
-        const maxW = Math.max(280, window.innerWidth - 20);
-        const maxH = Math.max(280, window.innerHeight - 64);
+        // Scale finite boards so the outer hex fills most of the viewport.
+        // viewportFill is a fraction of the live window (no stolen chrome padding —
+        // that made Fire's 0.98 read as ~90% with large letterbox margins).
+        // Optional viewportPadCells grows the height budget for innie shaft sink.
+        const maxW = Math.max(280, window.innerWidth);
+        const maxH = Math.max(280, window.innerHeight);
+        const padCells = Number.isFinite(state.config.viewportPadCells)
+          ? state.config.viewportPadCells
+          : 0;
         const naturalW = (mapRadius * 2 + 1) * SQRT3 * cellSize;
-        const naturalH = (mapRadius * 2 + 1) * 1.5 * cellSize + 0.5 * cellSize;
-        // Fire fills the viewport so the pit reads as one composition;
-        // Plague keeps a little desk margin around the specimen.
-        const fillDefault = window.innerWidth < 500 ? 0.92 : 0.88;
+        const naturalH =
+          (mapRadius * 2 + 1) * 1.5 * cellSize + 0.5 * cellSize + padCells * cellSize;
+        // Fire ~0.98 fills the short axis; Plague keeps a thin specimen margin.
+        const fillDefault = window.innerWidth < 500 ? 0.96 : 0.94;
         const fill = Number.isFinite(state.config.viewportFill)
           ? state.config.viewportFill
           : fillDefault;
         if (naturalW > 0 && naturalH > 0) {
           const scale = Math.min((maxW * fill) / naturalW, (maxH * fill) / naturalH);
-          cellSize = Math.max(15, Math.min(62, cellSize * scale));
+          // Cap high enough for easy Fire on large monitors (old 62 capped ~70% fill).
+          cellSize = Math.max(14, Math.min(96, cellSize * scale));
         }
       }
       const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
-      return Math.max(12, Math.min(72, cellSize * zoom));
+      return Math.max(12, Math.min(110, cellSize * zoom));
     }
 
     /**
