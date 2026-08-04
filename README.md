@@ -45,8 +45,32 @@ Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Ligh
 | `core.js` | Shared engine: hex grid, endless growth, input, hooks |
 | `skin-chrome.css` | Shared nav / settings / overlay chrome (lab + classic) |
 | `fonts/` | Self-hosted IBM Plex Sans/Mono + `OFL.txt` |
+| `collection/` | Theme one-pagers + Copy HTML desk (CodePen-ready) |
+| `tools/export-collection.py` | Regenerates `collection/theme-*.html` + index |
 | `classic.html` | Lab baseline neumorph skin |
 | `lab.html` + `skins.json` + `skins/` | Dormant visual lab — not linked from production |
+
+## Collection (one-pagers)
+
+Five self-contained theme files for paste into CodePen (or anywhere HTML runs):
+
+| File | Theme |
+|------|--------|
+| [`collection/`](collection/) | Desk with **Open** + **Copy HTML** |
+| `collection/theme-light.html` | Light · Infinite |
+| `collection/theme-dark.html` | Dark · Infinite |
+| `collection/theme-fire.html` | Fire · Finite |
+| `collection/theme-plague.html` | Plague · Finite |
+| `collection/theme-escape.html` | Escape · Infinite |
+
+Regenerate after production changes:
+
+```bash
+python3 tools/export-collection.py
+python3 tools/export-collection.py --check   # CI / drift guard
+```
+
+Exports inline `core.js`, chrome CSS, and IBM Plex (base64 woff2). Each file sets `window.HEXSWEEPER_ONEPAGER` so the theme is locked and welcome/theme chrome stay hidden. The live multi-theme game remains `index.html`.
 
 ## Engine API
 

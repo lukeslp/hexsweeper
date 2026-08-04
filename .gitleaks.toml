@@ -1,0 +1,12 @@
+# File Purpose: Allowlist false-positive gitleaks hits for Hexsweeper.
+# Notes: localStorage preference/save lane names are not credentials.
+title = "hexsweeper"
+
+[allowlist]
+description = "Browser storage keys and collection export mirrors"
+regexes = [
+  '''hexsweeper-[a-z0-9-]+-v[0-9]+''',
+]
+paths = [
+  '''collection/theme-.*\.html''',
+]

@@ -19,6 +19,16 @@ Production is **only** Light / Dark / Fire / Plague / Escape in `index.html`. Do
 - `PROJECT_PLAN.md` — objectives and outstanding work
 - File banners on `core.js`, `skin-chrome.css`, and other code entrypoints
 
+## Collection exports
+
+After changing `index.html`, `core.js`, `skin-chrome.css`, or `fonts/`, regenerate:
+
+```bash
+python3 tools/export-collection.py
+```
+
+Do not hand-edit `collection/theme-*.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`).
+
 ## Safety
 
 No new public ports. No secrets in this tree. Prefer loopback + Caddy for any future backend (none required today).

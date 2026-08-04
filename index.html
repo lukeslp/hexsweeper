@@ -36,6 +36,9 @@ body {
 }
 body.flag-mode { cursor: cell; }
 body.welcome-open { overflow: hidden; }
+/* Collection one-pagers: single theme, no mode chrome */
+body.onepager-locked .mode-switch { display: none !important; }
+body.onepager-locked .welcome-overlay { display: none !important; }
 /* All production modes: full-bleed canvas so zoom/pan never hits a board box */
 body[data-mode="light"] .canvas-container,
 body[data-mode="dark"] .canvas-container,
@@ -1224,6 +1227,12 @@ body[data-mode="plague"] .chrome-glass {
   };
 
   // Bare URL opens Light. Explicit ?mode= deep-links; storage restores last theme.
+  // Collection exports set window.HEXSWEEPER_ONEPAGER = { mode, skipWelcome, hideThemeSwitch }.
+  const ONEPAGER =
+    typeof window !== "undefined" && window.HEXSWEEPER_ONEPAGER
+      ? window.HEXSWEEPER_ONEPAGER
+      : null;
+  const ONEPAGER_LOCKED = !!(ONEPAGER && ONEPAGER.mode);
   const HOME_THEME_ID = "light";
   const STORAGE_KEY = "hexsweeper-mode-v3";
   const LEGACY_TONE_KEY = "hexsweeper-minimalist-tone-v1";
@@ -1265,16 +1274,22 @@ body[data-mode="plague"] .chrome-glass {
     THEMES.findIndex((t) => t.id === HOME_THEME_ID)
   );
   try {
-    const params = new URLSearchParams(location.search);
-    const q = params.get("mode") || params.get("theme");
-    const fromQuery = resolveThemeId(q);
-    if (fromQuery) {
-      themeIndex = THEMES.findIndex((t) => t.id === fromQuery);
+    const locked = ONEPAGER_LOCKED ? resolveThemeId(ONEPAGER.mode) : null;
+    if (locked) {
+      themeIndex = THEMES.findIndex((t) => t.id === locked);
+      document.body.classList.add("onepager-locked");
     } else {
-      const stored = resolveThemeId(localStorage.getItem(STORAGE_KEY));
-      if (stored) themeIndex = THEMES.findIndex((t) => t.id === stored);
-      else if (localStorage.getItem(LEGACY_TONE_KEY) === "dark") {
-        themeIndex = THEMES.findIndex((t) => t.id === "dark");
+      const params = new URLSearchParams(location.search);
+      const q = params.get("mode") || params.get("theme");
+      const fromQuery = resolveThemeId(q);
+      if (fromQuery) {
+        themeIndex = THEMES.findIndex((t) => t.id === fromQuery);
+      } else {
+        const stored = resolveThemeId(localStorage.getItem(STORAGE_KEY));
+        if (stored) themeIndex = THEMES.findIndex((t) => t.id === stored);
+        else if (localStorage.getItem(LEGACY_TONE_KEY) === "dark") {
+          themeIndex = THEMES.findIndex((t) => t.id === "dark");
+        }
       }
     }
   } catch (_) {}
@@ -3239,17 +3254,19 @@ body[data-mode="plague"] .chrome-glass {
       else if (plateSwap && previousIndex !== themeIndex) schedulePersist();
     }
     syncSettingsRows();
-    try {
-      const url = new URL(location.href);
-      url.searchParams.delete("theme");
-      if (t.id === HOME_THEME_ID) url.searchParams.delete("mode");
-      else url.searchParams.set("mode", t.id);
-      history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-    } catch (_) {}
-    try {
-      localStorage.setItem(STORAGE_KEY, t.id);
-    } catch (_) {}
-    if (toast) showToast(t.name);
+    if (!ONEPAGER_LOCKED) {
+      try {
+        const url = new URL(location.href);
+        url.searchParams.delete("theme");
+        if (t.id === HOME_THEME_ID) url.searchParams.delete("mode");
+        else url.searchParams.set("mode", t.id);
+        history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+      } catch (_) {}
+      try {
+        localStorage.setItem(STORAGE_KEY, t.id);
+      } catch (_) {}
+    }
+    if (toast && !ONEPAGER_LOCKED) showToast(t.name);
   }
 
   /**
@@ -3265,6 +3282,7 @@ body[data-mode="plague"] .chrome-glass {
   }
 
   function cycleTheme() {
+    if (ONEPAGER_LOCKED) return;
     applyTheme(themeIndex + 1);
   }
 
@@ -4065,6 +4083,7 @@ body[data-mode="plague"] .chrome-glass {
 
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (ONEPAGER_LOCKED) return;
       const i = THEMES.findIndex((theme) => theme.id === button.dataset.mode);
       if (i >= 0 && i !== themeIndex) applyTheme(i);
     });
@@ -4982,10 +5001,14 @@ body[data-mode="plague"] .chrome-glass {
   }
   try {
     // ?welcome=0 skips first-visit modal (smoke / agent probes)
-    const skipWelcome = /(?:\?|&)welcome=0(?:&|$)/.test(location.search);
+    // Collection one-pagers always skip (HEXSWEEPER_ONEPAGER.skipWelcome).
+    const skipWelcome =
+      (ONEPAGER && ONEPAGER.skipWelcome !== false) ||
+      ONEPAGER_LOCKED ||
+      /(?:\?|&)welcome=0(?:&|$)/.test(location.search);
     if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openWelcome();
   } catch (_) {
-    openWelcome();
+    if (!ONEPAGER_LOCKED) openWelcome();
   }
 
   // Test/debug: window.__hexBlast.force() after first click places mines

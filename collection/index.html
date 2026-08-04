@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+  File Purpose: Hexsweeper Collection desk — Open + Copy HTML for theme one-pagers.
+  Primary Functions/Classes: Tile grid; data-copy clipboard fetch (Choice One-Pagers pattern).
+  Inputs: theme-*.html siblings. Outputs: browsable index + clipboard full HTML.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Standalone Hexsweeper theme one-pagers with copy-ready HTML by Luke Steuber.">
+<meta name="author" content="Luke Steuber">
+<meta name="theme-color" content="#e8eaee">
+<link rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/collection/">
+<title>Hexsweeper Collection</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  color-scheme:light;
+  --bg:#e8eaee;
+  --bg-wash:radial-gradient(ellipse 70% 45% at 50% -8%,#f4f6f9,transparent 42rem),linear-gradient(180deg,#e8eaee,#dce2ea);
+  --panel:rgba(255,255,255,.62);
+  --ink:#1a1d23;
+  --muted:#6b7280;
+  --line:rgba(26,29,35,.14);
+  --accent:#1d4ed8;
+  --status:#047857;
+  --display:"IBM Plex Sans","Source Sans 3",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --touch:44px;
+}
+body{margin:0;min-height:100vh;background:var(--bg-wash),var(--bg);color:var(--ink);font-family:var(--display)}
+main{width:min(1100px,100%);margin:auto;padding:max(1rem,env(safe-area-inset-top)) clamp(1rem,4vw,2rem) max(3rem,env(safe-area-inset-bottom))}
+.back{display:inline-flex;align-items:center;min-height:var(--touch);color:var(--muted);font:600 .78rem var(--mono);text-decoration:none}
+.back:hover,.back:focus-visible{color:var(--accent)}
+header{margin:2.4rem 0 1.6rem}
+h1{margin:0;font:800 clamp(2.4rem,8vw,4.6rem)/.9 var(--display);letter-spacing:-.04em}
+.lede{max-width:40rem;margin:.85rem 0 0;color:var(--muted);line-height:1.55}
+#status{min-height:1.4rem;margin:.75rem 0 0;color:var(--status);font:600 .75rem var(--mono)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,14rem),1fr));gap:.7rem;margin-top:1.4rem}
+.study{display:flex;min-height:12.5rem;flex-direction:column;border:1px solid var(--line);background:var(--panel)}
+.study-copy{display:grid;gap:.4rem;flex:1;padding:1rem;text-decoration:none;color:inherit}
+.study-copy:hover{background:rgba(255,255,255,.55)}
+.study-copy:focus-visible,.actions a:focus-visible,.actions button:focus-visible,.back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.swatch{display:block;height:2.4rem;border:1px solid var(--line);background:
+  linear-gradient(90deg,var(--swatch-bg) 0 25%,var(--swatch-a) 25% 50%,var(--swatch-b) 50% 75%,var(--swatch-c) 75% 100%)}
+.study-kicker{color:var(--muted);font:700 .66rem var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.study-title{font:750 1.45rem/1 var(--display)}
+.study p{margin:0;color:var(--muted);font-size:.78rem;line-height:1.4}
+.actions{display:flex;gap:.4rem;padding:0 1rem 1rem}
+.actions a,.actions button{min-height:var(--touch);flex:1;border:1px solid var(--line);background:#fff;color:var(--ink);padding:.55rem;text-align:center;text-decoration:none;font:700 .66rem var(--mono);cursor:pointer}
+.actions a:hover,.actions button:hover{border-color:var(--accent)}
+footer{margin-top:2.8rem;color:var(--muted);font-size:.74rem;text-align:center}
+footer a{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../">&lsaquo; Play Hexsweeper</a>
+  <header>
+    <h1>Hexsweeper Collection</h1>
+    <p class="lede">Five theme one-pagers — each a complete, copy-ready HTML file for CodePen or local paste. The live multi-theme game stays on the Play link.</p>
+    <p id="status" role="status" aria-live="polite"></p>
+  </header>
+  <!-- generated-hexsweeper-collection:begin -->
+  <div class="grid">
+      <article class="study" data-filter="light infinite pale honeycomb plate flat" style="--swatch-bg:#e8eaee;--swatch-a:#dce2ea;--swatch-b:#1d4ed8;--swatch-c:#dc2626">
+        <a class="study-copy" href="theme-light.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Infinite</span>
+          <span class="study-title">Light</span>
+          <p>Flat pale honeycomb; infinite plate, default at the bare URL.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-light.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-light.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="dark infinite night lattice plate" style="--swatch-bg:#0f1115;--swatch-a:#2a3038;--swatch-b:#60a5fa;--swatch-c:#f43f5e">
+        <a class="study-copy" href="theme-dark.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Infinite</span>
+          <span class="study-title">Dark</span>
+          <p>Same lattice at night; cosmetic swap keeps the Light/Dark run.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-dark.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-dark.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="fire finite magma pit boil bowl" style="--swatch-bg:#1c120c;--swatch-a:#ff6400;--swatch-b:#ffd24a;--swatch-c:#ff3c14">
+        <a class="study-copy" href="theme-fire.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Finite</span>
+          <span class="study-title">Fire</span>
+          <p>Magma pit — large fill, bowl tilt, boiling center.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-fire.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-fire.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="plague finite specimen verdigris mycelium" style="--swatch-bg:#141e1c;--swatch-a:#7ec8a8;--swatch-b:#d4a08c;--swatch-c:#8fd4b0">
+        <a class="study-copy" href="theme-plague.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Finite</span>
+          <span class="study-title">Plague</span>
+          <p>Specimen slide; irregular verdigris faces and hyphal mat.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-plague.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-plague.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="escape infinite rift chase slate" style="--swatch-bg:#0e1218;--swatch-a:#263a50;--swatch-b:#7fd8c4;--swatch-c:#9dc4dd">
+        <a class="study-copy" href="theme-escape.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Infinite</span>
+          <span class="study-title">Escape</span>
+          <p>Calm slate until the rift wakes and crawls on a dig budget.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-escape.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-escape.html">Copy HTML</button>
+        </div>
+      </article>
+  </div>
+  <!-- generated-hexsweeper-collection:end -->
+  <footer>By <a href="https://lukesteuber.com">Luke Steuber</a> · <a href="../LICENSE">MIT</a> · IBM Plex under <a href="../fonts/OFL.txt">OFL</a></footer>
+</main>
+<script>
+(function () {
+  const status = document.querySelector("#status");
+  const copyText = async (value) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(value);
+    }
+    const field = document.createElement("textarea");
+    field.value = value;
+    document.body.append(field);
+    field.select();
+    document.execCommand("copy");
+    field.remove();
+  };
+  document.addEventListener("click", async (event) => {
+    const btn = event.target.closest("[data-copy]");
+    if (!btn) return;
+    const old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Copying…";
+    try {
+      const response = await fetch(btn.dataset.copy, { cache: "no-store" });
+      if (!response.ok) throw new Error("fetch failed");
+      await copyText(await response.text());
+      btn.textContent = "Copied";
+      if (status) status.textContent = "Copied " + btn.dataset.copy + ".";
+    } catch (error) {
+      btn.textContent = "Copy failed";
+      if (status) status.textContent = "Open the page and copy its source directly.";
+    }
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = old;
+    }, 1600);
+  });
+})();
+</script>
+</body>
+</html>

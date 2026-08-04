@@ -52,9 +52,12 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Nested git repo for production folder (commit/push history)
 - [x] Self-hosted fonts committed (`fonts/` + OFL) so GitHub clones match live typography
 - [x] Docs / `skins.json` production surface aligned to five themes
+- [x] Collection one-pagers: `collection/theme-*.html` + Copy HTML desk + `tools/export-collection.py`
+- [x] Production `HEXSWEEPER_ONEPAGER` lock (theme fixed, welcome/theme switch suppressed)
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
 - [ ] Optional: automated smoke (desktop/mobile) in CI — currently manual / browser probes
-- [ ] Phase next: full / comprehensive / impressive cut (see session plan after distill)
+- [ ] Optional: `export-collection.py --check` in CI; CodePen push via codepen-prefill when published
+- [ ] Phase next: full / comprehensive / impressive cut beyond the collection scaffold
 
 ## Risks
 
