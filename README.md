@@ -13,7 +13,7 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 |------|--------|------|
 | **Light** | Infinite | Flat minimal field; default at bare URL |
 | **Dark** | Infinite | Flat minimal field, night |
-| **Fire** | Finite | Magma pit — large fill, bowl tilt, boiling center |
+| **Fire** | Finite | Magma shaft — into-screen bowl, sink-on-poke, boiling center |
 | **Plague** | Finite | Green specimen tiles (irregular faces) + hyphal mat |
 | **Escape** | Infinite | Calm slate plate → classic dig/flag/chord; a glacial rift seeps toward your digs |
 
@@ -21,7 +21,7 @@ Fire and Plague open on the **large** board; board size (S·M·L) lives in Setti
 
 Cycle with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`). Preference key: `hexsweeper-mode-v3`.
 
-First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome: lower-right **Light/Dark · Reset · Menu** (hex icon). Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
+First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome: lower-right **Appearance (sun/moon) · Reset · Menu** as matching icons — Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
 
 ### Interaction
 
