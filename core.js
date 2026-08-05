@@ -7,9 +7,10 @@
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
  *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
- *   hooks.cameraLock (bool|fn): single-finger drag drives pointer tilt / hover
- *   instead of cam pan (Fire magma pit). Long-press still flags; pinch zooms;
- *   Space/middle-drag still pans as an escape hatch.
+ *   hooks.cameraLock (bool|fn): Fire-style tilt while the board fits the
+ *   viewport. Once zoom pushes the board past the frame, drag pans (clamped
+ *   to the board) so edge tiles stay reachable — especially on mobile.
+ *   Long-press still flags; pinch zooms; Space/middle-drag always pans.
  */
 (function (global) {
   "use strict";
@@ -329,6 +330,8 @@
       },
       focusOnCell(cell, snap) {
         if (!cell) return;
+        // Fire pit: digs must not steal the camera — tilt/overflow-pan own the view.
+        if (isCameraLocked()) return;
         state.focusCell = cell;
         const wx = state.cellSize * SQRT3 * (cell.q + cell.r / 2);
         const wy = state.cellSize * 1.5 * cell.r;
@@ -538,6 +541,57 @@
      * `persist: false` frames the view without touching the stored preference — the zoom key
      * is shared across themes, so an opening zoom must not overwrite what the player chose.
      */
+    /** Finite board size in pixels at the current cellSize (includes zoom). */
+    function boardPixelExtents() {
+      const r = state.mapRadius || 0;
+      const s = state.cellSize || 28;
+      const pad = Number.isFinite(state.config && state.config.viewportPadCells)
+        ? state.config.viewportPadCells
+        : 0;
+      return {
+        w: (r * 2 + 1) * SQRT3 * s,
+        h: (r * 2 + 1) * 1.5 * s + 0.5 * s + pad * s,
+      };
+    }
+
+    /**
+     * True when edge tiles need pan: zoomed past default, or the finite board
+     * no longer fits the canvas. Zoom-1 Fire (~0.98 fill) stays tilt-only.
+     */
+    function boardOverflowsViewport() {
+      if (state.endless) return false;
+      const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
+      // Any deliberate zoom-in unlocks pan — bounding-box alone often leaves
+      // maxX=0 on wide desks (height overflows first) so rim tiles stayed stuck.
+      if (zoom > 1.04) return true;
+      const { w, h } = boardPixelExtents();
+      const slack = 12;
+      return w > canvas.width + slack || h > canvas.height + slack;
+    }
+
+    /** Keep a finite board's camera inside a usable overflow range. */
+    function clampCameraToBoard() {
+      if (state.endless) return;
+      const { w, h } = boardPixelExtents();
+      const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
+      const byBoxX = Math.max(0, (w - canvas.width) / 2);
+      const byBoxY = Math.max(0, (h - canvas.height) / 2);
+      // Zoom slack: even when one axis still "fits", let the player reach the rim.
+      const byZoomX = zoom > 1 ? (canvas.width * (zoom - 1)) / 2 : 0;
+      const byZoomY = zoom > 1 ? (canvas.height * (zoom - 1)) / 2 : 0;
+      const maxX = Math.max(byBoxX, byZoomX);
+      const maxY = Math.max(byBoxY, byZoomY);
+      if (maxX < 0.5 && maxY < 0.5) {
+        state.camX = 0;
+        state.camY = 0;
+      } else {
+        state.camX = Math.max(-maxX, Math.min(maxX, state.camX || 0));
+        state.camY = Math.max(-maxY, Math.min(maxY, state.camY || 0));
+      }
+      state.camTX = state.camX;
+      state.camTY = state.camY;
+    }
+
     function applyViewZoom(nextZoom, anchor, { persist = true } = {}) {
       const lo = 0.55;
       const hi = 1.9;
@@ -545,7 +599,9 @@
       if (Math.abs(z - state.viewZoom) < 0.001) return state.viewZoom;
       const oldSize = state.cellSize || 28;
       let worldUnder = null;
-      if (anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y) && state.endless) {
+      // Endless always; Fire (cameraLock) also — pinch/wheel should keep the dig under the finger.
+      const anchorZoom = state.endless || isCameraLocked();
+      if (anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y) && anchorZoom) {
         const wx = anchor.x - canvas.width / 2 + state.camX;
         const wy = anchor.y - canvas.height / 2 + state.camY;
         worldUnder = { wx, wy };
@@ -578,6 +634,8 @@
         cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
       });
       if (state.endless) ensureWorldCoverage(true);
+      // Fire: snap home when the pit fits again; clamp when zoomed past the frame.
+      if (isCameraLocked() && !state.endless) clampCameraToBoard();
       if (typeof state.hooks.onZoom === "function") state.hooks.onZoom(api, { zoom: state.viewZoom });
       syncCursor();
       return state.viewZoom;
@@ -611,6 +669,7 @@
         cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
       });
       if (state.endless) ensureWorldCoverage(true);
+      if (isCameraLocked() && !state.endless) clampCameraToBoard();
       if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
     }
 
@@ -1072,10 +1131,11 @@
         const dist = Math.hypot(dx, dy);
         const panThreshold = digSession.forcePan || state.endless ? 8 : 18;
         if (digSession.panned || dist > panThreshold) {
-          const lockTilt = isCameraLocked() && !digSession.forcePan;
+          // Fire fits → tilt; Fire zoomed past frame (or Space/middle) → pan.
+          const lockTilt = isTiltDragOnly() && !digSession.forcePan;
           if (!digSession.panned) {
             digSession.panned = true;
-            // Locked skins: suppress dig-on-release, but keep hover for heat/tilt
+            // Tilt-only: suppress dig-on-release, but keep hover for heat/tilt
             if (!lockTilt) {
               state.panning = true;
               state.hoveredKey = null;
@@ -1089,6 +1149,7 @@
             state.camTX = state.camX;
             state.camTY = state.camY;
             state.focusCell = null;
+            if (isCameraLocked() && !state.endless) clampCameraToBoard();
             if (state.endless) ensureWorldCoverage(false);
             return;
           }
@@ -1113,7 +1174,7 @@
       syncCursor();
       if (wasPan) {
         // Camera moved — let endless autosave capture the new viewport
-        if (!isCameraLocked() || wasForcePan) {
+        if (!isTiltDragOnly() || wasForcePan) {
           if (typeof state.hooks.onPersistTick === "function") state.hooks.onPersistTick(api);
         }
         return;
@@ -1147,11 +1208,19 @@
     let touchFlagged = false;
     let touchPanOrigin = null;
 
-    /** Fire (and similar): drag tilts via pointer; do not translate the board. */
+    /** Fire (and similar): theme wants pit-tilt chrome rather than free pan. */
     function isCameraLocked() {
       const lock = state.hooks && state.hooks.cameraLock;
       if (typeof lock === "function") return !!lock(api);
       return !!lock;
+    }
+
+    /**
+     * Tilt-only drag while the locked board still fits the viewport.
+     * Once zoom overflows the frame, drag pans (clamped) so rim tiles stay reachable.
+     */
+    function isTiltDragOnly() {
+      return isCameraLocked() && !boardOverflowsViewport();
     }
 
     function handleTouchStart(e) {
@@ -1212,20 +1281,21 @@
       if (Math.hypot(dx, dy) > 10) {
         touchMoved = true;
         clearTimeout(longPressTimer);
-        // Camera-locked skins (Fire): drag = parallax tilt + hover heat, not pan.
-        if (isCameraLocked()) {
+        // Fire fits the frame → tilt; zoomed past the frame → clamped pan to the rim.
+        if (isTiltDragOnly()) {
           handleMouseMove(e);
           return;
         }
         state.hoveredKey = null;
         state.panning = true;
-        // Pan the camera (endless plates + zoomed finite boards)
+        // Pan the camera (endless plates + zoomed Fire / finite boards)
         if (touchPanOrigin) {
           state.camX = touchPanOrigin.camX - dx;
           state.camY = touchPanOrigin.camY - dy;
           state.camTX = state.camX;
           state.camTY = state.camY;
           state.focusCell = null;
+          if (isCameraLocked() && !state.endless) clampCameraToBoard();
           if (state.endless) ensureWorldCoverage(false);
         }
         const p = canvasPointFromEvent(e);
@@ -1256,7 +1326,7 @@
         state.pointer.active = false;
       }
       if (suppressTapReveal || touchFlagged || touchMoved) {
-        if (touchMoved && !isCameraLocked() && typeof state.hooks.onPersistTick === "function") {
+        if (touchMoved && !isTiltDragOnly() && typeof state.hooks.onPersistTick === "function") {
           state.hooks.onPersistTick(api);
         }
         suppressTapReveal = false;

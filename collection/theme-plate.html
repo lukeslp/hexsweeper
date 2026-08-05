@@ -1293,7 +1293,7 @@ body[data-mode="escape"] .menu-links {
     <p>Click or tap a covered cell. First click is always safe. The number is how many mines sit on the six sides. Empty clears open outward in rings until they hit numbered cells. When the flags around a number match that count, click it again (or double-click) to open the rest. In Light/Dark/Escape, the camera follows your dig and the grid expands so the canvas never runs out of hexes.</p>
 
     <h3>Move &amp; zoom</h3>
-    <p>Infinite boards: drag to pan. <strong>Fire</strong>: drag tilts the pit; hold to flag. Scroll or pinch to zoom. <kbd>+</kbd> / <kbd>−</kbd> also zoom. Space-drag or middle-drag pans (even on Fire).</p>
+    <p>Infinite boards: drag to pan. <strong>Fire</strong>: drag tilts while the pit fits the screen; zoom in and drag pans (clamped) so rim tiles stay reachable. Hold to flag. Scroll or pinch to zoom. <kbd>+</kbd> / <kbd>−</kbd> also zoom.</p>
 
     <h3>Mine death</h3>
     <p><strong>Fire</strong> and the Light/Dark plates charge then blow tiles apart (shock ring, shards, shake). <strong>Plague</strong> infects outward along the honeycomb — copper puncture, then a hyphal crawl. <strong>Escape</strong> loses to a mine or the rift as a cool lens swallow, not an explosion. Press <kbd>R</kbd> or use Reset when you're ready.</p>
@@ -1335,9 +1335,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
  *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
- *   hooks.cameraLock (bool|fn): single-finger drag drives pointer tilt / hover
- *   instead of cam pan (Fire magma pit). Long-press still flags; pinch zooms;
- *   Space/middle-drag still pans as an escape hatch.
+ *   hooks.cameraLock (bool|fn): Fire-style tilt while the board fits the
+ *   viewport. Once zoom pushes the board past the frame, drag pans (clamped
+ *   to the board) so edge tiles stay reachable — especially on mobile.
+ *   Long-press still flags; pinch zooms; Space/middle-drag always pans.
  */
 (function (global) {
   "use strict";
@@ -1657,6 +1658,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       },
       focusOnCell(cell, snap) {
         if (!cell) return;
+        // Fire pit: digs must not steal the camera — tilt/overflow-pan own the view.
+        if (isCameraLocked()) return;
         state.focusCell = cell;
         const wx = state.cellSize * SQRT3 * (cell.q + cell.r / 2);
         const wy = state.cellSize * 1.5 * cell.r;
@@ -1866,6 +1869,57 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
      * `persist: false` frames the view without touching the stored preference — the zoom key
      * is shared across themes, so an opening zoom must not overwrite what the player chose.
      */
+    /** Finite board size in pixels at the current cellSize (includes zoom). */
+    function boardPixelExtents() {
+      const r = state.mapRadius || 0;
+      const s = state.cellSize || 28;
+      const pad = Number.isFinite(state.config && state.config.viewportPadCells)
+        ? state.config.viewportPadCells
+        : 0;
+      return {
+        w: (r * 2 + 1) * SQRT3 * s,
+        h: (r * 2 + 1) * 1.5 * s + 0.5 * s + pad * s,
+      };
+    }
+
+    /**
+     * True when edge tiles need pan: zoomed past default, or the finite board
+     * no longer fits the canvas. Zoom-1 Fire (~0.98 fill) stays tilt-only.
+     */
+    function boardOverflowsViewport() {
+      if (state.endless) return false;
+      const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
+      // Any deliberate zoom-in unlocks pan — bounding-box alone often leaves
+      // maxX=0 on wide desks (height overflows first) so rim tiles stayed stuck.
+      if (zoom > 1.04) return true;
+      const { w, h } = boardPixelExtents();
+      const slack = 12;
+      return w > canvas.width + slack || h > canvas.height + slack;
+    }
+
+    /** Keep a finite board's camera inside a usable overflow range. */
+    function clampCameraToBoard() {
+      if (state.endless) return;
+      const { w, h } = boardPixelExtents();
+      const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
+      const byBoxX = Math.max(0, (w - canvas.width) / 2);
+      const byBoxY = Math.max(0, (h - canvas.height) / 2);
+      // Zoom slack: even when one axis still "fits", let the player reach the rim.
+      const byZoomX = zoom > 1 ? (canvas.width * (zoom - 1)) / 2 : 0;
+      const byZoomY = zoom > 1 ? (canvas.height * (zoom - 1)) / 2 : 0;
+      const maxX = Math.max(byBoxX, byZoomX);
+      const maxY = Math.max(byBoxY, byZoomY);
+      if (maxX < 0.5 && maxY < 0.5) {
+        state.camX = 0;
+        state.camY = 0;
+      } else {
+        state.camX = Math.max(-maxX, Math.min(maxX, state.camX || 0));
+        state.camY = Math.max(-maxY, Math.min(maxY, state.camY || 0));
+      }
+      state.camTX = state.camX;
+      state.camTY = state.camY;
+    }
+
     function applyViewZoom(nextZoom, anchor, { persist = true } = {}) {
       const lo = 0.55;
       const hi = 1.9;
@@ -1873,7 +1927,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (Math.abs(z - state.viewZoom) < 0.001) return state.viewZoom;
       const oldSize = state.cellSize || 28;
       let worldUnder = null;
-      if (anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y) && state.endless) {
+      // Endless always; Fire (cameraLock) also — pinch/wheel should keep the dig under the finger.
+      const anchorZoom = state.endless || isCameraLocked();
+      if (anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y) && anchorZoom) {
         const wx = anchor.x - canvas.width / 2 + state.camX;
         const wy = anchor.y - canvas.height / 2 + state.camY;
         worldUnder = { wx, wy };
@@ -1906,6 +1962,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
       });
       if (state.endless) ensureWorldCoverage(true);
+      // Fire: snap home when the pit fits again; clamp when zoomed past the frame.
+      if (isCameraLocked() && !state.endless) clampCameraToBoard();
       if (typeof state.hooks.onZoom === "function") state.hooks.onZoom(api, { zoom: state.viewZoom });
       syncCursor();
       return state.viewZoom;
@@ -1939,6 +1997,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
       });
       if (state.endless) ensureWorldCoverage(true);
+      if (isCameraLocked() && !state.endless) clampCameraToBoard();
       if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
     }
 
@@ -2400,10 +2459,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         const dist = Math.hypot(dx, dy);
         const panThreshold = digSession.forcePan || state.endless ? 8 : 18;
         if (digSession.panned || dist > panThreshold) {
-          const lockTilt = isCameraLocked() && !digSession.forcePan;
+          // Fire fits → tilt; Fire zoomed past frame (or Space/middle) → pan.
+          const lockTilt = isTiltDragOnly() && !digSession.forcePan;
           if (!digSession.panned) {
             digSession.panned = true;
-            // Locked skins: suppress dig-on-release, but keep hover for heat/tilt
+            // Tilt-only: suppress dig-on-release, but keep hover for heat/tilt
             if (!lockTilt) {
               state.panning = true;
               state.hoveredKey = null;
@@ -2417,6 +2477,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             state.camTX = state.camX;
             state.camTY = state.camY;
             state.focusCell = null;
+            if (isCameraLocked() && !state.endless) clampCameraToBoard();
             if (state.endless) ensureWorldCoverage(false);
             return;
           }
@@ -2441,7 +2502,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       syncCursor();
       if (wasPan) {
         // Camera moved — let endless autosave capture the new viewport
-        if (!isCameraLocked() || wasForcePan) {
+        if (!isTiltDragOnly() || wasForcePan) {
           if (typeof state.hooks.onPersistTick === "function") state.hooks.onPersistTick(api);
         }
         return;
@@ -2475,11 +2536,19 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     let touchFlagged = false;
     let touchPanOrigin = null;
 
-    /** Fire (and similar): drag tilts via pointer; do not translate the board. */
+    /** Fire (and similar): theme wants pit-tilt chrome rather than free pan. */
     function isCameraLocked() {
       const lock = state.hooks && state.hooks.cameraLock;
       if (typeof lock === "function") return !!lock(api);
       return !!lock;
+    }
+
+    /**
+     * Tilt-only drag while the locked board still fits the viewport.
+     * Once zoom overflows the frame, drag pans (clamped) so rim tiles stay reachable.
+     */
+    function isTiltDragOnly() {
+      return isCameraLocked() && !boardOverflowsViewport();
     }
 
     function handleTouchStart(e) {
@@ -2540,20 +2609,21 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (Math.hypot(dx, dy) > 10) {
         touchMoved = true;
         clearTimeout(longPressTimer);
-        // Camera-locked skins (Fire): drag = parallax tilt + hover heat, not pan.
-        if (isCameraLocked()) {
+        // Fire fits the frame → tilt; zoomed past the frame → clamped pan to the rim.
+        if (isTiltDragOnly()) {
           handleMouseMove(e);
           return;
         }
         state.hoveredKey = null;
         state.panning = true;
-        // Pan the camera (endless plates + zoomed finite boards)
+        // Pan the camera (endless plates + zoomed Fire / finite boards)
         if (touchPanOrigin) {
           state.camX = touchPanOrigin.camX - dx;
           state.camY = touchPanOrigin.camY - dy;
           state.camTX = state.camX;
           state.camTY = state.camY;
           state.focusCell = null;
+          if (isCameraLocked() && !state.endless) clampCameraToBoard();
           if (state.endless) ensureWorldCoverage(false);
         }
         const p = canvasPointFromEvent(e);
@@ -2584,7 +2654,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         state.pointer.active = false;
       }
       if (suppressTapReveal || touchFlagged || touchMoved) {
-        if (touchMoved && !isCameraLocked() && typeof state.hooks.onPersistTick === "function") {
+        if (touchMoved && !isTiltDragOnly() && typeof state.hooks.onPersistTick === "function") {
           state.hooks.onPersistTick(api);
         }
         suppressTapReveal = false;
@@ -3767,6 +3837,12 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       endless: true,
       // Fresh runs open a patch so the rift has somewhere to seep from
       openingDig: true,
+      // Escape reads as a field to cross, not a handful of hexes, so it opens
+      // fully out like the plate lanes.
+      initialZoom: MIN_VIEW_ZOOM,
+      // …but it arrives mid-zoom and pulls back, so landing shows the patch
+      // first and then reveals how much dark is around it.
+      introZoom: { from: 1.0, ms: 1400 },
       material: "neumorph",
       css: {
         "--bg-color": "#0e1218",
@@ -3818,7 +3894,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       ...MATERIAL_LIBRARY[6],
       id: "fire",
       name: "Fire · Magma",
-      // Pit stays centered: drag = parallax tilt / hold = flag (not board pan).
+      // Pit fits → drag tilts; zoomed past the frame → clamped pan to the rim.
       cameraLock: true,
       boardConfig: {
         // Outer hex ≈ 98% of the live window; tiny pad — packing is face-scale, not sink.
@@ -6209,7 +6285,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (RIFT.phase === "grace" && RIFT.intensity < 0.12) return;
     const cx = RIFT.x;
     const cy = RIFT.y;
-    const pulse = 0.55 + 0.45 * Math.sin(now * 0.005);
+    // Heartbeat, not a sine: a double thump that quickens as the rift closes,
+    // so the thing reads as alive and hungry rather than as a glowing circle.
+    const beatHz = 0.7 + RIFT.intensity * 1.2;
+    const beat = ((now * 0.001 * beatHz) % 1 + 1) % 1;
+    const thump =
+      Math.exp(-beat * 9) + 0.6 * Math.exp(-Math.max(0, beat - 0.18) * 9);
+    const pulse = 0.5 + 0.75 * Math.min(1, thump);
     ctx.save();
 
     // Pressure vignette (stronger when chasing / catch swallow)
@@ -6221,7 +6303,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       RIFT.phase === "catch"
         ? 0.35 + catchU * 0.35
         : RIFT.phase === "chase" || RIFT.phase === "awaken"
-          ? 0.22 + RIFT.intensity * 0.2
+          ? 0.3 + RIFT.intensity * 0.32
           : RIFT.intensity * 0.12;
     if (vig > 0.04) {
       const g = ctx.createRadialGradient(
@@ -6252,6 +6334,60 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.beginPath();
     ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
     ctx.fill();
+
+    // Intake: motes dragged down the throat, so the lens reads as pulling
+    // rather than sitting there. Positions come from the clock and an index,
+    // so there is no particle array to grow or garbage-collect.
+    if (RIFT.intensity > 0.08) {
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 16; i++) {
+        const seed = i * 12.9898;
+        const fall = (now * 0.00024 + (Math.sin(seed) * 0.5 + 0.5)) % 1;
+        const far = 1 - fall; // 1 = out at the rim, 0 = swallowed
+        const spin = seed * 7.7 + fall * 2.6;
+        const rad = s.cellSize * (0.45 + far * 3.5);
+        ctx.fillStyle = `rgba(150,225,240,${0.6 * RIFT.intensity * Math.sin(fall * Math.PI)})`;
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(spin) * rad, cy + Math.sin(spin) * rad, 1 + (1 - far) * 1.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Reach: arms groping toward the dig it is hunting. This is the tell that
+    // the rift has picked a target and is coming for it — the ring alone never
+    // said which way it was headed.
+    if (RIFT.phase === "awaken" || RIFT.phase === "chase") {
+      const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
+      const toward = tip ? Math.atan2(tip.y - cy, tip.x - cx) : 0;
+      const reach = s.cellSize * (1.5 + RIFT.intensity * 2.5);
+      const arms = 5;
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      ctx.shadowColor = "rgba(56,189,248,0.7)";
+      ctx.shadowBlur = 10;
+      for (let i = 0; i < arms; i++) {
+        // Arms fan around the hunt line; the middle one leads.
+        const fan = ((i - (arms - 1) / 2) / arms) * 2.3;
+        const angle = toward + fan + Math.sin(now * 0.0016 + i * 1.7) * 0.34;
+        const len = reach * (0.62 + 0.38 * Math.abs(Math.sin(now * 0.0011 + i * 2.3)));
+        const ex = cx + Math.cos(angle) * len;
+        const ey = cy + Math.sin(angle) * len;
+        // Bow each arm sideways so it crawls instead of pointing.
+        const bow = Math.sin(now * 0.0021 + i) * len * 0.28;
+        const mx = cx + Math.cos(angle) * len * 0.5 - Math.sin(angle) * bow;
+        const my = cy + Math.sin(angle) * len * 0.5 + Math.cos(angle) * bow;
+        const arm = ctx.createLinearGradient(cx, cy, ex, ey);
+        arm.addColorStop(0, `rgba(125,240,225,${0.5 * RIFT.intensity})`);
+        arm.addColorStop(1, "rgba(56,189,248,0)");
+        ctx.strokeStyle = arm;
+        ctx.lineWidth = 2.6 + RIFT.intensity * 2.2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.quadraticCurveTo(mx, my, ex, ey);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
 
     // Leading ribbon while hunting — not during catch swallow
     if (RIFT.phase === "awaken" || RIFT.phase === "chase") {
@@ -6677,6 +6813,45 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
   function mt(t) {
     return reduceMotion ? 0 : t;
+  }
+
+  // —— Opening pull-back ——
+  // A theme with introZoom lands mid-zoom on its opening patch and glides out
+  // to initialZoom, so arrival shows the dig first and then how much dark
+  // surrounds it. Self-policing: if anything else moves the camera (a restored
+  // run replayed by applyEndlessState, or the player's own wheel/pinch), the
+  // glide stands down instead of fighting for it.
+  let introZoomFrame = 0;
+  let introZoomExpect = 0;
+  function cancelIntroZoom() {
+    if (introZoomFrame) cancelAnimationFrame(introZoomFrame);
+    introZoomFrame = 0;
+    introZoomExpect = 0;
+  }
+  function runIntroZoom(api, from, to, ms) {
+    cancelIntroZoom();
+    if (!api || typeof api.setZoom !== "function") return;
+    if (reduceMotion || !(ms > 0)) {
+      api.setZoom(to, null, { persist: false });
+      return;
+    }
+    api.setZoom(from, null, { persist: false });
+    introZoomExpect = api.state ? api.state.viewZoom : from;
+    const t0 = performance.now();
+    const step = (now) => {
+      if (api.state && Math.abs(api.state.viewZoom - introZoomExpect) > 0.002) {
+        cancelIntroZoom();
+        return;
+      }
+      const u = Math.min(1, (now - t0) / ms);
+      // easeOutCubic: a quick lift off the patch, then a long settle wide.
+      const eased = 1 - Math.pow(1 - u, 3);
+      api.setZoom(from + (to - from) * eased, null, { persist: false });
+      introZoomExpect = api.state ? api.state.viewZoom : introZoomExpect;
+      if (u < 1) introZoomFrame = requestAnimationFrame(step);
+      else cancelIntroZoom();
+    };
+    introZoomFrame = requestAnimationFrame(step);
   }
 
   /**
@@ -7754,6 +7929,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
           api.state?.isFirstClick
         ) {
           api.dig({ q: 0, r: 0 });
+        }
+        // Pull back off that opening patch. Runs last so the dig it frames
+        // already exists, and stands down on its own if a saved run replays a
+        // zoom over the top.
+        cancelIntroZoom();
+        if (th?.introZoom && Number.isFinite(th.initialZoom)) {
+          runIntroZoom(api, th.introZoom.from, th.initialZoom, th.introZoom.ms);
         }
         // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX
         if (th && api.state && api.state.canvas) {
