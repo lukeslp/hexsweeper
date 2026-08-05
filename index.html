@@ -16,13 +16,13 @@
 <meta name="description" content="Hexagonal minesweeper: Light/Dark plates, Fire, Plague, and Escape rift chase.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hexsweeper">
-<meta property="og:description" content="Hexagonal minesweeper: Soft UI Light/Dark, Fire magma pit, Plague, Escape.">
+<meta property="og:description" content="Hexagonal minesweeper: six neighbors instead of eight, across five boards.">
 <meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/">
-<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/fire-og.png">
+<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/home-og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Hexsweeper">
-<meta name="twitter:description" content="Hexagonal minesweeper: Soft UI Light/Dark, Fire magma pit, Plague, Escape.">
-<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/fire-og.png">
+<meta name="twitter:description" content="Hexagonal minesweeper: six neighbors instead of eight, across five boards.">
+<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/home-og.png">
 <meta name="theme-color" content="#d4dce8">
 <link rel="stylesheet" href="skin-chrome.css">
 <style>
@@ -1348,6 +1348,16 @@ body[data-mode="escape"] .menu-links {
 
   // Matches the clamp in core.js applyViewZoom — fully zoomed out.
   const MIN_VIEW_ZOOM = 0.55;
+
+  // ?deal=1 opens a starting patch in any mode, the way Escape always does.
+  // Used by tools/og-card.html so social cards show a game rather than a lid.
+  const FORCE_OPENING_DIG = (() => {
+    try {
+      return new URLSearchParams(location.search).get("deal") === "1";
+    } catch (_) {
+      return false;
+    }
+  })();
 
   const THEMES = [
     {
@@ -5354,7 +5364,11 @@ body[data-mode="escape"] .menu-links {
         }
         // Open a starting patch so the field reads as a place, not a blank plate.
         // placeMines() keeps its safe zone and the finish clear of this dig.
-        if (th?.openingDig && typeof api.dig === "function" && api.state?.isFirstClick) {
+        if (
+          (th?.openingDig || FORCE_OPENING_DIG) &&
+          typeof api.dig === "function" &&
+          api.state?.isFirstClick
+        ) {
           api.dig({ q: 0, r: 0 });
         }
         // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX

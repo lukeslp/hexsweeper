@@ -17,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 COLLECTION = ROOT / "collection"
 PUBLIC_BASE = "https://dr.eamer.dev/games/hexsweeper/collection"
+OG = "https://dr.eamer.dev/games/hexsweeper/assets/social"
 
 # Four pasteable files: Light/Dark share one infinite run, toggled in-file.
 THEMES = [
@@ -29,6 +30,7 @@ THEMES = [
         "swatch": ("#d4dce8", "#10151d", "#1d4ed8", "#60a5fa"),
         "mode": "light",
         "allowModes": ["light", "dark"],
+        "ogImage": f"{OG}/light-og.png",
     },
     {
         "id": "fire",
@@ -38,7 +40,7 @@ THEMES = [
         "filter": "fire finite magma pit boil bowl hell mine tilt parallax camera lock",
         "swatch": ("#1c120c", "#ff6400", "#ffd24a", "#ff3c14"),
         "mode": "fire",
-        "ogImage": "https://dr.eamer.dev/games/hexsweeper/assets/social/fire-og.png",
+        "ogImage": f"{OG}/fire-og.png",
     },
     {
         "id": "plague",
@@ -48,6 +50,7 @@ THEMES = [
         "filter": "plague finite specimen verdigris mycelium",
         "swatch": ("#141e1c", "#7ec8a8", "#d4a08c", "#8fd4b0"),
         "mode": "plague",
+        "ogImage": f"{OG}/plague-og.png",
     },
     {
         "id": "escape",
@@ -57,6 +60,7 @@ THEMES = [
         "filter": "escape infinite rift chase slate crawl finish exit",
         "swatch": ("#0e1218", "#263a50", "#7fd8c4", "#9dc4dd"),
         "mode": "escape",
+        "ogImage": f"{OG}/escape-og.png",
     },
 ]
 

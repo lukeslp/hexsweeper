@@ -14,6 +14,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Hexsweeper — Plague</title>
 <meta name="description" content="Hexagonal minesweeper one-pager: Plague — Specimen slide; irregular verdigris faces and hyphal mat.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Hexsweeper — Plague">
+<meta property="og:description" content="Hexagonal minesweeper one-pager: Plague — Specimen slide; irregular verdigris faces and hyphal mat.">
+<meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/collection/theme-plague.html">
+<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/plague-og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hexsweeper — Plague">
+<meta name="twitter:description" content="Hexagonal minesweeper one-pager: Plague — Specimen slide; irregular verdigris faces and hyphal mat.">
+<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/plague-og.png">
 <meta name="theme-color" content="#d4dce8">
 <style>
 /* skin-chrome.css */
@@ -3719,6 +3728,16 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
   // Matches the clamp in core.js applyViewZoom — fully zoomed out.
   const MIN_VIEW_ZOOM = 0.55;
+
+  // ?deal=1 opens a starting patch in any mode, the way Escape always does.
+  // Used by tools/og-card.html so social cards show a game rather than a lid.
+  const FORCE_OPENING_DIG = (() => {
+    try {
+      return new URLSearchParams(location.search).get("deal") === "1";
+    } catch (_) {
+      return false;
+    }
+  })();
 
   const THEMES = [
     {
@@ -7725,7 +7744,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         }
         // Open a starting patch so the field reads as a place, not a blank plate.
         // placeMines() keeps its safe zone and the finish clear of this dig.
-        if (th?.openingDig && typeof api.dig === "function" && api.state?.isFirstClick) {
+        if (
+          (th?.openingDig || FORCE_OPENING_DIG) &&
+          typeof api.dig === "function" &&
+          api.state?.isFirstClick
+        ) {
           api.dig({ q: 0, r: 0 });
         }
         // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX

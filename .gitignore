@@ -11,3 +11,6 @@
 !assets/
 !assets/social/
 !assets/social/*.png
+
+# Staging frames for tools/shoot-og-cards.sh
+og-frames/
