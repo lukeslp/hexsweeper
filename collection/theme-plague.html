@@ -1675,8 +1675,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       toggleFlag(cell) {
         if (cell) toggleFlag(cell);
       },
-      setZoom(z, anchor) {
-        return applyViewZoom(z, anchor);
+      setZoom(z, anchor, opts) {
+        return applyViewZoom(z, anchor, opts);
       },
       adjustZoom(factor, anchor) {
         return applyViewZoom(state.viewZoom * factor, anchor);
@@ -1850,8 +1850,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
     /**
      * Zoom the board. When `anchor` is a canvas pixel, keep that world point under the cursor.
+     * `persist: false` frames the view without touching the stored preference — the zoom key
+     * is shared across themes, so an opening zoom must not overwrite what the player chose.
      */
-    function applyViewZoom(nextZoom, anchor) {
+    function applyViewZoom(nextZoom, anchor, { persist = true } = {}) {
       const lo = 0.55;
       const hi = 1.9;
       const z = Math.max(lo, Math.min(hi, nextZoom));
@@ -1864,9 +1866,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         worldUnder = { wx, wy };
       }
       state.viewZoom = z;
-      try {
-        localStorage.setItem("hexsweeper-zoom-v1", String(Math.round(z * 100) / 100));
-      } catch (_) {}
+      if (persist) {
+        try {
+          localStorage.setItem("hexsweeper-zoom-v1", String(Math.round(z * 100) / 100));
+        } catch (_) {}
+      }
       const level = state.currentDifficulty;
       state.cellSize = computeCellSize(level, state.mapRadius);
       // Keep camera focus coherent when cell size changes
@@ -3001,7 +3005,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         state.camTY = state.camY;
       }
       if (Number.isFinite(data.zoom)) {
-        applyViewZoom(Math.max(0.55, Math.min(1.9, data.zoom)));
+        // Restoring a lane's view, not choosing a zoom: leave the shared
+        // preference to explicit wheel / pinch / button input.
+        applyViewZoom(Math.max(0.55, Math.min(1.9, data.zoom)), null, { persist: false });
       }
 
       updateUI();
@@ -3711,18 +3717,24 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.fillText(digit, cell.x, ty);
   }
 
+  // Matches the clamp in core.js applyViewZoom — fully zoomed out.
+  const MIN_VIEW_ZOOM = 0.55;
+
   const THEMES = [
     {
       ...MATERIAL_LIBRARY[0],
       id: "light",
       name: "Light · Infinite",
       ...PLATE_LIGHT,
+      // Open the plate wide: the desk reads as a field, not a handful of hexes
+      initialZoom: MIN_VIEW_ZOOM,
     },
     {
       ...MATERIAL_LIBRARY[0],
       id: "dark",
       name: "Dark · Infinite",
       ...PLATE_DARK,
+      initialZoom: MIN_VIEW_ZOOM,
     },
     {
       ...MATERIAL_LIBRARY[0],
@@ -3730,6 +3742,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       name: "Escape · Rift",
       rift: true,
       endless: true,
+      // Fresh runs open a patch so the rift has somewhere to seep from
+      openingDig: true,
       material: "neumorph",
       css: {
         "--bg-color": "#0e1218",
@@ -7700,11 +7714,21 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             c.isFinish = false;
           });
         }
-        // Escape: seed a fresh offscreen finish (restore may overwrite via applyEndlessState)
-        if (THEMES[themeIndex]?.rift) placeEscapeFinish(api);
-        else if (api && typeof api.setFinish === "function") api.setFinish(null, null);
-        // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX
         const th = THEMES[themeIndex];
+        // Escape: seed a fresh offscreen finish (restore may overwrite via applyEndlessState)
+        if (th?.rift) placeEscapeFinish(api);
+        else if (api && typeof api.setFinish === "function") api.setFinish(null, null);
+        // Fresh-run framing, same restore-may-overwrite contract as the finish
+        // above: applyEndlessState replays the saved zoom and board after this.
+        if (th && Number.isFinite(th.initialZoom) && typeof api.setZoom === "function") {
+          api.setZoom(th.initialZoom, null, { persist: false });
+        }
+        // Open a starting patch so the field reads as a place, not a blank plate.
+        // placeMines() keeps its safe zone and the finish clear of this dig.
+        if (th?.openingDig && typeof api.dig === "function" && api.state?.isFirstClick) {
+          api.dig({ q: 0, r: 0 });
+        }
+        // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX
         if (th && api.state && api.state.canvas) {
           seedAmbient(th, api.state.canvas.width, api.state.canvas.height);
         }

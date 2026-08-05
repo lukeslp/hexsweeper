@@ -360,8 +360,8 @@
       toggleFlag(cell) {
         if (cell) toggleFlag(cell);
       },
-      setZoom(z, anchor) {
-        return applyViewZoom(z, anchor);
+      setZoom(z, anchor, opts) {
+        return applyViewZoom(z, anchor, opts);
       },
       adjustZoom(factor, anchor) {
         return applyViewZoom(state.viewZoom * factor, anchor);
@@ -535,8 +535,10 @@
 
     /**
      * Zoom the board. When `anchor` is a canvas pixel, keep that world point under the cursor.
+     * `persist: false` frames the view without touching the stored preference — the zoom key
+     * is shared across themes, so an opening zoom must not overwrite what the player chose.
      */
-    function applyViewZoom(nextZoom, anchor) {
+    function applyViewZoom(nextZoom, anchor, { persist = true } = {}) {
       const lo = 0.55;
       const hi = 1.9;
       const z = Math.max(lo, Math.min(hi, nextZoom));
@@ -549,9 +551,11 @@
         worldUnder = { wx, wy };
       }
       state.viewZoom = z;
-      try {
-        localStorage.setItem("hexsweeper-zoom-v1", String(Math.round(z * 100) / 100));
-      } catch (_) {}
+      if (persist) {
+        try {
+          localStorage.setItem("hexsweeper-zoom-v1", String(Math.round(z * 100) / 100));
+        } catch (_) {}
+      }
       const level = state.currentDifficulty;
       state.cellSize = computeCellSize(level, state.mapRadius);
       // Keep camera focus coherent when cell size changes
@@ -1686,7 +1690,9 @@
         state.camTY = state.camY;
       }
       if (Number.isFinite(data.zoom)) {
-        applyViewZoom(Math.max(0.55, Math.min(1.9, data.zoom)));
+        // Restoring a lane's view, not choosing a zoom: leave the shared
+        // preference to explicit wheel / pinch / button input.
+        applyViewZoom(Math.max(0.55, Math.min(1.9, data.zoom)), null, { persist: false });
       }
 
       updateUI();
