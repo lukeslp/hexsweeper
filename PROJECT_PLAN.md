@@ -54,6 +54,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Light/Dark lattice seams readable when zoomed out
 - [x] Light/Dark Soft UI neumorph (raised covered / inset revealed; Escape paint at lower intensity)
 - [x] Fire OG social cards under `assets/social/fire-og*.png`
+- [x] Playtest pass: warmer Fire letterbox hell walls; Soft UI wells/bevel contrast tuned
 - [x] Infinite autosave + JSON export/import (plate + Escape lanes)
 - [x] Fresh-run contract: R / Restart / S·M·L all clear the active autosave lane
 - [x] Chord on satisfied numbers · `R` restart · quiet score rail

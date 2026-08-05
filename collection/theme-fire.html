@@ -3564,8 +3564,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     },
     states: {
       // Covered raised bright; revealed pressed into the plate
-      covered:  { h: 214, s: 16, l: 92 },
-      revealed: { h: 216, s: 12, l: 72 },
+      covered:  { h: 214, s: 16, l: 93 },
+      revealed: { h: 216, s: 13, l: 68 },
       flagged:  { h: 350, s: 55, l: 90 },
     },
     particles: {
@@ -3604,8 +3604,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     },
     states: {
       // Soft dark: covered extruded slightly; revealed sinks as a well
-      covered:  { h: 220, s: 10, l: 28 },
-      revealed: { h: 220, s: 8, l: 14 },
+      covered:  { h: 220, s: 11, l: 30 },
+      revealed: { h: 220, s: 9, l: 12 },
       flagged:  { h: 350, s: 40, l: 30 },
     },
     particles: {
@@ -4084,14 +4084,25 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
 
-    // Bottom magma river — reads as mine depth below the board
-    const floor = ctx.createLinearGradient(0, h * 0.55, 0, h);
+    // Bottom magma river + side embers — letterbox must not read as pure void
+    const floor = ctx.createLinearGradient(0, h * 0.42, 0, h);
     floor.addColorStop(0, "transparent");
-    floor.addColorStop(0.45, `rgba(80, 18, 4, ${0.22 + pulse * 0.08})`);
-    floor.addColorStop(0.78, `rgba(180, 48, 8, ${0.18 + pulse * 0.1})`);
-    floor.addColorStop(1, `rgba(255, 90, 20, ${0.12 + pulse * 0.08})`);
+    floor.addColorStop(0.35, `rgba(90, 22, 6, ${0.28 + pulse * 0.1})`);
+    floor.addColorStop(0.72, `rgba(200, 55, 10, ${0.24 + pulse * 0.12})`);
+    floor.addColorStop(1, `rgba(255, 100, 24, ${0.18 + pulse * 0.1})`);
     ctx.fillStyle = floor;
     ctx.fillRect(0, 0, w, h);
+    // Soft side lamps (off-board hell walls)
+    for (const side of [-1, 1]) {
+      const lx = cx + side * Math.min(w, h) * 0.52;
+      const ly = cy + reach * 0.15;
+      const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, Math.min(w, h) * 0.42);
+      lg.addColorStop(0, `rgba(255, 120, 30, ${0.1 + pulse * 0.06})`);
+      lg.addColorStop(0.45, `rgba(160, 40, 8, ${0.05 + pulse * 0.03})`);
+      lg.addColorStop(1, "transparent");
+      ctx.fillStyle = lg;
+      ctx.fillRect(0, 0, w, h);
+    }
 
     // Soft crust bloom under the honeycomb so the board doesn't cast a rectangle
     const under = ctx.createRadialGradient(cx, cy, reach * 0.18, cx, cy, reach * 1.15);
@@ -4218,7 +4229,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       const ty = h * (0.85 - life * 0.75) + Math.sin(t * 0.001 + i) * (reduceMotion ? 0 : 8);
       const tw = 10 + v * 28;
       const thh = 40 + u * 90;
-      const ta = (1 - life) * (0.08 + v * 0.1) * (0.75 + pulse * 0.25);
+      const ta = (1 - life) * (0.12 + v * 0.14) * (0.8 + pulse * 0.28);
       const tg = ctx.createRadialGradient(tx, ty, 0, tx, ty - thh * 0.3, thh);
       tg.addColorStop(0, `rgba(255, 170, 40, ${ta})`);
       tg.addColorStop(0.4, `rgba(255, 70, 10, ${ta * 0.55})`);
@@ -7926,14 +7937,18 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             // Soft plate: dual Soft UI edges without Escape's hard plastic glare.
             // Dark plates keep a whisper of bevel at full-viewport density.
             const hi = darkPlate
-              ? "rgba(255,255,255,0.12)"
+              ? softPlate
+                ? "rgba(255,255,255,0.09)"
+                : "rgba(255,255,255,0.12)"
               : softPlate
-                ? "rgba(255,255,255,0.72)"
+                ? "rgba(255,255,255,0.68)"
                 : "rgba(255,255,255,0.95)";
             const lo = darkPlate
-              ? "rgba(0,0,0,0.38)"
+              ? softPlate
+                ? "rgba(0,0,0,0.42)"
+                : "rgba(0,0,0,0.38)"
               : softPlate
-                ? "rgba(120,136,158,0.55)"
+                ? "rgba(120,136,158,0.5)"
                 : "rgba(110,128,150,0.95)";
             drawFace(3, 5, hi);
             drawFace(0, 2, lo);
