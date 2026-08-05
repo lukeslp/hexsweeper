@@ -11,6 +11,12 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - **`index.html`**: production chrome + five-theme model + custom Canvas rendering (Soft UI Light/Dark, Escape neumorph, Fire magma pit, mycelium Plague).
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Current status (2026-08-05)
+
+- [x] **Sphere MVP** — `sphere/` experimental closed hex minesweeper (Canvas projection, hexasphere math, dig/flag/flood, first-dig safe, RM-safe camera)
+- [x] **Choices hub** — `choices.html` + `choices/lab/*` one-pagers (curated; not in production theme switcher)
+- [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 1–2)
+
 ## Current status (2026-08-04)
 
 Five-theme production cut is **landed**, plus chrome/UX polish:
@@ -81,7 +87,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Production chrome: BR Appearance · Reset · Menu (scores/modes/links inside Menu)
 - [x] Lab skins + classic: same BR Reset · Menu; scores + outbound links in Menu (no BL rail / gear)
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
-- [ ] Optional: automated smoke (desktop/mobile) in CI — currently manual / browser probes
+- [ ] Optional: automated smoke (desktop/mobile) in CI — sphere neighbor test exists (`sphere/test-neighbors.js`); browser probes still manual
 - [ ] Optional: `export-collection.py --check` in CI; CodePen push via codepen-prefill when published
 - [ ] Phase next: full / comprehensive / impressive cut beyond the collection scaffold
 

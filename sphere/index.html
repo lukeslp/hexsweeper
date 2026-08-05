@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!--
+  File Purpose: Experimental Hexsweeper on a closed hex sphere (Canvas projection).
+  Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
+  Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hex Sphere — Hexsweeper (experimental)</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="../skin-chrome.css">
+<style>
+:root {
+  --bg-color: #0c1018;
+  --text-main: #c8d4e8;
+  --text-sub: #6b7a94;
+  --nav-bg: #141a26;
+  --nav-ink: #c8d4e8;
+}
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  user-select: none;
+  touch-action: none;
+}
+.canvas-container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+#gameCanvas:active { cursor: grabbing; }
+.experimental-badge {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 35;
+  pointer-events: none;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+.sphere-banner {
+  position: fixed;
+  left: 50%;
+  bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
+  transform: translateX(-50%) translateY(12px);
+  z-index: 45;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: rgba(20, 26, 38, 0.92);
+  border: 1px solid rgba(200, 212, 232, 0.2);
+  color: var(--text-main);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.sphere-banner.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sphere-banner { transition: none; }
+}
+.modal-content {
+  background: #141a26;
+  border-color: rgba(200, 212, 232, 0.15);
+  color: var(--text-main);
+}
+.modal-row .icon-label { color: var(--text-sub); }
+.diff-option.active { background: rgba(96, 165, 250, 0.25); }
+#flag-toggle.active { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.instructions-text { color: var(--text-sub); }
+</style>
+</head>
+<body>
+<div class="experimental-badge" aria-hidden="true">Experimental · Sphere</div>
+
+<nav class="skin-nav" aria-label="Navigation">
+  <a href="../choices.html">Choices</a>
+  <a href="../index.html">Flat game</a>
+  <span class="meta"><span class="tag">sphere</span> · Hex Sphere</span>
+</nav>
+
+<div class="canvas-container">
+  <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
+</div>
+
+<div class="hud-actions" role="toolbar" aria-label="Game controls">
+  <button type="button" id="flag-toggle" class="hud-btn" aria-label="Flag mode" aria-pressed="false" title="Flag mode (F)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+      <line x1="4" y1="22" x2="4" y2="15"></line>
+    </svg>
+  </button>
+  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  </button>
+  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu" title="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="5" y1="7" x2="19" y2="7"></line>
+      <line x1="5" y1="12" x2="15" y2="12"></line>
+      <line x1="5" y1="17" x2="19" y2="17"></line>
+    </svg>
+  </button>
+</div>
+
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+  <div class="modal-content">
+    <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <h2 id="menu-title" class="menu-title">Sphere</h2>
+    <div class="modal-row" id="run-row">
+      <div class="modal-section-label">Run</div>
+      <div class="menu-stats" aria-label="Score">
+        <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
+        <div id="stats-time" class="stat-item visible" data-label="time" title="Elapsed seconds">000</div>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="icon-label" title="Sphere density">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle></svg>
+      </div>
+      <div class="diff-selector" id="diff-selector" role="group" aria-label="Sphere density">
+        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="12 faces · 2 mines">S</button>
+        <button type="button" class="diff-option active" data-val="medium" aria-pressed="true" title="42 faces · 8 mines">M</button>
+        <button type="button" class="diff-option" data-val="hard" aria-pressed="false" title="92 faces · 18 mines">L</button>
+      </div>
+    </div>
+    <div class="instructions-text">
+      Drag to rotate the sphere · tap to dig · flag: right-click, F, long-hold, or flag button<br>
+      First dig is always safe · pentagons mark icosahedron poles · flat game stays default
+    </div>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="../index.html">Flat Hexsweeper</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="../choices.html">Choices hub</a>
+    </nav>
+  </div>
+</div>
+
+<script src="hexasphere.js"></script>
+<script src="sphere.js"></script>
+<script>
+SphereSweeper.boot({ canvasId: "gameCanvas" });
+</script>
+</body>
+</html>

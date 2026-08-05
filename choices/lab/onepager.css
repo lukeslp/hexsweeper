@@ -1,0 +1,101 @@
+/*
+ * File Purpose: Shared styles for Hexsweeper lab one-pagers under choices/lab/.
+ * Primary Classes: .onepager, .play-btn, .technique-list.
+ * Inputs: CSS variables. Outputs: Visual layout for intro pages.
+ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0c10;
+  --ink: #e6e0d4;
+  --muted: rgba(230, 224, 212, 0.64);
+  --line: rgba(230, 224, 212, 0.14);
+  --accent: #d2c4a8;
+  --play: #7eb8ff;
+}
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 20% 0%, rgba(210, 196, 168, 0.07), transparent 60%);
+}
+.wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
+}
+.back {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 1.5rem;
+}
+.back:hover { color: var(--accent); }
+.kicker {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 700; margin: 0.4rem 0 1rem; }
+.lede { color: var(--muted); line-height: 1.6; margin-bottom: 1.5rem; font-size: 1.05rem; }
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  margin-bottom: 1.5rem;
+}
+.panel h2 {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.technique-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.technique-list li {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(210, 196, 168, 0.1);
+  color: var(--accent);
+}
+.play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-radius: 999px;
+  background: rgba(126, 184, 255, 0.18);
+  color: var(--play);
+  text-decoration: none;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s, transform 0.15s;
+}
+.play-btn:hover, .play-btn:focus-visible {
+  background: rgba(126, 184, 255, 0.28);
+  transform: translateY(-1px);
+  outline: none;
+}
+.note {
+  margin-top: 1.5rem;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  line-height: 1.5;
+}
+.note a { color: var(--accent); }

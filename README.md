@@ -49,6 +49,9 @@ Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Ligh
 | `fonts/` | Self-hosted IBM Plex Sans/Mono + `OFL.txt` |
 | `collection/` | Theme one-pagers + Copy HTML desk (CodePen-ready) |
 | `tools/export-collection.py` | Regenerates `collection/theme-*.html` + index |
+| `sphere/` | **Experimental** closed hex sphere minesweeper (Canvas projection) |
+| `choices.html` | Curated hub: production, sphere, lab one-pagers — not in theme switcher |
+| `choices/lab/` | Improved one-pagers for each lab skin |
 | `classic.html` | Lab baseline neumorph skin |
 | `lab.html` + `skins.json` + `skins/` | Dormant visual lab — not linked from production |
 
@@ -95,9 +98,28 @@ Hexsweeper.boot({
 
 Also exported: `Hexsweeper.DEFAULT_THEME`, `DEFAULT_CONFIG`, `SQRT3`.
 
+## Sphere (experimental)
+
+Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.dev/games/hexsweeper/sphere/
+
+- Canvas 2D projection of vendored hexasphere math (no Three.js)
+- Dig / flag / flood over geodesic `neighborIndices`; first dig safe; win/lose
+- Drag to rotate; flag mode + long-hold; RM-safe camera (no lerp when reduced motion)
+- Densities: S = 12 faces · M = 42 · L = 92
+
+Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 1–2).
+
+Flat game remains the default at `index.html`.
+
+## Choices hub
+
+[`choices.html`](choices.html) — https://dr.eamer.dev/games/hexsweeper/choices.html
+
+Curated entry for production play, the sphere experiment, and lab skins with improved one-pagers under `choices/lab/`. Not linked from the production theme switcher.
+
 ## Lab (prior art)
 
-Open `lab.html` locally or by URL path. Experimental skins remain under `skins/` for technique reference; production navigation only exposes Light / Dark / Fire / Plague / Escape.
+Open `lab.html` or `choices.html` locally or by URL path. Experimental skins remain under `skins/` for technique reference; production navigation only exposes Light / Dark / Fire / Plague / Escape.
 
 ## Accessibility
 
