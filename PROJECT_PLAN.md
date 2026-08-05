@@ -66,6 +66,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Fire/Plague full-bleed · Fire void underlay + center boil · Plague digit ticks
 - [x] Plague Moss/mycelium-network visual pass
 - [x] Plague hive underlay: seeded mycelial graph, nutrient pulses, fruiting nodes, LOD + PRM
+- [x] Plague specimen LOD: seam-only faces + throttled hyphae/particles when zoomed out (hive underlay unchanged)
 - [x] Blast settle + full FX reset on restart
 - [x] Cold load / Reset parity: applyTheme before startFreshRun so full-bleed canvas matches
 

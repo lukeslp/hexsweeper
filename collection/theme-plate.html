@@ -4491,6 +4491,12 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     return 0;
   }
 
+  /** Plague specimen LOD — same zoom / cell-size / map-size gates as the hive underlay. */
+  function usePlagueLod(th, s) {
+    if (!th || th.material !== "mycelium") return false;
+    return plagueHiveLod(s) >= 1;
+  }
+
   function plagueHiveLimits(lod) {
     if (reduceMotion) return { nodes: 42, links: 58, spores: 14, growMs: 1e9 };
     if (lod >= 2) return { nodes: 34, links: 46, spores: 18, growMs: 1500 };
@@ -4767,7 +4773,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       { x: 0.12, y: 0.55, r: 0.22, a: 0.04, copper: true },
       { x: 0.88, y: 0.35, r: 0.24, a: 0.045, copper: false },
     ];
-    for (const bl of blooms) {
+    const bloomList = lod >= 2 ? blooms.slice(0, 3) : blooms;
+    for (const bl of bloomList) {
       const bx = w * bl.x + ox * 0.07;
       const by = h * bl.y + oy * 0.05;
       const br = short * bl.r;
@@ -4786,25 +4793,28 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
 
     // Low-frequency colony banding — reads as living culture, not flat desk paint
-    ctx.save();
-    ctx.globalAlpha = 0.045 + pulse * 0.015;
-    for (let i = 0; i < 5; i++) {
-      const u = cellHash(i, 3, 11);
-      const v = cellHash(i, 7, 17);
-      const band = ctx.createRadialGradient(
-        w * (0.2 + u * 0.6),
-        h * (0.2 + v * 0.6),
-        0,
-        w * (0.2 + u * 0.6),
-        h * (0.2 + v * 0.6),
-        short * (0.35 + u * 0.4)
-      );
-      band.addColorStop(0, i % 2 ? "rgba(90, 160, 130, 0.55)" : "rgba(40, 80, 68, 0.7)");
-      band.addColorStop(1, "transparent");
-      ctx.fillStyle = band;
-      ctx.fillRect(0, 0, w, h);
+    if (lod < 2) {
+      ctx.save();
+      ctx.globalAlpha = 0.045 + pulse * 0.015;
+      const bandN = lod >= 1 ? 3 : 5;
+      for (let i = 0; i < bandN; i++) {
+        const u = cellHash(i, 3, 11);
+        const v = cellHash(i, 7, 17);
+        const band = ctx.createRadialGradient(
+          w * (0.2 + u * 0.6),
+          h * (0.2 + v * 0.6),
+          0,
+          w * (0.2 + u * 0.6),
+          h * (0.2 + v * 0.6),
+          short * (0.35 + u * 0.4)
+        );
+        band.addColorStop(0, i % 2 ? "rgba(90, 160, 130, 0.55)" : "rgba(40, 80, 68, 0.7)");
+        band.addColorStop(1, "transparent");
+        ctx.fillStyle = band;
+        ctx.fillRect(0, 0, w, h);
+      }
+      ctx.restore();
     }
-    ctx.restore();
 
     // Living mycelial hive — swarming graph under the hex lattice
     drawPlagueHiveNetwork(ctx, w, h, t, s, lod);
@@ -6841,6 +6851,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
   function stepParticles(ctx, s, th) {
     if (!isFxTheme(th)) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    const plagueLod = th.material === "mycelium" ? plagueHiveLod(s) : 0;
+    if (plagueLod >= 2) return;
     const w = s.canvas.width;
     const h = s.canvas.height;
 
@@ -7524,6 +7537,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
    */
   function drawPlagueGrowth(ctx, api) {
     const s = api.state;
+    const lod = plagueHiveLod(s);
     const time = performance.now();
     const revealed = [];
     s.map.forEach((c) => {
@@ -7536,7 +7550,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.lineJoin = "round";
 
     // Soft infection bloom under the cleared colony
-    if (revealed.length >= 3) {
+    if (revealed.length >= 3 && lod < 2) {
       let ax = 0;
       let ay = 0;
       for (const c of revealed) {
@@ -7556,7 +7570,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       ctx.fill();
     }
 
-    if (revealed.length < 2) {
+    if (revealed.length < 2 || lod >= 2) {
       ctx.restore();
       return;
     }
@@ -7583,6 +7597,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         ctx.stroke();
 
         // Secondary branch tips (recursive grammar, short)
+        if (lod >= 1) continue;
         if (maturity > 0.35) {
           const tipSeed = cellHash(c.q, n.r, 11);
           const ang = Math.atan2(n.y - c.y, n.x - c.x) + (tipSeed - 0.5) * 1.2;
@@ -8612,6 +8627,55 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText("!", cell.x, cell.y + size * 0.08);
+          }
+          if (ba < 0.999 || spun) ctx.restore();
+          return;
+        }
+
+        // —— Plague LOD: flat specimen seams when zoomed out / large board ——
+        if (th.material === "mycelium" && usePlagueLod(th, s)) {
+          const lodFace = 0.84 + cellHash(cell.q, cell.r, 17) * 0.14;
+          const path = cell.hexPath(size, 0.92 * lodFace);
+          const stateKey =
+            cell.flagged && !cell.revealed ? "flagged" : cell.revealed ? "revealed" : "covered";
+          const st = (th.states && th.states[stateKey]) || { h: 152, s: 28, l: 22 };
+          ctx.fillStyle = `hsl(${st.h} ${st.s}% ${st.l}%)`;
+          ctx.fill(path);
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
+          ctx.strokeStyle = "rgba(4,14,10,0.78)";
+          ctx.lineWidth = Math.max(2, size * 0.09);
+          ctx.stroke(path);
+          ctx.lineWidth = Math.max(1.15, size * 0.048);
+          ctx.strokeStyle = cell.revealed
+            ? "rgba(126,200,168,0.28)"
+            : "rgba(120,198,160,0.52)";
+          ctx.stroke(path);
+          if (cell.animReveal > 0.1) {
+            ctx.globalAlpha = cell.animReveal;
+            if (cell.isMine) {
+              ctx.fillStyle = T.text.mine || "#edf9f2";
+              ctx.beginPath();
+              ctx.arc(cell.x, cell.y, size * 0.28, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (cell.neighborMines > 0) {
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.font = `800 ${Math.max(15, size * 1.02)}px "IBM Plex Sans", system-ui, sans-serif`;
+              ctx.fillStyle = T.text[cell.neighborMines] || "#d8f5e4";
+              ctx.fillText(String(cell.neighborMines), cell.x, cell.y + size * 0.04);
+            }
+            ctx.globalAlpha = 1;
+          }
+          if (cell.flagged && !cell.revealed) {
+            ctx.strokeStyle = T.flag;
+            ctx.lineWidth = Math.max(1.5, size * 0.08);
+            ctx.stroke(path);
+            ctx.fillStyle = T.flag;
+            ctx.font = `bold ${size * 0.95}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("!", cell.x, cell.y + size * 0.1);
           }
           if (ba < 0.999 || spun) ctx.restore();
           return;
