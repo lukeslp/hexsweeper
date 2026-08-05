@@ -11,9 +11,9 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 
 | Theme | Board | Feel |
 |------|--------|------|
-| **Light** | Infinite | Soft UI pale honeycomb — raised covered / inset revealed |
-| **Dark** | Infinite | Soft UI night plate (same run as Light) |
-| **Fire** | Finite | Magma shaft / hell-mine well — dense viewport-filling honeycomb, dark lamp rim → center ember, rising burn columns + ember tongues in the void, heat motes / goo boil (gentle innie parallax) |
+| **Light** | Infinite | Porcelain chalk desk — bright raised covers, graphite wells, faint hex watermark (same run as Dark) |
+| **Dark** | Infinite | Night-iron plate — cold steel bevels, deep wells, brushed grain (same run as Light) |
+| **Fire** | Finite | Magma shaft / hell-mine well — dense viewport-filling honeycomb; drag tilts the pit (camera locked); hold to flag |
 | **Plague** | Finite | Full-field culture-slide slime + green specimen tiles (irregular faces) + hyphal mat |
 | **Escape** | Infinite | Calm slate plate → dig/flag/chord toward an offscreen finish (edge cue); a glacial rift seeps toward your digs |
 
@@ -29,7 +29,7 @@ First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome:
 |--------|-----|
 | Dig | Click / tap — empty floods open outward in rings |
 | Flag | Right-click, Ctrl/⌘-click, long-hold, or Settings → Flag mode (`F`) |
-| Pan | Drag · Space-drag · middle-drag |
+| Pan / tilt | Infinite: drag pans. Fire: drag tilts the pit (hold flags). Space/middle-drag pans anywhere |
 | Zoom | Scroll · pinch · `+` / `−` (persists as `hexsweeper-zoom-v1`) |
 | Chord | Click a revealed number whose neighbor flags match the count |
 | Restart / size | `R`, Restart, or S·M·L (finite only) — each clears that lane’s autosave |
@@ -84,6 +84,7 @@ Hexsweeper.boot({
   hooks: {
     layout, onRelayout, onReset, onExpand, onMaxRadius,
     transformPoint, hitTest, usePathHitTest, sortCells,
+    cameraLock, // bool|fn — drag updates pointer tilt, not cam (Fire)
     beforeFrame, drawCell, decorateCell, afterFrame,
     onReveal, onFlag, onGameOver,
   },
@@ -100,7 +101,7 @@ Open `lab.html` locally or by URL path. Experimental skins remain under `skins/`
 
 - Help dialog and keyboard shortcuts (`?`, `T`, difficulty keys as documented in-game)
 - `prefers-reduced-motion` respected for particle / blast motion
-- Touch: long-hold to flag; canvas uses `touch-action: none`
+- Touch: long-hold to flag; Fire drag tilts (camera locked); canvas uses `touch-action: none`
 
 ## Related
 

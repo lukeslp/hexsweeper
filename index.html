@@ -5,6 +5,8 @@
   Inputs: ?mode=; localStorage mode / welcome / endless saves; pointer/keyboard/touch.
   Outputs: Live game at /games/hexsweeper/ (bare URL = Light).
   Chrome: BR Appearance (sun/moon) · Reset · Menu; scores/modes/help live in Menu.
+  Notes: Fire cameraLock — drag tilts the pit / hold flags (no board pan).
+    Light = porcelain plate; Dark = night iron; Escape = cool rift steel.
 -->
 <html lang="en">
 <head>
@@ -21,16 +23,16 @@
 <meta name="twitter:title" content="Hexsweeper">
 <meta name="twitter:description" content="Hexagonal minesweeper: Soft UI Light/Dark, Fire magma pit, Plague, Escape.">
 <meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/fire-og.png">
-<meta name="theme-color" content="#d8dee8">
+<meta name="theme-color" content="#d4dce8">
 <link rel="stylesheet" href="skin-chrome.css">
 <style>
 :root {
-  /* Soft UI Light first paint */
-  --bg-color: #d8dee8;
-  --text-main: #2a3444;
-  --text-sub: #5c6b7e;
-  --nav-bg: #e4eaf2;
-  --nav-ink: #2a3444;
+  /* Porcelain Light first paint */
+  --bg-color: #d4dce8;
+  --text-main: #243044;
+  --text-sub: #5a6b82;
+  --nav-bg: #e6edf6;
+  --nav-ink: #243044;
   --hud-gap: 6px;
   --hud-border: transparent;
   --font-ui: "IBM Plex Sans", "Source Sans 3", system-ui, sans-serif;
@@ -38,7 +40,7 @@
 }
 body {
   font-family: var(--font-ui);
-  background: #d8dee8;
+  background: #d4dce8;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   height: 100vh; margin: 0; overflow: hidden; user-select: none; touch-action: none;
   color: var(--text-main);
@@ -78,8 +80,9 @@ body[data-mode="plague"] canvas {
 }
 #fx {
   background:
-    radial-gradient(ellipse 70% 50% at 50% 40%, rgba(255,255,255,0.55), transparent 55%),
-    linear-gradient(180deg, #dbe2ec, #c4ccd8);
+    radial-gradient(ellipse 62% 48% at 48% 36%, rgba(255,255,255,0.72), transparent 58%),
+    radial-gradient(ellipse 40% 32% at 78% 72%, rgba(150,170,195,0.22), transparent 55%),
+    linear-gradient(168deg, #e9eef6 0%, #d4dce8 48%, #c2cbd8 100%);
   transition: opacity 0.35s ease;
 }
 #fx::before, #fx::after {
@@ -781,7 +784,7 @@ body[data-mode="escape"] .menu-links {
       <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
       <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
     </div>
-    <p class="welcome-theme-note" id="welcome-theme-note">Light — infinite calm plate</p>
+    <p class="welcome-theme-note" id="welcome-theme-note">Light — porcelain infinite plate</p>
     <div class="welcome-actions">
       <button type="button" id="welcome-yes" class="primary">Yes — play</button>
       <button type="button" id="welcome-no">No — refresher</button>
@@ -872,13 +875,13 @@ body[data-mode="escape"] .menu-links {
     <p>Minesweeper on a honeycomb. Six neighbors max, not eight.</p>
 
     <h3>Goal</h3>
-    <p><strong>Light</strong> and <strong>Dark</strong> are an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> is the same minesweeper loop — dig, flag, chord, score cleared cells — plus a finish hex placed beyond the starting view. An edge cue points toward it; reveal that hex to win. A slow rift wakes after you open a patch and seeps toward your last dig. Mines still kill; the rift is a second, glacial threat. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
+    <p><strong>Light</strong> (porcelain) and <strong>Dark</strong> (night iron) share an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> is the same minesweeper loop — dig, flag, chord, score cleared cells — plus a finish hex placed beyond the starting view. An edge cue points toward it; reveal that hex to win. A slow rift wakes after you open a patch and seeps toward your last dig. Mines still kill; the rift is a second, glacial threat. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
 
     <h3>Reveal</h3>
     <p>Click or tap a covered cell. First click is always safe. The number is how many mines sit on the six sides. Empty clears open outward in rings until they hit numbered cells. When the flags around a number match that count, click it again (or double-click) to open the rest. In Light/Dark/Escape, the camera follows your dig and the grid expands so the canvas never runs out of hexes.</p>
 
     <h3>Move &amp; zoom</h3>
-    <p>Drag to pan. Scroll or pinch to zoom. <kbd>+</kbd> / <kbd>−</kbd> also zoom. Space-drag or middle-drag pans.</p>
+    <p>Infinite boards: drag to pan. <strong>Fire</strong>: drag tilts the pit; hold to flag. Scroll or pinch to zoom. <kbd>+</kbd> / <kbd>−</kbd> also zoom. Space-drag or middle-drag pans (even on Fire).</p>
 
     <h3>Mine death</h3>
     <p><strong>Fire</strong> and the Light/Dark plates charge then blow tiles apart (shock ring, shards, shake). <strong>Plague</strong> infects outward along the honeycomb — copper puncture, then a hyphal crawl. <strong>Escape</strong> loses to a mine or the rift as a cool lens swallow, not an explosion. Press <kbd>R</kbd> or use Reset when you're ready.</p>
@@ -1194,21 +1197,26 @@ body[data-mode="escape"] .menu-links {
 
   // Production themes: Light / Dark (endless) + Fire / Plague (finite).
   // The larger material library stays as prior art for the renderer.
-  // Soft UI plate: raised covered / inset revealed (Escape neumorph at lower intensity).
+  // Soft UI plates — distinct materials, not just inverted palettes.
+  // Light = porcelain chalk desk; Dark = night iron; Escape keeps cool rift steel.
   // Not flatPlate — inherits Soft White endless layout + extruded paint path.
   const PLATE_LIGHT = {
     flatPlate: false,
     flatGrid: false,
+    plateStyle: "porcelain",
     css: {
-      "--bg-color": "#d8dee8",
-      "--text-main": "#2a3444",
-      "--text-sub": "#5c6b7e",
-      "--nav-bg": "#e4eaf2",
-      "--nav-ink": "#2a3444",
+      "--bg-color": "#d4dce8",
+      "--text-main": "#243044",
+      "--text-sub": "#5a6b82",
+      "--nav-bg": "#e6edf6",
+      "--nav-ink": "#243044",
     },
-    bodyBg: "#d8dee8",
+    bodyBg: "#d4dce8",
     fx: {
-      bg: "radial-gradient(ellipse 70% 50% at 50% 40%, rgba(255,255,255,0.55), transparent 55%), linear-gradient(180deg, #e8eef6, #cfd6e0)",
+      bg:
+        "radial-gradient(ellipse 62% 48% at 48% 36%, rgba(255,255,255,0.72), transparent 58%)," +
+        "radial-gradient(ellipse 40% 32% at 78% 72%, rgba(150,170,195,0.22), transparent 55%)," +
+        "linear-gradient(168deg, #e9eef6 0%, #d4dce8 48%, #c2cbd8 100%)",
     },
     theme: {
       flag: "#dc2626",
@@ -1223,55 +1231,69 @@ body[data-mode="escape"] .menu-links {
       },
     },
     states: {
-      // Covered raised bright; revealed pressed into the plate
-      covered:  { h: 214, s: 16, l: 93 },
-      revealed: { h: 216, s: 13, l: 68 },
-      flagged:  { h: 350, s: 55, l: 90 },
+      // Chalk-raised covers; graphite wells when dug
+      covered:  { h: 214, s: 22, l: 95 },
+      revealed: { h: 218, s: 14, l: 62 },
+      flagged:  { h: 350, s: 58, l: 92 },
+    },
+    glow: {
+      colors: ["rgba(255,255,255,0.5)", "rgba(170,188,210,0.22)", "rgba(120,142,168,0.1)"],
+      pulse: 0.03,
+      bloom: 1.15,
     },
     particles: {
-      count: 20,
-      ambient: "rgba(120,140,165,0.22)",
-      reveal: "rgba(100,120,150,0.4)",
-      mine: "rgba(40,55,75,0.9)",
+      count: 18,
+      ambient: "rgba(130,150,175,0.16)",
+      reveal: "rgba(90,110,140,0.38)",
+      mine: "rgba(35,48,68,0.92)",
       flag: "rgba(220,38,38,0.75)",
     },
   };
   const PLATE_DARK = {
     flatPlate: false,
     flatGrid: false,
+    plateStyle: "iron",
     css: {
-      "--bg-color": "#1a1f28",
-      "--text-main": "#e8eaee",
-      "--text-sub": "#8b919a",
-      "--nav-bg": "#222833",
-      "--nav-ink": "#e8eaee",
+      "--bg-color": "#10151d",
+      "--text-main": "#e6ebf2",
+      "--text-sub": "#7d8796",
+      "--nav-bg": "#171d28",
+      "--nav-ink": "#e6ebf2",
     },
-    bodyBg: "#1a1f28",
+    bodyBg: "#10151d",
     fx: {
-      bg: "radial-gradient(ellipse 70% 50% at 50% 38%, rgba(60,72,90,0.45), transparent 55%), linear-gradient(180deg, #222833, #141820)",
+      bg:
+        "radial-gradient(ellipse 55% 42% at 42% 34%, rgba(70,96,128,0.28), transparent 58%)," +
+        "radial-gradient(ellipse 36% 30% at 72% 68%, rgba(40,56,78,0.35), transparent 52%)," +
+        "linear-gradient(175deg, #171d28 0%, #10151d 50%, #0a0e14 100%)",
     },
     theme: {
       flag: "#f43f5e",
       text: {
-        1: "#60a5fa",
-        2: "#34d399",
-        3: "#f87171",
-        4: "#a78bfa",
-        5: "#fbbf24",
-        6: "#f472b6",
+        1: "#7eb6ff",
+        2: "#5ee0b8",
+        3: "#ff8a8a",
+        4: "#b8a4ff",
+        5: "#f0c66a",
+        6: "#f08cc8",
         mine: "#f8fafc",
       },
     },
     states: {
-      // Soft dark: covered extruded slightly; revealed sinks as a well
-      covered:  { h: 220, s: 11, l: 30 },
-      revealed: { h: 220, s: 9, l: 12 },
-      flagged:  { h: 350, s: 40, l: 30 },
+      // Cold iron covers; near-black wells
+      covered:  { h: 216, s: 14, l: 26 },
+      revealed: { h: 220, s: 12, l: 9 },
+      flagged:  { h: 350, s: 36, l: 26 },
+    },
+    glow: {
+      colors: ["rgba(70,110,150,0.2)", "rgba(30,48,72,0.14)", "rgba(10,16,28,0.2)"],
+      pulse: 0.04,
+      bloom: 1.2,
     },
     particles: {
-      count: 16,
-      ambient: "rgba(100,120,150,0.18)",
-      reveal: "rgba(160,180,210,0.35)",
+      count: 14,
+      ambient: "rgba(90,120,160,0.14)",
+      reveal: "rgba(140,175,210,0.32)",
       mine: "rgba(230,235,245,0.9)",
       flag: "rgba(244,63,94,0.85)",
     },
@@ -1394,6 +1416,8 @@ body[data-mode="escape"] .menu-links {
       ...MATERIAL_LIBRARY[6],
       id: "fire",
       name: "Fire · Magma",
+      // Pit stays centered: drag = parallax tilt / hold = flag (not board pan).
+      cameraLock: true,
       boardConfig: {
         // Outer hex ≈ 98% of the live window; tiny pad — packing is face-scale, not sink.
         viewportFill: 0.98,
@@ -4054,8 +4078,8 @@ body[data-mode="escape"] .menu-links {
   }
 
   const WELCOME_THEME_NOTES = {
-    light: "Light — flat infinite field",
-    dark: "Dark — flat infinite field, night",
+    light: "Light — porcelain infinite plate",
+    dark: "Dark — night-iron infinite plate",
     fire: "Fire — finite magma pit",
     plague: "Plague — verdigris mycelium specimen",
     escape: "Escape — minesweeper with a slow rift behind you",
@@ -4115,6 +4139,9 @@ body[data-mode="escape"] .menu-links {
         const z = Number.isFinite(live.state.viewZoom) ? live.state.viewZoom : 1;
         if (z < 1) live.setZoom(1);
       }
+      // Magma pit: lock camera to center so drag is tilt, not translation.
+      if (live.state.hooks) live.state.hooks.cameraLock = !!t.cameraLock;
+      if (t.cameraLock && typeof live.setCamera === "function") live.setCamera(0, 0);
     }
     // Light↔Dark keeps the run; Escape / finite swaps rebuild (no persist wipe).
     if (game && typeof game.setEndless === "function") {
@@ -4997,6 +5024,112 @@ body[data-mode="escape"] .menu-links {
     ctx.restore();
   }
 
+  /**
+   * Infinite Light/Dark desk identity under the honeycomb:
+   * porcelain = cool chalk wash + faint hex watermark;
+   * iron = brushed steel grain + cold vignette.
+   * Escape keeps its own cool bloom via glow alone.
+   */
+  function drawInfinitePlateField(ctx, s, th) {
+    const style = th.plateStyle;
+    if (style !== "porcelain" && style !== "iron") return;
+    const w = s.canvas.width;
+    const h = s.canvas.height;
+    const cx = w / 2 + ox * 0.12;
+    const cy = h / 2 + oy * 0.1;
+    // Coarser than live cells — watermark, not a second playable lattice
+    const size = Math.max(28, (s.cellSize || 28) * 1.85);
+    const pitchX = size * Math.sqrt(3);
+    const pitchY = size * 1.5;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+
+    if (style === "porcelain") {
+      // Soft chalk wash — keeps the desk brighter than the revealed wells
+      const wash = ctx.createRadialGradient(cx, cy * 0.85, 20, cx, cy, Math.max(w, h) * 0.72);
+      wash.addColorStop(0, "rgba(255,255,255,0.22)");
+      wash.addColorStop(0.45, "rgba(255,255,255,0.06)");
+      wash.addColorStop(1, "transparent");
+      ctx.fillStyle = wash;
+      ctx.fillRect(0, 0, w, h);
+
+      // Faint honeycomb watermark (reads as porcelain lattice, not a second board)
+      ctx.strokeStyle = "rgba(90,110,140,0.06)";
+      ctx.lineWidth = Math.max(0.9, size * 0.02);
+      const r0 = Math.floor((-40 - cy) / pitchY) - 1;
+      const r1 = Math.ceil((h + 40 - cy) / pitchY) + 1;
+      const q0 = Math.floor((-40 - cx) / pitchX) - 1;
+      const q1 = Math.ceil((w + 40 - cx) / pitchX) + 1;
+      for (let r = r0; r <= r1; r++) {
+        for (let q = q0; q <= q1; q++) {
+          if ((q + r) & 1) continue;
+          const x = cx + pitchX * (q + r / 2);
+          const y = cy + pitchY * r;
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const ang = (Math.PI / 180) * (30 + 60 * i);
+            const vx = x + Math.cos(ang) * size * 0.9;
+            const vy = y + Math.sin(ang) * size * 0.9;
+            if (i === 0) ctx.moveTo(vx, vy);
+            else ctx.lineTo(vx, vy);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+    } else {
+      // Night iron: cool vignette + horizontal brush grain
+      const vig = ctx.createRadialGradient(cx, cy, Math.min(w, h) * 0.12, cx, cy, Math.max(w, h) * 0.7);
+      vig.addColorStop(0, "transparent");
+      vig.addColorStop(0.55, "rgba(0,0,0,0.12)");
+      vig.addColorStop(1, "rgba(0,0,0,0.38)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.globalAlpha = 0.04;
+      ctx.strokeStyle = "rgba(160,190,230,0.9)";
+      ctx.lineWidth = 1;
+      const step = Math.max(4, Math.round(size * 0.12));
+      for (let y = 0; y < h; y += step) {
+        const wobble = Math.sin(y * 0.07 + ox * 0.02) * 6;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y + wobble * 0.15);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Sparse steel hex ghosts
+      ctx.strokeStyle = "rgba(120,150,190,0.045)";
+      ctx.lineWidth = Math.max(0.7, size * 0.018);
+      const r0 = Math.floor((-40 - cy) / pitchY) - 1;
+      const r1 = Math.ceil((h + 40 - cy) / pitchY) + 1;
+      const q0 = Math.floor((-40 - cx) / pitchX) - 1;
+      const q1 = Math.ceil((w + 40 - cx) / pitchX) + 1;
+      for (let r = r0; r <= r1; r++) {
+        for (let q = q0; q <= q1; q++) {
+          if (((q * 3 + r * 5) & 7) !== 0) continue;
+          const x = cx + pitchX * (q + r / 2);
+          const y = cy + pitchY * r;
+          ctx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const ang = (Math.PI / 180) * (30 + 60 * i);
+            const vx = x + Math.cos(ang) * size * 0.88;
+            const vy = y + Math.sin(ang) * size * 0.88;
+            if (i === 0) ctx.moveTo(vx, vy);
+            else ctx.lineTo(vx, vy);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
   function drawGlowPlate(ctx, s, th, t) {
     // Fire owns its basalt field; Plague stays a strict 2D specimen.
     if (th.material === "magma" || th.flatGrid) return;
@@ -5131,6 +5264,7 @@ body[data-mode="escape"] .menu-links {
     },
     hooks: {
       usePathHitTest: true,
+      cameraLock: !!active.cameraLock,
       layout(api) {
         const s = api.state;
         // Full-bleed viewport for every production mode — zoom/pan never hits a board box.
@@ -5410,9 +5544,9 @@ body[data-mode="escape"] .menu-links {
         }
 
         // Desk: ambient pool, then per-tile ground shadows, then faces on top
-        // Light/Dark: no desk shading — flat field only
         if (!th.flatPlate) {
           drawBoardGroundShadow(ctx, s, th, flat);
+          drawInfinitePlateField(ctx, s, th);
           drawGlowPlate(ctx, s, th, t);
           drawThemeAtmosphere(ctx, s, th, t);
           if (th.material === "magma") drawMagmaDepthShadows(ctx, s);
@@ -5539,20 +5673,25 @@ body[data-mode="escape"] .menu-links {
         // —— Soft UI / Escape neumorph: extruded faces + bevel ——
         if (neo) {
           const softPlate = th.id === "light" || th.id === "dark";
-          const darkPlate = th.id === "escape" || th.id === "dark";
+          const porcelain = th.plateStyle === "porcelain" || th.id === "light";
+          const iron = th.plateStyle === "iron" || th.id === "dark";
+          const darkPlate = th.id === "escape" || iron;
           const scale = (cell._depthScale || 1) * (0.93 + cell.animHover * (softPlate ? 0.03 : 0.04));
           const path = cell.hexPath(size, scale);
           const ds = size * scale;
           const stateKey = cell.flagged && !cell.revealed ? "flagged" : cell.revealed ? "revealed" : "covered";
           const st = (th.states && th.states[stateKey]) || { h: 215, s: 14, l: 90 };
           const L = st.l + (cell.animHover || 0) * (softPlate ? 2 : 3);
-          // Soft plate: quieter extrusion so the infinite field stays calm
-          const wall = Math.max(0.45, elev * size * (softPlate ? 0.12 : 0.22));
+          // Porcelain: chalk lip; iron: thinner steel extrusion; Escape: plastic height
+          const wall = Math.max(
+            0.45,
+            elev * size * (porcelain ? 0.14 : iron ? 0.1 : softPlate ? 0.12 : 0.22)
+          );
 
           if (elev > 0.12 && (cell.animReveal || 0) < 0.85) {
             ctx.save();
             ctx.fillStyle = darkPlate
-              ? `hsl(${st.h} ${Math.max(8, st.s - 2)}% ${Math.max(8, L - 10)}%)`
+              ? `hsl(${st.h} ${Math.max(8, st.s - (iron ? 0 : 2))}% ${Math.max(6, L - (iron ? 12 : 10))}%)`
               : `hsl(${st.h} ${Math.max(8, st.s - 4)}% ${Math.max(55, L - 18)}%)`;
             ctx.beginPath();
             for (let i = 0; i < 6; i++) {
@@ -5569,7 +5708,7 @@ body[data-mode="escape"] .menu-links {
               ctx.lineTo(vx, vy);
             }
             ctx.closePath();
-            ctx.globalAlpha = 0.55;
+            ctx.globalAlpha = porcelain ? 0.48 : iron ? 0.62 : 0.55;
             ctx.fill();
             ctx.restore();
           }
@@ -5580,7 +5719,7 @@ body[data-mode="escape"] .menu-links {
 
           ctx.lineCap = "round";
           ctx.lineJoin = "round";
-          ctx.lineWidth = 2.2;
+          ctx.lineWidth = porcelain ? 2.4 : iron ? 1.7 : 2.2;
           const drawFace = (from, to, color) => {
             ctx.strokeStyle = color;
             ctx.beginPath();
@@ -5594,54 +5733,90 @@ body[data-mode="escape"] .menu-links {
             ctx.stroke();
           };
           if (!cell.revealed) {
-            // Soft plate: dual Soft UI edges without Escape's hard plastic glare.
-            // Dark plates keep a whisper of bevel at full-viewport density.
-            const hi = darkPlate
-              ? softPlate
-                ? "rgba(255,255,255,0.09)"
-                : "rgba(255,255,255,0.12)"
-              : softPlate
-                ? "rgba(255,255,255,0.68)"
-                : "rgba(255,255,255,0.95)";
-            const lo = darkPlate
-              ? softPlate
-                ? "rgba(0,0,0,0.42)"
-                : "rgba(0,0,0,0.38)"
-              : softPlate
-                ? "rgba(120,136,158,0.5)"
-                : "rgba(110,128,150,0.95)";
+            // Porcelain: bright chalk lip / soft graphite shade.
+            // Iron: cold steel highlight + hard shadow (not Escape plastic glare).
+            const hi = porcelain
+              ? "rgba(255,255,255,0.78)"
+              : iron
+                ? "rgba(190,210,235,0.14)"
+                : darkPlate
+                  ? "rgba(255,255,255,0.12)"
+                  : "rgba(255,255,255,0.95)";
+            const lo = porcelain
+              ? "rgba(110,128,152,0.55)"
+              : iron
+                ? "rgba(0,0,0,0.55)"
+                : darkPlate
+                  ? "rgba(0,0,0,0.38)"
+                  : "rgba(110,128,150,0.95)";
             drawFace(3, 5, hi);
             drawFace(0, 2, lo);
-            ctx.strokeStyle = darkPlate
-              ? "rgba(255,255,255,0.05)"
-              : softPlate
-                ? "rgba(90,110,135,0.18)"
-                : "rgba(90,110,135,0.28)";
-            ctx.lineWidth = Math.max(1, size * (softPlate ? 0.035 : 0.045));
+            ctx.strokeStyle = porcelain
+              ? "rgba(85,105,130,0.2)"
+              : iron
+                ? "rgba(150,175,205,0.07)"
+                : darkPlate
+                  ? "rgba(255,255,255,0.05)"
+                  : "rgba(90,110,135,0.28)";
+            ctx.lineWidth = Math.max(1, size * (porcelain ? 0.038 : iron ? 0.028 : softPlate ? 0.035 : 0.045));
             ctx.stroke(path);
             const spec = ctx.createRadialGradient(
-              cell.x - light.sdx * ds * 0.35,
-              cell.y - light.sdy * ds * 0.35,
+              cell.x - light.sdx * ds * (porcelain ? 0.38 : 0.32),
+              cell.y - light.sdy * ds * (porcelain ? 0.38 : 0.3),
               1,
               cell.x,
               cell.y,
               ds
             );
-            spec.addColorStop(0, darkPlate ? "rgba(255,255,255,0.06)" : softPlate ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.4)");
-            spec.addColorStop(0.45, darkPlate ? "rgba(255,255,255,0.015)" : softPlate ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.08)");
+            if (porcelain) {
+              spec.addColorStop(0, "rgba(255,255,255,0.36)");
+              spec.addColorStop(0.4, "rgba(255,255,255,0.08)");
+            } else if (iron) {
+              spec.addColorStop(0, "rgba(180,205,235,0.1)");
+              spec.addColorStop(0.35, "rgba(120,150,190,0.03)");
+            } else if (darkPlate) {
+              spec.addColorStop(0, "rgba(255,255,255,0.06)");
+              spec.addColorStop(0.45, "rgba(255,255,255,0.015)");
+            } else {
+              spec.addColorStop(0, "rgba(255,255,255,0.4)");
+              spec.addColorStop(0.45, "rgba(255,255,255,0.08)");
+            }
             spec.addColorStop(1, "transparent");
             ctx.fillStyle = spec;
             ctx.fill(path);
           } else {
             const well = ctx.createRadialGradient(cell.x, cell.y, 0, cell.x, cell.y, ds);
-            well.addColorStop(0, `hsl(${st.h} ${st.s}% ${Math.max(darkPlate ? 8 : 52, L - 8)}%)`);
-            well.addColorStop(1, `hsl(${st.h} ${Math.max(10, st.s - 2)}% ${Math.max(darkPlate ? 6 : 48, L - 14)}%)`);
+            if (porcelain) {
+              // Graphite inset — darker than the chalk covers for seam read
+              well.addColorStop(0, `hsl(${st.h} ${st.s}% ${Math.max(48, L - 6)}%)`);
+              well.addColorStop(1, `hsl(${st.h} ${Math.max(10, st.s - 2)}% ${Math.max(42, L - 16)}%)`);
+            } else if (iron) {
+              well.addColorStop(0, `hsl(${st.h} ${st.s}% ${Math.max(6, L - 2)}%)`);
+              well.addColorStop(1, `hsl(${st.h} ${Math.max(8, st.s)}% ${Math.max(4, L - 6)}%)`);
+            } else {
+              well.addColorStop(0, `hsl(${st.h} ${st.s}% ${Math.max(darkPlate ? 8 : 52, L - 8)}%)`);
+              well.addColorStop(1, `hsl(${st.h} ${Math.max(10, st.s - 2)}% ${Math.max(darkPlate ? 6 : 48, L - 14)}%)`);
+            }
             ctx.fillStyle = well;
             ctx.fill(path);
-            drawFace(3, 5, darkPlate ? "rgba(0,0,0,0.42)" : "rgba(90,110,135,0.85)");
-            drawFace(0, 2, darkPlate ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.55)");
-            ctx.strokeStyle = darkPlate ? "rgba(255,255,255,0.05)" : "rgba(70,90,115,0.35)";
-            ctx.lineWidth = Math.max(1, size * 0.04);
+            drawFace(
+              3,
+              5,
+              porcelain ? "rgba(70,90,120,0.72)" : iron ? "rgba(0,0,0,0.55)" : darkPlate ? "rgba(0,0,0,0.42)" : "rgba(90,110,135,0.85)"
+            );
+            drawFace(
+              0,
+              2,
+              porcelain ? "rgba(255,255,255,0.5)" : iron ? "rgba(160,185,215,0.1)" : darkPlate ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.55)"
+            );
+            ctx.strokeStyle = porcelain
+              ? "rgba(70,90,115,0.32)"
+              : iron
+                ? "rgba(140,165,195,0.06)"
+                : darkPlate
+                  ? "rgba(255,255,255,0.05)"
+                  : "rgba(70,90,115,0.35)";
+            ctx.lineWidth = Math.max(1, size * (iron ? 0.032 : 0.04));
             ctx.stroke(path);
           }
 

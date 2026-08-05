@@ -15,6 +15,9 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 
 Five-theme production cut is **landed**, plus chrome/UX polish:
 
+- [x] Fire mobile/desktop: `cameraLock` — drag = parallax tilt / hold = flag (no board pan; Space/middle still pans)
+- [x] Infinite Light/Dark distinct materials: porcelain chalk desk vs night-iron plate (desk field + bevel language)
+
 - [x] Public themes: Light / Dark / Fire / Plague / Escape
 - [x] Theme selector + `T` shortcut
 - [x] Biolume recast as Plague (flat, hyphae, spores)

@@ -7,6 +7,9 @@
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
  *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
+ *   hooks.cameraLock (bool|fn): single-finger drag drives pointer tilt / hover
+ *   instead of cam pan (Fire magma pit). Long-press still flags; pinch zooms;
+ *   Space/middle-drag still pans as an escape hatch.
  */
 (function (global) {
   "use strict";
@@ -1065,20 +1068,27 @@
         const dist = Math.hypot(dx, dy);
         const panThreshold = digSession.forcePan || state.endless ? 8 : 18;
         if (digSession.panned || dist > panThreshold) {
+          const lockTilt = isCameraLocked() && !digSession.forcePan;
           if (!digSession.panned) {
             digSession.panned = true;
-            state.panning = true;
-            state.hoveredKey = null;
+            // Locked skins: suppress dig-on-release, but keep hover for heat/tilt
+            if (!lockTilt) {
+              state.panning = true;
+              state.hoveredKey = null;
+            }
             syncCursor();
           }
-          // Absolute pan from drag origin (stable, no acceleration drift)
-          state.camX = digSession.camX - dx;
-          state.camY = digSession.camY - dy;
-          state.camTX = state.camX;
-          state.camTY = state.camY;
-          state.focusCell = null;
-          if (state.endless) ensureWorldCoverage(false);
-          return;
+          if (!lockTilt) {
+            // Absolute pan from drag origin (stable, no acceleration drift)
+            state.camX = digSession.camX - dx;
+            state.camY = digSession.camY - dy;
+            state.camTX = state.camX;
+            state.camTY = state.camY;
+            state.focusCell = null;
+            if (state.endless) ensureWorldCoverage(false);
+            return;
+          }
+          // Fall through: pointer already updated → pit tilt + cell hover
         }
       }
 
@@ -1093,12 +1103,15 @@
 
     function handleMouseUp(e) {
       const wasPan = digSession && digSession.panned;
+      const wasForcePan = digSession && digSession.forcePan;
       digSession = null;
       state.panning = false;
       syncCursor();
       if (wasPan) {
         // Camera moved — let endless autosave capture the new viewport
-        if (typeof state.hooks.onPersistTick === "function") state.hooks.onPersistTick(api);
+        if (!isCameraLocked() || wasForcePan) {
+          if (typeof state.hooks.onPersistTick === "function") state.hooks.onPersistTick(api);
+        }
         return;
       }
       if (state.isGameOver) return;
@@ -1129,6 +1142,13 @@
     let touchMoved = false;
     let touchFlagged = false;
     let touchPanOrigin = null;
+
+    /** Fire (and similar): drag tilts via pointer; do not translate the board. */
+    function isCameraLocked() {
+      const lock = state.hooks && state.hooks.cameraLock;
+      if (typeof lock === "function") return !!lock(api);
+      return !!lock;
+    }
 
     function handleTouchStart(e) {
       e.preventDefault();
@@ -1188,9 +1208,14 @@
       if (Math.hypot(dx, dy) > 10) {
         touchMoved = true;
         clearTimeout(longPressTimer);
+        // Camera-locked skins (Fire): drag = parallax tilt + hover heat, not pan.
+        if (isCameraLocked()) {
+          handleMouseMove(e);
+          return;
+        }
         state.hoveredKey = null;
         state.panning = true;
-        // Pan the camera (endless + finite Fire full-bleed both benefit)
+        // Pan the camera (endless plates + zoomed finite boards)
         if (touchPanOrigin) {
           state.camX = touchPanOrigin.camX - dx;
           state.camY = touchPanOrigin.camY - dy;
@@ -1220,8 +1245,14 @@
         suppressTapReveal = true;
         return;
       }
+      // Locked pit: ease parallax back to center when the finger lifts
+      if (isCameraLocked()) {
+        state.pointer.nx = 0;
+        state.pointer.ny = 0;
+        state.pointer.active = false;
+      }
       if (suppressTapReveal || touchFlagged || touchMoved) {
-        if (touchMoved && typeof state.hooks.onPersistTick === "function") {
+        if (touchMoved && !isCameraLocked() && typeof state.hooks.onPersistTick === "function") {
           state.hooks.onPersistTick(api);
         }
         suppressTapReveal = false;
@@ -1841,6 +1872,11 @@
       if (!digSession) {
         state.hoveredKey = null;
         state.pointer.active = false;
+        // Locked pits ease back to a calm center when the pointer leaves
+        if (isCameraLocked()) {
+          state.pointer.nx = 0;
+          state.pointer.ny = 0;
+        }
         syncCursor();
       }
     });

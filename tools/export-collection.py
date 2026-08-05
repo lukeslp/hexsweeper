@@ -18,15 +18,15 @@ ROOT = Path(__file__).resolve().parents[1]
 COLLECTION = ROOT / "collection"
 PUBLIC_BASE = "https://dr.eamer.dev/games/hexsweeper/collection"
 
-# Four pasteable files: Light/Dark share one infinite plate with an in-file toggle.
+# Four pasteable files: Light/Dark share one infinite run, toggled in-file.
 THEMES = [
     {
         "id": "plate",
         "title": "Light / Dark",
         "tag": "Infinite · toggle",
-        "blurb": "Soft UI infinite plate — raised hexes, inset wells; Light/Dark keep the run.",
-        "filter": "light dark infinite soft ui neumorph honeycomb plate night toggle",
-        "swatch": ("#d8dee8", "#1a1f28", "#1d4ed8", "#60a5fa"),
+        "blurb": "Two materials on one infinite run — porcelain chalk desk with graphite wells, or night-iron plate with brushed grain.",
+        "filter": "light dark infinite soft ui neumorph honeycomb plate night toggle porcelain chalk graphite iron steel watermark",
+        "swatch": ("#d4dce8", "#10151d", "#1d4ed8", "#60a5fa"),
         "mode": "light",
         "allowModes": ["light", "dark"],
     },
@@ -34,8 +34,8 @@ THEMES = [
         "id": "fire",
         "title": "Fire",
         "tag": "Finite",
-        "blurb": "Magma shaft / hell-mine — dense honeycomb, rising burns, molten digs.",
-        "filter": "fire finite magma pit boil bowl hell mine",
+        "blurb": "Magma shaft / hell-mine — dense honeycomb, rising burns, molten digs; drag tilts the pit instead of panning it.",
+        "filter": "fire finite magma pit boil bowl hell mine tilt parallax camera lock",
         "swatch": ("#1c120c", "#ff6400", "#ffd24a", "#ff3c14"),
         "mode": "fire",
         "ogImage": "https://dr.eamer.dev/games/hexsweeper/assets/social/fire-og.png",
@@ -286,7 +286,7 @@ footer a{{color:var(--accent)}}
   <a class="back" href="../">&lsaquo; Play Hexsweeper</a>
   <header>
     <h1>Hexsweeper Collection</h1>
-    <p class="lede">Four copy-ready HTML files for CodePen or local paste. Light and Dark share one infinite plate with an in-file toggle; Fire, Plague, and Escape each stand alone. The live multi-theme game stays on the Play link.</p>
+    <p class="lede">Four copy-ready HTML files for CodePen or local paste. Light and Dark share one infinite file with an in-file toggle, but each gets its own material: porcelain chalk or night iron. Fire, Plague, and Escape each stand alone. The live multi-theme game stays on the Play link.</p>
     <p id="status" role="status" aria-live="polite"></p>
   </header>
   <!-- generated-hexsweeper-collection:begin -->
