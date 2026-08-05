@@ -6561,36 +6561,18 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
   }
 
-  /**
-   * Drawing unit for the rift. Everything about it used to size off cellSize,
-   * which shrinks with zoom — so once Escape started opening fully out, the
-   * hunt became a dot. Floor its presence against the viewport instead: the
-   * monster stays legible at any zoom without changing what it can reach.
-   */
-  function riftDrawUnit(s) {
-    const floor = Math.min(s.canvas.width, s.canvas.height) * 0.05;
-    return Math.max(s.cellSize, floor);
-  }
-
   function drawRiftOverlay(ctx, s, now) {
     if (!riftThemeActive() || RIFT.phase === "idle") return;
     if (RIFT.phase === "grace" && RIFT.intensity < 0.12) return;
     const cx = RIFT.x;
     const cy = RIFT.y;
-    const unit = riftDrawUnit(s);
-    // Hunting reads at full strength from the first beat; the ramp stays in
-    // RIFT.intensity for the game rules, not for whether you can see it coming.
-    const heat =
-      RIFT.phase === "awaken" || RIFT.phase === "chase"
-        ? Math.max(0.55, RIFT.intensity)
-        : RIFT.intensity;
     // Heartbeat, not a sine: a double thump that quickens as the rift closes,
     // so the thing reads as alive and hungry rather than as a glowing circle.
     let pulse;
     if (reduceMotion) {
       pulse = 0.72;
     } else {
-      const beatHz = 0.7 + heat * 1.2;
+      const beatHz = 0.7 + RIFT.intensity * 1.2;
       const beat = ((now * 0.001 * beatHz) % 1 + 1) % 1;
       const thump =
         Math.exp(-beat * 9) + 0.6 * Math.exp(-Math.max(0, beat - 0.18) * 9);
@@ -6607,13 +6589,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       RIFT.phase === "catch"
         ? 0.35 + catchU * 0.35
         : RIFT.phase === "chase" || RIFT.phase === "awaken"
-          ? 0.3 + heat * 0.32
+          ? 0.3 + RIFT.intensity * 0.32
           : RIFT.intensity * 0.12;
     if (vig > 0.04) {
       const g = ctx.createRadialGradient(
         cx,
         cy,
-        unit * 0.5,
+        s.cellSize * 0.5,
         cx,
         cy,
         Math.max(s.canvas.width, s.canvas.height) * 0.7
@@ -6626,8 +6608,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
 
     // Core lens breath (catch: slow swallow, not a flash)
-    const catchBoost = RIFT.phase === "catch" ? 0.55 + catchU * 0.45 : heat;
-    const coreR = unit * (0.7 + catchBoost * 1.1 + pulse * 0.15);
+    const catchBoost = RIFT.phase === "catch" ? 0.55 + catchU * 0.45 : RIFT.intensity;
+    const coreR = s.cellSize * (0.7 + catchBoost * 1.1 + pulse * 0.15);
     ctx.globalCompositeOperation = "lighter";
     const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
     core.addColorStop(0, `rgba(180,240,255,${0.35 * catchBoost * pulse})`);
@@ -6642,15 +6624,15 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     // Intake: motes dragged down the throat, so the lens reads as pulling
     // rather than sitting there. Positions come from the clock and an index,
     // so there is no particle array to grow or garbage-collect.
-    if (!reduceMotion && heat > 0.08) {
+    if (!reduceMotion && RIFT.intensity > 0.08) {
       ctx.globalCompositeOperation = "lighter";
       for (let i = 0; i < 16; i++) {
         const seed = i * 12.9898;
         const fall = (now * 0.00024 + (Math.sin(seed) * 0.5 + 0.5)) % 1;
         const far = 1 - fall; // 1 = out at the rim, 0 = swallowed
         const spin = seed * 7.7 + fall * 2.6;
-        const rad = unit * (0.45 + far * 3.5);
-        ctx.fillStyle = `rgba(150,225,240,${0.6 * heat * Math.sin(fall * Math.PI)})`;
+        const rad = s.cellSize * (0.45 + far * 3.5);
+        ctx.fillStyle = `rgba(150,225,240,${0.6 * RIFT.intensity * Math.sin(fall * Math.PI)})`;
         ctx.beginPath();
         ctx.arc(cx + Math.cos(spin) * rad, cy + Math.sin(spin) * rad, 1 + (1 - far) * 1.7, 0, Math.PI * 2);
         ctx.fill();
@@ -6663,7 +6645,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (!reduceMotion && (RIFT.phase === "awaken" || RIFT.phase === "chase")) {
       const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
       const toward = tip ? Math.atan2(tip.y - cy, tip.x - cx) : 0;
-      const reach = unit * (1.5 + heat * 2.5);
+      const reach = s.cellSize * (1.5 + RIFT.intensity * 2.5);
       const arms = 5;
       ctx.globalCompositeOperation = "lighter";
       ctx.lineCap = "round";
@@ -6681,10 +6663,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         const mx = cx + Math.cos(angle) * len * 0.5 - Math.sin(angle) * bow;
         const my = cy + Math.sin(angle) * len * 0.5 + Math.cos(angle) * bow;
         const arm = ctx.createLinearGradient(cx, cy, ex, ey);
-        arm.addColorStop(0, `rgba(125,240,225,${0.62 * heat})`);
+        arm.addColorStop(0, `rgba(125,240,225,${0.5 * RIFT.intensity})`);
         arm.addColorStop(1, "rgba(56,189,248,0)");
         ctx.strokeStyle = arm;
-        ctx.lineWidth = 2.6 + heat * 2.6;
+        ctx.lineWidth = 2.6 + RIFT.intensity * 2.2;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.quadraticCurveTo(mx, my, ex, ey);
@@ -6712,10 +6694,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
     // Leading ribbon while hunting — not during catch swallow
     if (RIFT.phase === "awaken" || RIFT.phase === "chase") {
-      const ringR = Math.max(unit * 0.95, RIFT.radius) * (0.92 + pulse * 0.06);
+      const ringR = Math.max(s.cellSize * 0.95, RIFT.radius) * (0.92 + pulse * 0.06);
       ctx.globalCompositeOperation = "lighter";
       ctx.lineWidth = 3.5;
-      ctx.strokeStyle = `rgba(94,234,212,${0.62 * heat})`;
+      ctx.strokeStyle = `rgba(94,234,212,${0.62 * RIFT.intensity})`;
       ctx.shadowColor = "rgba(56,189,248,0.85)";
       ctx.shadowBlur = 14;
       ctx.beginPath();
@@ -6723,7 +6705,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       ctx.stroke();
       ctx.lineWidth = 1.5;
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = `rgba(125,211,252,${0.4 * heat})`;
+      ctx.strokeStyle = `rgba(125,211,252,${0.4 * RIFT.intensity})`;
       ctx.beginPath();
       ctx.arc(cx, cy, ringR * 0.72, 0, Math.PI * 2);
       ctx.stroke();

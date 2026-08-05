@@ -4151,15 +4151,15 @@ body[data-mode="escape"] .menu-links {
     // Intake: motes dragged down the throat, so the lens reads as pulling
     // rather than sitting there. Positions come from the clock and an index,
     // so there is no particle array to grow or garbage-collect.
-    if (!reduceMotion && heat > 0.08) {
+    if (!reduceMotion && RIFT.intensity > 0.08) {
       ctx.globalCompositeOperation = "lighter";
       for (let i = 0; i < 16; i++) {
         const seed = i * 12.9898;
         const fall = (now * 0.00024 + (Math.sin(seed) * 0.5 + 0.5)) % 1;
         const far = 1 - fall; // 1 = out at the rim, 0 = swallowed
         const spin = seed * 7.7 + fall * 2.6;
-        const rad = unit * (0.45 + far * 3.5);
-        ctx.fillStyle = `rgba(150,225,240,${0.6 * heat * Math.sin(fall * Math.PI)})`;
+        const rad = s.cellSize * (0.45 + far * 3.5);
+        ctx.fillStyle = `rgba(150,225,240,${0.6 * RIFT.intensity * Math.sin(fall * Math.PI)})`;
         ctx.beginPath();
         ctx.arc(cx + Math.cos(spin) * rad, cy + Math.sin(spin) * rad, 1 + (1 - far) * 1.7, 0, Math.PI * 2);
         ctx.fill();
@@ -4172,7 +4172,7 @@ body[data-mode="escape"] .menu-links {
     if (!reduceMotion && (RIFT.phase === "awaken" || RIFT.phase === "chase")) {
       const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
       const toward = tip ? Math.atan2(tip.y - cy, tip.x - cx) : 0;
-      const reach = unit * (1.5 + heat * 2.5);
+      const reach = s.cellSize * (1.5 + RIFT.intensity * 2.5);
       const arms = 5;
       ctx.globalCompositeOperation = "lighter";
       ctx.lineCap = "round";
@@ -4190,10 +4190,10 @@ body[data-mode="escape"] .menu-links {
         const mx = cx + Math.cos(angle) * len * 0.5 - Math.sin(angle) * bow;
         const my = cy + Math.sin(angle) * len * 0.5 + Math.cos(angle) * bow;
         const arm = ctx.createLinearGradient(cx, cy, ex, ey);
-        arm.addColorStop(0, `rgba(125,240,225,${0.62 * heat})`);
+        arm.addColorStop(0, `rgba(125,240,225,${0.5 * RIFT.intensity})`);
         arm.addColorStop(1, "rgba(56,189,248,0)");
         ctx.strokeStyle = arm;
-        ctx.lineWidth = 2.6 + heat * 2.6;
+        ctx.lineWidth = 2.6 + RIFT.intensity * 2.2;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.quadraticCurveTo(mx, my, ex, ey);
@@ -4221,10 +4221,10 @@ body[data-mode="escape"] .menu-links {
 
     // Leading ribbon while hunting — not during catch swallow
     if (RIFT.phase === "awaken" || RIFT.phase === "chase") {
-      const ringR = Math.max(unit * 0.95, RIFT.radius) * (0.92 + pulse * 0.06);
+      const ringR = Math.max(s.cellSize * 0.95, RIFT.radius) * (0.92 + pulse * 0.06);
       ctx.globalCompositeOperation = "lighter";
       ctx.lineWidth = 3.5;
-      ctx.strokeStyle = `rgba(94,234,212,${0.62 * heat})`;
+      ctx.strokeStyle = `rgba(94,234,212,${0.62 * RIFT.intensity})`;
       ctx.shadowColor = "rgba(56,189,248,0.85)";
       ctx.shadowBlur = 14;
       ctx.beginPath();
@@ -4232,7 +4232,7 @@ body[data-mode="escape"] .menu-links {
       ctx.stroke();
       ctx.lineWidth = 1.5;
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = `rgba(125,211,252,${0.4 * heat})`;
+      ctx.strokeStyle = `rgba(125,211,252,${0.4 * RIFT.intensity})`;
       ctx.beginPath();
       ctx.arc(cx, cy, ringR * 0.72, 0, Math.PI * 2);
       ctx.stroke();
