@@ -11,15 +11,15 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 
 | Theme | Board | Feel |
 |------|--------|------|
-| **Light** | Infinite | Flat minimal field; default at bare URL |
-| **Dark** | Infinite | Flat minimal field, night |
-| **Fire** | Finite | Magma shaft / volcano well — dense viewport-filling honeycomb (faces nearly touch), dark lamp rim → center ember, rising heat motes, goo boil (gentle innie parallax) |
+| **Light** | Infinite | Soft UI pale honeycomb — raised covered / inset revealed |
+| **Dark** | Infinite | Soft UI night plate (same run as Light) |
+| **Fire** | Finite | Magma shaft / hell-mine well — dense viewport-filling honeycomb, dark lamp rim → center ember, rising burn columns + ember tongues in the void, heat motes / goo boil (gentle innie parallax) |
 | **Plague** | Finite | Full-field culture-slide slime + green specimen tiles (irregular faces) + hyphal mat |
 | **Escape** | Infinite | Calm slate plate → dig/flag/chord toward an offscreen finish (edge cue); a glacial rift seeps toward your digs |
 
 Fire and Plague open on the **large** board; board size (S·M·L) lives in Settings and only appears for those two, since the infinite themes have no fixed board.
 
-Cycle with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`). Preference key: `hexsweeper-mode-v3`.
+Fire OG card: `assets/social/fire-og.png` (alts: `fire-og-alt.png`, `fire-og-bloom.png`). Cycle with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`). Preference key: `hexsweeper-mode-v3`.
 
 First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome: lower-right **Appearance (sun/moon) · Reset · Menu** as matching icons — Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
 

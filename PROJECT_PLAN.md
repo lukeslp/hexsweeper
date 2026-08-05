@@ -8,7 +8,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 
 - **Static artifact** under `www/dr.eamer.dev/games/hexsweeper/` (symlink: `~/dr.eamer.dev`).
 - **`core.js`**: axial hex map, finite + endless modes, input (mouse/touch), flood reveal, flags, RAF loop, skin hooks.
-- **`index.html`**: production chrome + five-theme model + custom Canvas rendering (neumorph Light/Dark/Escape, Fire magma pit, mycelium Plague).
+- **`index.html`**: production chrome + five-theme model + custom Canvas rendering (Soft UI Light/Dark, Escape neumorph, Fire magma pit, mycelium Plague).
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
 ## Current status (2026-08-04)
@@ -21,6 +21,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Fire magma pit (viewport-fit board, pit tilt, boiling center, contact shadows; no streak rain)
 - [x] Fire shaft camera: hover sinks crust, innie polarity (rim with-tilt / deep floor counter-shear), center-smaller scale, richer rim lip + lava underglow, spite vents up (PRM: static bowl + shading)
 - [x] Fire volcano-mine pass: darker lamp well → center ember, rising heat motes in pit (PRM static), gooier overlapping boil blobs (canvas only; digits stay legible)
+- [x] Fire hell-mine burn: bottom magma river, ~40 rising burn columns (CSS-burn carve+halo), ember tongues in letterbox void, denser ash rain outside honeycomb (PRM-safe; canvas only)
 - [x] Fire hover: crust thins / boil wakes / neighbor heat bleed + spite ember orbit & burp (PRM-safe)
 - [x] Shared detonation FX (Fire + Light/Dark plates)
 - [x] Plague / Escape organic lose: hex-graph seep (infection bloom / lens swallow) — no shards
@@ -51,6 +52,8 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Project README + this plan + file banners
 - [x] Drag pan · wheel/pinch zoom (persisted) · flag mode in settings
 - [x] Light/Dark lattice seams readable when zoomed out
+- [x] Light/Dark Soft UI neumorph (raised covered / inset revealed; Escape paint at lower intensity)
+- [x] Fire OG social cards under `assets/social/fire-og*.png`
 - [x] Infinite autosave + JSON export/import (plate + Escape lanes)
 - [x] Fresh-run contract: R / Restart / S·M·L all clear the active autosave lane
 - [x] Chord on satisfied numbers · `R` restart · quiet score rail

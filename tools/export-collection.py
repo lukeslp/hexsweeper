@@ -24,9 +24,9 @@ THEMES = [
         "id": "plate",
         "title": "Light / Dark",
         "tag": "Infinite · toggle",
-        "blurb": "One infinite plate — Light and Dark swap cosmetics and keep the run.",
-        "filter": "light dark infinite pale honeycomb plate night toggle",
-        "swatch": ("#e8eaee", "#0f1115", "#1d4ed8", "#60a5fa"),
+        "blurb": "Soft UI infinite plate — raised hexes, inset wells; Light/Dark keep the run.",
+        "filter": "light dark infinite soft ui neumorph honeycomb plate night toggle",
+        "swatch": ("#d8dee8", "#1a1f28", "#1d4ed8", "#60a5fa"),
         "mode": "light",
         "allowModes": ["light", "dark"],
     },
@@ -34,10 +34,11 @@ THEMES = [
         "id": "fire",
         "title": "Fire",
         "tag": "Finite",
-        "blurb": "Magma pit — large fill, bowl tilt, boiling center.",
-        "filter": "fire finite magma pit boil bowl",
+        "blurb": "Magma shaft / hell-mine — dense honeycomb, rising burns, molten digs.",
+        "filter": "fire finite magma pit boil bowl hell mine",
         "swatch": ("#1c120c", "#ff6400", "#ffd24a", "#ff3c14"),
         "mode": "fire",
+        "ogImage": "https://dr.eamer.dev/games/hexsweeper/assets/social/fire-og.png",
     },
     {
         "id": "plague",
@@ -149,6 +150,31 @@ def export_theme(theme: dict, source: str) -> str:
         markup,
         count=1,
     )
+
+    # Drop production OG/Twitter tags, then attach theme cards when provided.
+    markup = re.sub(r'\n?<meta property="og:[^"]+" content="[^"]*">', "", markup)
+    markup = re.sub(r'\n?<meta name="twitter:[^"]+" content="[^"]*">', "", markup)
+    og = theme.get("ogImage")
+    if og:
+        social = "\n".join(
+            [
+                '<meta property="og:type" content="website">',
+                f'<meta property="og:title" content="{title}">',
+                f'<meta property="og:description" content="{description}">',
+                f'<meta property="og:url" content="{PUBLIC_BASE}/theme-{theme["id"]}.html">',
+                f'<meta property="og:image" content="{og}">',
+                '<meta name="twitter:card" content="summary_large_image">',
+                f'<meta name="twitter:title" content="{title}">',
+                f'<meta name="twitter:description" content="{description}">',
+                f'<meta name="twitter:image" content="{og}">',
+            ]
+        )
+        markup = re.sub(
+            r'(<meta name="description" content="[^"]*">)',
+            r"\1\n" + social,
+            markup,
+            count=1,
+        )
 
     chrome = (ROOT / "skin-chrome.css").read_text(encoding="utf-8")
     fonts_css = inline_css_urls(

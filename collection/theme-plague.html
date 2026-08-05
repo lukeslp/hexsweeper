@@ -14,7 +14,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Hexsweeper — Plague</title>
 <meta name="description" content="Hexagonal minesweeper one-pager: Plague — Specimen slide; irregular verdigris faces and hyphal mat.">
-<meta name="theme-color" content="#e8eaee">
+<meta name="theme-color" content="#d8dee8">
 <style>
 /* skin-chrome.css */
 /*
@@ -381,12 +381,12 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
 </style>
 <style>
 :root {
-  /* Flat Light first paint */
-  --bg-color: #e8eaee;
-  --text-main: #1a1d23;
-  --text-sub: #6b7280;
-  --nav-bg: #e8eaee;
-  --nav-ink: #1a1d23;
+  /* Soft UI Light first paint */
+  --bg-color: #d8dee8;
+  --text-main: #2a3444;
+  --text-sub: #5c6b7e;
+  --nav-bg: #e4eaf2;
+  --nav-ink: #2a3444;
   --hud-gap: 6px;
   --hud-border: transparent;
   --font-ui: "IBM Plex Sans", "Source Sans 3", system-ui, sans-serif;
@@ -394,7 +394,7 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
 }
 body {
   font-family: var(--font-ui);
-  background: #e8eaee;
+  background: #d8dee8;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   height: 100vh; margin: 0; overflow: hidden; user-select: none; touch-action: none;
   color: var(--text-main);
@@ -424,6 +424,13 @@ body[data-mode="plague"] canvas {
   width: 100vw;
   height: 100vh;
   max-width: none;
+  outline: none; /* never show a focus ring during dig / blast shake */
+}
+.canvas-container:focus,
+.canvas-container:focus-visible,
+#gameCanvas:focus,
+#gameCanvas:focus-visible {
+  outline: none;
 }
 #fx {
   background:
@@ -3518,18 +3525,22 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
   // Production themes: Light / Dark (endless) + Fire / Plague (finite).
   // The larger material library stays as prior art for the renderer.
+  // Soft UI plate: raised covered / inset revealed (Escape neumorph at lower intensity).
+  // Not flatPlate — inherits Soft White endless layout + extruded paint path.
   const PLATE_LIGHT = {
-    flatPlate: true,
-    flatGrid: true,
+    flatPlate: false,
+    flatGrid: false,
     css: {
-      "--bg-color": "#e8eaee",
-      "--text-main": "#1a1d23",
-      "--text-sub": "#6b7280",
-      "--nav-bg": "#e8eaee",
-      "--nav-ink": "#1a1d23",
+      "--bg-color": "#d8dee8",
+      "--text-main": "#2a3444",
+      "--text-sub": "#5c6b7e",
+      "--nav-bg": "#e4eaf2",
+      "--nav-ink": "#2a3444",
     },
-    bodyBg: "#e8eaee",
-    fx: { bg: "#e8eaee" },
+    bodyBg: "#d8dee8",
+    fx: {
+      bg: "radial-gradient(ellipse 70% 50% at 50% 40%, rgba(255,255,255,0.55), transparent 55%), linear-gradient(180deg, #e8eef6, #cfd6e0)",
+    },
     theme: {
       flag: "#dc2626",
       text: {
@@ -3543,30 +3554,33 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       },
     },
     states: {
-      covered:  { h: 220, s: 6, l: 88 },
-      revealed: { h: 220, s: 4, l: 94 },
-      flagged:  { h: 0, s: 0, l: 88 },
+      // Covered raised bright; revealed pressed into the plate
+      covered:  { h: 214, s: 16, l: 92 },
+      revealed: { h: 216, s: 12, l: 72 },
+      flagged:  { h: 350, s: 55, l: 90 },
     },
     particles: {
-      count: 0,
-      ambient: "rgba(0,0,0,0)",
-      reveal: "rgba(80,90,110,0.35)",
-      mine: "rgba(30,40,55,0.85)",
+      count: 20,
+      ambient: "rgba(120,140,165,0.22)",
+      reveal: "rgba(100,120,150,0.4)",
+      mine: "rgba(40,55,75,0.9)",
       flag: "rgba(220,38,38,0.75)",
     },
   };
   const PLATE_DARK = {
-    flatPlate: true,
-    flatGrid: true,
+    flatPlate: false,
+    flatGrid: false,
     css: {
-      "--bg-color": "#0f1115",
+      "--bg-color": "#1a1f28",
       "--text-main": "#e8eaee",
       "--text-sub": "#8b919a",
-      "--nav-bg": "#0f1115",
+      "--nav-bg": "#222833",
       "--nav-ink": "#e8eaee",
     },
-    bodyBg: "#0f1115",
-    fx: { bg: "#0f1115" },
+    bodyBg: "#1a1f28",
+    fx: {
+      bg: "radial-gradient(ellipse 70% 50% at 50% 38%, rgba(60,72,90,0.45), transparent 55%), linear-gradient(180deg, #222833, #141820)",
+    },
     theme: {
       flag: "#f43f5e",
       text: {
@@ -3580,14 +3594,14 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       },
     },
     states: {
-      // Wider covered↔revealed gap so the lattice still reads when seams thin out
-      covered:  { h: 220, s: 7, l: 22 },
-      revealed: { h: 220, s: 5, l: 8 },
-      flagged:  { h: 0, s: 0, l: 22 },
+      // Soft dark: covered extruded slightly; revealed sinks as a well
+      covered:  { h: 220, s: 10, l: 28 },
+      revealed: { h: 220, s: 8, l: 14 },
+      flagged:  { h: 350, s: 40, l: 30 },
     },
     particles: {
-      count: 0,
-      ambient: "rgba(0,0,0,0)",
+      count: 16,
+      ambient: "rgba(100,120,150,0.18)",
       reveal: "rgba(160,180,210,0.35)",
       mine: "rgba(230,235,245,0.9)",
       flag: "rgba(244,63,94,0.85)",
@@ -4030,8 +4044,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
 
   /**
-   * Magma backdrop: volcano-lamp well — dark rim, hot center ember, soft boil.
-   * No boxed plate; heat motes rise in the pit (PRM freezes them).
+   * Magma backdrop: hell-mine shaft — dark rim, hot throat, rising burns.
+   * Canvas take on CSS blur/contrast fire: orange well + rising dark carve
+   * ellipses + ember tongues in the void. No GSAP / DOM fire overlay.
    */
   function drawMagmaPitWell(ctx, s) {
     const w = s.canvas.width;
@@ -4050,24 +4065,32 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
 
-    // Lamp-style well: near-black rim, warm throat, brighter ember core
-    const base = ctx.createRadialGradient(cx, cy, reach * 0.08, cx, cy, far * 0.88);
-    base.addColorStop(0, "#3a160c");
-    base.addColorStop(0.22, "#1c0c08");
-    base.addColorStop(0.5, "#0e0604");
-    base.addColorStop(0.78, "#060201");
-    base.addColorStop(1, "#020100");
+    // Hell floor: near-black void, warm throat, molten bottom seam
+    const base = ctx.createRadialGradient(cx, cy, reach * 0.08, cx, cy, far * 0.92);
+    base.addColorStop(0, "#4a1a0c");
+    base.addColorStop(0.2, "#22100a");
+    base.addColorStop(0.48, "#100604");
+    base.addColorStop(0.75, "#060201");
+    base.addColorStop(1, "#010000");
     ctx.fillStyle = base;
+    ctx.fillRect(0, 0, w, h);
+
+    // Bottom magma river — reads as mine depth below the board
+    const floor = ctx.createLinearGradient(0, h * 0.55, 0, h);
+    floor.addColorStop(0, "transparent");
+    floor.addColorStop(0.45, `rgba(80, 18, 4, ${0.22 + pulse * 0.08})`);
+    floor.addColorStop(0.78, `rgba(180, 48, 8, ${0.18 + pulse * 0.1})`);
+    floor.addColorStop(1, `rgba(255, 90, 20, ${0.12 + pulse * 0.08})`);
+    ctx.fillStyle = floor;
     ctx.fillRect(0, 0, w, h);
 
     // Soft crust bloom under the honeycomb so the board doesn't cast a rectangle
     const under = ctx.createRadialGradient(cx, cy, reach * 0.18, cx, cy, reach * 1.15);
-    under.addColorStop(0, `rgba(58, 24, 14, ${0.55 + pulse * 0.08})`);
-    under.addColorStop(0.5, "rgba(24, 10, 6, 0.28)");
+    under.addColorStop(0, `rgba(72, 28, 14, ${0.58 + pulse * 0.08})`);
+    under.addColorStop(0.5, "rgba(28, 12, 6, 0.3)");
     under.addColorStop(1, "transparent");
     ctx.fillStyle = under;
     ctx.beginPath();
-    // Pointy-top hex footprint matching the lattice (not a rounded rect)
     for (let i = 0; i < 6; i++) {
       const ang = (Math.PI / 180) * (30 + 60 * i);
       const x = cx + Math.cos(ang) * reach;
@@ -4078,13 +4101,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.closePath();
     ctx.fill();
 
-    // Soft underworld glow in the pit center — no stroke “rain” lines
+    // Soft underworld glow in the pit center
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     const glow = ctx.createRadialGradient(cx, cy + reach * 0.06, 0, cx, cy, reach * 0.72);
-    glow.addColorStop(0, `rgba(255, 150, 48, ${0.26 + pulse * 0.12})`);
-    glow.addColorStop(0.28, `rgba(255, 90, 18, ${0.14 + pulse * 0.07})`);
-    glow.addColorStop(0.62, `rgba(180, 40, 6, ${0.06 + pulse * 0.03})`);
+    glow.addColorStop(0, `rgba(255, 160, 52, ${0.3 + pulse * 0.14})`);
+    glow.addColorStop(0.28, `rgba(255, 90, 18, ${0.16 + pulse * 0.08})`);
+    glow.addColorStop(0.62, `rgba(180, 40, 6, ${0.07 + pulse * 0.03})`);
     glow.addColorStop(1, "transparent");
     ctx.fillStyle = glow;
     ctx.beginPath();
@@ -4092,18 +4115,16 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.fill();
 
     // Boil cells across the pit floor — overlapping soft pools merge into goo
-    // without SVG filters. Big pools breathe slowly; small vents flicker quicker.
     const boilN = reduceMotion ? 7 : 22;
     for (let i = 0; i < boilN; i++) {
       const u = cellHash(i, 17, 3);
       const v = cellHash(i, 29, 5);
       const w2 = cellHash(i, 41, 11);
-      const scale = 0.35 + u * 0.65; // small → large
+      const scale = 0.35 + u * 0.65;
       const speed = 0.000075 / (0.22 + scale * 0.9);
       const phase = reduceMotion ? 0.35 + v * 0.3 : (t * speed + v) % 1;
-      const swell = Math.sin(phase * Math.PI); // rise and fade, no popping
+      const swell = Math.sin(phase * Math.PI);
       const ang = w2 * Math.PI * 2 + (reduceMotion ? 0 : Math.sin(t * 0.00012 + i) * 0.5);
-      // Bias larger blobs toward center so the throat reads as one lava mass
       const rad = reach * (0.02 + v * 0.42) * (0.55 + (1 - scale) * 0.45);
       const bx = cx + Math.cos(ang) * rad;
       const by = cy + Math.sin(ang) * rad * 0.68 + reach * 0.03;
@@ -4120,9 +4141,87 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       ctx.fill();
     }
 
-    // Rising heat motes in the pit well (CSS-burn idea, canvas motes only).
-    // PRM: freeze at mid-rise so the volcano still reads without drift.
-    const moteN = reduceMotion ? 5 : 12;
+    // Rising burn columns (CSS .burn idea): dark carve + hot halo.
+    // Dense ring around the honeycomb + a few through the throat.
+    const burnN = reduceMotion ? 14 : 40;
+    for (let i = 0; i < burnN; i++) {
+      const u = cellHash(i, 101, 3);
+      const v = cellHash(i, 113, 7);
+      const w2 = cellHash(i, 127, 11);
+      const life = reduceMotion ? 0.25 + v * 0.45 : (t * (0.00022 + u * 0.00018) + v) % 1;
+      // Prefer margins + rim so digits stay clear; some in the pit
+      const rimBias = u > 0.28;
+      const ang = w2 * Math.PI * 2;
+      const rad = rimBias
+        ? reach * (0.72 + u * 0.55)
+        : reach * (0.1 + u * 0.45);
+      const bx = cx + Math.cos(ang) * rad * (0.85 + v * 0.3);
+      const by0 = cy + reach * 0.55;
+      const by = by0 - life * (reach * 1.15 + h * 0.12);
+      const bw = (6 + u * 18) * (1 - life * 0.35);
+      const bh = (14 + v * 36) * (0.55 + (1 - life) * 0.7);
+      const a = (1 - life) * (rimBias ? 0.22 : 0.1) * (0.7 + pulse * 0.3);
+      // Hot halo
+      const hg = ctx.createRadialGradient(bx, by, 0, bx, by, Math.max(bw, bh) * 1.4);
+      hg.addColorStop(0, `rgba(255, 200, 80, ${a * 0.85})`);
+      hg.addColorStop(0.35, `rgba(255, 100, 20, ${a * 0.45})`);
+      hg.addColorStop(1, "transparent");
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.ellipse(bx, by, bw * 1.6, bh * 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Dark carve cores on top of halos (blur/contrast “black burn” read)
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    const carveN = reduceMotion ? 10 : 28;
+    for (let i = 0; i < carveN; i++) {
+      const u = cellHash(i, 131, 5);
+      const v = cellHash(i, 149, 3);
+      const w2 = cellHash(i, 163, 9);
+      const life = reduceMotion ? 0.3 + v * 0.4 : (t * (0.0002 + u * 0.00016) + v + 0.37) % 1;
+      const ang = w2 * Math.PI * 2;
+      const rad = reach * (0.65 + u * 0.7);
+      const bx = cx + Math.cos(ang) * rad;
+      const by = cy + reach * 0.5 - life * (reach * 1.05 + h * 0.1);
+      const bw = 4 + u * 14;
+      const bh = 10 + v * 28 * (1 - life * 0.5);
+      const a = (1 - life) * 0.55;
+      ctx.fillStyle = `rgba(0, 0, 0, ${a})`;
+      ctx.beginPath();
+      ctx.ellipse(bx, by, bw, bh, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Ember tongues in the letterbox void (hell mine walls)
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const tongueN = reduceMotion ? 6 : 16;
+    for (let i = 0; i < tongueN; i++) {
+      const u = cellHash(i, 179, 2);
+      const v = cellHash(i, 191, 8);
+      const side = u < 0.5 ? -1 : 1;
+      const life = reduceMotion ? 0.4 + v * 0.3 : (t * (0.00015 + u * 0.0001) + v) % 1;
+      const tx = cx + side * (reach * 0.95 + u * (w * 0.22));
+      const ty = h * (0.85 - life * 0.75) + Math.sin(t * 0.001 + i) * (reduceMotion ? 0 : 8);
+      const tw = 10 + v * 28;
+      const thh = 40 + u * 90;
+      const ta = (1 - life) * (0.08 + v * 0.1) * (0.75 + pulse * 0.25);
+      const tg = ctx.createRadialGradient(tx, ty, 0, tx, ty - thh * 0.3, thh);
+      tg.addColorStop(0, `rgba(255, 170, 40, ${ta})`);
+      tg.addColorStop(0.4, `rgba(255, 70, 10, ${ta * 0.55})`);
+      tg.addColorStop(1, "transparent");
+      ctx.fillStyle = tg;
+      ctx.beginPath();
+      ctx.ellipse(tx, ty, tw, thh, side * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Rising heat motes in the pit well
+    const moteN = reduceMotion ? 6 : 18;
     for (let i = 0; i < moteN; i++) {
       const u = cellHash(i, 61, 3);
       const v = cellHash(i, 73, 9);
@@ -4133,7 +4232,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       const rad = reach * (0.08 + u * 0.38) * (1 - life * 0.35);
       const mx = cx + Math.cos(ang) * rad;
       const my = cy + reach * 0.22 - life * reach * 0.72 + Math.sin(ang) * rad * 0.22;
-      const ma = (1 - life) * (0.14 + v * 0.16) * (0.75 + pulse * 0.25);
+      const ma = (1 - life) * (0.16 + v * 0.18) * (0.75 + pulse * 0.25);
       const mr = (1.2 + (1 - life) * 2.4) * (0.7 + u * 0.6);
       const mg = ctx.createRadialGradient(mx, my, 0, mx, my, mr * 2.2);
       mg.addColorStop(0, `rgba(255, 220, 140, ${ma})`);
@@ -4150,9 +4249,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.globalCompositeOperation = "source-over";
     const vig = ctx.createRadialGradient(cx, cy, reach * 0.35, cx, cy, far * 0.72);
     vig.addColorStop(0, "transparent");
-    vig.addColorStop(0.55, "transparent");
-    vig.addColorStop(0.82, "rgba(8, 2, 1, 0.28)");
-    vig.addColorStop(1, "rgba(2, 0, 0, 0.55)");
+    vig.addColorStop(0.5, "transparent");
+    vig.addColorStop(0.78, "rgba(10, 2, 1, 0.32)");
+    vig.addColorStop(1, "rgba(2, 0, 0, 0.62)");
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, w, h);
 
@@ -6687,24 +6786,32 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     const cy = s.canvas.height / 2 + oy * 0.1 + 22;
     const R = s.mapRadius * s.cellSize;
 
-    // Magma: sparse ambient ash above the lattice (pit well owns rising heat).
+    // Magma: ash + spark rain in the void (pit well owns the burn columns).
     if (th.material === "magma") {
       if (reduceMotion) return;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const n = 10;
+      const n = 28;
+      const Rboard = s.mapRadius * s.cellSize * 1.15;
       for (let i = 0; i < n; i++) {
         const u = cellHash(i, 41, 2);
         const v = cellHash(i, 53, 7);
-        const life = (time * 0.00018 + u) % 1;
-        const ex =
-          (u * s.canvas.width + ox * 0.8 + Math.sin(time * 0.0008 + v * 6) * 18 + s.canvas.width) %
+        const life = (time * (0.00016 + u * 0.00008) + v) % 1;
+        let ex =
+          (u * s.canvas.width + ox * 0.8 + Math.sin(time * 0.0008 + v * 6) * 22 + s.canvas.width) %
           s.canvas.width;
-        const ey = s.canvas.height * (0.5 + v * 0.35) - life * s.canvas.height * 0.32;
-        const a = (1 - life) * (0.06 + v * 0.1);
-        const er = 0.9 + (1 - life) * 1.6;
+        let ey = s.canvas.height * (0.62 + v * 0.28) - life * s.canvas.height * 0.55;
+        // Keep denser sparks outside the honeycomb so digits stay clear
+        const dx = ex - cx;
+        const dy = ey - cy;
+        if (dx * dx + dy * dy < Rboard * Rboard * 0.55) {
+          ex = cx + (dx || 1) * 1.8;
+          ey = cy + (dy || 1) * 1.6;
+        }
+        const a = (1 - life) * (0.08 + v * 0.14);
+        const er = 0.8 + (1 - life) * (i % 4 === 0 ? 2.8 : 1.8);
         ctx.globalAlpha = a;
-        ctx.fillStyle = i % 3 === 0 ? "#ffb050" : "#ff6818";
+        ctx.fillStyle = i % 4 === 0 ? "#ffd080" : i % 3 === 0 ? "#ffb050" : "#ff6818";
         ctx.beginPath();
         ctx.arc(ex, ey, er, 0, Math.PI * 2);
         ctx.fill();
@@ -7600,12 +7707,17 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
           }
         }
 
-        // Screen shake from blast or near-miss rift pressure (organic seep: none)
+        // Screen shake from blast or near-miss rift pressure (organic seep: none).
+        // clearRect leaves the canvas transparent; translating the whole paint would
+        // flash a viewport "frame" of #fx/body behind it (reads like a focus ring).
+        // Seal the buffer with an opaque underlay first, then shake content only.
         const shakeAmt = Math.max(
           BLAST.active && BLAST.shake > 0.15 ? BLAST.shake : 0,
           !SEEP.active && RIFT.shake > 0.15 ? RIFT.shake : 0
         );
         if (shakeAmt > 0.15) {
+          ctx.fillStyle = th.bodyBg || th.css["--bg-color"] || "#020100";
+          ctx.fillRect(0, 0, s.canvas.width, s.canvas.height);
           ctx.save();
           ctx.translate(
             (Math.random() - 0.5) * shakeAmt,
@@ -7683,7 +7795,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
         // Ground shadows already painted in beforeFrame (desk plane only).
 
-        // —— Light/Dark: ultra-flat plate (no bevel, extrusion, or soft shading) ——
+        // —— Legacy flat plate (unused by production Soft UI Light/Dark) ——
         if (neo && th.flatPlate) {
           const path = cell.hexPath(size, 0.96);
           const stateKey = cell.flagged && !cell.revealed ? "flagged" : cell.revealed ? "revealed" : "covered";
@@ -7744,16 +7856,18 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
           return;
         }
 
-        // —— Escape (and other neumorph): extruded faces + bevel ——
+        // —— Soft UI / Escape neumorph: extruded faces + bevel ——
         if (neo) {
+          const softPlate = th.id === "light" || th.id === "dark";
           const darkPlate = th.id === "escape" || th.id === "dark";
-          const scale = (cell._depthScale || 1) * (0.93 + cell.animHover * 0.04);
+          const scale = (cell._depthScale || 1) * (0.93 + cell.animHover * (softPlate ? 0.03 : 0.04));
           const path = cell.hexPath(size, scale);
           const ds = size * scale;
           const stateKey = cell.flagged && !cell.revealed ? "flagged" : cell.revealed ? "revealed" : "covered";
           const st = (th.states && th.states[stateKey]) || { h: 215, s: 14, l: 90 };
-          const L = st.l + (cell.animHover || 0) * 3;
-          const wall = Math.max(0.6, elev * size * 0.22);
+          const L = st.l + (cell.animHover || 0) * (softPlate ? 2 : 3);
+          // Soft plate: quieter extrusion so the infinite field stays calm
+          const wall = Math.max(0.45, elev * size * (softPlate ? 0.12 : 0.22));
 
           if (elev > 0.12 && (cell.animReveal || 0) < 0.85) {
             ctx.save();
@@ -7800,12 +7914,26 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             ctx.stroke();
           };
           if (!cell.revealed) {
-            // Dark plates keep a whisper of bevel: at full-viewport tile counts,
-            // strong highlights turn the field into glare.
-            drawFace(3, 5, darkPlate ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.95)");
-            drawFace(0, 2, darkPlate ? "rgba(0,0,0,0.34)" : "rgba(110,128,150,0.95)");
-            ctx.strokeStyle = darkPlate ? "rgba(255,255,255,0.05)" : "rgba(90,110,135,0.28)";
-            ctx.lineWidth = Math.max(1, size * 0.045);
+            // Soft plate: dual Soft UI edges without Escape's hard plastic glare.
+            // Dark plates keep a whisper of bevel at full-viewport density.
+            const hi = darkPlate
+              ? "rgba(255,255,255,0.12)"
+              : softPlate
+                ? "rgba(255,255,255,0.72)"
+                : "rgba(255,255,255,0.95)";
+            const lo = darkPlate
+              ? "rgba(0,0,0,0.38)"
+              : softPlate
+                ? "rgba(120,136,158,0.55)"
+                : "rgba(110,128,150,0.95)";
+            drawFace(3, 5, hi);
+            drawFace(0, 2, lo);
+            ctx.strokeStyle = darkPlate
+              ? "rgba(255,255,255,0.05)"
+              : softPlate
+                ? "rgba(90,110,135,0.18)"
+                : "rgba(90,110,135,0.28)";
+            ctx.lineWidth = Math.max(1, size * (softPlate ? 0.035 : 0.045));
             ctx.stroke(path);
             const spec = ctx.createRadialGradient(
               cell.x - light.sdx * ds * 0.35,
@@ -7815,8 +7943,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
               cell.y,
               ds
             );
-            spec.addColorStop(0, darkPlate ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.4)");
-            spec.addColorStop(0.45, darkPlate ? "rgba(255,255,255,0.015)" : "rgba(255,255,255,0.08)");
+            spec.addColorStop(0, darkPlate ? "rgba(255,255,255,0.06)" : softPlate ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.4)");
+            spec.addColorStop(0.45, darkPlate ? "rgba(255,255,255,0.015)" : softPlate ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.08)");
             spec.addColorStop(1, "transparent");
             ctx.fillStyle = spec;
             ctx.fill(path);

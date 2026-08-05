@@ -6,3 +6,8 @@
 *.jpg
 .env
 .env.*
+
+# Keep collection / OG social cards tracked
+!assets/
+!assets/social/
+!assets/social/*.png
