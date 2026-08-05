@@ -1372,9 +1372,9 @@ body[data-mode="escape"] .menu-links {
       id: "fire",
       name: "Fire · Magma",
       boardConfig: {
-        // Outer hex ≈ 98% of the live window; light pad for residual innie sink.
+        // Outer hex ≈ 98% of the live window; tiny pad — packing is face-scale, not sink.
         viewportFill: 0.98,
-        viewportPadCells: 0.35,
+        viewportPadCells: 0.08,
         easy: { radius: 4, mines: 10, cellSize: 52 },
         medium: { radius: 7, mines: 35, cellSize: 44 },
         hard: { radius: 10, mines: 70, cellSize: 38 },
@@ -3991,6 +3991,11 @@ body[data-mode="escape"] .menu-links {
       }
       // Fire and Plague open at the large board; the rebuild below picks this up.
       if (!t.endless && live.state.config.hard) live.state.currentDifficulty = "hard";
+      // Fire: never inherit a zoomed-out plate — sparse zoom made the pit look empty.
+      if (t.material === "magma" && typeof live.setZoom === "function") {
+        const z = Number.isFinite(live.state.viewZoom) ? live.state.viewZoom : 1;
+        if (z < 1) live.setZoom(1);
+      }
     }
     // Light↔Dark keeps the run; Escape / finite swaps rebuild (no persist wipe).
     if (game && typeof game.setEndless === "function") {
@@ -5188,24 +5193,25 @@ body[data-mode="escape"] .menu-links {
             // Innie: rim (near) follows tilt; deep floor COUNTER-shears under the lip
             // so pointer reads as looking into the hole, not pushing the board at you.
             // Contact shadows (drawMagmaDepthShadows) reinforce depth when parallax is small.
+            // Packing rule: faces stay ~0.92–0.98 of axial spacing (classic honeycomb).
+            // Old 0.52 floor + 1.05 bowl made islands in a pit — rejected as "not a game."
             const near = d; // 0 far/deep center → 1 near rim
             const deep = 1 - near;
-            const gMult = 0.32;
+            const gMult = 0.28;
             cell._gx = baseX + ox * gMult * 0.8;
-            cell._gy = baseY + oy * gMult * 0.6 + s.cellSize * 0.16;
-            // Rim with-tilt; deep floor opposite / under the lip
-            const shearOx = ox * (0.18 + near * 0.52) - ox * deep * 0.92;
-            const shearOy = oy * (0.14 + near * 0.4) - oy * deep * 0.7;
-            // Tighter bowl than the old 0.68/1.38 sink — that dropped the honeycomb
-            // into a letterbox under a huge dark top margin. Recenter keeps pit feel.
-            const boardSink = s.cellSize * 0.22;
-            const bowlSink = deep * s.cellSize * 1.05 + elev * s.cellSize * 0.28;
-            const pitch = s.cellSize * (0.08 + deep * 0.28);
-            const pitRecenter = -s.cellSize * (0.55 + deep * 0.35);
+            cell._gy = baseY + oy * gMult * 0.6 + s.cellSize * 0.08;
+            // Rim with-tilt; deep floor opposite / under the lip (gentler so rings stay tight)
+            const shearOx = ox * (0.14 + near * 0.4) - ox * deep * 0.55;
+            const shearOy = oy * (0.1 + near * 0.32) - oy * deep * 0.42;
+            // Shallow bowl: depth from lighting/parallax, not from yanking centers apart
+            const boardSink = s.cellSize * 0.1;
+            const bowlSink = deep * s.cellSize * 0.28 + elev * s.cellSize * 0.1;
+            const pitch = s.cellSize * (0.03 + deep * 0.08);
+            const pitRecenter = -s.cellSize * (0.18 + deep * 0.1);
             cell.x = baseX + shearOx;
             cell.y = baseY + shearOy + boardSink + bowlSink + pitch + pitRecenter;
-            // Center smaller (farther); rim nearer — floor clamped so digs stay hittable
-            cell._depthScale = Math.max(0.54, 0.52 + near * 0.46 - elev * 0.06);
+            // Subtle far/near cue only — floor stays dense and diggable
+            cell._depthScale = Math.max(0.94, 0.935 + near * 0.055 - elev * 0.015);
           } else {
             // Desk lattice (gentle board drift) vs elevated face (stronger parallax)
             // Shadows use _gx/_gy so they never paint on faces below.
@@ -5651,12 +5657,14 @@ body[data-mode="escape"] .menu-links {
           th.material === "mycelium"
             ? 0.84 + cellHash(cell.q, cell.r, 17) * 0.14
             : 1;
-        // Magma poke shrinks the aperture (floor gives way); other themes still lift
+        // Magma poke thins crust slightly; keep faces packed (no island gaps).
+        // Magma facePack ~0.97 of spacing; other depth themes keep 0.92.
         const hoverScale =
           th.material === "magma"
-            ? -cell.animHover * 0.07
+            ? -cell.animHover * 0.025
             : cell.animHover * 0.06;
-        const scale = (cell._depthScale || 1) * (0.92 + hoverScale) * faceJitter;
+        const facePack = th.material === "magma" ? 0.97 : 0.92;
+        const scale = (cell._depthScale || 1) * (facePack + hoverScale) * faceJitter;
         const path = cell.hexPath(size, scale);
         const ds = size * scale;
         const wall = Math.max(0.8, elev * size * 0.28);
@@ -5714,28 +5722,28 @@ body[data-mode="escape"] .menu-links {
             ctx.stroke();
           };
           // Shadow lip — light-facing edges sit deeper / occluded
-          drawInsetFace(3, 5, "rgba(0,0,0,0.86)", 2.9);
-          drawInsetFace(3, 5, "rgba(12,4,2,0.72)", 1.75);
+          drawInsetFace(3, 5, "rgba(0,0,0,0.78)", 2.1);
+          drawInsetFace(3, 5, "rgba(12,4,2,0.62)", 1.25);
           // Warm far catch — richer rim lip (still reads as recess, not a raised coin)
-          drawInsetFace(0, 2, "rgba(255,120,32,0.3)", 1.55);
-          drawInsetFace(0, 2, "rgba(255,165,70,0.14)", 1.05);
+          drawInsetFace(0, 2, "rgba(255,120,32,0.28)", 1.2);
+          drawInsetFace(0, 2, "rgba(255,165,70,0.12)", 0.85);
 
-          // AO well — stronger occluding rim, transparent under digit ink
+          // AO well — occluding rim, transparent under digit ink (lighter so faces stay dense)
           const well = ctx.createRadialGradient(cell.x, cell.y, ds * 0.08, cell.x, cell.y, ds * 1.06);
           well.addColorStop(0, "transparent");
-          well.addColorStop(0.48, "transparent");
-          well.addColorStop(1, `rgba(0,0,0,${0.42 + elev * 0.18})`);
+          well.addColorStop(0.55, "transparent");
+          well.addColorStop(1, `rgba(0,0,0,${0.28 + elev * 0.14})`);
           ctx.fillStyle = well;
           ctx.fill(path);
 
-          // Crust rim: dark seam + ember lip (void separation; numbered stays dark via paint)
-          ctx.strokeStyle = "rgba(0,0,0,0.94)";
-          ctx.lineWidth = Math.max(1.8, size * 0.075);
+          // Crust seam + ember lip — thin so faces nearly touch (not moat gaps)
+          ctx.strokeStyle = "rgba(0,0,0,0.88)";
+          ctx.lineWidth = Math.max(1.1, size * 0.038);
           ctx.stroke(path);
           ctx.strokeStyle = cell.revealed
             ? "rgba(255,120,36,0.22)"
             : "rgba(255,120,36,0.42)";
-          ctx.lineWidth = Math.max(1.05, size * 0.042);
+          ctx.lineWidth = Math.max(0.85, size * 0.028);
           ctx.stroke(path);
           ctx.restore();
         } else if (flatTile) {

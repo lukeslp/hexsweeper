@@ -13,7 +13,7 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 |------|--------|------|
 | **Light** | Infinite | Flat minimal field; default at bare URL |
 | **Dark** | Infinite | Flat minimal field, night |
-| **Fire** | Finite | Magma shaft / volcano well — viewport-filling honeycomb, dark lamp rim → center ember, rising heat motes, goo boil (rim-near / floor-counter parallax) |
+| **Fire** | Finite | Magma shaft / volcano well — dense viewport-filling honeycomb (faces nearly touch), dark lamp rim → center ember, rising heat motes, goo boil (gentle innie parallax) |
 | **Plague** | Finite | Full-field culture-slide slime + green specimen tiles (irregular faces) + hyphal mat |
 | **Escape** | Infinite | Calm slate plate → dig/flag/chord toward an offscreen finish (edge cue); a glacial rift seeps toward your digs |
 
