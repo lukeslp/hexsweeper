@@ -43,7 +43,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Self-hosted IBM Plex (no Google Fonts CDN); fixed font URLs + distinct weights
 - [x] Fire opens large and fills ~98% of the viewport so the pit reads as one composition
 - [x] Fire viewport fill: no chrome-stolen padding / cellSize cap; innie shaft recentered (no letterbox gaps)
-- [x] Fire dense honeycomb: face pack ~0.94–0.98 of spacing (was ~0.48–0.90 via aggressive `_depthScale`); shallow bowl; zoom floor 1 on Fire apply
+- [x] Fire dense honeycomb: face pack ~0.96–0.99 of spacing (was ~0.48–0.90 via aggressive `_depthScale`); whisper bowl; zoom floor 1 on Fire apply
 - [x] Plague full-field culture-slide slime (blooms / filaments / beads under the lattice)
 - [x] Progressive empty-cell flood: BFS rings open outward to the numbered boundary
 - [x] Plague irregular face scale + off-center shading; green-forward grid with rose-copper complements

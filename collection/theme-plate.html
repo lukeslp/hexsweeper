@@ -7537,25 +7537,25 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             // Innie: rim (near) follows tilt; deep floor COUNTER-shears under the lip
             // so pointer reads as looking into the hole, not pushing the board at you.
             // Contact shadows (drawMagmaDepthShadows) reinforce depth when parallax is small.
-            // Packing rule: faces stay ~0.92–0.98 of axial spacing (classic honeycomb).
+            // Packing rule: faces ≈0.96–0.99 of axial spacing (classic honeycomb).
             // Old 0.52 floor + 1.05 bowl made islands in a pit — rejected as "not a game."
             const near = d; // 0 far/deep center → 1 near rim
             const deep = 1 - near;
-            const gMult = 0.28;
+            const gMult = 0.22;
             cell._gx = baseX + ox * gMult * 0.8;
-            cell._gy = baseY + oy * gMult * 0.6 + s.cellSize * 0.08;
-            // Rim with-tilt; deep floor opposite / under the lip (gentler so rings stay tight)
-            const shearOx = ox * (0.14 + near * 0.4) - ox * deep * 0.55;
-            const shearOy = oy * (0.1 + near * 0.32) - oy * deep * 0.42;
-            // Shallow bowl: depth from lighting/parallax, not from yanking centers apart
-            const boardSink = s.cellSize * 0.1;
-            const bowlSink = deep * s.cellSize * 0.28 + elev * s.cellSize * 0.1;
-            const pitch = s.cellSize * (0.03 + deep * 0.08);
-            const pitRecenter = -s.cellSize * (0.18 + deep * 0.1);
+            cell._gy = baseY + oy * gMult * 0.6 + s.cellSize * 0.04;
+            // Light innie shear — keep neighbor centers almost coplanar
+            const shearOx = ox * (0.1 + near * 0.28) - ox * deep * 0.32;
+            const shearOy = oy * (0.08 + near * 0.22) - oy * deep * 0.24;
+            // Whisper bowl: depth from lamp/AO, not from spreading the lattice
+            const boardSink = s.cellSize * 0.06;
+            const bowlSink = deep * s.cellSize * 0.12 + elev * s.cellSize * 0.05;
+            const pitch = s.cellSize * (0.015 + deep * 0.04);
+            const pitRecenter = -s.cellSize * (0.1 + deep * 0.05);
             cell.x = baseX + shearOx;
             cell.y = baseY + shearOy + boardSink + bowlSink + pitch + pitRecenter;
-            // Subtle far/near cue only — floor stays dense and diggable
-            cell._depthScale = Math.max(0.94, 0.935 + near * 0.055 - elev * 0.015);
+            // Near-uniform face size — hairline depth cue only
+            cell._depthScale = Math.max(0.97, 0.968 + near * 0.028 - elev * 0.01);
           } else {
             // Desk lattice (gentle board drift) vs elevated face (stronger parallax)
             // Shadows use _gx/_gy so they never paint on faces below.
@@ -8001,13 +8001,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
           th.material === "mycelium"
             ? 0.84 + cellHash(cell.q, cell.r, 17) * 0.14
             : 1;
-        // Magma poke thins crust slightly; keep faces packed (no island gaps).
-        // Magma facePack ~0.97 of spacing; other depth themes keep 0.92.
+        // Magma poke thins crust slightly; faces stay packed (hairline seams only).
+        // Magma facePack ~0.99 of spacing; other depth themes keep 0.92.
         const hoverScale =
           th.material === "magma"
-            ? -cell.animHover * 0.025
+            ? -cell.animHover * 0.015
             : cell.animHover * 0.06;
-        const facePack = th.material === "magma" ? 0.97 : 0.92;
+        const facePack = th.material === "magma" ? 0.99 : 0.92;
         const scale = (cell._depthScale || 1) * (facePack + hoverScale) * faceJitter;
         const path = cell.hexPath(size, scale);
         const ds = size * scale;
@@ -8066,28 +8066,28 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             ctx.stroke();
           };
           // Shadow lip — light-facing edges sit deeper / occluded
-          drawInsetFace(3, 5, "rgba(0,0,0,0.78)", 2.1);
-          drawInsetFace(3, 5, "rgba(12,4,2,0.62)", 1.25);
-          // Warm far catch — richer rim lip (still reads as recess, not a raised coin)
-          drawInsetFace(0, 2, "rgba(255,120,32,0.28)", 1.2);
-          drawInsetFace(0, 2, "rgba(255,165,70,0.12)", 0.85);
+          drawInsetFace(3, 5, "rgba(0,0,0,0.62)", 1.45);
+          drawInsetFace(3, 5, "rgba(12,4,2,0.48)", 0.9);
+          // Warm far catch — recess cue without eating neighbor gaps
+          drawInsetFace(0, 2, "rgba(255,120,32,0.22)", 0.9);
+          drawInsetFace(0, 2, "rgba(255,165,70,0.1)", 0.65);
 
-          // AO well — occluding rim, transparent under digit ink (lighter so faces stay dense)
-          const well = ctx.createRadialGradient(cell.x, cell.y, ds * 0.08, cell.x, cell.y, ds * 1.06);
+          // AO well — light occluding rim so packed faces stay readable
+          const well = ctx.createRadialGradient(cell.x, cell.y, ds * 0.1, cell.x, cell.y, ds * 1.04);
           well.addColorStop(0, "transparent");
-          well.addColorStop(0.55, "transparent");
-          well.addColorStop(1, `rgba(0,0,0,${0.28 + elev * 0.14})`);
+          well.addColorStop(0.62, "transparent");
+          well.addColorStop(1, `rgba(0,0,0,${0.18 + elev * 0.1})`);
           ctx.fillStyle = well;
           ctx.fill(path);
 
-          // Crust seam + ember lip — thin so faces nearly touch (not moat gaps)
-          ctx.strokeStyle = "rgba(0,0,0,0.88)";
-          ctx.lineWidth = Math.max(1.1, size * 0.038);
+          // Hairline crust seam + ember lip (faces nearly share an edge)
+          ctx.strokeStyle = "rgba(0,0,0,0.78)";
+          ctx.lineWidth = Math.max(0.9, size * 0.024);
           ctx.stroke(path);
           ctx.strokeStyle = cell.revealed
-            ? "rgba(255,120,36,0.22)"
-            : "rgba(255,120,36,0.42)";
-          ctx.lineWidth = Math.max(0.85, size * 0.028);
+            ? "rgba(255,120,36,0.2)"
+            : "rgba(255,120,36,0.38)";
+          ctx.lineWidth = Math.max(0.7, size * 0.018);
           ctx.stroke(path);
           ctx.restore();
         } else if (flatTile) {
