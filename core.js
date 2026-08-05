@@ -1975,10 +1975,16 @@
     canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
     // Never reset the run on viewport change — endless depends on this.
     let resizeTimer = null;
-    window.addEventListener("resize", () => {
+    const scheduleRelayout = () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => relayout(), 80);
-    });
+    };
+    window.addEventListener("resize", scheduleRelayout);
+    // Mobile URL-bar show/hide changes visualViewport without always firing resize.
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", scheduleRelayout);
+      window.visualViewport.addEventListener("scroll", scheduleRelayout);
+    }
 
     window.addEventListener("keydown", (e) => {
       if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;

@@ -67,8 +67,11 @@ body[data-mode="dark"] canvas,
 body[data-mode="escape"] canvas,
 body[data-mode="fire"] canvas,
 body[data-mode="plague"] canvas {
-  width: 100vw;
-  height: 100vh;
+  /* Fill the fixed inset container — NOT 100vw/100vh.
+     On mobile Safari, 100vh is often taller than window.innerHeight, so a
+     buffer sized to innerHeight gets CSS-stretched and hexes look tall. */
+  width: 100%;
+  height: 100%;
   max-width: none;
   outline: none; /* never show a focus ring during dig / blast shake */
 }
@@ -5424,9 +5427,15 @@ body[data-mode="escape"] .menu-links {
       cameraLock: !!active.cameraLock,
       layout(api) {
         const s = api.state;
-        // Full-bleed viewport for every production mode — zoom/pan never hits a board box.
-        s.canvas.width = Math.max(320, window.innerWidth);
-        s.canvas.height = Math.max(320, window.innerHeight);
+        // Match the visible layout viewport (visualViewport when present) so the
+        // backing store aspect equals the CSS box — no mobile hex stretch.
+        const vv = window.visualViewport;
+        const w = Math.max(320, Math.round((vv && vv.width) || window.innerWidth));
+        const h = Math.max(320, Math.round((vv && vv.height) || window.innerHeight));
+        s.canvas.width = w;
+        s.canvas.height = h;
+        s.canvas.style.width = `${w}px`;
+        s.canvas.style.height = `${h}px`;
         s.centerX = s.canvas.width / 2;
         s.centerY = s.canvas.height / 2;
       },
