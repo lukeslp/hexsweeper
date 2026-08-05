@@ -14,7 +14,7 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 | **Light** | Infinite | Porcelain chalk desk — bright raised covers, graphite wells, faint hex watermark (same run as Dark) |
 | **Dark** | Infinite | Night-iron plate — cold steel bevels, deep wells, brushed grain (same run as Light) |
 | **Fire** | Finite | Magma shaft / hell-mine well — dense viewport-filling honeycomb; drag tilts the pit (camera locked); hold to flag |
-| **Plague** | Finite | Full-field culture-slide slime + green specimen tiles (irregular faces) + hyphal mat |
+| **Plague** | Finite | Soil hive bed + living mycelial underlay + green specimen tiles + hyphal mat |
 | **Escape** | Infinite | Opens on a patch then pulls wide; dig/flag/chord toward an offscreen finish (edge cue); rift heartbeats and reaches toward your digs |
 
 Fire and Plague open on the **large** board; board size (S·M·L) lives in Settings and only appears for those two, since the infinite themes have no fixed board.
@@ -22,6 +22,8 @@ Fire and Plague open on the **large** board; board size (S·M·L) lives in Setti
 OG cards: `assets/social/<home|light|dark|fire|plague|escape>-og.png`, each a real board under a title and one-line description (older Fire studies stay as `fire-og-alt.png`, `fire-og-bloom.png`). Rebuild them with `tools/shoot-og-cards.sh`, which shoots `tools/og-card.html` headless at 2x and downscales to 1200x630. Cycle themes with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`); add `?deal=1` to open a starting patch in any mode. Preference key: `hexsweeper-mode-v3`.
 
 First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome: lower-right **Appearance (sun/moon) · Reset · Menu** as matching icons — Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
+
+Fresh runs (cold load or Reset) share one `startFreshRun` path after theme chrome is applied, so Escape intro zoom and plate framing match between first paint and restart.
 
 ### Interaction
 

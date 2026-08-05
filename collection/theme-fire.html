@@ -1334,6 +1334,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
  *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
+ *   hooks.onReset / skin startFreshRun: chrome must be live before framing zoom.
+ *   Boot skips onReset once; index.html restores autosave or calls startFreshRun.
  *   hooks.cameraLock (bool|fn): Fire-style tilt while the board fits the
  *   viewport. Once zoom pushes the board past the frame, drag pans (clamped
  *   to the board) so edge tiles stay reachable — especially on mobile.
@@ -2000,7 +2002,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
     }
 
-    function setDifficulty(level) {
+    function setDifficulty(level, options = {}) {
       const conf = state.config[level];
       if (!conf) {
         console.warn("Hexsweeper: unknown difficulty", level);
@@ -2029,12 +2031,12 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
       applyLayout();
       syncDiffButtons();
-      resetGame();
+      resetGame(options);
       // Endless: grow the honeycomb until it fills the canvas (+ buffer)
       if (state.endless) ensureWorldCoverage(true);
     }
 
-    function resetGame() {
+    function resetGame(options = {}) {
       state.map.clear();
       state.camX = 0;
       state.camY = 0;
@@ -2075,7 +2077,12 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       }
       stopTimer();
       updateUI();
-      if (typeof state.hooks.onReset === "function") state.hooks.onReset(api);
+      if (
+        options.skipHooks !== true &&
+        typeof state.hooks.onReset === "function"
+      ) {
+        state.hooks.onReset(api);
+      }
     }
 
     function noteCleared(n) {
@@ -3354,8 +3361,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     });
 
     updateStatsVisibility();
-    setDifficulty(state.currentDifficulty);
-    // Re-apply persisted zoom after first layout
+    // Skins finish chrome first, then call startFreshRun or restore — see index.html.
+    setDifficulty(state.currentDifficulty, { skipHooks: true });
+    // Re-apply persisted zoom after first layout (startFreshRun may override).
     if (Math.abs(state.viewZoom - 1) > 0.01) {
       applyViewZoom(state.viewZoom);
     }
@@ -4457,32 +4465,292 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
 
   /**
+   * Plague hive underlay — seeded mycelial graph behind the lattice.
+   * Slow growth, gold nutrient pulses along hyphae, drifting spores; capped and
+   * LOD-throttled so huge boards stay playable. Re-seeds on Reset / theme apply.
+   */
+  const PLAGUE_HIVE = { nodes: [], links: [], spores: [], seed: 1, w: 0, h: 0, lastGrow: 0 };
+
+  function phRand(n) {
+    let t = (PLAGUE_HIVE.seed + (n | 0) * 0x6d2b79f5) | 0;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  function plagueHiveLod(s) {
+    const z = s && Number.isFinite(s.viewZoom) ? s.viewZoom : 1;
+    const size = s && s.cellSize ? s.cellSize : 28;
+    const n = s && s.map ? s.map.size : 0;
+    if (z < 0.62 || size < 17 || n > 450) return 2;
+    if (z < 0.82 || size < 21) return 1;
+    return 0;
+  }
+
+  function plagueHiveLimits(lod) {
+    if (reduceMotion) return { nodes: 42, links: 58, spores: 14, growMs: 1e9 };
+    if (lod >= 2) return { nodes: 34, links: 46, spores: 18, growMs: 1500 };
+    if (lod >= 1) return { nodes: 52, links: 74, spores: 30, growMs: 950 };
+    return { nodes: 68, links: 96, spores: 42, growMs: 620 };
+  }
+
+  function plagueLinkCtrl(na, nb, i) {
+    const short = Math.min(PLAGUE_HIVE.w, PLAGUE_HIVE.h);
+    return {
+      mx: (na.x + nb.x) / 2 + (phRand(i * 5 + 1) - 0.5) * short * 0.16,
+      my: (na.y + nb.y) / 2 + (phRand(i * 5 + 3) - 0.5) * short * 0.14,
+    };
+  }
+
+  function addPlagueLink(ai, bi) {
+    const lim = plagueHiveLimits(0);
+    if (PLAGUE_HIVE.links.length >= lim.links * 1.2) return;
+    const na = PLAGUE_HIVE.nodes[ai];
+    const nb = PLAGUE_HIVE.nodes[bi];
+    if (!na || !nb) return;
+    for (const L of PLAGUE_HIVE.links) {
+      if ((L.a === ai && L.b === bi) || (L.a === bi && L.b === ai)) return;
+    }
+    const { mx, my } = plagueLinkCtrl(na, nb, PLAGUE_HIVE.links.length);
+    PLAGUE_HIVE.links.push({
+      a: ai,
+      b: bi,
+      mx,
+      my,
+      pulseT: phRand(ai * 17 + bi * 31),
+      pulseSpd: 0.00035 + phRand(ai + bi + 11) * 0.00055,
+      copper: phRand(ai + bi) > 0.78,
+    });
+  }
+
+  function seedPlagueHive(w, h) {
+    PLAGUE_HIVE.nodes = [];
+    PLAGUE_HIVE.links = [];
+    PLAGUE_HIVE.spores = [];
+    PLAGUE_HIVE.w = w;
+    PLAGUE_HIVE.h = h;
+    PLAGUE_HIVE.seed = (Math.random() * 0x7fffffff) | 0;
+    PLAGUE_HIVE.lastGrow = performance.now();
+    const hubs = reduceMotion ? 7 : 11;
+    for (let i = 0; i < hubs; i++) {
+      const u = phRand(i * 3 + 1);
+      const v = phRand(i * 3 + 2);
+      const x = w * (0.1 + u * 0.8);
+      const y = h * (0.08 + v * 0.84);
+      PLAGUE_HIVE.nodes.push({
+        x,
+        y,
+        fruit: i % 3 === 0 || phRand(i + 90) > 0.72,
+        pulse: phRand(i + 40),
+        gen: 0,
+      });
+    }
+    for (let i = 0; i < PLAGUE_HIVE.nodes.length; i++) {
+      const dists = PLAGUE_HIVE.nodes.map((n, j) => ({
+        j,
+        d: j === i ? Infinity : Math.hypot(n.x - PLAGUE_HIVE.nodes[i].x, n.y - PLAGUE_HIVE.nodes[i].y),
+      }));
+      dists.sort((a, b) => a.d - b.d);
+      const k = reduceMotion ? 2 : 3;
+      for (let c = 0; c < k && c < dists.length; c++) {
+        if (dists[c].j > i) addPlagueLink(i, dists[c].j);
+      }
+    }
+  }
+
+  function stepPlagueHive(w, h, t, lod) {
+    if (typeof document !== "undefined" && document.hidden) return;
+    PLAGUE_HIVE.w = w;
+    PLAGUE_HIVE.h = h;
+    const lim = plagueHiveLimits(lod);
+    if (!reduceMotion) {
+      for (const L of PLAGUE_HIVE.links) {
+        L.pulseT += L.pulseSpd;
+        if (L.pulseT > 1) L.pulseT -= 1;
+      }
+    }
+    if (
+      !reduceMotion &&
+      t - PLAGUE_HIVE.lastGrow > lim.growMs &&
+      PLAGUE_HIVE.nodes.length < lim.nodes
+    ) {
+      PLAGUE_HIVE.lastGrow = t;
+      const pi = ((t * 0.017) | 0) % PLAGUE_HIVE.nodes.length;
+      const parent = PLAGUE_HIVE.nodes[pi];
+      const ang = phRand(pi + (t | 0)) * Math.PI * 2;
+      const dist = Math.min(w, h) * (0.035 + phRand(t + pi) * 0.08);
+      const nx = Math.max(10, Math.min(w - 10, parent.x + Math.cos(ang) * dist));
+      const ny = Math.max(10, Math.min(h - 10, parent.y + Math.sin(ang) * dist));
+      const ni = PLAGUE_HIVE.nodes.length;
+      PLAGUE_HIVE.nodes.push({
+        x: nx,
+        y: ny,
+        fruit: phRand(ni + t) > 0.84,
+        pulse: phRand(ni + 2),
+        gen: (parent.gen || 0) + 1,
+      });
+      addPlagueLink(pi, ni);
+      if (phRand(ni + t) > 0.55 && PLAGUE_HIVE.nodes.length > 4) {
+        const qi = ((phRand(t + ni) * PLAGUE_HIVE.nodes.length) | 0) % PLAGUE_HIVE.nodes.length;
+        if (qi !== ni) addPlagueLink(qi, ni);
+      }
+    }
+    if (reduceMotion) return;
+    const spawnEvery = lod >= 2 ? 420 : 240;
+    if ((t | 0) % spawnEvery < 20) {
+      for (const n of PLAGUE_HIVE.nodes) {
+        if (!n.fruit || PLAGUE_HIVE.spores.length >= lim.spores) break;
+        if (phRand(n.x + t) > 0.92) {
+          PLAGUE_HIVE.spores.push({
+            x: n.x + (phRand(t) - 0.5) * 8,
+            y: n.y + (phRand(t + 1) - 0.5) * 8,
+            vx: (phRand(t + 2) - 0.5) * 0.12,
+            vy: -0.04 - phRand(t + 3) * 0.14,
+            life: 0.35 + phRand(t + 4) * 0.55,
+            r: 0.6 + phRand(t + 5) * 1.2,
+          });
+        }
+      }
+    }
+    for (let i = PLAGUE_HIVE.spores.length - 1; i >= 0; i--) {
+      const p = PLAGUE_HIVE.spores[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx += (phRand(i + (t | 0)) - 0.5) * 0.008;
+      p.life -= 0.004;
+      if (p.life <= 0 || p.y < -12 || p.x < -12 || p.x > w + 12) PLAGUE_HIVE.spores.splice(i, 1);
+    }
+  }
+
+  function drawPlagueHiveNetwork(ctx, w, h, t, s, lod) {
+    const lim = plagueHiveLimits(lod);
+    const short = Math.min(w, h);
+    const boardR = s.mapRadius * s.cellSize * 1.05;
+    const cx = w / 2 + ox * 0.12;
+    const cy = h / 2 + oy * 0.08;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.globalCompositeOperation = "lighter";
+
+    for (let i = 0; i < PLAGUE_HIVE.links.length; i++) {
+      const L = PLAGUE_HIVE.links[i];
+      const na = PLAGUE_HIVE.nodes[L.a];
+      const nb = PLAGUE_HIVE.nodes[L.b];
+      if (!na || !nb) continue;
+      const underBoard =
+        Math.hypot(L.mx - cx, L.my - cy) < boardR * 0.92 ||
+        Math.hypot(na.x - cx, na.y - cy) < boardR ||
+        Math.hypot(nb.x - cx, nb.y - cy) < boardR;
+      const baseA = underBoard ? 0.028 : 0.055 + phRand(i) * 0.035;
+      ctx.globalAlpha = baseA * (reduceMotion ? 1.15 : 0.85 + 0.15 * Math.sin(t * 0.0004 + i));
+      ctx.strokeStyle = L.copper ? "#c97e4f" : i % 4 === 0 ? "#8fd4b0" : "#4a7868";
+      ctx.lineWidth = 0.65 + (L.copper ? 0.35 : 0) + phRand(i + 2) * 0.85;
+      ctx.beginPath();
+      ctx.moveTo(na.x, na.y);
+      ctx.quadraticCurveTo(L.mx, L.my, nb.x, nb.y);
+      ctx.stroke();
+      if (!reduceMotion && lod < 2) {
+        const pt = L.pulseT;
+        const u = 1 - pt;
+        const px = u * u * na.x + 2 * u * pt * L.mx + pt * pt * nb.x;
+        const py = u * u * na.y + 2 * u * pt * L.my + pt * pt * nb.y;
+        ctx.globalAlpha = 0.22 + 0.35 * Math.sin(pt * Math.PI);
+        ctx.fillStyle = L.copper ? "#e0a071" : "#f0d890";
+        ctx.beginPath();
+        ctx.arc(px, py, 1.1 + phRand(i + 7) * 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (!reduceMotion && lod === 0 && phRand(i + 99) > 0.62) {
+        const ang = Math.atan2(nb.y - na.y, nb.x - na.x) + (phRand(i + 33) - 0.5) * 1.4;
+        const len = short * (0.022 + phRand(i + 44) * 0.038);
+        ctx.globalAlpha = baseA * 1.8;
+        ctx.lineWidth *= 0.65;
+        ctx.beginPath();
+        ctx.moveTo(L.mx, L.my);
+        ctx.lineTo(L.mx + Math.cos(ang) * len, L.my + Math.sin(ang) * len);
+        ctx.stroke();
+      }
+    }
+
+    for (let i = 0; i < PLAGUE_HIVE.nodes.length; i++) {
+      const n = PLAGUE_HIVE.nodes[i];
+      const breathe = reduceMotion ? 0.7 : 0.55 + 0.45 * Math.sin(t * 0.0011 + n.pulse * 9);
+      if (n.fruit) {
+        const fr = 2.2 + breathe * 1.8;
+        const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, fr * 2.4);
+        g.addColorStop(0, `rgba(224, 160, 113, ${0.14 + breathe * 0.1})`);
+        g.addColorStop(0.45, `rgba(201, 126, 79, ${0.06 + breathe * 0.05})`);
+        g.addColorStop(1, "transparent");
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, fr * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.35 + breathe * 0.25;
+        ctx.fillStyle = "#e0a071";
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 0.85 + breathe * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (lod < 2 && i % (lod >= 1 ? 3 : 2) === 0) {
+        ctx.globalAlpha = 0.04 + breathe * 0.03;
+        ctx.fillStyle = "#7ec8a8";
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 0.9 + breathe * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const sporeCap = Math.min(PLAGUE_HIVE.spores.length, lim.spores);
+    for (let i = 0; i < sporeCap; i++) {
+      const p = PLAGUE_HIVE.spores[i];
+      ctx.globalAlpha = p.life * 0.55;
+      ctx.fillStyle = i % 3 === 0 ? "#e0a071" : "#a8dcc4";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /**
    * Plague specimen desk — full-canvas culture-slide underlay.
-   * Soft infection blooms, hyphal filaments, and nutrient beads across the whole
-   * field (not only revealed tiles), at low opacity so covered hexes + digits stay
-   * readable. Motifs echo exposed-tile mycelium; not a stamped wallpaper.
+   * Soil-dark hive bed + living mycelial graph, soft blooms, and sparse spores
+   * under the lattice (digits stay on top). Motifs echo exposed-tile hyphae.
    */
   function drawPlagueSpecimenField(ctx, s) {
     const w = s.canvas.width;
     const h = s.canvas.height;
     const t = performance.now();
+    const lod = plagueHiveLod(s);
+    stepPlagueHive(w, h, t, lod);
     const pulse = reduceMotion ? 0.68 : 0.52 + 0.48 * Math.sin(t * 0.00085);
     const cx = w / 2 + ox * 0.12;
     const cy = h / 2 + oy * 0.08;
-    const reach = Math.max(s.mapRadius * s.cellSize * 1.35, Math.min(w, h) * 0.4);
     const far = Math.max(w, h);
     const short = Math.min(w, h);
 
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
 
-    // Damp specimen slide: cool green-black, brightest under the culture
+    // Damp soil slide: sickly warm black-green, hive brightest under the culture
     const desk = ctx.createRadialGradient(cx, cy, 0, cx, cy, far * 0.78);
-    desk.addColorStop(0, "#243430");
-    desk.addColorStop(0.28, "#1a2824");
-    desk.addColorStop(0.58, "#101c19");
-    desk.addColorStop(1, "#070c0b");
+    desk.addColorStop(0, "#2a3228");
+    desk.addColorStop(0.22, "#1e2a22");
+    desk.addColorStop(0.48, "#141e18");
+    desk.addColorStop(0.72, "#0e1612");
+    desk.addColorStop(1, "#080c0a");
     ctx.fillStyle = desk;
+    ctx.fillRect(0, 0, w, h);
+
+    // Warm rot undertone — organic hive bed, not flat lab green
+    const rot = ctx.createRadialGradient(cx * 0.92, cy * 1.04, 0, cx, cy, far * 0.65);
+    rot.addColorStop(0, "rgba(92, 58, 38, 0.09)");
+    rot.addColorStop(0.4, "rgba(48, 32, 24, 0.06)");
+    rot.addColorStop(1, "transparent");
+    ctx.fillStyle = rot;
     ctx.fillRect(0, 0, w, h);
 
     // Soft infection blooms — whole-field culture, not a board-only halo
@@ -4534,68 +4802,65 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
     ctx.restore();
 
-    // Sparse hyphal filaments across the slide (hash-stable; PRM freezes sway)
-    ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    const filamentN = 28;
-    for (let i = 0; i < filamentN; i++) {
-      const u = cellHash(i, 41, 2);
-      const v = cellHash(i, 43, 5);
-      const u2 = cellHash(i, 47, 9);
-      const v2 = cellHash(i, 53, 13);
-      const sway = reduceMotion
-        ? 0
-        : Math.sin(t * 0.00022 + i * 0.7) * short * 0.012;
-      const x0 = u * w;
-      const y0 = v * h;
-      const x1 = u2 * w;
-      const y1 = v2 * h;
-      const mx = (x0 + x1) / 2 + (cellHash(i, 59, 3) - 0.5) * short * 0.18 + sway;
-      const my = (y0 + y1) / 2 + (cellHash(i, 61, 7) - 0.5) * short * 0.16;
-      const copper = i % 5 === 0;
-      ctx.globalAlpha = 0.03 + cellHash(i, 67, 11) * 0.05;
-      ctx.strokeStyle = copper ? "#c97e4f" : i % 3 === 0 ? "#8fd4b0" : "#4a7868";
-      ctx.lineWidth = 0.55 + cellHash(i, 71, 4) * 1.15;
-      ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.quadraticCurveTo(mx, my, x1, y1);
-      ctx.stroke();
-      // Short recursive tip — same grammar as revealed hyphae, quieter
-      if (cellHash(i, 73, 8) > 0.35) {
-        const ang = Math.atan2(y1 - y0, x1 - x0) + (cellHash(i, 79, 1) - 0.5) * 1.1;
-        const len = short * (0.03 + cellHash(i, 83, 6) * 0.05);
-        ctx.globalAlpha *= 0.75;
-        ctx.lineWidth *= 0.7;
+    // Living mycelial hive — swarming graph under the hex lattice
+    drawPlagueHiveNetwork(ctx, w, h, t, s, lod);
+
+    // Whisper filaments at the edges (hive owns the center activity)
+    if (lod < 2) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      const filamentN = lod >= 1 ? 8 : 14;
+      for (let i = 0; i < filamentN; i++) {
+        const u = cellHash(i, 41, 2);
+        const v = cellHash(i, 43, 5);
+        const u2 = cellHash(i, 47, 9);
+        const v2 = cellHash(i, 53, 13);
+        const sway = reduceMotion
+          ? 0
+          : Math.sin(t * 0.00022 + i * 0.7) * short * 0.012;
+        const x0 = u * w;
+        const y0 = v * h;
+        const x1 = u2 * w;
+        const y1 = v2 * h;
+        const mx = (x0 + x1) / 2 + (cellHash(i, 59, 3) - 0.5) * short * 0.18 + sway;
+        const my = (y0 + y1) / 2 + (cellHash(i, 61, 7) - 0.5) * short * 0.16;
+        const copper = i % 5 === 0;
+        ctx.globalAlpha = 0.022 + cellHash(i, 67, 11) * 0.04;
+        ctx.strokeStyle = copper ? "#c97e4f" : i % 3 === 0 ? "#8fd4b0" : "#4a7868";
+        ctx.lineWidth = 0.5 + cellHash(i, 71, 4) * 0.95;
         ctx.beginPath();
-        ctx.moveTo(mx, my);
-        ctx.lineTo(mx + Math.cos(ang) * len, my + Math.sin(ang) * len);
+        ctx.moveTo(x0, y0);
+        ctx.quadraticCurveTo(mx, my, x1, y1);
         ctx.stroke();
       }
+      ctx.restore();
     }
-    ctx.restore();
 
-    // Nutrient / fruiting beads + slide grain
-    ctx.globalCompositeOperation = "lighter";
-    for (let i = 0; i < 120; i++) {
-      const u = cellHash(i, 7, 2);
-      const v = cellHash(i, 13, 6);
-      const gx = u * w;
-      const gy = v * h;
-      const fruit = i % 7 === 0;
-      ctx.globalAlpha = fruit
-        ? 0.04 + cellHash(i, 23, 4) * 0.06
-        : 0.018 + cellHash(i, 23, 4) * 0.035;
-      ctx.fillStyle = fruit ? "#e0a071" : i % 5 === 0 ? "#c97e4f" : "#7ec8a8";
-      ctx.beginPath();
-      ctx.arc(gx, gy, (fruit ? 1.1 : 0.55) + cellHash(i, 31, 9) * (fruit ? 1.6 : 1.1), 0, Math.PI * 2);
-      ctx.fill();
+    // Slide grain + distant fruiting specks (quieter than the hive)
+    if (lod < 2) {
+      ctx.globalCompositeOperation = "lighter";
+      const grainN = lod >= 1 ? 48 : 72;
+      for (let i = 0; i < grainN; i++) {
+        const u = cellHash(i, 7, 2);
+        const v = cellHash(i, 13, 6);
+        const gx = u * w;
+        const gy = v * h;
+        const fruit = i % 9 === 0;
+        ctx.globalAlpha = fruit
+          ? 0.03 + cellHash(i, 23, 4) * 0.05
+          : 0.012 + cellHash(i, 23, 4) * 0.028;
+        ctx.fillStyle = fruit ? "#e0a071" : i % 5 === 0 ? "#c97e4f" : "#7ec8a8";
+        ctx.beginPath();
+        ctx.arc(gx, gy, (fruit ? 1 : 0.5) + cellHash(i, 31, 9) * (fruit ? 1.4 : 0.9), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
 
-    // Spore loft — slow drift; PRM parks a static dusting
-    const sporeN = reduceMotion ? 18 : 34;
+    // Ambient spore loft — hive spores carry most motion; keep a thin static haze
+    const sporeN = reduceMotion ? 14 : lod >= 2 ? 16 : 22;
     for (let i = 0; i < sporeN; i++) {
       const u = cellHash(i, 11, 4);
       const v = cellHash(i, 19, 8);
@@ -6296,18 +6561,36 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
   }
 
+  /**
+   * Drawing unit for the rift. Everything about it used to size off cellSize,
+   * which shrinks with zoom — so once Escape started opening fully out, the
+   * hunt became a dot. Floor its presence against the viewport instead: the
+   * monster stays legible at any zoom without changing what it can reach.
+   */
+  function riftDrawUnit(s) {
+    const floor = Math.min(s.canvas.width, s.canvas.height) * 0.05;
+    return Math.max(s.cellSize, floor);
+  }
+
   function drawRiftOverlay(ctx, s, now) {
     if (!riftThemeActive() || RIFT.phase === "idle") return;
     if (RIFT.phase === "grace" && RIFT.intensity < 0.12) return;
     const cx = RIFT.x;
     const cy = RIFT.y;
+    const unit = riftDrawUnit(s);
+    // Hunting reads at full strength from the first beat; the ramp stays in
+    // RIFT.intensity for the game rules, not for whether you can see it coming.
+    const heat =
+      RIFT.phase === "awaken" || RIFT.phase === "chase"
+        ? Math.max(0.55, RIFT.intensity)
+        : RIFT.intensity;
     // Heartbeat, not a sine: a double thump that quickens as the rift closes,
     // so the thing reads as alive and hungry rather than as a glowing circle.
     let pulse;
     if (reduceMotion) {
       pulse = 0.72;
     } else {
-      const beatHz = 0.7 + RIFT.intensity * 1.2;
+      const beatHz = 0.7 + heat * 1.2;
       const beat = ((now * 0.001 * beatHz) % 1 + 1) % 1;
       const thump =
         Math.exp(-beat * 9) + 0.6 * Math.exp(-Math.max(0, beat - 0.18) * 9);
@@ -6324,13 +6607,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       RIFT.phase === "catch"
         ? 0.35 + catchU * 0.35
         : RIFT.phase === "chase" || RIFT.phase === "awaken"
-          ? 0.3 + RIFT.intensity * 0.32
+          ? 0.3 + heat * 0.32
           : RIFT.intensity * 0.12;
     if (vig > 0.04) {
       const g = ctx.createRadialGradient(
         cx,
         cy,
-        s.cellSize * 0.5,
+        unit * 0.5,
         cx,
         cy,
         Math.max(s.canvas.width, s.canvas.height) * 0.7
@@ -6343,8 +6626,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
 
     // Core lens breath (catch: slow swallow, not a flash)
-    const catchBoost = RIFT.phase === "catch" ? 0.55 + catchU * 0.45 : RIFT.intensity;
-    const coreR = s.cellSize * (0.7 + catchBoost * 1.1 + pulse * 0.15);
+    const catchBoost = RIFT.phase === "catch" ? 0.55 + catchU * 0.45 : heat;
+    const coreR = unit * (0.7 + catchBoost * 1.1 + pulse * 0.15);
     ctx.globalCompositeOperation = "lighter";
     const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
     core.addColorStop(0, `rgba(180,240,255,${0.35 * catchBoost * pulse})`);
@@ -6359,15 +6642,15 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     // Intake: motes dragged down the throat, so the lens reads as pulling
     // rather than sitting there. Positions come from the clock and an index,
     // so there is no particle array to grow or garbage-collect.
-    if (!reduceMotion && RIFT.intensity > 0.08) {
+    if (!reduceMotion && heat > 0.08) {
       ctx.globalCompositeOperation = "lighter";
       for (let i = 0; i < 16; i++) {
         const seed = i * 12.9898;
         const fall = (now * 0.00024 + (Math.sin(seed) * 0.5 + 0.5)) % 1;
         const far = 1 - fall; // 1 = out at the rim, 0 = swallowed
         const spin = seed * 7.7 + fall * 2.6;
-        const rad = s.cellSize * (0.45 + far * 3.5);
-        ctx.fillStyle = `rgba(150,225,240,${0.6 * RIFT.intensity * Math.sin(fall * Math.PI)})`;
+        const rad = unit * (0.45 + far * 3.5);
+        ctx.fillStyle = `rgba(150,225,240,${0.6 * heat * Math.sin(fall * Math.PI)})`;
         ctx.beginPath();
         ctx.arc(cx + Math.cos(spin) * rad, cy + Math.sin(spin) * rad, 1 + (1 - far) * 1.7, 0, Math.PI * 2);
         ctx.fill();
@@ -6380,7 +6663,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (!reduceMotion && (RIFT.phase === "awaken" || RIFT.phase === "chase")) {
       const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
       const toward = tip ? Math.atan2(tip.y - cy, tip.x - cx) : 0;
-      const reach = s.cellSize * (1.5 + RIFT.intensity * 2.5);
+      const reach = unit * (1.5 + heat * 2.5);
       const arms = 5;
       ctx.globalCompositeOperation = "lighter";
       ctx.lineCap = "round";
@@ -6398,10 +6681,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         const mx = cx + Math.cos(angle) * len * 0.5 - Math.sin(angle) * bow;
         const my = cy + Math.sin(angle) * len * 0.5 + Math.cos(angle) * bow;
         const arm = ctx.createLinearGradient(cx, cy, ex, ey);
-        arm.addColorStop(0, `rgba(125,240,225,${0.5 * RIFT.intensity})`);
+        arm.addColorStop(0, `rgba(125,240,225,${0.62 * heat})`);
         arm.addColorStop(1, "rgba(56,189,248,0)");
         ctx.strokeStyle = arm;
-        ctx.lineWidth = 2.6 + RIFT.intensity * 2.2;
+        ctx.lineWidth = 2.6 + heat * 2.6;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.quadraticCurveTo(mx, my, ex, ey);
@@ -6429,10 +6712,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
     // Leading ribbon while hunting — not during catch swallow
     if (RIFT.phase === "awaken" || RIFT.phase === "chase") {
-      const ringR = Math.max(4, RIFT.radius * (0.92 + pulse * 0.06));
+      const ringR = Math.max(unit * 0.95, RIFT.radius) * (0.92 + pulse * 0.06);
       ctx.globalCompositeOperation = "lighter";
       ctx.lineWidth = 3.5;
-      ctx.strokeStyle = `rgba(94,234,212,${0.55 * RIFT.intensity})`;
+      ctx.strokeStyle = `rgba(94,234,212,${0.62 * heat})`;
       ctx.shadowColor = "rgba(56,189,248,0.85)";
       ctx.shadowBlur = 14;
       ctx.beginPath();
@@ -6440,7 +6723,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       ctx.stroke();
       ctx.lineWidth = 1.5;
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = `rgba(125,211,252,${0.35 * RIFT.intensity})`;
+      ctx.strokeStyle = `rgba(125,211,252,${0.4 * heat})`;
       ctx.beginPath();
       ctx.arc(cx, cy, ringR * 0.72, 0, Math.PI * 2);
       ctx.stroke();
@@ -6538,6 +6821,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     particles.length = 0;
     streaks.length = 0;
     lastAmbientThemeId = th ? th.id : null;
+    if (th && th.material === "mycelium") seedPlagueHive(w, h);
     if (!isFxTheme(th)) return;
     const p = th.particles;
     const count = p.count || 70;
@@ -6695,7 +6979,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     showToast._t = setTimeout(() => el.classList.remove("show"), 1400);
   }
 
-  function applyTheme(i, { toast = true } = {}) {
+  function applyTheme(i, { toast = true, initial = false } = {}) {
     const previousIndex = themeIndex;
     themeIndex = ((i % THEMES.length) + THEMES.length) % THEMES.length;
     const t = THEMES[themeIndex];
@@ -6771,11 +7055,17 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         rebuilt = true;
       }
       // Deep-link / first paint: apply Plague's larger board even if mode didn't change.
-      if (!rebuilt && t.boardConfig && !wantEndless && typeof game.restart === "function") {
+      if (
+        !initial &&
+        !rebuilt &&
+        t.boardConfig &&
+        !wantEndless &&
+        typeof game.restart === "function"
+      ) {
         game.restart({ clearPersist: false });
         rebuilt = true;
       }
-      if (rebuilt && wantEndless) tryRestoreEndless();
+      if (rebuilt && wantEndless && !initial) tryRestoreEndless();
       else if (plateSwap && previousIndex !== themeIndex) schedulePersist();
     }
     syncSettingsRows();
@@ -6902,6 +7192,62 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       else cancelIntroZoom();
     };
     introZoomFrame = requestAnimationFrame(step);
+  }
+
+  /**
+   * Single fresh-run path for Reset and cold start (after chrome + restore attempt).
+   * Sets framing zoom, optional opening dig, intro pull-back, finish, and ambient FX.
+   */
+  function startFreshRun(api) {
+    if (!api || !api.state) return;
+    clearBlast(api.state);
+    clearSeep(api.state);
+    resetRift();
+    particles.length = 0;
+    streaks.length = 0;
+    lastAmbientThemeId = null;
+    if (api.state.map) {
+      api.state.map.forEach((c) => {
+        c._riftTorn = false;
+        c._blast = null;
+        c._blastRot = 0;
+        c._blastAlpha = 1;
+        c._seepAt = null;
+        c._seepAmt = 0;
+        c._seepFruited = false;
+        c._offscreen = false;
+        c.isFinish = false;
+      });
+    }
+    const th = THEMES[themeIndex];
+    // Escape: seed a fresh offscreen finish (restore may overwrite via applyEndlessState)
+    if (th?.rift) placeEscapeFinish(api);
+    else if (typeof api.setFinish === "function") api.setFinish(null, null);
+    // Fresh-run framing, same restore-may-overwrite contract as the finish
+    // above: applyEndlessState replays the saved zoom and board after this.
+    if (th && Number.isFinite(th.initialZoom) && typeof api.setZoom === "function") {
+      api.setZoom(th.initialZoom, null, { persist: false });
+    }
+    // Open a starting patch so the field reads as a place, not a blank plate.
+    // placeMines() keeps its safe zone and the finish clear of this dig.
+    if (
+      (th?.openingDig || FORCE_OPENING_DIG) &&
+      typeof api.dig === "function" &&
+      api.state?.isFirstClick
+    ) {
+      api.dig({ q: 0, r: 0 });
+    }
+    // Pull back off that opening patch. Runs last so the dig it frames
+    // already exists, and stands down on its own if a saved run replays a
+    // zoom over the top.
+    cancelIntroZoom();
+    if (th?.introZoom && Number.isFinite(th.initialZoom)) {
+      runIntroZoom(api, th.introZoom.from, th.initialZoom, th.introZoom.ms);
+    }
+    // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX
+    if (th && api.state && api.state.canvas) {
+      seedAmbient(th, api.state.canvas.width, api.state.canvas.height);
+    }
   }
 
   /**
@@ -7949,54 +8295,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         } else startDetonation(api, meta && meta.detonator);
       },
       onReset(api) {
-        clearBlast(api.state);
-        clearSeep(api.state);
-        resetRift();
-        particles.length = 0;
-        streaks.length = 0;
-        lastAmbientThemeId = null;
-        if (api && api.state && api.state.map) {
-          api.state.map.forEach((c) => {
-            c._riftTorn = false;
-            c._blast = null;
-            c._blastRot = 0;
-            c._blastAlpha = 1;
-            c._seepAt = null;
-            c._seepAmt = 0;
-            c._seepFruited = false;
-            c._offscreen = false;
-            c.isFinish = false;
-          });
-        }
-        const th = THEMES[themeIndex];
-        // Escape: seed a fresh offscreen finish (restore may overwrite via applyEndlessState)
-        if (th?.rift) placeEscapeFinish(api);
-        else if (api && typeof api.setFinish === "function") api.setFinish(null, null);
-        // Fresh-run framing, same restore-may-overwrite contract as the finish
-        // above: applyEndlessState replays the saved zoom and board after this.
-        if (th && Number.isFinite(th.initialZoom) && typeof api.setZoom === "function") {
-          api.setZoom(th.initialZoom, null, { persist: false });
-        }
-        // Open a starting patch so the field reads as a place, not a blank plate.
-        // placeMines() keeps its safe zone and the finish clear of this dig.
-        if (
-          (th?.openingDig || FORCE_OPENING_DIG) &&
-          typeof api.dig === "function" &&
-          api.state?.isFirstClick
-        ) {
-          api.dig({ q: 0, r: 0 });
-        }
-        // Pull back off that opening patch. Runs last so the dig it frames
-        // already exists, and stands down on its own if a saved run replays a
-        // zoom over the top.
-        cancelIntroZoom();
-        if (th?.introZoom && Number.isFinite(th.initialZoom)) {
-          runIntroZoom(api, th.introZoom.from, th.initialZoom, th.introZoom.ms);
-        }
-        // Re-seed ambient for the live theme so Fire/Plague don't inherit stale FX
-        if (th && api.state && api.state.canvas) {
-          seedAmbient(th, api.state.canvas.width, api.state.canvas.height);
-        }
+        startFreshRun(api);
       },
       onClearPersist() {
         clearLanePersist();
@@ -8747,6 +9046,15 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
             ? "rgba(126,200,168,0.28)"
             : "rgba(120,198,160,0.52)";
           ctx.stroke(path);
+          // Sickly warm rim crawl on covered specimens (subtle; digits untouched)
+          if (!cell.revealed && !reduceMotion && (cell.animHover || 0) < 0.2) {
+            const crawl = 0.42 + 0.58 * Math.sin(t * 0.0024 + cellHash(cell.q, cell.r, 53) * 11);
+            ctx.globalAlpha = 0.08 + crawl * 0.06;
+            ctx.strokeStyle = "rgba(201,126,79,0.55)";
+            ctx.lineWidth = Math.max(0.85, size * 0.032);
+            ctx.stroke(path);
+            ctx.globalAlpha = 1;
+          }
         } else {
           // Rim / edge light (raised themes)
           ctx.strokeStyle =
@@ -8880,10 +9188,23 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     game.toggleFlagMode();
   });
 
-  // Infinite-run autosave + export/import
+  // Infinite-run autosave + export/import — chrome first, then restore or fresh run.
   gameApi = game;
+  applyTheme(themeIndex, { toast: false, initial: true });
   syncSettingsRows();
-  if (THEMES[themeIndex]?.endless) tryRestoreEndless();
+  syncFlagButton(!!game.state.flagMode);
+  if (THEMES[themeIndex] && THEMES[themeIndex].endless && game && !game.state.endless) {
+    game.setEndless(true);
+  }
+  if (!tryRestoreEndless()) {
+    const th = THEMES[themeIndex];
+    // Finite boards (Fire/Plague): config lands in applyTheme — rebuild then startFreshRun.
+    if (th?.boardConfig && !th?.endless) {
+      game.restart({ clearPersist: false });
+    } else {
+      startFreshRun(game);
+    }
+  }
   document.getElementById("export-run-btn")?.addEventListener("click", () => {
     downloadPersistExport();
   });
@@ -8939,13 +9260,6 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   });
   document.getElementById("welcome-play")?.addEventListener("click", closeWelcome);
 
-  // Initial chrome — Light Endless is the index product home
-  gameApi = game;
-  applyTheme(themeIndex, { toast: false });
-  syncFlagButton(!!game.state.flagMode);
-  if (THEMES[themeIndex] && THEMES[themeIndex].endless && game && !game.state.endless) {
-    game.setEndless(true);
-  }
   try {
     // ?welcome=0 skips first-visit modal (smoke / agent probes)
     // Collection one-pagers always skip (HEXSWEEPER_ONEPAGER.skipWelcome).

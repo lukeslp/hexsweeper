@@ -7,6 +7,8 @@
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
  *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
+ *   hooks.onReset / skin startFreshRun: chrome must be live before framing zoom.
+ *   Boot skips onReset once; index.html restores autosave or calls startFreshRun.
  *   hooks.cameraLock (bool|fn): Fire-style tilt while the board fits the
  *   viewport. Once zoom pushes the board past the frame, drag pans (clamped
  *   to the board) so edge tiles stay reachable — especially on mobile.
@@ -673,7 +675,7 @@
       if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
     }
 
-    function setDifficulty(level) {
+    function setDifficulty(level, options = {}) {
       const conf = state.config[level];
       if (!conf) {
         console.warn("Hexsweeper: unknown difficulty", level);
@@ -702,12 +704,12 @@
 
       applyLayout();
       syncDiffButtons();
-      resetGame();
+      resetGame(options);
       // Endless: grow the honeycomb until it fills the canvas (+ buffer)
       if (state.endless) ensureWorldCoverage(true);
     }
 
-    function resetGame() {
+    function resetGame(options = {}) {
       state.map.clear();
       state.camX = 0;
       state.camY = 0;
@@ -748,7 +750,12 @@
       }
       stopTimer();
       updateUI();
-      if (typeof state.hooks.onReset === "function") state.hooks.onReset(api);
+      if (
+        options.skipHooks !== true &&
+        typeof state.hooks.onReset === "function"
+      ) {
+        state.hooks.onReset(api);
+      }
     }
 
     function noteCleared(n) {
@@ -2027,8 +2034,9 @@
     });
 
     updateStatsVisibility();
-    setDifficulty(state.currentDifficulty);
-    // Re-apply persisted zoom after first layout
+    // Skins finish chrome first, then call startFreshRun or restore — see index.html.
+    setDifficulty(state.currentDifficulty, { skipHooks: true });
+    // Re-apply persisted zoom after first layout (startFreshRun may override).
     if (Math.abs(state.viewZoom - 1) > 0.01) {
       applyViewZoom(state.viewZoom);
     }
