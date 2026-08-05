@@ -15,7 +15,7 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 | **Dark** | Infinite | Night-iron plate — cold steel bevels, deep wells, brushed grain (same run as Light) |
 | **Fire** | Finite | Magma shaft / hell-mine well — dense viewport-filling honeycomb; drag tilts the pit (camera locked); hold to flag |
 | **Plague** | Finite | Full-field culture-slide slime + green specimen tiles (irregular faces) + hyphal mat |
-| **Escape** | Infinite | Calm slate plate → dig/flag/chord toward an offscreen finish (edge cue); a glacial rift seeps toward your digs |
+| **Escape** | Infinite | Opens on a patch then pulls wide; dig/flag/chord toward an offscreen finish (edge cue); rift heartbeats and reaches toward your digs |
 
 Fire and Plague open on the **large** board; board size (S·M·L) lives in Settings and only appears for those two, since the infinite themes have no fixed board.
 

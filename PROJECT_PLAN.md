@@ -31,6 +31,8 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Escape rift chase (grace → awaken → continuous crawl → catch)
 - [x] Escape MS-first rethink: dig/flag/chord primary; rift is glacial secondary threat (no dig-budget hex hops)
 - [x] Escape finish tile: offscreen exit hex + edge direction cue; win on reveal (autosaved)
+- [x] Escape rift polish: heartbeat pulse, intake motes, hunt arms; introZoom pull-back; RM-safe cues
+- [x] Soft UI / Escape LOD: seam-only paint when zoomed out / huge map; RAF pauses on hidden tabs
 - [x] Help / metadata describe modes, not the skin lab
 - [x] Bare URL opens infinite Light
 - [x] Light↔Dark keeps the run (cosmetic swap)

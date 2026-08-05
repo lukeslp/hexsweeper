@@ -3225,7 +3225,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       cell.animReveal += ((cell.revealed ? 1 : 0) - cell.animReveal) * 0.15;
     }
 
+    let rafId = 0;
     function gameLoop(ts) {
+      // Hidden tabs: stop the loop so endless Soft UI / Escape don't spin coolers.
+      if (typeof document !== "undefined" && document.hidden) {
+        rafId = 0;
+        return;
+      }
       state.now = ts - state.t0;
       stepRevealWave();
       stepCamera();
@@ -3259,7 +3265,12 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       }
 
       if (typeof state.hooks.afterFrame === "function") state.hooks.afterFrame(ctx, api);
-      requestAnimationFrame(gameLoop);
+      rafId = requestAnimationFrame(gameLoop);
+    }
+    if (typeof document !== "undefined" && document.addEventListener) {
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && !rafId) rafId = requestAnimationFrame(gameLoop);
+      });
     }
 
     canvas.addEventListener("mousemove", handleMouseMove);
@@ -3340,7 +3351,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       applyViewZoom(state.viewZoom);
     }
     syncCursor();
-    requestAnimationFrame(gameLoop);
+    rafId = requestAnimationFrame(gameLoop);
 
     // Expose relayout for skins / debug
     api.relayout = relayout;
@@ -6283,11 +6294,16 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     const cy = RIFT.y;
     // Heartbeat, not a sine: a double thump that quickens as the rift closes,
     // so the thing reads as alive and hungry rather than as a glowing circle.
-    const beatHz = 0.7 + RIFT.intensity * 1.2;
-    const beat = ((now * 0.001 * beatHz) % 1 + 1) % 1;
-    const thump =
-      Math.exp(-beat * 9) + 0.6 * Math.exp(-Math.max(0, beat - 0.18) * 9);
-    const pulse = 0.5 + 0.75 * Math.min(1, thump);
+    let pulse;
+    if (reduceMotion) {
+      pulse = 0.72;
+    } else {
+      const beatHz = 0.7 + RIFT.intensity * 1.2;
+      const beat = ((now * 0.001 * beatHz) % 1 + 1) % 1;
+      const thump =
+        Math.exp(-beat * 9) + 0.6 * Math.exp(-Math.max(0, beat - 0.18) * 9);
+      pulse = 0.5 + 0.75 * Math.min(1, thump);
+    }
     ctx.save();
 
     // Pressure vignette (stronger when chasing / catch swallow)
@@ -6334,7 +6350,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     // Intake: motes dragged down the throat, so the lens reads as pulling
     // rather than sitting there. Positions come from the clock and an index,
     // so there is no particle array to grow or garbage-collect.
-    if (RIFT.intensity > 0.08) {
+    if (!reduceMotion && RIFT.intensity > 0.08) {
       ctx.globalCompositeOperation = "lighter";
       for (let i = 0; i < 16; i++) {
         const seed = i * 12.9898;
@@ -6352,7 +6368,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     // Reach: arms groping toward the dig it is hunting. This is the tell that
     // the rift has picked a target and is coming for it — the ring alone never
     // said which way it was headed.
-    if (RIFT.phase === "awaken" || RIFT.phase === "chase") {
+    if (!reduceMotion && (RIFT.phase === "awaken" || RIFT.phase === "chase")) {
       const tip = RIFT.lastDigKey && s.map.get(RIFT.lastDigKey);
       const toward = tip ? Math.atan2(tip.y - cy, tip.x - cx) : 0;
       const reach = s.cellSize * (1.5 + RIFT.intensity * 2.5);
@@ -6383,6 +6399,23 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         ctx.stroke();
       }
       ctx.shadowBlur = 0;
+    } else if (
+      reduceMotion &&
+      (RIFT.phase === "awaken" || RIFT.phase === "chase") &&
+      RIFT.lastDigKey &&
+      s.map.get(RIFT.lastDigKey)
+    ) {
+      // Static hunt cue: one calm line toward the dig (no thrashing arms).
+      const tip = s.map.get(RIFT.lastDigKey);
+      const toward = Math.atan2(tip.y - cy, tip.x - cx);
+      const len = s.cellSize * (1.8 + RIFT.intensity * 2);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = `rgba(125,240,225,${0.45 * RIFT.intensity})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(toward) * len, cy + Math.sin(toward) * len);
+      ctx.stroke();
     }
 
     // Leading ribbon while hunting — not during catch swallow
@@ -6448,6 +6481,18 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
   function isFxTheme(th) {
     return !!(th && th.particles);
+  }
+
+  /**
+   * Soft UI / Escape LOD: at open zoom the endless plate can be thousands of
+   * extruded hexes — drop walls/specular/ground shadows and paint seams only.
+   */
+  function useSoftUiLod(th, s) {
+    if (!th || th.material !== "neumorph" || th.flatPlate) return false;
+    const z = s && Number.isFinite(s.viewZoom) ? s.viewZoom : 1;
+    const size = s && s.cellSize ? s.cellSize : 28;
+    const n = s && s.map ? s.map.size : 0;
+    return z < 0.78 || size < 20 || n > 800;
   }
 
   function emit(x, y, n, color) {
@@ -8138,13 +8183,21 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         }
 
         // Desk: ambient pool, then per-tile ground shadows, then faces on top
+        const softLod = useSoftUiLod(th, s);
         if (!th.flatPlate) {
-          drawBoardGroundShadow(ctx, s, th, flat);
-          drawInfinitePlateField(ctx, s, th);
-          drawGlowPlate(ctx, s, th, t);
-          drawThemeAtmosphere(ctx, s, th, t);
-          if (th.material === "magma") drawMagmaDepthShadows(ctx, s);
-          else drawAllGroundShadows(ctx, s, th);
+          if (softLod) {
+            // Cheap wash — no per-tile footprints / multi-layer glow at open zoom
+            ctx.fillStyle = th.bodyBg || th.css["--bg-color"] || "#e8eaee";
+            ctx.fillRect(0, 0, s.canvas.width, s.canvas.height);
+            drawInfinitePlateField(ctx, s, th);
+          } else {
+            drawBoardGroundShadow(ctx, s, th, flat);
+            drawInfinitePlateField(ctx, s, th);
+            drawGlowPlate(ctx, s, th, t);
+            drawThemeAtmosphere(ctx, s, th, t);
+            if (th.material === "magma") drawMagmaDepthShadows(ctx, s);
+            else drawAllGroundShadows(ctx, s, th);
+          }
         } else {
           ctx.fillStyle = th.bodyBg || th.css["--bg-color"] || "#e8eaee";
           ctx.fillRect(0, 0, s.canvas.width, s.canvas.height);
@@ -8203,12 +8256,12 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
         // Ground shadows already painted in beforeFrame (desk plane only).
 
-        // —— Legacy flat plate (unused by production Soft UI Light/Dark) ——
-        if (neo && th.flatPlate) {
+        // —— Flat / LOD plate (legacy flatPlate, or Soft UI/Escape when zoomed way out) ——
+        if (neo && (th.flatPlate || useSoftUiLod(th, s))) {
           const path = cell.hexPath(size, 0.96);
           const stateKey = cell.flagged && !cell.revealed ? "flagged" : cell.revealed ? "revealed" : "covered";
           const st = (th.states && th.states[stateKey]) || { h: 220, s: 4, l: 90 };
-          const dark = th.id === "dark";
+          const dark = th.id === "dark" || th.id === "escape";
           ctx.fillStyle = `hsl(${st.h} ${st.s}% ${st.l}%)`;
           ctx.fill(path);
           // Floor stroke width in CSS pixels so zoomed-out lattices don't disappear
@@ -8942,6 +8995,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     },
     get digs() {
       return RIFT.digClicks;
+    },
+    /** Live view zoom — lets a probe watch the opening pull-back land. */
+    get zoom() {
+      return game && game.state ? game.state.viewZoom : null;
     },
     digCenter() {
       if (!game || typeof game.dig !== "function") return false;

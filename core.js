@@ -1901,7 +1901,13 @@
       cell.animReveal += ((cell.revealed ? 1 : 0) - cell.animReveal) * 0.15;
     }
 
+    let rafId = 0;
     function gameLoop(ts) {
+      // Hidden tabs: stop the loop so endless Soft UI / Escape don't spin coolers.
+      if (typeof document !== "undefined" && document.hidden) {
+        rafId = 0;
+        return;
+      }
       state.now = ts - state.t0;
       stepRevealWave();
       stepCamera();
@@ -1935,7 +1941,12 @@
       }
 
       if (typeof state.hooks.afterFrame === "function") state.hooks.afterFrame(ctx, api);
-      requestAnimationFrame(gameLoop);
+      rafId = requestAnimationFrame(gameLoop);
+    }
+    if (typeof document !== "undefined" && document.addEventListener) {
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && !rafId) rafId = requestAnimationFrame(gameLoop);
+      });
     }
 
     canvas.addEventListener("mousemove", handleMouseMove);
@@ -2016,7 +2027,7 @@
       applyViewZoom(state.viewZoom);
     }
     syncCursor();
-    requestAnimationFrame(gameLoop);
+    rafId = requestAnimationFrame(gameLoop);
 
     // Expose relayout for skins / debug
     api.relayout = relayout;
