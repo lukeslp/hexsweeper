@@ -1844,8 +1844,8 @@
     }
 
     /**
-     * Borderless only strips strokes on *cleared* faces.
-     * Unactivated (covered) tiles keep their borders.
+     * Borderless strips strokes on cleared faces only.
+     * (Valley pass must not re-apply grooves when styleId === borderless.)
      */
     function drawColorsForStyle(colors, styleId, cell) {
       if (styleId !== "borderless") return colors;
@@ -2253,16 +2253,25 @@
           );
           drawProj = inset;
           markLift = REVEAL_INSET;
-          // Borders ride the recessed face — that *is* the inset grid.
-          const groove =
-            state.theme.valleyGroove ||
-            state.theme.revealedEdge ||
-            colors.stroke;
-          colors = {
-            ...colors,
-            stroke: groove,
-            lineWidth: Math.max(colors.lineWidth || 0, 1.25),
-          };
+          if (styleId === "borderless") {
+            // Seamless valley floor — no per-hex grid (covered tiles keep edges).
+            colors = {
+              ...colors,
+              stroke: colors.fill,
+              lineWidth: 0,
+            };
+          } else {
+            // Numerals/rings/yellow: borders ride the recessed face.
+            const groove =
+              state.theme.valleyGroove ||
+              state.theme.revealedEdge ||
+              colors.stroke;
+            colors = {
+              ...colors,
+              stroke: groove,
+              lineWidth: Math.max(colors.lineWidth || 1.2, 1.25),
+            };
+          }
         }
         const pop =
           cell.revealed &&
