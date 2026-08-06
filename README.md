@@ -108,7 +108,7 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 
 - Canvas 2D projection of vendored hexasphere math (no Three.js)
 - Dig / flag / flood over geodesic `neighborIndices`; first dig safe; win/lose
-- Starts pulled back (~0.72×); scroll/pinch to zoom; drag to rotate; flag mode + long-hold; RM-safe camera
+- Starts pulled back (~0.72×); scroll/pinch to zoom; drag for full 360° tumble (yaw+pitch); flag mode + long-hold; RM-safe camera
 - Hover lifts **covered** faces only (cleared stay put); flags stay pinned at lift height (pure red fill, no glyph). Cleared recess in numerals/rings (empty) and borderless (all clears). **N** / count button cycles numerals · rings · yellow · flush · borderless — borderless strips strokes on cleared only; covered keep borders (`hexsweeper-sphere-countstyle-v1`)
 - **Autosave:** mid-run state in `hexsweeper-sphere-run-v1` (resume on refresh); Reset and size changes confirm before discarding progress
 - Minimal help: short lede, color history tile → [CoolmathGames history](https://www.coolmathgames.com/blog/the-history-of-minesweeper) + lightbox

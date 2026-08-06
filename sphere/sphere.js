@@ -9,7 +9,7 @@
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
- * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
+ * Notes: Canvas 2D projection; drag tumbles freely (full 360° yaw+pitch); first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
  * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
@@ -580,6 +580,15 @@
       const dx = touches[0].clientX - touches[1].clientX;
       const dy = touches[0].clientY - touches[1].clientY;
       return Math.hypot(dx, dy);
+    }
+
+    /** Keep angles in (-π, π] so lerp/cache stay well-behaved over long tumbles. */
+    function wrapAngle(a) {
+      const tau = Math.PI * 2;
+      let x = a % tau;
+      if (x > Math.PI) x -= tau;
+      if (x <= -Math.PI) x += tau;
+      return x;
     }
 
     function rotatePoint(p, rotY, rotX) {
@@ -2219,10 +2228,12 @@
           touchMoved = true;
           clearTimeout(longPressTimer);
           state.pressed = -1;
-          state.targetRotY = state.dragStart.rotY + dx * 0.0105;
-          state.targetRotX = Math.max(
-            -0.8,
-            Math.min(0.8, state.dragStart.rotX + dy * 0.0105)
+          // Free tumble — no pitch clamp (full 360° on both drag axes).
+          state.targetRotY = wrapAngle(
+            state.dragStart.rotY + dx * 0.0105
+          );
+          state.targetRotX = wrapAngle(
+            state.dragStart.rotX + dy * 0.0105
           );
           invalidateProjection();
         }
