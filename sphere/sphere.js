@@ -4,6 +4,8 @@
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
+ * Hover: radial lift along face normal + skirt walls (no white-overpaint border wipe).
+ * Labels: drawn in the face plane (inset), not screen-billboarded.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
@@ -143,6 +145,11 @@
   const INITIAL_ZOOM = 0.72;
   /** Sphere fill of the short viewport edge at zoomFactor = 1. */
   const BASE_SCALE_FRAC = 0.42;
+  /** Hover / press radial lift in sphere-radius units (~1). */
+  const HOVER_LIFT = 0.055;
+  const PRESS_LIFT = 0.028;
+  /** Label sits slightly into the face (negative = inset). */
+  const LABEL_INSET = -0.014;
   /** Static letter marks — globes looked decorative and hid S/M/L meaning. */
   const SIZE_ICONS = {
     easy: '<span class="size-mark" data-size="S" aria-hidden="true">S</span>',
@@ -502,8 +509,7 @@
       return { x: x1, y: y2, z: z2 };
     }
 
-    function projectPoint(p, rotY, rotX) {
-      const r = rotatePoint(p, rotY, rotX);
+    function projectRotated(r) {
       const fov = 2.8;
       const depth = fov / (fov - r.z);
       return {
@@ -514,20 +520,71 @@
       };
     }
 
-    function projectTile(tile, rotY, rotX) {
-      const center = projectPoint(tile.centerPoint, rotY, rotX);
-      const boundary = tile.boundary.map((b) => projectPoint(b, rotY, rotX));
+    function projectPoint(p, rotY, rotX) {
+      return projectRotated(rotatePoint(p, rotY, rotX));
+    }
+
+    function faceNormal(tile, rotY, rotX) {
+      const n = rotatePoint(tile.centerPoint, rotY, rotX);
+      const len = Math.hypot(n.x, n.y, n.z) || 1;
+      return { x: n.x / len, y: n.y / len, z: n.z / len };
+    }
+
+    /** Orthonormal tangent basis (u, v) on the face, with v roughly “up” on screen. */
+    function faceBasis(n) {
+      let ax = 0;
+      let ay = 1;
+      let az = 0;
+      if (Math.abs(n.y) > 0.92) {
+        ax = 1;
+        ay = 0;
+        az = 0;
+      }
+      let ux = ay * n.z - az * n.y;
+      let uy = az * n.x - ax * n.z;
+      let uz = ax * n.y - ay * n.x;
+      let ul = Math.hypot(ux, uy, uz) || 1;
+      ux /= ul;
+      uy /= ul;
+      uz /= ul;
+      const vx = n.y * uz - n.z * uy;
+      const vy = n.z * ux - n.x * uz;
+      const vz = n.x * uy - n.y * ux;
+      return {
+        u: { x: ux, y: uy, z: uz },
+        v: { x: vx, y: vy, z: vz },
+      };
+    }
+
+    function projectTile(tile, rotY, rotX, lift) {
+      const liftAmt = lift || 0;
+      const n = faceNormal(tile, rotY, rotX);
+      const liftVec = (p) => {
+        const r = rotatePoint(p, rotY, rotX);
+        return {
+          x: r.x + n.x * liftAmt,
+          y: r.y + n.y * liftAmt,
+          z: r.z + n.z * liftAmt,
+        };
+      };
+      const centerR = liftVec(tile.centerPoint);
+      const boundaryR = tile.boundary.map(liftVec);
+      const center = projectRotated(centerR);
+      const boundary = boundaryR.map(projectRotated);
       const avgZ =
         boundary.reduce((s, p) => s + p.z, center.z) / (boundary.length + 1);
-      const normal = rotatePoint(tile.centerPoint, rotY, rotX);
-      const nLen = Math.hypot(normal.x, normal.y, normal.z) || 1;
       return {
         center,
         boundary,
         z: avgZ,
-        normalZ: normal.z / nLen,
+        normalZ: n.z,
+        normal: n,
         index: tile.index,
         area: hexScreenArea(boundary),
+        baseBoundary:
+          liftAmt !== 0
+            ? tile.boundary.map((b) => projectPoint(b, rotY, rotX))
+            : null,
       };
     }
 
@@ -1288,25 +1345,115 @@
       ctx.stroke();
     }
 
+    /** Skirt walls between base and raised face (true radial extrusion cue). */
+    function drawExtrusionSkirt(baseBoundary, raisedBoundary, darkMono) {
+      if (!baseBoundary || !raisedBoundary) return;
+      const n = Math.min(baseBoundary.length, raisedBoundary.length);
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        const mx =
+          (baseBoundary[i].x +
+            baseBoundary[j].x +
+            raisedBoundary[i].x +
+            raisedBoundary[j].x) *
+          0.25;
+        const my =
+          (baseBoundary[i].y +
+            baseBoundary[j].y +
+            raisedBoundary[i].y +
+            raisedBoundary[j].y) *
+          0.25;
+        const cx =
+          raisedBoundary.reduce((s, p) => s + p.x, 0) / raisedBoundary.length;
+        const cy =
+          raisedBoundary.reduce((s, p) => s + p.y, 0) / raisedBoundary.length;
+        const vx = mx - cx;
+        const vy = my - cy;
+        const len = Math.hypot(vx, vy) || 1;
+        const nw = Math.max(0, Math.min(1, (-vx / len - vy / len) * 0.5 + 0.5));
+        ctx.beginPath();
+        ctx.moveTo(baseBoundary[i].x, baseBoundary[i].y);
+        ctx.lineTo(baseBoundary[j].x, baseBoundary[j].y);
+        ctx.lineTo(raisedBoundary[j].x, raisedBoundary[j].y);
+        ctx.lineTo(raisedBoundary[i].x, raisedBoundary[i].y);
+        ctx.closePath();
+        ctx.fillStyle = darkMono
+          ? colorMix("#dddddd", "#777777", 1 - nw)
+          : colorMix("#e8e8e8", "#888888", 1 - nw);
+        ctx.fill();
+      }
+    }
+
     function labelFontSize(area) {
       const base = Math.sqrt(area) * 0.42;
       return Math.max(9, Math.min(18, base));
     }
 
-    function drawLabel(proj, text, color, opts) {
+    /**
+     * Draw glyph seated in the tile plane (perspective-correct-ish via
+     * projected tangent basis), slightly inset so it reads as carved in.
+     */
+    function drawLabelOnFace(tile, text, color, opts) {
       opts = opts || {};
-      const size = opts.size || labelFontSize(proj.area);
+      const rotY = state.rotY;
+      const rotX = state.rotX;
+      const n = faceNormal(tile, rotY, rotX);
+      const basis = faceBasis(n);
+      const c = rotatePoint(tile.centerPoint, rotY, rotX);
+      const along = (opts.lift || 0) + LABEL_INSET;
+      const origin = {
+        x: c.x + n.x * along,
+        y: c.y + n.y * along,
+        z: c.z + n.z * along,
+      };
+      // World-space half-height of the glyph on the face.
+      const half = Math.max(0.018, Math.min(0.045, 0.032 * (state.radius || 1)));
+      const p0 = projectRotated(origin);
+      const pU = projectRotated({
+        x: origin.x + basis.u.x * half,
+        y: origin.y + basis.u.y * half,
+        z: origin.z + basis.u.z * half,
+      });
+      const pV = projectRotated({
+        x: origin.x + basis.v.x * half,
+        y: origin.y + basis.v.y * half,
+        z: origin.z + basis.v.z * half,
+      });
+      const ax = pU.x - p0.x;
+      const ay = pU.y - p0.y;
+      const bx = pV.x - p0.x;
+      const by = pV.y - p0.y;
+      // Degenerate near silhouette — fall back to screen text.
+      if (Math.abs(ax * by - ay * bx) < 4) {
+        const weight = opts.weight || "700";
+        const size = opts.size || 12;
+        ctx.font = `${weight} ${size}px IBM Plex Sans, system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        if (opts.stroke) {
+          ctx.lineWidth = opts.strokeWidth || Math.max(2, size * 0.18);
+          ctx.strokeStyle = opts.stroke;
+          ctx.strokeText(text, p0.x, p0.y);
+        }
+        ctx.fillStyle = color;
+        ctx.fillText(text, p0.x, p0.y);
+        return;
+      }
+      ctx.save();
+      ctx.translate(p0.x, p0.y);
+      ctx.transform(ax, ay, bx, by, 0, 0);
       const weight = opts.weight || "700";
-      ctx.font = `${weight} ${size}px IBM Plex Sans, system-ui, sans-serif`;
+      ctx.font = `${weight} 1.15px IBM Plex Sans, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       if (opts.stroke) {
-        ctx.lineWidth = opts.strokeWidth || Math.max(2, size * 0.18);
+        ctx.lineWidth = opts.strokeWidth != null ? opts.strokeWidth : 0.22;
         ctx.strokeStyle = opts.stroke;
-        ctx.strokeText(text, proj.center.x, proj.center.y);
+        ctx.strokeText(text, 0, 0);
       }
       ctx.fillStyle = color;
-      ctx.fillText(text, proj.center.x, proj.center.y);
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
     }
 
     function coveredStyle(proj, tile, isFront) {
@@ -1485,9 +1632,18 @@
 
       const projected = getProjected();
       const now = performance.now();
+      const highlightIdx =
+        !state.isGameOver &&
+        (state.pressed >= 0 ? state.pressed : state.hovered);
+      const darkMono =
+        !!(state.theme.pureCovered || state.theme.id === "dark");
 
       for (const proj of projected) {
         const idx = proj.index;
+        // Hovered / pressed face is redrawn raised after the pass.
+        if (highlightIdx >= 0 && idx === highlightIdx && proj.z > 0.02) {
+          continue;
+        }
         const cell = state.cells[idx];
         const tile = state.tiles[idx];
         const colors = tileColors(idx, proj, cell, tile, now);
@@ -1506,29 +1662,54 @@
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
 
         if (colors.showLabel && colors.label) {
-          drawLabel(drawProj, colors.label, colors.labelColor, {
+          drawLabelOnFace(tile, colors.label, colors.labelColor, {
             stroke: colors.labelStroke,
             weight: cell.flagged ? "600" : "700",
           });
         }
       }
 
-      if (!state.isGameOver) {
-        const highlightIdx = state.pressed >= 0 ? state.pressed : state.hovered;
-        if (highlightIdx >= 0) {
-          const hp = projected.find((p) => p.index === highlightIdx && p.z > 0.02);
-          if (hp) {
-            const ringColor = state.pressed >= 0 ? state.theme.activeRing : state.theme.hoverRing;
-            const lw = state.pressed >= 0 ? 3.2 : 2.4;
-            drawHexRing(hp, ringColor, lw);
-            if (state.pressed < 0 && !state.cells[highlightIdx].revealed) {
-              drawHex(
-                hp,
-                colorMix(state.theme.coveredHi, state.theme.hoverRing, 0.35),
-                state.theme.hoverRing,
-                1.6
-              );
-            }
+      if (highlightIdx >= 0) {
+        const base = projected.find(
+          (p) => p.index === highlightIdx && p.z > 0.02
+        );
+        if (base) {
+          const tile = state.tiles[highlightIdx];
+          const cell = state.cells[highlightIdx];
+          const colors = tileColors(highlightIdx, base, cell, tile, now);
+          const lift =
+            state.pressed === highlightIdx ? PRESS_LIFT : HOVER_LIFT;
+          const raised = projectTile(
+            tile,
+            state.rotY,
+            state.rotX,
+            lift
+          );
+          const baseBoundary =
+            raised.baseBoundary ||
+            tile.boundary.map((b) =>
+              projectPoint(b, state.rotY, state.rotX)
+            );
+          drawExtrusionSkirt(baseBoundary, raised.boundary, darkMono);
+          // Keep real tile colors + edge; only a hair of lift cue in fill.
+          let fill = colors.fill;
+          if (!cell.revealed && !cell.flagged) {
+            fill = darkMono
+              ? colors.fill
+              : colorMix(colors.fill, state.theme.coveredHi, 0.2);
+          }
+          drawHex(
+            raised,
+            fill,
+            colors.stroke,
+            Math.max(colors.lineWidth || 1.5, 1.8)
+          );
+          if (colors.showLabel && colors.label) {
+            drawLabelOnFace(tile, colors.label, colors.labelColor, {
+              stroke: colors.labelStroke,
+              weight: cell.flagged ? "600" : "700",
+              lift,
+            });
           }
         }
       }
