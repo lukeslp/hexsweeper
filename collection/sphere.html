@@ -453,12 +453,19 @@ body[data-sphere-theme="card"] {
 }
 body[data-sphere-chrome="dark"],
 body[data-sphere-theme="dark"],
-body[data-sphere-theme="shell"] {
+body[data-sphere-theme="shell"],
+body[data-sphere-theme="earth"],
+body[data-sphere-theme="moon"] {
   --bg-color: #000000;
   --text-main: #ffffff;
   --text-sub: #888888;
   --nav-bg: #111111;
   --nav-ink: #ffffff;
+}
+body[data-sphere-theme="earth"],
+body[data-sphere-theme="moon"] {
+  --bg-color: #05070c;
+  --nav-bg: #0c1018;
 }
 html, body {
   height: 100%;
@@ -963,7 +970,7 @@ body.help-open { overflow: hidden; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Bottom bar: reset, board size (XS–XL), theme, count style. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+      <p>Bottom bar: reset, board size (XS–XL), theme (includes Earth &amp; Moon daymaps), count style. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
     </div>
     <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -1230,6 +1237,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   const api = {
     generateHexasphere,
     floodClosure,
+    cartesianToSpherical,
     vec3,
     clone,
     dot,
@@ -1251,7 +1259,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
  * File Purpose: Hexsweeper on a closed hex sphere — dig/flag/flood via neighborIndices.
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
- * Chrome: Reset·Size·Theme | Flag | Help; sizes XS–XL; themes Light·Shell·Dark·Ink·Float·Card.
+ * Chrome: Reset·Size·Theme | Flag | Help; sizes XS–XL; themes Light·Shell·Dark·Ink·Float·Card·Earth·Moon.
+ * Globe maps: Earth/Moon equirectangular daymaps sampled per face (lat/lon).
  * Mono: four shell·field pairings + two light-field float themes (contact shadow under sphere).
  * Zoom: wheel + pinch (clamped); starts pulled back (~0.72×).
  * Heights (highest→lowest): covered → flagged → numbered clear → empty clear.
@@ -1428,6 +1437,95 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     float: true,
   });
 
+  /**
+   * Globe map themes — equirectangular daymaps sampled per hex face (lat/lon).
+   * Textures: Solar System Scope style daymaps (same set as orrery.solar).
+   */
+  const GLOBE_TEX_BASE =
+    "https://dr.eamer.dev/games/hexsweeper/sphere/assets/textures/";
+  const GLOBE_MAPS = {
+    earth: {
+      id: "earth",
+      file: "earth_daymap_2k.jpg",
+      // Fallback while loading / if sample fails
+      fallback: "#2a6a9a",
+    },
+    moon: {
+      id: "moon",
+      file: "moon_2k.jpg",
+      fallback: "#9a9a9a",
+    },
+  };
+
+  function globeTheme(spec) {
+    // Dark sky field; covered faces carry the planet texture.
+    return {
+      id: spec.id,
+      name: spec.name,
+      chrome: "dark",
+      float: true,
+      globeMap: spec.mapId,
+      pureCovered: false,
+      pureRevealed: true,
+      accent: spec.accent || "#e8eef8",
+      bg: "#05070c",
+      bgGlow: "#0a101c",
+      covered: GLOBE_MAPS[spec.mapId]?.fallback || "#666666",
+      coveredHi: "#ffffff",
+      coveredEdge: "rgba(0,0,0,0.45)",
+      coveredShadow: "#000000",
+      tierCovered: GLOBE_MAPS[spec.mapId]?.fallback || "#666666",
+      tierFlagged: "#ff2200",
+      tierNumbered: "#0a0e18",
+      tierEmpty: "#05080f",
+      revealed: "#0a0e18",
+      revealedEmpty: "#05080f",
+      revealedEdge: "rgba(255,255,255,0.12)",
+      valleyGroove: "rgba(255,255,255,0.1)",
+      valleyGrooveDeep: "rgba(0,0,0,0.5)",
+      flagFill: "#ff2200",
+      flagIcon: "#ffffff",
+      flagEdge: "#ff2200",
+      mine: "#1a1010",
+      mineCore: "#ff6644",
+      mineEdge: "#000000",
+      mineBurst: "#ffaa66",
+      pentagon: GLOBE_MAPS[spec.mapId]?.fallback || "#666666",
+      pentagonEdge: "rgba(0,0,0,0.5)",
+      hoverRing: "#ffffff",
+      activeRing: "#ffe8a0",
+      backface: "#080a10",
+      backfaceEdge: "#1a2030",
+      core: "#020308",
+      floatShadow: "rgba(0,0,0,0.35)",
+      text: {
+        1: "#d8e8ff",
+        2: "#a8d4ff",
+        3: "#7ec8a8",
+        4: "#f0c070",
+        5: "#f09060",
+        6: "#f07080",
+      },
+      label: "#eef4ff",
+      labelStroke: "rgba(0,0,0,0.75)",
+      revealFlash: "#ffffff",
+      revealGlow: spec.accent || "#88aaff",
+    };
+  }
+
+  const THEME_EARTH = globeTheme({
+    id: "earth",
+    name: "Earth",
+    mapId: "earth",
+    accent: "#6ec8ff",
+  });
+  const THEME_MOON = globeTheme({
+    id: "moon",
+    name: "Moon",
+    mapId: "moon",
+    accent: "#d0d4dc",
+  });
+
   const THEMES = [
     THEME_LIGHT,
     THEME_SHELL,
@@ -1435,6 +1533,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     THEME_INK,
     THEME_FLOAT,
     THEME_CARD,
+    THEME_EARTH,
+    THEME_MOON,
   ];
   const DEFAULT_THEME = THEME_LIGHT;
 
@@ -1708,7 +1808,14 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><ellipse cx="12" cy="18" rx="6" ry="1.6" opacity="0.35" fill="currentColor" stroke="none"></ellipse><circle cx="12" cy="10" r="5"></circle></svg>',
     card:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="19" rx="5.5" ry="1.4" opacity="0.35" fill="currentColor" stroke="none"></ellipse><rect x="6" y="4" width="12" height="13" rx="1.5"></rect></svg>',
+    earth:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"></path></svg>',
+    moon:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
   };
+
+  /** Loaded equirectangular maps (ImageData cache). */
+  const globeCache = Object.create(null);
 
   function boot(opts) {
     opts = opts || {};
@@ -1904,8 +2011,132 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       return THEMES[themeIndex];
     }
 
+    function globeUrl(mapId) {
+      const meta = GLOBE_MAPS[mapId];
+      if (!meta) return null;
+      // Prefer absolute (works in collection/ CodePen); fall back to relative under sphere/.
+      try {
+        if (/\/sphere\/?$|\/sphere\//.test(location.pathname)) {
+          return new URL(`assets/textures/${meta.file}`, location.href).href;
+        }
+      } catch (_) {}
+      return GLOBE_TEX_BASE + meta.file;
+    }
+
+    function loadGlobeMap(mapId) {
+      if (!mapId || !GLOBE_MAPS[mapId]) return Promise.resolve(null);
+      if (globeCache[mapId] && globeCache[mapId].ready) {
+        return Promise.resolve(globeCache[mapId]);
+      }
+      if (globeCache[mapId] && globeCache[mapId].promise) {
+        return globeCache[mapId].promise;
+      }
+      const entry = { ready: false, promise: null, data: null, w: 0, h: 0 };
+      globeCache[mapId] = entry;
+      entry.promise = new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const c = document.createElement("canvas");
+            c.width = img.naturalWidth || img.width;
+            c.height = img.naturalHeight || img.height;
+            const g = c.getContext("2d", { willReadFrequently: true });
+            g.drawImage(img, 0, 0);
+            entry.data = g.getImageData(0, 0, c.width, c.height);
+            entry.w = c.width;
+            entry.h = c.height;
+            entry.ready = true;
+          } catch (_) {
+            entry.ready = false;
+          }
+          resolve(entry);
+          bakeGlobeTileColors();
+          scheduleFrame();
+        };
+        img.onerror = () => {
+          entry.ready = false;
+          resolve(entry);
+        };
+        img.src = globeUrl(mapId);
+      });
+      return entry.promise;
+    }
+
+    function sampleGlobeRgb(mapId, lat, lon) {
+      const entry = globeCache[mapId];
+      if (!entry || !entry.ready || !entry.data) return null;
+      let la = Number(lat);
+      let lo = Number(lon);
+      if (!Number.isFinite(la) || !Number.isFinite(lo)) return null;
+      la = Math.max(-90, Math.min(90, la));
+      // lon from atan2 is -180..180
+      while (lo < -180) lo += 360;
+      while (lo > 180) lo -= 360;
+      const u = (lo + 180) / 360;
+      const v = (90 - la) / 180;
+      const x = Math.min(entry.w - 1, Math.max(0, Math.floor(u * entry.w)));
+      const y = Math.min(entry.h - 1, Math.max(0, Math.floor(v * entry.h)));
+      const i = (y * entry.w + x) * 4;
+      const d = entry.data.data;
+      return [d[i], d[i + 1], d[i + 2]];
+    }
+
+    function rgbCss(rgb, a) {
+      if (!rgb) return null;
+      if (a != null && a < 1) {
+        return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+      }
+      return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    }
+
+    function shadeRgb(rgb, amount) {
+      // amount > 0 lighten, < 0 darken
+      if (!rgb) return rgb;
+      const t = Math.max(-1, Math.min(1, amount));
+      return rgb.map((c) => {
+        if (t >= 0) return Math.round(c + (255 - c) * t);
+        return Math.round(c * (1 + t));
+      });
+    }
+
+    function tileGlobeColor(tile, opts) {
+      opts = opts || {};
+      const mapId = state.theme && state.theme.globeMap;
+      if (!mapId || !tile) return null;
+      if (tile._globeCss && !opts.force) return tile._globeCss;
+      const sph = tile.spherical ||
+        (global.Hexasphere && global.Hexasphere.cartesianToSpherical
+          ? global.Hexasphere.cartesianToSpherical(tile.centerPoint)
+          : null);
+      if (!sph) return null;
+      let rgb = sampleGlobeRgb(mapId, sph.lat, sph.lon);
+      if (!rgb) return null;
+      if (opts.darken) rgb = shadeRgb(rgb, -opts.darken);
+      if (opts.lighten) rgb = shadeRgb(rgb, opts.lighten);
+      const css = rgbCss(rgb);
+      if (!opts.ephemeral) tile._globeCss = css;
+      return css;
+    }
+
+    function bakeGlobeTileColors() {
+      const mapId = state.theme && state.theme.globeMap;
+      if (!mapId || !state.tiles || !state.tiles.length) return;
+      for (let i = 0; i < state.tiles.length; i++) {
+        const t = state.tiles[i];
+        t._globeCss = null;
+        tileGlobeColor(t);
+      }
+    }
+
+    function ensureGlobeForTheme(themeDef) {
+      if (themeDef && themeDef.globeMap) {
+        loadGlobeMap(themeDef.globeMap);
+      }
+    }
+
     function syncChromeTheme() {
-      const t = currentThemeDef();
+      const t = state.theme || currentThemeDef();
       // Page chrome follows field (bg); dataset keeps the concrete theme id.
       document.body.dataset.sphereTheme = t.id;
       document.body.dataset.sphereChrome = t.chrome || "light";
@@ -1913,7 +2144,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -1939,6 +2170,14 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       themeIndex = ((index % THEMES.length) + THEMES.length) % THEMES.length;
       const def = currentThemeDef();
       state.theme = themePalette(def);
+      // Clear per-tile globe cache when leaving/entering a map theme.
+      if (state.tiles) {
+        for (let i = 0; i < state.tiles.length; i++) {
+          state.tiles[i]._globeCss = null;
+        }
+      }
+      ensureGlobeForTheme(def);
+      bakeGlobeTileColors();
       syncChromeTheme();
       try {
         localStorage.setItem(THEME_STORAGE_KEY, def.id);
@@ -2367,6 +2606,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       state.ambientSpin = !state.reduceMotion;
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
       invalidateProjection();
+      ensureGlobeForTheme(state.theme);
+      bakeGlobeTileColors();
       updateUI();
       if (!optsReset.keepPersist) clearPersist();
     }
@@ -2646,6 +2887,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       }
 
       invalidateProjection();
+      ensureGlobeForTheme(state.theme);
+      bakeGlobeTileColors();
       updateUI();
 
       if (!state.isFirstClick && !state.isGameOver) {
@@ -3672,6 +3915,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           showLabel: false,
         };
       }
+      // Globe maps: each face samples equirectangular daymap at tile lat/lon.
+      if (T.globeMap) {
+        const sample = tileGlobeColor(tile);
+        let fill = sample || T.covered;
+        // Soft limb darkening so the sphere reads round.
+        const limb = Math.max(0, Math.min(1, 1 - proj.normalZ));
+        fill = colorMix(fill, "#000000", limb * 0.42);
+        if (isFront) fill = colorMix(fill, T.coveredHi || "#ffffff", 0.06);
+        return {
+          fill,
+          stroke: T.coveredEdge,
+          lineWidth: tile.isPentagon ? 1.6 : 1.15,
+          showLabel: false,
+        };
+      }
       let fill = tile.isPentagon ? T.pentagon : T.covered;
       let stroke = tile.isPentagon ? T.pentagonEdge : T.coveredEdge;
       fill = shadeByNormal(fill, proj.normalZ, isFront ? 0.38 : 0.22);
@@ -3760,7 +4018,14 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         ) {
           wellFill = T.countTintRamp[cell.neighborMines];
         }
-        let fill = pureWell ? wellFill : lit(wellFill, proj.normalZ, 0.28);
+        // Globe maps: dug faces keep a ghost of the terrain under a dark well.
+        if (T.globeMap) {
+          const ghost = tileGlobeColor(tile);
+          if (ghost) {
+            wellFill = colorMix(wellFill, ghost, empty ? 0.18 : 0.28);
+          }
+        }
+        let fill = pureWell && !T.globeMap ? wellFill : lit(wellFill, proj.normalZ, 0.28);
         const pulseAge = now - cell.pulseAt;
         if (
           !state.reduceMotion &&
@@ -4284,6 +4549,19 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       if (document.visibilityState === "hidden") persistNow();
     });
     resize();
+
+    // Deep-link theme: ?theme=earth|moon|light|…
+    try {
+      const tid = new URLSearchParams(location.search).get("theme");
+      if (tid) {
+        const i = THEMES.findIndex((t) => t.id === tid);
+        if (i >= 0) {
+          themeIndex = i;
+          state.theme = themePalette(THEMES[i]);
+          syncChromeTheme();
+        }
+      }
+    } catch (_) {}
 
     // Model-authored takes (?take=… or window.HEXSWEEPER_SPHERE_TAKE).
     let activeTake = null;

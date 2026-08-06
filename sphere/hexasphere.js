@@ -230,6 +230,7 @@
   const api = {
     generateHexasphere,
     floodClosure,
+    cartesianToSpherical,
     vec3,
     clone,
     dot,

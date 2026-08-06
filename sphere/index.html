@@ -41,12 +41,19 @@ body[data-sphere-theme="card"] {
 }
 body[data-sphere-chrome="dark"],
 body[data-sphere-theme="dark"],
-body[data-sphere-theme="shell"] {
+body[data-sphere-theme="shell"],
+body[data-sphere-theme="earth"],
+body[data-sphere-theme="moon"] {
   --bg-color: #000000;
   --text-main: #ffffff;
   --text-sub: #888888;
   --nav-bg: #111111;
   --nav-ink: #ffffff;
+}
+body[data-sphere-theme="earth"],
+body[data-sphere-theme="moon"] {
+  --bg-color: #05070c;
+  --nav-bg: #0c1018;
 }
 html, body {
   height: 100%;
@@ -551,7 +558,7 @@ body.help-open { overflow: hidden; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Bottom bar: reset, board size (XS–XL), theme, count style. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+      <p>Bottom bar: reset, board size (XS–XL), theme (includes Earth &amp; Moon daymaps), count style. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
     </div>
     <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -577,8 +584,8 @@ body.help-open { overflow: hidden; }
   <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
-<script src="hexasphere.js?v=20260807i"></script>
-<script src="sphere.js?v=20260807i"></script>
+<script src="hexasphere.js?v=20260807j"></script>
+<script src="sphere.js?v=20260807j"></script>
 <script>
 SphereSweeper.boot({ canvasId: "gameCanvas" });
 (function () {
