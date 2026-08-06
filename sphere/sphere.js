@@ -1404,27 +1404,39 @@
       return i >= 0 ? i : 0;
     }
 
-    /** Empty clears recess in numerals/rings; flush modes stay shell-flat. */
+    /**
+     * Recess cleared faces. Borderless: all clears. Numerals/rings/yellow: empty only.
+     * Flush: never. Covered always flush.
+     */
     function tileShouldInset(cell, styleId) {
-      if (
-        !cell.revealed ||
-        cell.flagged ||
-        cell.isMine ||
-        cell.neighborMines !== 0
-      ) {
-        return false;
-      }
-      return styleId === "numerals" || styleId === "rings";
+      if (!cell.revealed || cell.flagged || cell.isMine) return false;
+      if (styleId === "flush") return false;
+      if (styleId === "borderless") return true;
+      if (cell.neighborMines !== 0) return false;
+      return (
+        styleId === "numerals" ||
+        styleId === "rings" ||
+        styleId === "yellow"
+      );
     }
 
-    /** Borderless: silhouette from fill only; hover lift still reads. */
-    function drawColorsForStyle(colors, styleId) {
+    /**
+     * Borderless only strips strokes on *cleared* faces.
+     * Unactivated (covered) tiles keep their borders.
+     */
+    function drawColorsForStyle(colors, styleId, cell) {
       if (styleId !== "borderless") return colors;
+      if (!cell || !cell.revealed || cell.flagged) return colors;
       return {
         ...colors,
         stroke: colors.fill,
         lineWidth: 0,
       };
+    }
+
+    /** Hover lift only for faces you can still activate (covered / flaggable). */
+    function tileCanActivate(cell) {
+      return !!(cell && !cell.revealed);
     }
 
     let countStyleToastTimer = null;
@@ -1760,22 +1772,22 @@
       for (const proj of projected) {
         const idx = proj.index;
         const cell = state.cells[idx];
-        // Hovered / pressed / pinned flags are drawn raised after the pass.
+        // Pinned flags + hover/press on *activatable* faces draw in the raised pass.
         const pinnedFlag = cell.flagged && !cell.revealed;
-        if (
-          proj.z > 0.02 &&
-          (pinnedFlag || (highlightIdx >= 0 && idx === highlightIdx))
-        ) {
+        const hoverRaise =
+          highlightIdx >= 0 &&
+          idx === highlightIdx &&
+          tileCanActivate(cell);
+        if (proj.z > 0.02 && (pinnedFlag || hoverRaise)) {
           continue;
         }
         const tile = state.tiles[idx];
         let colors = tileColors(idx, proj, cell, tile, now);
-        colors = drawColorsForStyle(colors, styleId);
+        colors = drawColorsForStyle(colors, styleId, cell);
         const visualReady =
           state.reduceMotion ||
           now >= cell.visualDue ||
           cell.animReveal >= 0.98;
-        // Empty clears recess in numerals/rings; flush modes stay shell-flat.
         const shouldInset =
           tileShouldInset(cell, styleId) && visualReady && proj.z > 0.02;
         let drawProj = proj;
@@ -1811,14 +1823,19 @@
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
-      // Raised pass: pinned flags (always) + hover/press (temporary).
+      // Raised pass: pinned flags (always) + hover/press on covered only.
       const raisedIdxs = new Set();
       for (let i = 0; i < state.cells.length; i++) {
         if (state.cells[i].flagged && !state.cells[i].revealed) {
           raisedIdxs.add(i);
         }
       }
-      if (highlightIdx >= 0) raisedIdxs.add(highlightIdx);
+      if (
+        highlightIdx >= 0 &&
+        tileCanActivate(state.cells[highlightIdx])
+      ) {
+        raisedIdxs.add(highlightIdx);
+      }
 
       for (const idx of raisedIdxs) {
         const base = projected.find((p) => p.index === idx && p.z > 0.02);
@@ -1827,15 +1844,15 @@
         const cell = state.cells[idx];
         let colors = drawColorsForStyle(
           tileColors(idx, base, cell, tile, now),
-          styleId
+          styleId,
+          cell
         );
         const pinnedFlag = cell.flagged && !cell.revealed;
-        const lift =
-          pinnedFlag
-            ? HOVER_LIFT
-            : state.pressed === idx
-              ? PRESS_LIFT
-              : HOVER_LIFT;
+        const lift = pinnedFlag
+          ? HOVER_LIFT
+          : state.pressed === idx
+            ? PRESS_LIFT
+            : HOVER_LIFT;
         const raised = projectTile(tile, state.rotY, state.rotX, lift);
         const baseBoundary =
           raised.baseBoundary ||
@@ -1847,12 +1864,9 @@
             ? colors.fill
             : colorMix(colors.fill, state.theme.coveredHi, 0.2);
         }
-        drawHex(
-          raised,
-          fill,
-          colors.stroke,
-          Math.max(colors.lineWidth || 1.5, 1.8)
-        );
+        // Covered tiles always keep a visible edge (even in borderless mode).
+        const edgeW = Math.max(colors.lineWidth || 1.5, 1.8);
+        drawHex(raised, fill, colors.stroke, edgeW);
         paintCountMark(tile, raised, cell, colors, lift);
       }
 
