@@ -330,9 +330,9 @@
         state.camTX = x;
         state.camTY = y;
       },
+      /** Explicit framing only (themes / tools). Never called from dig/chord/flood. */
       focusOnCell(cell, snap) {
         if (!cell) return;
-        // Fire pit: digs must not steal the camera — tilt/overflow-pan own the view.
         if (isCameraLocked()) return;
         state.focusCell = cell;
         const wx = state.cellSize * SQRT3 * (cell.q + cell.r / 2);
@@ -980,7 +980,7 @@
 
     function stepCamera() {
       if (!state.endless) return;
-      // Smooth pan toward focus (last reveal / click)
+      // Smooth pan toward camTX (user drag / explicit setCamera only)
       state.camX += (state.camTX - state.camX) * 0.08;
       state.camY += (state.camTY - state.camY) * 0.08;
       // As the camera moves, grow the honeycomb so the canvas never shows empty space
@@ -1381,7 +1381,6 @@
       if (typeof state.hooks.onReveal === "function") {
         state.hooks.onReveal(cell, api, { source: "dig" });
       }
-      api.focusOnCell(cell, false);
       if (cell.isMine) {
         state.detonator = cell;
         gameOver(false);
@@ -1537,7 +1536,6 @@
             } else if (n.neighborMines === 0) floodFrom(n);
           }
         }
-        api.focusOnCell(cell, false);
         if (hitMine) gameOver(false);
         else {
           openFrontier(null);
