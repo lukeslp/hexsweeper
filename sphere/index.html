@@ -184,8 +184,8 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   position: fixed;
   inset: 0;
   z-index: 110;
-  background: color-mix(in srgb, var(--bg-color) 88%, transparent);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg-color) 72%, transparent);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,54 +194,88 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   pointer-events: none;
   transition: opacity 0.2s ease;
 }
-.help-overlay.open { opacity: 1; pointer-events: auto; cursor: pointer; }
+.help-overlay.open { opacity: 1; pointer-events: auto; }
 .help-panel {
-  width: min(380px, 100%);
-  max-height: min(75vh, 480px);
+  width: min(360px, 100%);
+  max-height: min(82vh, 520px);
   overflow: auto;
-  background: color-mix(in srgb, var(--nav-bg) 94%, transparent);
+  background: color-mix(in srgb, var(--nav-bg) 96%, transparent);
   color: var(--text-main);
-  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
-  border-radius: 22px;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  padding: 1.35rem 1.3rem 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  border-radius: 16px;
+  padding: 1.1rem 1.15rem 1rem;
   position: relative;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.28);
   text-align: left;
+}
+.help-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 1.35rem;
+  line-height: 1;
   cursor: pointer;
 }
+.help-close:hover,
+.help-close:focus-visible {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  outline: none;
+}
 .help-panel h2 {
-  font-size: 1.1rem;
-  margin: 0 0 0.85rem;
+  font-size: 1.05rem;
+  margin: 0 2rem 0.55rem 0;
   letter-spacing: -0.02em;
-  text-align: center;
+}
+.help-lede {
+  margin: 0 0 0.85rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-sub);
 }
 .help-glyphs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin: 0 0 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 0.85rem;
 }
 .help-glyph {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   gap: 6px;
-  padding: 10px 6px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--text-main) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
-  font-size: 0.72rem;
+  min-height: 4.5rem;
+  padding: 0.55rem 0.35rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: color-mix(in srgb, var(--text-main) 90%, var(--text-sub));
+  color: color-mix(in srgb, var(--text-main) 88%, var(--text-sub));
   text-align: center;
-  line-height: 1.2;
+  line-height: 1.25;
+}
+.help-glyph-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .help-glyph svg {
-  width: 22px;
-  height: 22px;
+  width: 1.25rem;
+  height: 1.25rem;
   stroke: var(--text-main);
   fill: none;
   stroke-width: 2;
@@ -249,33 +283,58 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   stroke-linejoin: round;
   opacity: 0.92;
 }
-.help-tagline {
-  margin: 0 0 0.65rem;
-  font-size: 0.82rem;
-  line-height: 1.35;
-  text-align: center;
+.help-body {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
   color: var(--text-sub);
 }
+.help-body p {
+  margin: 0 0 0.55rem;
+}
+.help-body p:last-child { margin-bottom: 0; }
 .help-panel .help-keys {
-  margin-top: 0.65rem;
-  font-size: 0.78rem;
-  text-align: center;
+  margin: 0 0 0.65rem;
+  font-size: 0.74rem;
+  line-height: 1.45;
   color: var(--text-sub);
 }
 .help-panel kbd {
   font-family: ui-monospace, monospace;
   font-size: 0.8em;
-  border: 1px solid color-mix(in srgb, var(--text-main) 30%, transparent);
-  border-radius: 5px;
-  padding: 0.05em 0.4em;
-  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 24%, transparent);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
 }
-.help-dismiss {
-  margin: 0.85rem 0 0;
-  font-size: 0.72rem;
-  text-align: center;
-  color: var(--text-sub);
-  letter-spacing: 0.02em;
+.help-more {
+  margin: 0 0 0.85rem;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+.help-more a {
+  color: var(--text-main);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+.help-more a:hover { opacity: 0.85; }
+.help-done {
+  appearance: none;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--text-main) 18%, transparent);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.help-done:hover,
+.help-done:focus-visible {
+  background: color-mix(in srgb, var(--text-main) 12%, transparent);
+  outline: none;
 }
 .menu-links {
   margin-top: 0.85rem;
@@ -351,8 +410,9 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
 
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
   <div class="help-panel" id="help-panel" tabindex="-1">
+    <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hex Sphere</h2>
-    <p class="help-tagline">Minesweeper on a closed sphere · six neighbors · first dig safe</p>
+    <p class="help-lede">Minesweeper on a closed sphere.<br>Six neighbors per cell · first dig is always safe.</p>
     <p class="help-run-stats" aria-label="Current run">
       <span class="stat-item" id="stats-mines" title="Mines remaining">00</span> left
       <span aria-hidden="true"> · </span>
@@ -360,37 +420,43 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
     </p>
     <div class="help-glyphs" aria-label="Controls">
       <div class="help-glyph">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
         Dig
       </div>
       <div class="help-glyph">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
         Flag
       </div>
       <div class="help-glyph">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7-7 7 7"/><path d="M12 2v20"/></svg>
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 9l7-7 7 7"/><path d="M12 2v20"/></svg></span>
         Drag rotate
       </div>
       <div class="help-glyph">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="4"/></svg>
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="4"/></svg></span>
         S · M · L
       </div>
       <div class="help-glyph">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41"/></svg>
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41"/></svg></span>
         Themes
       </div>
       <div class="help-glyph">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></span>
         Clear all
       </div>
     </div>
-    <p class="help-keys"><kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>T</kbd> theme · <kbd>S</kbd>/<kbd>M</kbd>/<kbd>L</kbd> size · scroll or pinch to zoom</p>
+    <div class="help-body">
+      <p>Reveal every safe cell without detonating a mine.<br>Numbers count mines among the six touching neighbors.</p>
+      <p>Flag suspected mines, then dig elsewhere.<br>When a revealed cell’s flags match its count, tap it again to chord-open the rest.</p>
+      <p>Drag to spin the sphere; scroll or pinch to zoom.<br>Clear every mine to win — tap the board after a loss to try again.</p>
+    </div>
+    <p class="help-keys"><kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>T</kbd> theme · <kbd>S</kbd>/<kbd>M</kbd>/<kbd>L</kbd> size · <kbd>Esc</kbd> close</p>
+    <p class="help-more">New to the genre? <a href="https://en.wikipedia.org/wiki/Minesweeper_(video_game)" target="_blank" rel="noopener noreferrer">Minesweeper on Wikipedia</a> — classic rules on a square grid.</p>
+    <button type="button" class="help-done" id="help-done-btn">Done</button>
     <nav class="menu-links" aria-label="Elsewhere">
-      <a href="https://lukesteuber.com" rel="noopener">lukesteuber.com</a>
+      <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>
-      <a href="https://datapoems.io" rel="noopener">datapoems.io</a>
+      <a href="https://datapoems.io" rel="noopener noreferrer">datapoems.io</a>
     </nav>
-    <p class="help-dismiss">Tap anywhere to close</p>
   </div>
 </div>
 

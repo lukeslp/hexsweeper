@@ -13,7 +13,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 
 ## Current status (2026-08-05)
 
-- [x] **Plate perf** — Light/Dark: seam-only Soft UI LOD when zoomed out (0.78 enter / 0.82 exit hysteresis); full extrusion when zoomed in; Escape keeps its own seam LOD; frustum cull @ 80 cells in LOD / 220 full; IntersectionObserver + iframe blur + idle RAF throttle in `core.js`
+- [x] **Plate perf** — Light/Dark: seam-only Soft UI LOD when zoomed out (0.87 enter / 0.91 exit hysteresis; landing zoom 0.72); full extrusion when zoomed in; Escape keeps its own seam LOD; frustum cull @ 80 cells in LOD / 220 full; IntersectionObserver + iframe blur + idle RAF throttle in `core.js`
 - [x] **No dig auto-pan** — `core.js` no longer calls `focusOnCell` on dig/chord; Escape intro zoom on Reset unchanged
 - [x] **Lab → collection** — `export-collection.py` exports `collection/skin-*.html`; desk lists Production + Lab with Open + Copy HTML (copy on index only)
 - [x] **Choices lab redirects** — `choices/lab/*.html` redirect to collection pens; playable pages are game-only (no Copy bar)

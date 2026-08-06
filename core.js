@@ -1915,7 +1915,7 @@
     function isEndlessIdle(ts) {
       if (!state.endless) return false;
       const z = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
-      if (z >= 0.78) return false;
+      if (z >= 0.87) return false;
       const camMoving =
         Math.abs(state.camTX - state.camX) > 0.5 || Math.abs(state.camTY - state.camY) > 0.5;
       if (camMoving || state.pointer.active) return false;

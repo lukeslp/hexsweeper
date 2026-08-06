@@ -306,6 +306,8 @@
     const helpOverlay = document.getElementById("help-overlay");
     const helpPanel = document.getElementById("help-panel");
     const helpBtn = document.getElementById("help-btn");
+    const helpCloseBtn = document.getElementById("help-close-btn");
+    const helpDoneBtn = document.getElementById("help-done-btn");
     let helpFocusReturn = null;
     let shareBusy = false;
 
@@ -1636,10 +1638,10 @@
           touchMoved = true;
           clearTimeout(longPressTimer);
           state.pressed = -1;
-          state.targetRotY = state.dragStart.rotY + dx * 0.008;
+          state.targetRotY = state.dragStart.rotY + dx * 0.0105;
           state.targetRotX = Math.max(
             -0.8,
-            Math.min(0.8, state.dragStart.rotX + dy * 0.008)
+            Math.min(0.8, state.dragStart.rotX + dy * 0.0105)
           );
           invalidateProjection();
         }
@@ -1728,11 +1730,8 @@
     if (sizeBtn) sizeBtn.addEventListener("click", hudClick(cycleSize));
     if (themeBtn) themeBtn.addEventListener("click", hudClick(cycleTheme));
     if (helpBtn) helpBtn.addEventListener("click", hudClick(() => openHelp(false)));
-    // Any click dismisses (links still navigate). No X / Got it controls.
-    helpOverlay?.addEventListener("click", (e) => {
-      if (e.target.closest("a")) return;
-      closeHelp();
-    });
+    if (helpCloseBtn) helpCloseBtn.addEventListener("click", hudClick(closeHelp));
+    if (helpDoneBtn) helpDoneBtn.addEventListener("click", hudClick(closeHelp));
 
     window.addEventListener("keydown", (e) => {
       if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;

@@ -3214,7 +3214,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     function isEndlessIdle(ts) {
       if (!state.endless) return false;
       const z = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
-      if (z >= 0.78) return false;
+      if (z >= 0.87) return false;
       const camMoving =
         Math.abs(state.camTX - state.camX) > 0.5 || Math.abs(state.camTY - state.camY) > 0.5;
       if (camMoving || state.pointer.active) return false;
@@ -3859,6 +3859,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
   // Matches the clamp in core.js applyViewZoom — fully zoomed out.
   const MIN_VIEW_ZOOM = 0.55;
+  /** Light/Dark landing zoom — nearer seam crossover than MIN so a slight zoom-out hits seam LOD. */
+  const PLATE_INITIAL_ZOOM = 0.72;
 
   // ?deal=1 opens a starting patch in any mode, the way Escape always does.
   // Used by tools/og-card.html so social cards show a game rather than a lid.
@@ -3877,14 +3879,14 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       name: "Light · Infinite",
       ...PLATE_LIGHT,
       // Open the plate wide: the desk reads as a field, not a handful of hexes
-      initialZoom: MIN_VIEW_ZOOM,
+      initialZoom: PLATE_INITIAL_ZOOM,
     },
     {
       ...MATERIAL_LIBRARY[0],
       id: "dark",
       name: "Dark · Infinite",
       ...PLATE_DARK,
-      initialZoom: MIN_VIEW_ZOOM,
+      initialZoom: PLATE_INITIAL_ZOOM,
     },
     {
       ...MATERIAL_LIBRARY[0],
@@ -6808,15 +6810,15 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
    * Soft UI / Escape visual LOD: at open zoom the endless plate can be thousands of
    * extruded hexes — drop walls/specular/ground shadows and paint seams only.
    * Light/Dark prefer seam-only when zoomed out; full extrusion when zoomed in.
-   * Hysteresis around 0.78–0.82 reduces seam/digit flicker at the crossover.
+   * Hysteresis around 0.87–0.91 reduces seam/digit flicker at the crossover.
    * Gates on viewZoom (not viewport-fit cellSize — same rule as Plague LOD).
    */
   function useSoftUiLod(th, s) {
     if (!th || th.material !== "neumorph" || th.flatPlate) return false;
     const z = s && Number.isFinite(s.viewZoom) ? s.viewZoom : 1;
     const n = s && s.map ? s.map.size : 0;
-    const enter = z < 0.78 || (n > 520 && z < 0.88);
-    const exit = z >= 0.82 && (n <= 520 || z >= 0.92);
+    const enter = z < 0.87 || (n > 520 && z < 0.94);
+    const exit = z >= 0.91 && (n <= 520 || z >= 0.96);
     if (s._softUiLod == null) s._softUiLod = enter;
     else if (s._softUiLod) {
       if (exit) s._softUiLod = false;
