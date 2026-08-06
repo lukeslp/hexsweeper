@@ -24,11 +24,13 @@
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
 <style>
-/* Sphere chrome follows field (bg): light page for Light/Ink, dark for Shell/Dark */
+/* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
 :root,
 body[data-sphere-chrome="light"],
 body[data-sphere-theme="light"],
-body[data-sphere-theme="ink"] {
+body[data-sphere-theme="ink"],
+body[data-sphere-theme="float"],
+body[data-sphere-theme="card"] {
   --bg-color: #ffffff;
   --text-main: #000000;
   --text-sub: #666666;
@@ -478,7 +480,7 @@ body.help-open { overflow: hidden; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hex Sphere</h2>
-    <p class="help-lede">Dig and flag on a closed hex sphere.<br>Six neighbors · first dig is safe · drag to spin · progress autosaves.<br>Size XS→XL · Theme cycles Light · Shell · Dark · Ink (tile·field pairings).<br><kbd>N</kbd> cycles count styles (numerals · rings · yellow · flush · borderless).</p>
+    <p class="help-lede">Dig and flag on a closed hex sphere.<br>Six neighbors · first dig is safe · drag to spin · progress autosaves.<br>Size XS→XL · Theme cycles Light · Shell · Dark · Ink · Float · Card.<br><kbd>N</kbd> cycles count styles (numerals · rings · yellow · flush · borderless).</p>
     <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic Minesweeper screenshot">
       <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper" width="320" height="240" loading="lazy">
     </button>
@@ -500,8 +502,8 @@ body.help-open { overflow: hidden; }
   <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
-<script src="hexasphere.js?v=20260807a"></script>
-<script src="sphere.js?v=20260807a"></script>
+<script src="hexasphere.js?v=20260807b"></script>
+<script src="sphere.js?v=20260807b"></script>
 <script>
 SphereSweeper.boot({ canvasId: "gameCanvas" });
 (function () {

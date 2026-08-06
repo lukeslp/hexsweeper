@@ -2,20 +2,20 @@
  * File Purpose: Hexsweeper on a closed hex sphere — dig/flag/flood via neighborIndices.
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
- * Chrome: Reset·Size·Theme | Flag | Help; sizes XS–XL; themes Light·Shell·Dark·Ink.
- * Mono: white/white, white/black, black/black, black/white (tile·field); wells opposite the shell.
+ * Chrome: Reset·Size·Theme | Flag | Help; sizes XS–XL; themes Light·Shell·Dark·Ink·Float·Card.
+ * Mono: four shell·field pairings + two light-field float themes (contact shadow under sphere).
  * Zoom: wheel + pinch (clamped); starts pulled back (~0.72×).
- * Hover: lift only activatable covered faces (+ pinned flags); cleared stay put.
- * Cleared: empty (0) faces recess; numbered clears stay flush. Rim skirts on the basin edge.
+ * Heights (highest→lowest): covered → flagged → numbered clear → empty clear.
+ * Hover: temporary lift on activatable covered only (cleared stay put).
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D projection; drag tumbles freely; camera angles stay continuous (no ±π wrap yoink).
- * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
+ * Idle: ambient yaw until first canvas interaction (off under reduced motion).
  * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
  * Persist: autosave mid-run (`hexsweeper-sphere-run-v1`); confirm before Reset / size change.
- * Flags: pure red fill only (no glyph on the tile).
+ * Flags: pure red fill only (no glyph); sit at the flagged height tier.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
@@ -50,24 +50,32 @@
   const END_MINE_STEP_MS = 42;
   const END_MINE_CAP_MS = 1200;
   const END_SHAKE_DECAY = 0.88;
-  /** Idle yaw before first interact — ~1.4°/s, one turn ≈ 4.3 min. */
-  const AMBIENT_SPIN_RAD_PER_MS = 0.000024;
+  /** Idle yaw before first interact — ~2.6°/s, one turn ≈ 2.3 min. */
+  const AMBIENT_SPIN_RAD_PER_MS = 0.000045;
 
   /**
-   * Four mono pairings (tile · field), flat fills only:
+   * Mono pairings (tile · field), flat fills only:
    *   Light  — white on white · black wells/core
    *   Shell  — white on black · black wells/core   (light-on-dark)
    *   Dark   — black on black · white wells/core
    *   Ink    — black on white · white wells/core   (dark-on-light)
+   *   Float  — Light + contact shadow (sphere floats on the light field)
+   *   Card   — Ink + contact shadow
+   *
+   * Height tiers (radial lift, highest → lowest) share slots with optional
+   * tier* color fields — numbered uses the same well fill as empty for now.
    */
   function monoTheme(spec) {
     const whiteShell = spec.shell === "white";
     const whiteField = spec.field === "white";
     const whiteWell = !whiteShell; // dig into the opposite of the shell
+    const float = !!spec.float;
+    const well = whiteWell ? "#ffffff" : "#000000";
     return {
       id: spec.id,
       name: spec.name,
       chrome: whiteField ? "light" : "dark",
+      float,
       accent: whiteField ? "#000000" : "#ffffff",
       pureCovered: true,
       pureRevealed: true,
@@ -77,8 +85,13 @@
       coveredHi: whiteShell ? "#ffffff" : "#000000",
       coveredEdge: whiteShell ? "#000000" : "#ffffff",
       coveredShadow: whiteShell ? "#cccccc" : "#000000",
-      revealed: whiteWell ? "#ffffff" : "#000000",
-      revealedEmpty: whiteWell ? "#ffffff" : "#000000",
+      // Color-tier slots (height tiers always apply; fill override optional).
+      tierCovered: whiteShell ? "#ffffff" : "#000000",
+      tierFlagged: "#ff0000",
+      tierNumbered: well,
+      tierEmpty: well,
+      revealed: well,
+      revealedEmpty: well,
       revealedEdge: whiteWell ? "#999999" : "#6a6a6a",
       valleyGroove: whiteWell ? "#777777" : "#8a8a8a",
       valleyGrooveDeep: whiteWell ? "#cccccc" : "#3a3a3a",
@@ -96,6 +109,11 @@
       backface: whiteWell ? "#ffffff" : "#000000",
       backfaceEdge: whiteWell ? "#cccccc" : "#333333",
       core: whiteWell ? "#ffffff" : "#000000",
+      floatShadow: float
+        ? whiteField
+          ? "rgba(0,0,0,0.18)"
+          : "rgba(255,255,255,0.12)"
+        : null,
       text: whiteWell
         ? {
             1: "#000000",
@@ -144,8 +162,29 @@
     shell: "black",
     field: "white",
   });
+  const THEME_FLOAT = monoTheme({
+    id: "float",
+    name: "Float",
+    shell: "white",
+    field: "white",
+    float: true,
+  });
+  const THEME_CARD = monoTheme({
+    id: "card",
+    name: "Card",
+    shell: "black",
+    field: "white",
+    float: true,
+  });
 
-  const THEMES = [THEME_LIGHT, THEME_SHELL, THEME_DARK, THEME_INK];
+  const THEMES = [
+    THEME_LIGHT,
+    THEME_SHELL,
+    THEME_DARK,
+    THEME_INK,
+    THEME_FLOAT,
+    THEME_CARD,
+  ];
   const DEFAULT_THEME = THEME_LIGHT;
   const SIZE_ORDER = ["xsmall", "easy", "medium", "hard", "xlarge"];
   const SIZE_LABEL = {
@@ -169,7 +208,7 @@
     hard: 1442,
     xlarge: 2252,
   };
-  const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v5";
+  const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v6";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
@@ -202,11 +241,19 @@
   const INITIAL_ZOOM = 0.72;
   /** Sphere fill of the short viewport edge at zoomFactor = 1. */
   const BASE_SCALE_FRAC = 0.42;
-  /** Hover / press radial lift in sphere-radius units (~1). Cut 60% from first pass. */
+  /** Hover / press radial lift in sphere-radius units (~1). Temporary on covered. */
   const HOVER_LIFT = 0.022;
   const PRESS_LIFT = 0.011;
-  /** Cleared faces recess inward (inverse of hover lift). */
-  const REVEAL_INSET = -0.018;
+  /**
+   * Four permanent height tiers (radial, sphere-radius units).
+   * Covered highest → empty deepest. Hover adds HOVER_LIFT on covered only.
+   */
+  const TIER_COVERED = 0;
+  const TIER_FLAGGED = -0.009;
+  const TIER_NUMBERED = -0.018;
+  const TIER_EMPTY = -0.034;
+  /** @deprecated kept as alias of TIER_NUMBERED for any external callers */
+  const REVEAL_INSET = TIER_NUMBERED;
   /** Static letter marks — readable size at a glance. */
   const SIZE_ICONS = {
     xsmall: '<span class="size-mark" data-size="XS" aria-hidden="true">XS</span>',
@@ -225,6 +272,10 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
     ink:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5s5 5.2 5 9.2a5 5 0 1 1-10 0c0-4 5-9.2 5-9.2z"></path><path d="M12 16.5v2"></path></svg>',
+    float:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><ellipse cx="12" cy="18" rx="6" ry="1.6" opacity="0.35" fill="currentColor" stroke="none"></ellipse><circle cx="12" cy="10" r="5"></circle></svg>',
+    card:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="19" rx="5.5" ry="1.4" opacity="0.35" fill="currentColor" stroke="none"></ellipse><rect x="6" y="4" width="12" height="13" rx="1.5"></rect></svg>',
   };
 
   function boot(opts) {
@@ -237,6 +288,7 @@
       try {
         const id =
           localStorage.getItem(THEME_STORAGE_KEY) ||
+          localStorage.getItem("hexsweeper-sphere-theme-v5") ||
           localStorage.getItem("hexsweeper-sphere-theme-v4") ||
           localStorage.getItem("hexsweeper-sphere-theme-v3");
         if (id && THEMES.some((t) => t.id === id)) return id;
@@ -429,7 +481,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -1743,18 +1795,39 @@
     }
 
     /**
-     * Only fully opened empties (0) recess. Numbered clears stay flush with the shell.
-     * Flush/yellow: nothing recesses. Covered always flush.
+     * Permanent radial height for a cell (before hover/press).
+     * Covered → flagged → numbered clear → empty clear.
+     * Flush/yellow keep clears flush with the covered shell.
      */
+    function tileHeight(cell, styleId) {
+      if (!cell) return TIER_COVERED;
+      if (cell.flagged && !cell.revealed) return TIER_FLAGGED;
+      if (!cell.revealed) return TIER_COVERED;
+      if (styleId === "flush" || styleId === "yellow") return TIER_COVERED;
+      if (cell.isMine) return TIER_NUMBERED;
+      if (
+        styleId !== "numerals" &&
+        styleId !== "rings" &&
+        styleId !== "borderless"
+      ) {
+        return TIER_COVERED;
+      }
+      if (cell.neighborMines === 0) return TIER_EMPTY;
+      return TIER_NUMBERED;
+    }
+
+    /** True when a clear sits below the shell (numbered or empty recess). */
     function tileShouldInset(cell, styleId) {
-      if (!cell.revealed || cell.flagged || cell.isMine) return false;
-      if (styleId === "flush" || styleId === "yellow") return false;
-      if (cell.neighborMines !== 0) return false;
-      return (
-        styleId === "numerals" ||
-        styleId === "rings" ||
-        styleId === "borderless"
-      );
+      const h = tileHeight(cell, styleId);
+      return h < TIER_COVERED - 1e-6 && !(cell.flagged && !cell.revealed);
+    }
+
+    /** Quantize height for skirt comparisons (float noise guard). */
+    function heightBucket(h) {
+      if (h >= TIER_COVERED - 0.002) return 0;
+      if (h >= TIER_FLAGGED - 0.002) return 1;
+      if (h >= TIER_NUMBERED - 0.002) return 2;
+      return 3;
     }
 
     /** Map each boundary edge → neighbor tile index (for valley perimeter skirts). */
@@ -2040,7 +2113,7 @@
       // Flags: pure red fill only — no glyph (red is enough).
       if (cell.flagged && !cell.revealed) {
         return {
-          fill: T.flagFill,
+          fill: T.tierFlagged || T.flagFill,
           stroke: T.flagEdge,
           lineWidth: 2,
           showLabel: false,
@@ -2092,11 +2165,11 @@
           };
         }
         const empty = cell.neighborMines === 0;
-        let fill = pureWell
-          ? empty
-            ? T.revealedEmpty
-            : T.revealed
-          : lit(empty ? T.revealedEmpty : T.revealed, proj.normalZ, 0.28);
+        // Numbered shares empty well fill for now (tier color slots reserved).
+        const wellFill = empty
+          ? T.tierEmpty || T.revealedEmpty
+          : T.tierNumbered || T.revealed;
+        let fill = pureWell ? wellFill : lit(wellFill, proj.normalZ, 0.28);
         const pulseAge = now - cell.pulseAt;
         if (
           !state.reduceMotion &&
@@ -2172,6 +2245,32 @@
       ctx.fillStyle = grd;
       ctx.fillRect(0, 0, w, h);
 
+      // Float themes: soft contact shadow under the sphere (light-field lift).
+      if (state.theme.float) {
+        const r = Math.max(12, state.scale * 1.02);
+        const cx = state.centerX;
+        const cy = state.centerY + r * 0.08;
+        const ink =
+          (state.theme.chrome || "light") === "light"
+            ? [0, 0, 0]
+            : [255, 255, 255];
+        const sh = ctx.createRadialGradient(
+          cx,
+          cy + r * 0.12,
+          r * 0.2,
+          cx,
+          cy + r * 0.18,
+          r * 1.05
+        );
+        sh.addColorStop(0, `rgba(${ink[0]},${ink[1]},${ink[2]},0.22)`);
+        sh.addColorStop(0.45, `rgba(${ink[0]},${ink[1]},${ink[2]},0.1)`);
+        sh.addColorStop(1, `rgba(${ink[0]},${ink[1]},${ink[2]},0)`);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + r * 0.22, r * 0.92, r * 0.28, 0, 0, Math.PI * 2);
+        ctx.fillStyle = sh;
+        ctx.fill();
+      }
+
       // Sphere underlayer / core — black beneath white shell (and inverse).
       const coreFill = state.theme.core || state.theme.backface || "#000000";
       ctx.beginPath();
@@ -2203,75 +2302,74 @@
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
 
-      // Valley membership — rim cliffs only; floor grid is the inset face stroke.
-      const valleyInset = new Uint8Array(state.cells.length);
+      // Per-tile permanent heights (hover is a temporary fifth offset).
+      const heights = new Float32Array(state.cells.length);
       for (let i = 0; i < state.cells.length; i++) {
         const c = state.cells[i];
         const ready =
           state.reduceMotion ||
           now >= c.visualDue ||
           c.animReveal >= 0.98;
-        if (tileShouldInset(c, styleId) && ready) valleyInset[i] = 1;
+        // While the reveal anim is pending, keep shell height so flood doesn't pop.
+        if (c.revealed && !ready) heights[i] = TIER_COVERED;
+        else heights[i] = tileHeight(c, styleId);
       }
 
       for (const proj of projected) {
         const idx = proj.index;
         const cell = state.cells[idx];
-        // Pinned flags + hover/press on *activatable* faces draw in the raised pass.
-        const pinnedFlag = cell.flagged && !cell.revealed;
+        // Hover/press on activatable covered faces draw in the raised pass.
         const hoverRaise =
           highlightIdx >= 0 &&
           idx === highlightIdx &&
           tileCanActivate(cell);
-        if (proj.z > 0.02 && (pinnedFlag || hoverRaise)) {
+        if (proj.z > 0.02 && hoverRaise) {
           continue;
         }
         const tile = state.tiles[idx];
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
-        const shouldInset = valleyInset[idx] && proj.z > 0.02;
+        const h = heights[idx];
         let drawProj = proj;
         let markLift = 0;
-        if (shouldInset) {
-          const inset = projectTile(
-            tile,
-            state.rotY,
-            state.rotX,
-            REVEAL_INSET
-          );
+        if (Math.abs(h) > 1e-6 && proj.z > 0.02) {
+          const lifted = projectTile(tile, state.rotY, state.rotX, h);
           const baseBoundary =
-            inset.baseBoundary ||
+            lifted.baseBoundary ||
             tile.boundary.map((b) =>
               projectPoint(b, state.rotY, state.rotX)
             );
-          // Cliff only where the valley meets a non-valley neighbor.
+          // Cliff only toward a strictly higher neighbor (same-depth edges stay open).
+          const myBucket = heightBucket(h);
           drawSelectiveSkirt(
             idx,
             baseBoundary,
-            inset.boundary,
+            lifted.boundary,
             darkMono,
-            (ni) => !!valleyInset[ni]
+            (ni) => heightBucket(heights[ni]) >= myBucket
           );
-          drawProj = inset;
-          markLift = REVEAL_INSET;
-          if (styleId === "borderless") {
-            // Seamless valley floor — no per-hex grid (covered tiles keep edges).
-            colors = {
-              ...colors,
-              stroke: colors.fill,
-              lineWidth: 0,
-            };
-          } else {
-            // Numerals/rings/yellow: borders ride the recessed face.
-            const groove =
-              state.theme.valleyGroove ||
-              state.theme.revealedEdge ||
-              colors.stroke;
-            colors = {
-              ...colors,
-              stroke: groove,
-              lineWidth: Math.max(colors.lineWidth || 1.2, 1.25),
-            };
+          drawProj = lifted;
+          markLift = h;
+          if (h < -1e-6) {
+            if (styleId === "borderless") {
+              // Seamless valley floor — no per-hex grid (covered tiles keep edges).
+              colors = {
+                ...colors,
+                stroke: colors.fill,
+                lineWidth: 0,
+              };
+            } else if (!(cell.flagged && !cell.revealed)) {
+              // Recessed clears: groove rides the inset face.
+              const groove =
+                state.theme.valleyGroove ||
+                state.theme.revealedEdge ||
+                colors.stroke;
+              colors = {
+                ...colors,
+                stroke: groove,
+                lineWidth: Math.max(colors.lineWidth || 1.2, 1.25),
+              };
+            }
           }
         }
         const pop =
@@ -2289,50 +2387,38 @@
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
-      // Raised pass: pinned flags (always) + hover/press on covered only.
-      const raisedIdxs = new Set();
-      for (let i = 0; i < state.cells.length; i++) {
-        if (state.cells[i].flagged && !state.cells[i].revealed) {
-          raisedIdxs.add(i);
-        }
-      }
+      // Raised pass: hover/press on covered only (flags sit at TIER_FLAGGED).
       if (
         highlightIdx >= 0 &&
         tileCanActivate(state.cells[highlightIdx])
       ) {
-        raisedIdxs.add(highlightIdx);
-      }
-
-      for (const idx of raisedIdxs) {
+        const idx = highlightIdx;
         const base = projected.find((p) => p.index === idx && p.z > 0.02);
-        if (!base) continue;
-        const tile = state.tiles[idx];
-        const cell = state.cells[idx];
-        let colors = drawColorsForStyle(
-          tileColors(idx, base, cell, tile, now),
-          styleId,
-          cell
-        );
-        const pinnedFlag = cell.flagged && !cell.revealed;
-        const lift = pinnedFlag
-          ? HOVER_LIFT
-          : state.pressed === idx
-            ? PRESS_LIFT
-            : HOVER_LIFT;
-        const raised = projectTile(tile, state.rotY, state.rotX, lift);
-        const baseBoundary =
-          raised.baseBoundary ||
-          tile.boundary.map((b) => projectPoint(b, state.rotY, state.rotX));
-        drawExtrusionSkirt(baseBoundary, raised.boundary);
-        let fill = colors.fill;
-        if (!cell.revealed && !cell.flagged) {
-          // Nudge toward the edge ink so hover reads on pure white *and* pure black.
-          fill = colorMix(colors.fill, state.theme.coveredEdge, 0.14);
+        if (base) {
+          const tile = state.tiles[idx];
+          const cell = state.cells[idx];
+          let colors = drawColorsForStyle(
+            tileColors(idx, base, cell, tile, now),
+            styleId,
+            cell
+          );
+          const lift =
+            state.pressed === idx ? PRESS_LIFT : HOVER_LIFT;
+          const raised = projectTile(tile, state.rotY, state.rotX, lift);
+          const baseBoundary =
+            raised.baseBoundary ||
+            tile.boundary.map((b) => projectPoint(b, state.rotY, state.rotX));
+          drawExtrusionSkirt(baseBoundary, raised.boundary);
+          let fill = colors.fill;
+          if (!cell.revealed && !cell.flagged) {
+            // Nudge toward the edge ink so hover reads on pure white *and* pure black.
+            fill = colorMix(colors.fill, state.theme.coveredEdge, 0.14);
+          }
+          // Covered tiles always keep a visible edge (even in borderless mode).
+          const edgeW = Math.max(colors.lineWidth || 1.5, 1.8);
+          drawHex(raised, fill, colors.stroke, edgeW);
+          paintCountMark(tile, raised, cell, colors, lift);
         }
-        // Covered tiles always keep a visible edge (even in borderless mode).
-        const edgeW = Math.max(colors.lineWidth || 1.5, 1.8);
-        drawHex(raised, fill, colors.stroke, edgeW);
-        paintCountMark(tile, raised, cell, colors, lift);
       }
 
       drawEndFxOverlay(now);
