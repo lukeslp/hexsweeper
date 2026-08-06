@@ -2,7 +2,8 @@
  * File Purpose: Hexsweeper on a closed hex sphere — dig/flag/flood via neighborIndices.
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
- * Chrome: Reset · Size · Theme · Flag · Help; themes Void/Light/Dusk/Ember/Moss.
+ * Chrome: Reset·Size·Theme | Flag | Help pills; themes Void/Light/Dusk/Ember/Moss.
+ * Zoom: wheel + pinch adjust projection scale (clamped); rotate/dig/flag unchanged.
  * Endgame: lose mine cascade + burst; win ring pulse + confetti-lite (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
@@ -237,6 +238,30 @@
   const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v1";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
+  const ZOOM_MIN = 0.55;
+  const ZOOM_MAX = 2.25;
+
+  const SIZE_ICONS = {
+    easy:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><ellipse cx="12" cy="12" rx="6" ry="2.5" transform="rotate(-20 12 12)"></ellipse></svg>',
+    medium:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-20 12 12)"></ellipse></svg>',
+    hard:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10.5"></circle><ellipse cx="12" cy="12" rx="10.5" ry="4.5" transform="rotate(-20 12 12)"></ellipse><ellipse cx="12" cy="12" rx="10.5" ry="4.5" transform="rotate(40 12 12)"></ellipse></svg>',
+  };
+
+  const THEME_ICONS = {
+    void:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
+    light:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>',
+    dusk:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path><circle cx="18" cy="6" r="1" fill="currentColor" stroke="none"></circle><circle cx="20" cy="10" r="0.6" fill="currentColor" stroke="none"></circle></svg>',
+    ember:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.5 1-2.5 1-4.5 2 1 3 3.5 3 5.5a3 3 0 1 1-6 1.5z"></path><path d="M12 22c4-2 6-5.5 6-10a6 6 0 0 0-12 0c0 4.5 2 8 6 10z"></path></svg>',
+    moss:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>',
+  };
 
   function boot(opts) {
     opts = opts || {};
@@ -291,6 +316,8 @@
         typeof matchMedia === "function" &&
         matchMedia("(prefers-reduced-motion: reduce)").matches,
       radius: 1,
+      baseScale: 200,
+      zoomFactor: 1,
       scale: 200,
       centerX: 0,
       centerY: 0,
@@ -317,9 +344,7 @@
     const restartBtn = document.getElementById("reset-btn") || document.getElementById("restart-btn");
     const flagToggle = document.getElementById("flag-toggle");
     const sizeBtn = document.getElementById("size-btn");
-    const sizeBadge = document.getElementById("size-badge");
     const themeBtn = document.getElementById("theme-btn");
-    const themeDot = document.getElementById("theme-dot");
     const helpOverlay = document.getElementById("help-overlay");
     const helpBtn = document.getElementById("help-btn");
     const helpClose = document.getElementById("help-close");
@@ -353,18 +378,17 @@
       if (themeBtn) {
         themeBtn.title = `Theme — ${t.name}`;
         themeBtn.setAttribute("aria-label", `Theme: ${t.name}`);
+        themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.void;
       }
-      if (themeDot) themeDot.style.background = t.accent;
     }
 
     function syncSizeChrome() {
-      const label = SIZE_LABEL[state.difficulty] || "M";
       const name = SIZE_NAMES[state.difficulty] || "Medium";
       const faces = SIZE_FACES[state.difficulty] || 1002;
-      if (sizeBadge) sizeBadge.textContent = label;
       if (sizeBtn) {
         sizeBtn.title = `Size — ${name} (${faces} faces)`;
         sizeBtn.setAttribute("aria-label", `Board size: ${name}`);
+        sizeBtn.innerHTML = SIZE_ICONS[state.difficulty] || SIZE_ICONS.medium;
       }
     }
 
@@ -479,8 +503,22 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       state.centerX = w / 2;
       state.centerY = h / 2;
-      state.scale = Math.min(w, h) * 0.36;
+      state.baseScale = Math.min(w, h) * 0.36;
+      state.scale = state.baseScale * state.zoomFactor;
       state.projectedCache = null;
+    }
+
+    function setZoomFactor(factor) {
+      state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, factor));
+      state.scale = state.baseScale * state.zoomFactor;
+      invalidateProjection();
+      scheduleFrame();
+    }
+
+    function touchDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.hypot(dx, dy);
     }
 
     function rotatePoint(p, rotY, rotX) {
@@ -1379,8 +1417,22 @@
 
     let longPressTimer = null;
     let touchMoved = false;
+    let pinching = false;
+    let pinchStartDist = 0;
+    let pinchStartZoom = 1;
 
     function onPointerDown(e) {
+      if (e.type === "touchstart" && e.touches && e.touches.length >= 2) {
+        pinching = true;
+        touchMoved = true;
+        clearTimeout(longPressTimer);
+        state.dragging = false;
+        state.dragStart = null;
+        state.pressed = -1;
+        pinchStartDist = touchDistance(e.touches);
+        pinchStartZoom = state.zoomFactor;
+        return;
+      }
       if (state.isGameOver && state.won) return;
       const p = canvasPoint(e);
       touchMoved = false;
@@ -1401,6 +1453,21 @@
     }
 
     function onPointerMove(e) {
+      if (e.type === "touchmove" && e.touches && e.touches.length >= 2) {
+        e.preventDefault();
+        if (!pinching) {
+          pinching = true;
+          pinchStartDist = touchDistance(e.touches);
+          pinchStartZoom = state.zoomFactor;
+          clearTimeout(longPressTimer);
+          state.pressed = -1;
+        }
+        const dist = touchDistance(e.touches);
+        if (pinchStartDist > 0) {
+          setZoomFactor(pinchStartZoom * (dist / pinchStartDist));
+        }
+        return;
+      }
       const p = canvasPoint(e);
       if (state.dragging && state.dragStart) {
         const dx = p.x - state.dragStart.x;
@@ -1422,6 +1489,16 @@
 
     function onPointerUp(e) {
       clearTimeout(longPressTimer);
+      if (pinching) {
+        if (e.touches && e.touches.length >= 2) return;
+        pinching = false;
+        pinchStartDist = 0;
+        state.dragging = false;
+        state.dragStart = null;
+        state.pressed = -1;
+        touchMoved = false;
+        return;
+      }
       const p = canvasPoint(e.changedTouches ? e.changedTouches[0] : e);
       if (!touchMoved && state.dragStart) {
         const idx = pickTile(p.x, p.y);
@@ -1449,6 +1526,15 @@
     }, { passive: false });
     canvas.addEventListener("touchend", onPointerUp);
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    canvas.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const delta = -e.deltaY * 0.0012;
+        setZoomFactor(state.zoomFactor * (1 + delta));
+      },
+      { passive: false }
+    );
 
     if (restartBtn) {
       restartBtn.addEventListener("click", hudClick(() => {

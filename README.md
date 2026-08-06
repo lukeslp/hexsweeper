@@ -105,10 +105,10 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 
 - Canvas 2D projection of vendored hexasphere math (no Three.js)
 - Dig / flag / flood over geodesic `neighborIndices`; first dig safe; win/lose
-- Drag to rotate; flag mode + long-hold; RM-safe camera (no lerp when reduced motion)
+- Drag to rotate; scroll or pinch to zoom; flag mode + long-hold; RM-safe camera (no lerp when reduced motion)
 - Densities: **S** = 362 faces · 62 mines · **M** = 1002 · 170 · **L** = 1442 · 245 (~17% mine density; ~3× prior boards)
 - Flood expand: BFS ring stagger + brief flash/pop (logic opens immediately; paint catch-up; RM-safe)
-- **Chrome:** BR icon cluster — Reset · Size (icon cycles S→M→L) · Theme · Flag · Help
+- **Chrome:** three BR glass pills — Reset·Size·Theme | Flag | Help; size/theme icons morph per state (no corner badges)
 - **Themes:** Void (default dark/blue), Light (porcelain), Dusk, Ember, Moss — persisted in `localStorage`
 - **First visit:** short icon help modal (`hexsweeper-sphere-welcome-v1`); `?welcome=1` forces, `?welcome=0` skips
 - **Endgame FX:** lose — graph-distance mine cascade + particle burst + shock ring; win — clearance pulse + confetti-lite (`prefers-reduced-motion`: instant states)
