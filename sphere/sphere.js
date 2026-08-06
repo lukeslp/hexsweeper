@@ -2,9 +2,9 @@
  * File Purpose: Hexsweeper on a closed hex sphere — dig/flag/flood via neighborIndices.
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
- * Chrome: Reset·Size·Theme | Flag | Help pills; themes Void/Light/Dusk/Ember/Moss.
+ * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); rotate/dig/flag unchanged.
- * Endgame: lose mine cascade + burst; win ring pulse + confetti-lite (RM-safe).
+ * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
  * Author: Luke Steuber <luke@lukesteuber.com>
@@ -24,218 +24,107 @@
   const REVEAL_LERP = 0.18;
   const REVEAL_FLASH_MS = 240;
   const IDLE_FRAME_MS = 200;
-  const END_MINE_STEP_MS = 42;
-  const END_MINE_CAP_MS = 1200;
-  const END_SHAKE_DECAY = 0.88;
-  const END_PARTICLE_CAP = 120;
+  /** Blast phases (ms) match flat Soft UI: charge 0–300 · shock from 260 · scatter 300+ */
+  const BLAST_CHARGE_MS = 300;
+  const BLAST_SCATTER_MS = 300;
+  const BLAST_DURATION_MS = 2600;
+  const BLAST_SHAKE0 = 18;
+  const BLAST_KICK = 9.4;
+  const MAX_SHARDS = 420;
+  const END_PARTICLE_CAP = 180;
 
-  const THEME_VOID = {
-    id: "void",
-    name: "Void",
-    accent: "#60a5fa",
-    bg: "#060a12",
-    bgGlow: "#0e1624",
-    covered: "#1c2840",
-    coveredHi: "#263552",
-    coveredEdge: "#3d5278",
-    coveredShadow: "#0a1018",
-    revealed: "#2a3d58",
-    revealedEmpty: "#324a6a",
-    revealedEdge: "#4a6288",
-    flagFill: "#7f1d1d",
-    flagIcon: "#fca5a5",
-    flagEdge: "#ef4444",
-    mine: "#dc2626",
-    mineCore: "#450a0a",
-    mineEdge: "#991b1b",
-    mineBurst: "#fef08a",
-    pentagon: "#243044",
-    pentagonEdge: "#4a5870",
-    hoverRing: "#60a5fa",
-    activeRing: "#93c5fd",
-    backface: "#111827",
-    backfaceEdge: "#1f2937",
-    text: {
-      1: "#7dd3fc",
-      2: "#6ee7b7",
-      3: "#fca5a5",
-      4: "#c4b5fd",
-      5: "#fcd34d",
-      6: "#f9a8d4",
-    },
-    label: "#94a3b8",
-    labelStroke: "#0c1018",
-    revealFlash: "#8cb4e8",
-    revealGlow: "#c8daf4",
-  };
-
+  /**
+   * Light mono is the reference board.
+   * Dark is its invert (black field, white covered tiles) except flags stay pure red.
+   */
   const THEME_LIGHT = {
     id: "light",
     name: "Light",
-    accent: "#64748b",
-    bg: "#e4e9f2",
-    bgGlow: "#f2f5fa",
-    covered: "#c8d0dc",
-    coveredHi: "#d8dee8",
-    coveredEdge: "#a8b4c8",
-    coveredShadow: "#b0bac8",
-    revealed: "#eef1f6",
-    revealedEmpty: "#f4f6fa",
-    revealedEdge: "#b8c4d4",
-    flagFill: "#fce7f3",
-    flagIcon: "#e11d48",
-    flagEdge: "#f43f5e",
-    mine: "#dc2626",
-    mineCore: "#fecaca",
-    mineEdge: "#b91c1c",
-    mineBurst: "#fef08a",
-    pentagon: "#bcc6d4",
-    pentagonEdge: "#94a3b8",
-    hoverRing: "#475569",
-    activeRing: "#334155",
-    backface: "#d0d8e4",
-    backfaceEdge: "#b0bac8",
+    accent: "#000000",
+    bg: "#ffffff",
+    bgGlow: "#f5f5f5",
+    covered: "#e8e8e8",
+    coveredHi: "#f2f2f2",
+    coveredEdge: "#999999",
+    coveredShadow: "#cccccc",
+    revealed: "#fafafa",
+    revealedEmpty: "#ffffff",
+    revealedEdge: "#b0b0b0",
+    flagFill: "#ff0000",
+    flagIcon: "#ffffff",
+    flagEdge: "#ff0000",
+    mine: "#000000",
+    mineCore: "#ffffff",
+    mineEdge: "#333333",
+    mineBurst: "#000000",
+    pentagon: "#e0e0e0",
+    pentagonEdge: "#888888",
+    hoverRing: "#000000",
+    activeRing: "#222222",
+    backface: "#f0f0f0",
+    backfaceEdge: "#d0d0d0",
     text: {
-      1: "#0369a1",
-      2: "#047857",
-      3: "#b91c1c",
-      4: "#6d28d9",
-      5: "#b45309",
-      6: "#be185d",
+      1: "#000000",
+      2: "#222222",
+      3: "#444444",
+      4: "#666666",
+      5: "#888888",
+      6: "#aaaaaa",
     },
-    label: "#475569",
-    labelStroke: "#f8fafc",
-    revealFlash: "#cbd5e1",
-    revealGlow: "#e2e8f0",
+    label: "#555555",
+    labelStroke: "#ffffff",
+    revealFlash: "#000000",
+    revealGlow: "#333333",
   };
 
-  const THEME_DUSK = {
-    id: "dusk",
-    name: "Dusk",
-    accent: "#a78bfa",
-    bg: "#100c18",
-    bgGlow: "#1a1428",
-    covered: "#241c38",
-    coveredHi: "#2e2448",
-    coveredEdge: "#4a3a68",
-    coveredShadow: "#0c0814",
-    revealed: "#342a50",
-    revealedEmpty: "#3e325c",
-    revealedEdge: "#5a4878",
-    flagFill: "#4c1d4a",
-    flagIcon: "#f0abfc",
-    flagEdge: "#d946ef",
-    mine: "#c026d3",
-    mineCore: "#3b0764",
-    mineEdge: "#86198f",
-    mineBurst: "#fde68a",
-    pentagon: "#2a2040",
-    pentagonEdge: "#504068",
-    hoverRing: "#a78bfa",
-    activeRing: "#c4b5fd",
-    backface: "#181024",
-    backfaceEdge: "#281c38",
+  /** Invert of light — white unactivated tiles on black; red flags unchanged. */
+  const THEME_DARK = {
+    id: "dark",
+    name: "Dark",
+    accent: "#ffffff",
+    bg: "#000000",
+    bgGlow: "#0a0a0a",
+    covered: "#ffffff",
+    coveredHi: "#f2f2f2",
+    coveredEdge: "#666666",
+    coveredShadow: "#333333",
+    revealed: "#050505",
+    revealedEmpty: "#000000",
+    revealedEdge: "#4f4f4f",
+    flagFill: "#ff0000",
+    flagIcon: "#ffffff",
+    flagEdge: "#ff0000",
+    mine: "#ffffff",
+    mineCore: "#000000",
+    mineEdge: "#cccccc",
+    mineBurst: "#ffffff",
+    pentagon: "#f5f5f5",
+    pentagonEdge: "#777777",
+    hoverRing: "#ffffff",
+    activeRing: "#dddddd",
+    backface: "#0f0f0f",
+    backfaceEdge: "#2f2f2f",
     text: {
-      1: "#93c5fd",
-      2: "#6ee7b7",
-      3: "#fda4af",
-      4: "#c4b5fd",
-      5: "#fcd34d",
-      6: "#f9a8d4",
+      1: "#ffffff",
+      2: "#dddddd",
+      3: "#bbbbbb",
+      4: "#999999",
+      5: "#777777",
+      6: "#555555",
     },
-    label: "#a89bc8",
-    labelStroke: "#100c18",
-    revealFlash: "#9f8fd8",
-    revealGlow: "#c8b8f0",
+    label: "#aaaaaa",
+    labelStroke: "#000000",
+    revealFlash: "#ffffff",
+    revealGlow: "#cccccc",
   };
 
-  const THEME_EMBER = {
-    id: "ember",
-    name: "Ember",
-    accent: "#fb923c",
-    bg: "#0c0604",
-    bgGlow: "#180c08",
-    covered: "#281810",
-    coveredHi: "#342018",
-    coveredEdge: "#503828",
-    coveredShadow: "#080402",
-    revealed: "#3c2818",
-    revealedEmpty: "#483020",
-    revealedEdge: "#604838",
-    flagFill: "#4a1810",
-    flagIcon: "#fdba74",
-    flagEdge: "#ea580c",
-    mine: "#dc2626",
-    mineCore: "#450a0a",
-    mineEdge: "#991b1b",
-    mineBurst: "#fef08a",
-    pentagon: "#302018",
-    pentagonEdge: "#504030",
-    hoverRing: "#fb923c",
-    activeRing: "#fdba74",
-    backface: "#140c08",
-    backfaceEdge: "#241810",
-    text: {
-      1: "#7dd3fc",
-      2: "#86efac",
-      3: "#fca5a5",
-      4: "#c4b5fd",
-      5: "#fcd34d",
-      6: "#f9a8d4",
-    },
-    label: "#c8a090",
-    labelStroke: "#0c0604",
-    revealFlash: "#d89060",
-    revealGlow: "#f0b890",
-  };
-
-  const THEME_MOSS = {
-    id: "moss",
-    name: "Moss",
-    accent: "#6b9e72",
-    bg: "#080c08",
-    bgGlow: "#101810",
-    covered: "#182018",
-    coveredHi: "#202a20",
-    coveredEdge: "#344838",
-    coveredShadow: "#040804",
-    revealed: "#283830",
-    revealedEmpty: "#304438",
-    revealedEdge: "#405848",
-    flagFill: "#2a3020",
-    flagIcon: "#d4a574",
-    flagEdge: "#a08058",
-    mine: "#7f4a3a",
-    mineCore: "#2a1810",
-    mineEdge: "#5c3828",
-    mineBurst: "#e8d8a0",
-    pentagon: "#1c281c",
-    pentagonEdge: "#384838",
-    hoverRing: "#6b9e72",
-    activeRing: "#8fbc8f",
-    backface: "#0c100c",
-    backfaceEdge: "#182018",
-    text: {
-      1: "#7ec8e8",
-      2: "#8fd4a0",
-      3: "#d4a080",
-      4: "#a8c8d8",
-      5: "#d8c878",
-      6: "#c8a8b8",
-    },
-    label: "#88a888",
-    labelStroke: "#080c08",
-    revealFlash: "#688868",
-    revealGlow: "#98b898",
-  };
-
-  const THEMES = [THEME_VOID, THEME_LIGHT, THEME_DUSK, THEME_EMBER, THEME_MOSS];
-  const DEFAULT_THEME = THEME_VOID;
+  const THEMES = [THEME_LIGHT, THEME_DARK];
+  const DEFAULT_THEME = THEME_LIGHT;
   const SIZE_ORDER = ["easy", "medium", "hard"];
   const SIZE_LABEL = { easy: "S", medium: "M", hard: "L" };
   const SIZE_NAMES = { easy: "Small", medium: "Medium", hard: "Large" };
   const SIZE_FACES = { easy: 362, medium: 1002, hard: 1442 };
-  const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v1";
+  const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v3";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const ZOOM_MIN = 0.55;
@@ -251,16 +140,10 @@
   };
 
   const THEME_ICONS = {
-    void:
+    dark:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
     light:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>',
-    dusk:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path><circle cx="18" cy="6" r="1" fill="currentColor" stroke="none"></circle><circle cx="20" cy="10" r="0.6" fill="currentColor" stroke="none"></circle></svg>',
-    ember:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.5 1-2.5 1-4.5 2 1 3 3.5 3 5.5a3 3 0 1 1-6 1.5z"></path><path d="M12 22c4-2 6-5.5 6-10a6 6 0 0 0-12 0c0 4.5 2 8 6 10z"></path></svg>',
-    moss:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>',
   };
 
   function boot(opts) {
@@ -333,11 +216,64 @@
       active: false,
       won: false,
       t0: 0,
+      lastT: 0,
+      duration: BLAST_DURATION_MS,
       detonator: -1,
+      x: 0,
+      y: 0,
       particles: [],
       rings: [],
+      shards: [],
+      poppedMines: null,
       mineDue: null,
     };
+
+    function freshCell() {
+      return {
+        isMine: false,
+        revealed: false,
+        flagged: false,
+        neighborMines: 0,
+        animReveal: 0,
+        visualDue: 0,
+        pulseAt: 0,
+        endFlash: 0,
+        endPop: 0,
+        blast: null,
+        blastOx: 0,
+        blastOy: 0,
+        blastRot: 0,
+        blastAlpha: 1,
+        blastScale: 1,
+      };
+    }
+
+    function monoBlastPalette() {
+      const dark = state.theme.id !== "light";
+      return dark
+        ? ["#ffffff", "#e8e8e8", "#bbbbbb", "#888888", "#555555"]
+        : ["#000000", "#222222", "#444444", "#666666", "#999999"];
+    }
+
+    function monoShockStroke(alpha) {
+      const dark = state.theme.id !== "light";
+      return dark
+        ? `rgba(255,255,255,${alpha})`
+        : `rgba(0,0,0,${alpha})`;
+    }
+
+    function avgTileRadius(projected) {
+      if (!projected || !projected.length) return state.scale * 0.06;
+      let sum = 0;
+      let n = 0;
+      for (const p of projected) {
+        if (p.z > 0.02 && p.area > 0) {
+          sum += Math.sqrt(p.area);
+          n++;
+        }
+      }
+      return n ? sum / n : state.scale * 0.06;
+    }
 
     const statsMines = document.getElementById("stats-mines");
     const statsTime = document.getElementById("stats-time");
@@ -378,7 +314,7 @@
       if (themeBtn) {
         themeBtn.title = `Theme — ${t.name}`;
         themeBtn.setAttribute("aria-label", `Theme: ${t.name}`);
-        themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.void;
+        themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.dark;
       }
     }
 
@@ -696,17 +632,7 @@
       }
       state.sphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
       state.tiles = state.sphere.tiles;
-      state.cells = state.tiles.map(() => ({
-        isMine: false,
-        revealed: false,
-        flagged: false,
-        neighborMines: 0,
-        animReveal: 0,
-        visualDue: 0,
-        pulseAt: 0,
-        endFlash: 0,
-        endPop: 0,
-      }));
+      state.cells = state.tiles.map(() => freshCell());
       state.isFirstClick = true;
       state.isGameOver = false;
       state.won = false;
@@ -1177,11 +1103,17 @@
 
     function coveredStyle(proj, tile, isFront) {
       const T = state.theme;
-      const lit = shadeByNormal;
       let fill = tile.isPentagon ? T.pentagon : T.covered;
       let stroke = tile.isPentagon ? T.pentagonEdge : T.coveredEdge;
-      fill = lit(fill, proj.normalZ, isFront ? 0.38 : 0.22);
-      if (isFront) fill = colorMix(fill, T.coveredHi, 0.15);
+      // Light: soft gray lift. Dark invert: keep covered near pure white (edge contrast only).
+      if (T.id === "dark") {
+        const dim = isFront ? 0.04 : 0.1;
+        fill = colorMix(fill, "#000000", dim * (1 - Math.max(0, proj.normalZ)));
+        if (isFront) fill = colorMix(fill, T.coveredHi, 0.08);
+      } else {
+        fill = shadeByNormal(fill, proj.normalZ, isFront ? 0.38 : 0.22);
+        if (isFront) fill = colorMix(fill, T.coveredHi, 0.15);
+      }
       return {
         fill,
         stroke,
@@ -1256,14 +1188,15 @@
       }
 
       if (cell.flagged) {
+        // Pure red — only non-mono accent; skip normal shading so flags read flat.
         return {
-          fill: lit(T.flagFill, proj.normalZ, 0.2),
+          fill: T.flagFill,
           stroke: T.flagEdge,
           lineWidth: 2,
           showLabel: true,
           label: "⚑",
           labelColor: T.flagIcon,
-          labelStroke: T.mineCore,
+          labelStroke: T.flagFill,
         };
       }
 
@@ -1629,6 +1562,6 @@
     boot,
     CONFIG,
     THEMES,
-    DEFAULT_THEME: THEME_VOID,
+    DEFAULT_THEME: THEME_LIGHT,
   };
 })(typeof window !== "undefined" ? window : global);

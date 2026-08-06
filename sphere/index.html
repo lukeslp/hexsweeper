@@ -24,41 +24,21 @@
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
 <style>
-/* Sphere chrome tokens — overridden per theme via body[data-sphere-theme] */
-:root {
-  --bg-color: #0c1018;
-  --text-main: #c8d4e8;
-  --text-sub: #6b7a94;
-  --nav-bg: #141a26;
-  --nav-ink: #c8d4e8;
-}
+/* Sphere chrome tokens — pure mono dark/light via body[data-sphere-theme] */
+:root,
 body[data-sphere-theme="light"] {
-  --bg-color: #e8ecf2;
-  --text-main: #334155;
-  --text-sub: #64748b;
-  --nav-bg: #f0f3f8;
-  --nav-ink: #475569;
+  --bg-color: #ffffff;
+  --text-main: #000000;
+  --text-sub: #666666;
+  --nav-bg: #f0f0f0;
+  --nav-ink: #000000;
 }
-body[data-sphere-theme="dusk"] {
-  --bg-color: #14101c;
-  --text-main: #ddd6f0;
-  --text-sub: #8b7fad;
-  --nav-bg: #1c1628;
-  --nav-ink: #ddd6f0;
-}
-body[data-sphere-theme="ember"] {
-  --bg-color: #120a08;
-  --text-main: #fde8dc;
-  --text-sub: #b8907a;
-  --nav-bg: #1a100c;
-  --nav-ink: #fde8dc;
-}
-body[data-sphere-theme="moss"] {
-  --bg-color: #0a100c;
-  --text-main: #c8dcc8;
-  --text-sub: #6b8a6e;
-  --nav-bg: #101810;
-  --nav-ink: #c8dcc8;
+body[data-sphere-theme="dark"] {
+  --bg-color: #000000;
+  --text-main: #ffffff;
+  --text-sub: #888888;
+  --nav-bg: #111111;
+  --nav-ink: #ffffff;
 }
 html, body {
   height: 100%;
@@ -143,8 +123,8 @@ body.help-open { overflow: hidden; }
   background: color-mix(in srgb, var(--text-main) 14%, transparent);
   opacity: 1;
 }
-#flag-toggle.active { color: #f87171; }
-body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
+#flag-toggle.active { color: #ff0000; }
+body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
 /* Instructions modal */
 .help-overlay {
   position: fixed;
@@ -291,7 +271,7 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
 }
 </style>
 </head>
-<body data-sphere-theme="void">
+<body data-sphere-theme="light">
 <div class="sphere-stats" aria-label="Score">
   <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
   <div id="stats-time" class="stat-item visible" data-label="time" title="Elapsed seconds">000</div>
@@ -316,9 +296,10 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
         <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-20 12 12)"></ellipse>
       </svg>
     </button>
-    <button type="button" id="theme-btn" class="hud-btn" aria-label="Theme: Void" title="Theme — Void">
+    <button type="button" id="theme-btn" class="hud-btn" aria-label="Theme: Light" title="Theme — Light">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        <circle cx="12" cy="12" r="5"></circle>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
       </svg>
     </button>
   </div>
