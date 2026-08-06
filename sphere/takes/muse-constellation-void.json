@@ -1,0 +1,27 @@
+{
+  "id": "muse-constellation-void",
+  "title": "Muse: Starlit Void",
+  "tagline": "Hexsweeper 3D's Goldberg hex-sphere, adrift in a soft void as a constellation to be charted.",
+  "aesthetic": "A 3am observatory above the atmosphere \u2014 deep indigo void, brushed-slate sphere, frosted-glass tiles. Cleared wells pool into twilight indigo, numbers orbit as thin rings of starlight. Flags burn as small coral lighthouses, warm against the cold cosmos.",
+  "palette": {
+    "field": "#0B1020",
+    "shell": "#2E3A52",
+    "well": "#141C33",
+    "numberedWell": "#1B2547",
+    "edge": "#3D4E6E",
+    "flag": "#FF8A6B",
+    "text": "#D8E2FF",
+    "chrome": "dark",
+    "accent": "#8BB8FF"
+  },
+  "visualTweaks": {
+    "floatShadow": true,
+    "countStyleDefault": "rings",
+    "defaultZoom": 0.88,
+    "ambientSpin": true,
+    "boardSizeDefault": "medium"
+  },
+  "mechanicTwist": "Numbered wells wash with a faint count-tint (1 ice-blue \u2192 6 rose-amber) and render counts as luminous concentric rings; hovering a number briefly draws hairline constellation threads to adjacent same-count tiles.",
+  "helpLede": "Six neighbors, one sphere, first dig always safe. Flag the stars, trust the rings, and let the void reveal itself.",
+  "hudNote": "The void holds its breath \u2014 chart lightly."
+}
