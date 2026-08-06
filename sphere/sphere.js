@@ -1918,6 +1918,8 @@
         return;
       }
       if (e.key === "Escape") {
+        const lb = document.getElementById("history-lightbox");
+        if (lb?.classList.contains("open")) return;
         if (helpOverlay?.classList.contains("open")) closeHelp();
         return;
       }

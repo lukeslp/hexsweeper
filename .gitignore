@@ -12,5 +12,9 @@
 !assets/social/
 !assets/social/*.png
 
+# Sphere help history tile
+!sphere/assets/
+!sphere/assets/*.png
+
 # Staging frames for tools/shoot-og-cards.sh
 og-frames/
