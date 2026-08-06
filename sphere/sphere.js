@@ -269,6 +269,67 @@
     accent: "#d0d4dc",
   });
 
+  /**
+   * Glow — dark shell; revealed faces keep a luminous center (radial, clipped to hex).
+   * Empty clears glow hotter; numbered wells glow softer under the digit.
+   */
+  const THEME_GLOW = {
+    id: "glow",
+    name: "Glow",
+    chrome: "dark",
+    float: true,
+    wellGlow: true,
+    wellGlowHot: "#f4fbff",
+    wellGlowColor: "#5ec8ff",
+    wellGlowEmptyBoost: 1.15,
+    pureCovered: false,
+    pureRevealed: true,
+    accent: "#5ec8ff",
+    bg: "#03050a",
+    bgGlow: "#071018",
+    covered: "#141a24",
+    coveredHi: "#1e2836",
+    coveredEdge: "rgba(120,180,220,0.22)",
+    coveredShadow: "#000000",
+    tierCovered: "#141a24",
+    tierFlagged: "#ff2a2a",
+    tierNumbered: "#060a12",
+    tierEmpty: "#02060c",
+    revealed: "#060a12",
+    revealedEmpty: "#02060c",
+    revealedEdge: "rgba(100,170,220,0.2)",
+    valleyGroove: "rgba(90,160,210,0.18)",
+    valleyGrooveDeep: "rgba(0,0,0,0.55)",
+    flagFill: "#ff2a2a",
+    flagIcon: "#ffffff",
+    flagEdge: "#ff2a2a",
+    mine: "#1a0a0a",
+    mineCore: "#ff6644",
+    mineEdge: "#000000",
+    mineBurst: "#ffaa66",
+    pentagon: "#181f2a",
+    pentagonEdge: "rgba(120,180,220,0.28)",
+    hoverRing: "#8ad4ff",
+    activeRing: "#c8ecff",
+    backface: "#05080f",
+    backfaceEdge: "#121820",
+    core: "#02060c",
+    coreGlow: "#3aa0e8",
+    floatShadow: "rgba(0,0,0,0.4)",
+    text: {
+      1: "#b8e8ff",
+      2: "#7ec8ff",
+      3: "#5ad4a8",
+      4: "#f0c060",
+      5: "#f09060",
+      6: "#f07090",
+    },
+    label: "#e8f6ff",
+    labelStroke: "rgba(0,0,0,0.7)",
+    revealFlash: "#ffffff",
+    revealGlow: "#5ec8ff",
+  };
+
   const THEMES = [
     THEME_LIGHT,
     THEME_SHELL,
@@ -278,6 +339,7 @@
     THEME_CARD,
     THEME_EARTH,
     THEME_MOON,
+    THEME_GLOW,
   ];
   const DEFAULT_THEME = THEME_LIGHT;
 
@@ -555,6 +617,8 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"></path></svg>',
     moon:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
+    glow:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.35"></circle><circle cx="12" cy="12" r="7"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path></svg>',
   };
 
   /** Loaded equirectangular maps (ImageData cache). */
@@ -887,7 +951,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -2309,6 +2373,58 @@
       ctx.stroke();
     }
 
+    /**
+     * Radial center glow clipped to the hex face (Glow theme / wellGlow themes).
+     * Empty clears run hotter; numbered wells stay softer so digits stay readable.
+     */
+    function drawWellCenterGlow(proj, cell, now) {
+      const T = state.theme;
+      if (!T || !T.wellGlow || !cell || !cell.revealed || cell.isMine) return;
+      if (!proj.boundary || proj.boundary.length < 3) return;
+      const cx = proj.center.x;
+      const cy = proj.center.y;
+      const outer = Math.sqrt(Math.max(24, proj.area));
+      const r = outer * (cell.neighborMines === 0 ? 0.62 : 0.48);
+      let boost = cell.neighborMines === 0 ? T.wellGlowEmptyBoost || 1.1 : 0.62;
+      // Brief hotter flash right after dig.
+      if (!state.reduceMotion && cell.pulseAt) {
+        const age = now - cell.pulseAt;
+        if (age >= 0 && age < REVEAL_FLASH_MS * 1.4) {
+          const flash = 1 - age / (REVEAL_FLASH_MS * 1.4);
+          boost += flash * 0.55;
+        }
+      }
+      const hot = T.wellGlowHot || "#ffffff";
+      const mid = T.wellGlowColor || T.accent || "#88ccff";
+      const a0 = Math.min(0.95, 0.72 * boost);
+      const a1 = Math.min(0.7, 0.42 * boost);
+      ctx.save();
+      if (!drawHexPath(proj)) {
+        ctx.restore();
+        return;
+      }
+      ctx.clip();
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      // parseCssColor + rgba for soft falloff
+      const h = parseCssColor(hot);
+      const m = parseCssColor(mid);
+      g.addColorStop(0, `rgba(${h[0]},${h[1]},${h[2]},${a0})`);
+      g.addColorStop(0.38, `rgba(${m[0]},${m[1]},${m[2]},${a1})`);
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+      // Soft outer bloom (unclipped-ish: drawn inside clip still, larger radius)
+      if (cell.neighborMines === 0 && !state.reduceMotion) {
+        const r2 = r * 1.15;
+        const g2 = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r2);
+        g2.addColorStop(0, `rgba(${m[0]},${m[1]},${m[2]},${0.18 * boost})`);
+        g2.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g2;
+        ctx.fillRect(cx - r2, cy - r2, r2 * 2, r2 * 2);
+      }
+      ctx.restore();
+    }
+
     function drawHexRing(proj, color, lineWidth) {
       if (!drawHexPath(proj)) return;
       ctx.strokeStyle = color;
@@ -2871,17 +2987,34 @@
       }
 
       // Sphere underlayer / core — black beneath white shell (and inverse).
+      // Glow theme: soft luminous core so dug faces feel lit from inside.
       const coreFill = state.theme.core || state.theme.backface || "#000000";
-      ctx.beginPath();
-      ctx.arc(
-        state.centerX,
-        state.centerY,
-        Math.max(12, state.scale * 1.02),
-        0,
-        Math.PI * 2
-      );
-      ctx.fillStyle = coreFill;
-      ctx.fill();
+      const coreR = Math.max(12, state.scale * 1.02);
+      if (state.theme.wellGlow && state.theme.coreGlow) {
+        const cg = ctx.createRadialGradient(
+          state.centerX,
+          state.centerY,
+          coreR * 0.08,
+          state.centerX,
+          state.centerY,
+          coreR
+        );
+        const hot = parseCssColor(state.theme.wellGlowHot || "#ffffff");
+        const mid = parseCssColor(state.theme.coreGlow);
+        cg.addColorStop(0, `rgba(${hot[0]},${hot[1]},${hot[2]},0.55)`);
+        cg.addColorStop(0.35, `rgba(${mid[0]},${mid[1]},${mid[2]},0.35)`);
+        cg.addColorStop(0.75, coreFill);
+        cg.addColorStop(1, coreFill);
+        ctx.beginPath();
+        ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
+        ctx.fillStyle = cg;
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
+        ctx.fillStyle = coreFill;
+        ctx.fill();
+      }
 
       if (!state.reduceMotion) {
         state.rotY += angleDelta(state.rotY, state.targetRotY) * 0.12;
@@ -2983,6 +3116,7 @@
         }
 
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
+        drawWellCenterGlow(drawProj, cell, now);
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
