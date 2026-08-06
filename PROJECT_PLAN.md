@@ -44,6 +44,8 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Light↔Dark keeps the run (cosmetic swap)
 - [x] First-visit welcome: “Have you played minesweeper?” + refresher
 - [x] Chrome: BR Appearance (sun/moon) · Reset · Menu; scores/modes/help inside Menu
+- [x] Help copy cut to a short dig sheet; Menu stripped of UX blurb / section labels
+- [x] Menu `[hidden]` flex override: Fire/Plague hide Export/Import + infinite hide S·M·L (`display: none !important`)
 - [x] BR Appearance: one icon via CSS `body[data-mode]` (SVG `[hidden]` was showing both)
 - [x] Menu theme chrome for Fire / Plague / Escape + outbound links (lukesteuber.com · datapoems.io)
 - [x] Blast cycle settle resets alphas/shards/particles (no broken corpses)

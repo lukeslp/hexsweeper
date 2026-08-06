@@ -413,7 +413,7 @@ body.flag-mode { cursor: cell; }
 body.welcome-open { overflow: hidden; }
 /* Collection one-pagers: strict = one theme; scoped = allowModes only (e.g. Light/Dark) */
 body.onepager-locked #plate-toggle,
-body.onepager-locked #mode-row { display: none !important; }
+body.onepager-locked .mode-switch { display: none !important; }
 body.onepager-locked .welcome-overlay,
 body.onepager-scoped .welcome-overlay { display: none !important; }
 /* All production modes: full-bleed canvas so zoom/pan never hits a board box */
@@ -560,7 +560,9 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   flex-wrap: wrap;
   gap: 4px;
   width: 100%;
+  margin-top: 10px;
 }
+.mode-switch[hidden] { display: none !important; }
 .mode-switch button {
   flex: 1 1 auto;
   min-height: 44px;
@@ -668,42 +670,36 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
 }
 .help-overlay.open { opacity: 1; pointer-events: auto; }
 .help-panel {
-  width: min(420px, 100%);
-  max-height: min(80vh, 560px);
+  width: min(360px, 100%);
+  max-height: min(70vh, 420px);
   overflow: auto;
   background: color-mix(in srgb, var(--bg-color) 88%, transparent);
   color: var(--text-main);
   border: 0;
   border-radius: 22px;
-  box-shadow: 0 18px 48px rgba(0,0,0,0.22);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  padding: 1.5rem 1.4rem 1.35rem;
+  padding: 1.35rem 1.3rem 1.2rem;
   position: relative;
   box-shadow: 0 20px 50px rgba(0,0,0,0.35);
 }
 .help-panel h2 {
-  font-size: 1.25rem;
-  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+  margin: 0 0 0.65rem;
   letter-spacing: -0.02em;
 }
-.help-panel h3 {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-sub);
-  margin: 1.1rem 0 0.4rem;
-}
-.help-panel p, .help-panel li {
-  font-size: 0.95rem;
-  line-height: 1.5;
+.help-panel p {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 0 0 0.7rem;
   color: color-mix(in srgb, var(--text-main) 88%, var(--text-sub));
 }
-.help-panel ul {
-  margin: 0.35rem 0 0;
-  padding-left: 1.15rem;
+.help-panel p:last-child { margin-bottom: 0; }
+.help-panel .help-keys {
+  margin-top: 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-sub);
 }
-.help-panel li { margin: 0.25rem 0; }
 .help-panel kbd {
   font-family: ui-monospace, monospace;
   font-size: 0.8em;
@@ -731,18 +727,23 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
 
 /* Menu modal inherits skin-chrome; production widens + left-aligns */
 .modal-content {
-  width: min(340px, calc(100vw - 2.5rem));
+  width: min(300px, calc(100vw - 2.5rem));
   text-align: left;
-  padding: 28px 24px 22px;
+  padding: 24px 20px 18px;
 }
-.modal-content .instructions-text {
-  margin-top: 16px;
-  text-align: left;
+.modal-content .modal-row { align-items: stretch; }
+#size-row {
+  margin: 10px 0 0;
+  padding: 0;
+  justify-content: flex-start;
 }
-.modal-content .modal-row { align-items: flex-start; }
-#mode-row { flex-direction: column; align-items: stretch; gap: 6px; }
-#run-row { flex-direction: column; align-items: stretch; gap: 6px; }
-.modal-actions { justify-content: flex-start; }
+/* Flex rows ignore bare [hidden] — force hide for Fire/Plague size + Export/Import. */
+#size-row[hidden] { display: none !important; }
+.persist-inline {
+  display: contents;
+}
+.persist-inline[hidden] { display: none !important; }
+.modal-actions { justify-content: flex-start; margin-top: 12px; }
 .close-btn {
   width: 44px;
   height: 44px;
@@ -1211,7 +1212,7 @@ body[data-mode="escape"] .menu-links {
       <li>Right-click or press-and-hold to <strong>flag</strong> mines.</li>
       <li>Use the <strong>numbers</strong> to figure out which hexes are dangerous.</li>
       <li><strong>Clear</strong> every safe cell — don't step on a mine.</li>
-      <li id="welcome-escape-tip" hidden>In <strong>Escape</strong>, play minesweeper as usual — dig toward the offscreen exit (edge cue points the way). After you open a patch, a slow rift seeps toward your digs. Reveal the finish hex to escape; mines and the rift still kill.</li>
+      <li id="welcome-escape-tip" hidden><strong>Escape:</strong> dig toward the finish hex (edge cue). A slow rift follows your digs. Mines and the rift both kill.</li>
     </ul>
     <div class="welcome-themes" role="group" aria-label="Theme">
       <button type="button" data-welcome-mode="light" aria-pressed="true">Light</button>
@@ -1224,7 +1225,7 @@ body[data-mode="escape"] .menu-links {
   </div>
 </div>
 
-<!-- Menu: scores, modes, board, play aids, save -->
+<!-- Menu: score, mode, size, aids -->
 <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
   <div class="modal-content">
     <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
@@ -1234,44 +1235,33 @@ body[data-mode="escape"] .menu-links {
       </svg>
     </button>
     <h2 id="menu-title" class="menu-title">Menu</h2>
-    <div class="modal-row" id="run-row">
-      <div class="modal-section-label">Run</div>
-      <div class="menu-stats" aria-label="Score">
-        <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
-        <div id="stats-time" class="stat-item visible" data-label="cleared" title="Safe cells cleared">000</div>
-      </div>
+    <div class="menu-stats" aria-label="Score">
+      <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
+      <div id="stats-time" class="stat-item visible" data-label="cleared" title="Safe cells cleared">000</div>
     </div>
-    <div class="modal-row" id="mode-row">
-      <div class="modal-section-label">Mode</div>
-      <div class="mode-switch" role="group" aria-label="Mode">
-        <button type="button" data-mode="light" aria-pressed="true">Light</button>
-        <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
-        <button type="button" data-mode="fire" aria-pressed="false">Fire</button>
-        <button type="button" data-mode="plague" aria-pressed="false">Plague</button>
-        <button type="button" data-mode="escape" aria-pressed="false">Escape</button>
-      </div>
+    <div class="mode-switch" role="group" aria-label="Mode">
+      <button type="button" data-mode="light" aria-pressed="true">Light</button>
+      <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-mode="fire" aria-pressed="false">Fire</button>
+      <button type="button" data-mode="plague" aria-pressed="false">Plague</button>
+      <button type="button" data-mode="escape" aria-pressed="false">Escape</button>
     </div>
-    <!-- Board size only matters on finite boards (Fire / Plague) -->
     <div class="modal-row" id="size-row">
-      <div class="icon-label" title="Board size">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="9" height="9"></rect><rect x="13" y="2" width="9" height="9"></rect><rect x="2" y="13" width="9" height="9"></rect></svg>
-      </div>
       <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
-        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small board · fewer mines">S</button>
-        <button type="button" class="diff-option" data-val="medium" aria-pressed="false" title="Medium board">M</button>
-        <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" title="Large board · denser field">L</button>
+        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small">S</button>
+        <button type="button" class="diff-option" data-val="medium" aria-pressed="false" title="Medium">M</button>
+        <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" title="Large">L</button>
       </div>
     </div>
     <div class="modal-actions">
-      <button type="button" id="flag-btn" aria-pressed="false">Flag mode</button>
-      <button type="button" id="help-btn">How to play</button>
-    </div>
-    <div class="modal-actions" id="persist-actions">
-      <button type="button" id="export-run-btn" title="Download infinite run as JSON">Export run</button>
-      <button type="button" id="import-run-btn" title="Load a previously exported run">Import run</button>
+      <button type="button" id="flag-btn" aria-pressed="false">Flag</button>
+      <button type="button" id="help-btn">Help</button>
+      <span id="persist-actions" class="persist-inline">
+        <button type="button" id="export-run-btn" title="Download run as JSON">Export</button>
+        <button type="button" id="import-run-btn" title="Load a saved run">Import</button>
+      </span>
     </div>
     <input type="file" id="import-run-file" accept="application/json,.json" hidden>
-    <div class="instructions-text">Menu holds scores, modes, and play aids<br>Sun/moon · Reset · Menu on the board · R new run · F flag</div>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">Luke Steuber</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>
@@ -1280,40 +1270,22 @@ body[data-mode="escape"] .menu-links {
   </div>
 </div>
 
-<!-- Help / rules -->
+<!-- Help -->
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
   <div class="help-panel">
     <button type="button" class="help-close" id="help-close" aria-label="Close help">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     </button>
     <h2 id="help-title">How to play</h2>
-    <p>Minesweeper on a honeycomb. Six neighbors max, not eight.</p>
-
-    <h3>Goal</h3>
-    <p><strong>Light</strong> (porcelain) and <strong>Dark</strong> (night iron) share an infinite honeycomb: the field keeps growing as you dig. Score is safe cells opened. Infinite runs autosave in the browser; Settings → Export/Import for portable JSON. <strong>Escape</strong> is the same minesweeper loop — dig, flag, chord, score cleared cells — plus a finish hex placed beyond the starting view. An edge cue points toward it; reveal that hex to win. A slow rift wakes after you open a patch and seeps toward your last dig. Mines still kill; the rift is a second, glacial threat. <strong>Fire</strong> and <strong>Plague</strong> are finite: clear every safe cell. Don't step on a mine.</p>
-
-    <h3>Reveal</h3>
-    <p>Click or tap a covered cell. First click is always safe. The number is how many mines sit on the six sides. Empty clears open outward in rings until they hit numbered cells. When the flags around a number match that count, click it again (or double-click) to open the rest. In Light/Dark/Escape, the camera follows your dig and the grid expands so the canvas never runs out of hexes.</p>
-
-    <h3>Move &amp; zoom</h3>
-    <p>Infinite boards: drag to pan. <strong>Fire</strong>: drag tilts while the pit fits the screen; zoom in and drag pans (clamped) so rim tiles stay reachable. Hold to flag. Scroll or pinch to zoom. <kbd>+</kbd> / <kbd>−</kbd> also zoom.</p>
-
-    <h3>Mine death</h3>
-    <p><strong>Fire</strong> and the Light/Dark plates charge then blow tiles apart (shock ring, shards, shake). <strong>Plague</strong> infects outward along the honeycomb — copper puncture, then a hyphal crawl. <strong>Escape</strong> loses to a mine or the rift as a cool lens swallow, not an explosion. Press <kbd>R</kbd> or use Reset when you're ready.</p>
-
-    <h3>Flag</h3>
-    <p>Right-click, Ctrl-click (or ⌘-click), press and hold on a phone, or turn on <strong>Flag mode</strong> (<kbd>F</kbd>) so every tap plants a flag.</p>
-
-    <h3>Controls</h3>
-    <ul>
-      <li><strong>Sun / moon</strong> on the board toggles Light↔Dark (same run)</li>
-      <li><strong>Menu</strong> holds scores, modes, board size, flag, help, export/import</li>
-      <li><strong>Reset</strong> starts a fresh run · <strong>?</strong> opens this panel</li>
-    </ul>
-
-    <h3>Keys</h3>
-    <p><kbd>?</kbd> help · <kbd>t</kbd> mode · <kbd>f</kbd> flag · <kbd>r</kbd> reset · <kbd>+</kbd>/<kbd>−</kbd> zoom · <kbd>Esc</kbd> closes panels</p>
+    <p>Minesweeper on hexes. Six neighbors.</p>
+    <p>Click to dig (first click is safe). The number is mines on the sides. Empties open out to those numbers. When flags match a number, click it again to clear the rest. Flag with right-click, press-and-hold, or <kbd>F</kbd>.</p>
+    <p><strong>Light / Dark</strong> — infinite field.<br>
+    <strong>Fire / Plague</strong> — finite clear.<br>
+    <strong>Escape</strong> — find the finish hex before the rift reaches you.</p>
+    <p class="help-keys">Drag pan · scroll zoom · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
   </div>
+</div>
+
 </div>
 
 <script>
@@ -7129,8 +7101,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (persistRow) persistRow.hidden = !endless;
     const sizeRow = document.getElementById("size-row");
     if (sizeRow) sizeRow.hidden = endless;
-    const modeRow = document.getElementById("mode-row");
-    if (modeRow) modeRow.hidden = ONEPAGER_STRICT;
+    const modeSwitch = document.querySelector(".modal-content .mode-switch");
+    if (modeSwitch) modeSwitch.hidden = ONEPAGER_STRICT;
     syncPlateToggle();
   }
 
@@ -8199,7 +8171,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (i >= 0 && i !== themeIndex) {
         applyTheme(i);
         // Mode picks from Menu should reveal the board immediately.
-        if (button.closest("#mode-row")) {
+        if (button.closest(".modal-content .mode-switch")) {
           document.getElementById("modal-overlay")?.classList.remove("open");
         }
       }

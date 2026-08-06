@@ -17,7 +17,7 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 | **Plague** | Finite | Soil hive bed + living mycelial underlay + green specimen tiles + hyphal mat (LOD when zoomed out) |
 | **Escape** | Infinite | Opens on a patch then pulls wide; dig/flag/chord toward an offscreen finish (edge cue); rift heartbeats and reaches toward your digs |
 
-Fire and Plague open on the **large** board; board size (S·M·L) lives in Settings and only appears for those two, since the infinite themes have no fixed board.
+Fire and Plague open on the **large** board; board size (S·M·L) lives in Menu and only appears for those two, since the infinite themes have no fixed board.
 
 OG cards: `assets/social/<home|light|dark|fire|plague|escape>-og.png`, each a real board under a title and one-line description (older Fire studies stay as `fire-og-alt.png`, `fire-og-bloom.png`). Rebuild them with `tools/shoot-og-cards.sh`, which shoots `tools/og-card.html` headless at 2x and downscales to 1200x630. Cycle themes with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`); add `?deal=1` to open a starting patch in any mode. Preference key: `hexsweeper-mode-v3`.
 
@@ -30,12 +30,12 @@ Fresh runs (cold load or Reset) share one `startFreshRun` path after theme chrom
 | Action | How |
 |--------|-----|
 | Dig | Click / tap — empty floods open outward in rings |
-| Flag | Right-click, Ctrl/⌘-click, long-hold, or Settings → Flag mode (`F`) |
+| Flag | Right-click, Ctrl/⌘-click, long-hold, or Menu → Flag (`F`) |
 | Pan / tilt | Infinite: drag pans. Fire: drag tilts the pit (hold flags). Space/middle-drag pans anywhere |
 | Zoom | Scroll · pinch · `+` / `−` (persists as `hexsweeper-zoom-v1`) |
 | Chord | Click a revealed number whose neighbor flags match the count |
 | Restart / size | `R`, Restart, or S·M·L (finite only) — each clears that lane’s autosave |
-| Export / Import | Settings → Export run / Import run (infinite Light/Dark/Escape JSON) |
+| Export / Import | Menu → Export / Import (infinite Light/Dark/Escape JSON) |
 
 Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Light/Dark, `hexsweeper-endless-escape-v1` for Escape).
 
