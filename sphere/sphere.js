@@ -5,7 +5,7 @@
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
  * Hover: lift only activatable covered faces (+ pinned flags); cleared stay put.
- * Cleared: valley recess — rim skirts + inset shared-edge grooves (no tall honeycomb walls).
+ * Cleared: valley recess — rim skirts only; floor grid = stroke on the inset faces themselves.
  * Light shell: colorMix accepts rgb() (fixes NaN→charcoal covered fill / lost borders).
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
@@ -1969,54 +1969,6 @@
       };
     }
 
-    /**
-     * Valley floor seams: one groove per shared cleared-cleared edge, at inset depth.
-     * Outer rim stays as extrusion skirts (not drawn here).
-     */
-    function drawValleyGrooves(valleyInset) {
-      const T = state.theme;
-      const deep = T.valleyGrooveDeep || T.revealedEdge || "#333333";
-      const lip = T.valleyGroove || "#888888";
-      const seen = new Set();
-      const pointKey = (p) =>
-        `${p.x.toFixed(5)},${p.y.toFixed(5)},${p.z.toFixed(5)}`;
-
-      for (let ti = 0; ti < state.tiles.length; ti++) {
-        if (!valleyInset[ti]) continue;
-        const tile = state.tiles[ti];
-        const edgeN = tile.edgeNeighbors || [];
-        const b = tile.boundary;
-        const inset = projectTile(tile, state.rotY, state.rotX, REVEAL_INSET);
-        if (!inset.boundary || inset.z <= 0.02) continue;
-
-        for (let ei = 0; ei < b.length; ei++) {
-          const ni = edgeN[ei];
-          if (!(ni >= 0 && valleyInset[ni])) continue;
-          const ej = (ei + 1) % b.length;
-          const key = [pointKey(b[ei]), pointKey(b[ej])].sort().join("|");
-          if (seen.has(key)) continue;
-          seen.add(key);
-
-          const p0 = inset.boundary[ei];
-          const p1 = inset.boundary[ej];
-          if (!p0 || !p1) continue;
-          // Skip edges fully behind the limb.
-          if (p0.z < -0.05 && p1.z < -0.05) continue;
-
-          ctx.beginPath();
-          ctx.moveTo(p0.x, p0.y);
-          ctx.lineTo(p1.x, p1.y);
-          ctx.strokeStyle = deep;
-          ctx.lineWidth = 2.4;
-          ctx.lineCap = "round";
-          ctx.stroke();
-          ctx.strokeStyle = lip;
-          ctx.lineWidth = 1.05;
-          ctx.stroke();
-        }
-      }
-    }
-
     function tileColors(idx, proj, cell, tile, now) {
       const T = state.theme;
       const lit = shadeByNormal;
@@ -2176,7 +2128,7 @@
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
 
-      // Valley membership for this frame — rim skirts + inset floor grooves.
+      // Valley membership — rim cliffs only; floor grid is the inset face stroke.
       const valleyInset = new Uint8Array(state.cells.length);
       for (let i = 0; i < state.cells.length; i++) {
         const c = state.cells[i];
@@ -2227,11 +2179,15 @@
           );
           drawProj = inset;
           markLift = REVEAL_INSET;
-          // Floor fill only — internal seams drawn once in groove pass.
+          // Borders ride the recessed face — that *is* the inset grid.
+          const groove =
+            state.theme.valleyGroove ||
+            state.theme.revealedEdge ||
+            colors.stroke;
           colors = {
             ...colors,
-            stroke: colors.fill,
-            lineWidth: 0,
+            stroke: groove,
+            lineWidth: Math.max(colors.lineWidth || 0, 1.25),
           };
         }
         const pop =
@@ -2246,28 +2202,7 @@
         }
 
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
-        // Defer valley numerals until after the groove pass so seams stay under ink.
-        if (!shouldInset) {
-          paintCountMark(tile, drawProj, cell, colors, markLift);
-        } else {
-          cell._valleyMark = { tile, drawProj, colors, markLift };
-        }
-      }
-
-      // Inset floor grid: shared cleared–cleared edges only (valley, not honeycomb walls).
-      drawValleyGrooves(valleyInset);
-
-      for (let i = 0; i < state.cells.length; i++) {
-        const mark = state.cells[i]._valleyMark;
-        if (!mark) continue;
-        paintCountMark(
-          mark.tile,
-          mark.drawProj,
-          state.cells[i],
-          mark.colors,
-          mark.markLift
-        );
-        state.cells[i]._valleyMark = null;
+        paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
       // Raised pass: pinned flags (always) + hover/press on covered only.
