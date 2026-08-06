@@ -72,6 +72,19 @@ TAG_SWATCH: dict[str, tuple[str, str, str, str]] = {
     "materials": ("#141820", "#c9a86c", "#7eb8ff", "#e8dcc8"),
     "organic": ("#141e1c", "#7ec8a8", "#d4a08c", "#5a8f78"),
 }
+EXPERIMENTS = [
+    {
+        "id": "sphere",
+        "title": "Hex Sphere",
+        "tag": "Experiment · Open only",
+        "blurb": "Minesweeper on a closed Goldberg sphere — drag to rotate, dig, flag, and clear the geodesic board.",
+        "filter": "sphere experiment goldberg geodesic rotate 3d closed",
+        "swatch": ("#0c1018", "#7eb8ff", "#34d399", "#c8d4e8"),
+        "href": "../sphere/",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+]
+
 DEFAULT_LAB_SWATCH = ("#080a0f", "#7eb8ff", "#34d399", "#fbbf24")
 
 
@@ -330,13 +343,41 @@ def export_skin(skin: dict) -> str:
         )
     else:
         markup = re.sub(
-            r"(<meta name=\"viewport\"[^>]*>)",
-            rf"\1\n<meta name=\"description\" content=\"{description}\">",
+            r'(<meta name="viewport"[^>]*>)',
+            rf'\1\n<meta name="description" content="{description}">',
             markup,
             count=1,
         )
     markup = strip_skin_nav(markup)
     markup = inline_skin_assets(markup)
+    og = f"{OG}/skin-{skin['id']}-og.png"
+    social = "\n".join(
+        [
+            '<meta property="og:type" content="website">',
+            f'<meta property="og:title" content="{title}">',
+            f'<meta property="og:description" content="{description}">',
+            f'<meta property="og:url" content="{PUBLIC_BASE}/skin-{skin["id"]}.html">',
+            f'<meta property="og:image" content="{og}">',
+            '<meta name="twitter:card" content="summary_large_image">',
+            f'<meta name="twitter:title" content="{title}">',
+            f'<meta name="twitter:description" content="{description}">',
+            f'<meta name="twitter:image" content="{og}">',
+        ]
+    )
+    if re.search(r'<meta name="description"', markup):
+        markup = re.sub(
+            r'(<meta name="description" content="[^"]*">)',
+            r"\1\n" + social,
+            markup,
+            count=1,
+        )
+    else:
+        markup = re.sub(
+            r'(<title>[^<]*</title>)',
+            r"\1\n" + social,
+            markup,
+            count=1,
+        )
     markup = markup.replace('<html lang="en">', '<html lang="en" class="collection-export">', 1)
     return markup
 
@@ -381,9 +422,35 @@ def skin_tile_html(skin: dict) -> str:
       </article>"""
 
 
-def write_index(themes: list[dict], skins: list[dict]) -> str:
+def experiment_tile_html(exp: dict) -> str:
+    a, b, c, d = exp["swatch"]
+    href = exp["href"]
+    return f"""      <article class="study" data-filter="{exp['filter']}" style="--swatch-bg:{a};--swatch-a:{b};--swatch-b:{c};--swatch-c:{d}">
+        <a class="study-copy" href="{href}">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">{exp['tag']}</span>
+          <span class="study-title">{exp['title']}</span>
+          <p>{exp['blurb']}</p>
+        </a>
+        <div class="actions">
+          <a href="{href}" target="_blank" rel="noopener">Open</a>
+        </div>
+      </article>"""
+
+
+def write_index(themes: list[dict], skins: list[dict], experiments: list[dict] | None = None) -> str:
     theme_tiles = "\n".join(tile_html(t) for t in themes)
     skin_tiles = "\n".join(skin_tile_html(s) for s in skins)
+    exp_tiles = "\n".join(experiment_tile_html(e) for e in (experiments or []))
+    experiments_section = ""
+    if exp_tiles:
+        experiments_section = f"""
+  <section class="section" aria-labelledby="experiments-heading">
+    <h2 id="experiments-heading">Experiments</h2>
+    <div class="grid">
+{exp_tiles}
+    </div>
+  </section>"""
     return f"""<!DOCTYPE html>
 <!--
   File Purpose: Hexsweeper Collection desk — Open + Copy HTML for theme and lab one-pagers.
@@ -463,7 +530,7 @@ footer a{{color:var(--accent)}}
     <div class="grid">
 {skin_tiles}
     </div>
-  </section>
+  </section>{experiments_section}
   <!-- generated-hexsweeper-collection:end -->
   <footer>By <a href="https://lukesteuber.com">Luke Steuber</a> · <a href="../LICENSE">MIT</a> · IBM Plex under <a href="../fonts/OFL.txt">OFL</a> · <a href="../choices.html">Choices hub</a></footer>
 </main>
@@ -531,7 +598,7 @@ def main() -> int:
     for skin in skins:
         path = COLLECTION / f"skin-{skin['id']}.html"
         planned[path] = export_skin(skin)
-    planned[COLLECTION / "index.html"] = write_index(THEMES, skins)
+    planned[COLLECTION / "index.html"] = write_index(THEMES, skins, EXPERIMENTS)
 
     expected_theme = {f"theme-{t['id']}.html" for t in THEMES}
     expected_skin = {f"skin-{s['id']}.html" for s in skins}

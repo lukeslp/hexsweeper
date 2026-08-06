@@ -3,6 +3,7 @@
 # Inputs: live site at $BASE (default dr.eamer.dev). Outputs: one PNG per card.
 # Note: renders at 2x then downscales, so the type stays crisp. Uses
 #       --virtual-time-budget so the board's dig + reveal wave settle before capture.
+# Cards: production themes, lab skins (skin-*), and sphere — see tools/og-card.html CARDS.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,9 +12,22 @@ OUT="$ROOT/assets/social"
 # Snap chromium is confined: it cannot write to hidden dirs like ~/.cache,
 # so stage the 2x frames in a plain (gitignored) directory in the repo.
 WORK="${WORK:-$ROOT/og-frames}"
-CARDS=(home light dark fire plague escape)
 
 mkdir -p "$OUT" "$WORK"
+
+mapfile -t CARDS < <(
+  python3 - "$ROOT/tools/og-card.html" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+# Keys in CARDS table: home, light, dark, sphere, skin-classic, …
+keys = re.findall(r'^\s{4}("?[\w-]+"?):\s*\{', text, re.M)
+for key in keys:
+    print(key.strip('"'))
+PY
+)
 
 for card in "${CARDS[@]}"; do
   raw="$WORK/$card@2x.png"

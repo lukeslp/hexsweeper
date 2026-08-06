@@ -11,15 +11,15 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 
 | Theme | Board | Feel |
 |------|--------|------|
-| **Light** | Infinite | Porcelain chalk desk — bright raised covers, graphite wells (full extruded paint at all zoom; idle throttle + offscreen RAF pause) |
-| **Dark** | Infinite | Night-iron plate — cold steel bevels, deep wells (same infinite run as Light) |
+| **Light** | Infinite | Porcelain chalk desk — bright raised covers, graphite wells (seam-only LOD when zoomed out; full extrusion when zoomed in) |
+| **Dark** | Infinite | Night-iron plate — cold steel bevels, deep wells (same infinite run as Light; same zoom LOD) |
 | **Fire** | Finite | Magma shaft / hell-mine well — dense viewport-filling honeycomb; drag tilts the pit (camera locked); hold to flag |
 | **Plague** | Finite | Soil hive bed + living mycelial underlay + green specimen tiles + hyphal mat (seam-only LOD at extreme zoom-out) |
 | **Escape** | Infinite | Opens on a patch then pulls wide; dig/flag/chord toward an offscreen finish (edge cue); rift heartbeats and reaches toward your digs |
 
 Fire and Plague open on the **large** board; board size (S·M·L) lives in Menu and only appears for those two, since the infinite themes have no fixed board.
 
-OG cards: `assets/social/<home|light|dark|fire|plague|escape>-og.png`, each a real board under a title and one-line description (older Fire studies stay as `fire-og-alt.png`, `fire-og-bloom.png`). Rebuild them with `tools/shoot-og-cards.sh`, which shoots `tools/og-card.html` headless at 2x and downscales to 1200x630. Cycle themes with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`); add `?deal=1` to open a starting patch in any mode. Preference key: `hexsweeper-mode-v3`.
+OG cards: `assets/social/<card>-og.png` for production themes (`home`, `light`, `dark`, `fire`, `plague`, `escape`), lab skins (`skin-<id>`), and `sphere`. Older Fire studies stay as `fire-og-alt.png`, `fire-og-bloom.png`. Rebuild with `tools/shoot-og-cards.sh` (reads card keys from `tools/og-card.html`, shoots headless at 2×, downscales to 1200×630). Requires Chromium + Pillow on Drummer; set `BASE=` to override the live URL. Cycle themes with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`); add `?deal=1` to open a starting patch in any mode. Preference key: `hexsweeper-mode-v3`.
 
 First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome: lower-right **Appearance (sun/moon) · Reset · Menu** as matching icons — Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
 
@@ -62,12 +62,13 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 
 | File | Theme |
 |------|--------|
-| [`collection/`](collection/) | Desk with **Open** + **Copy HTML** (Production + Lab sections) |
+| [`collection/`](collection/) | Desk with **Open** + **Copy HTML** (Production + Lab + Experiments) |
 | `collection/theme-plate.html` | Light / Dark · Infinite (in-file toggle; keeps the run) |
 | `collection/theme-fire.html` | Fire · Finite |
 | `collection/theme-plague.html` | Plague · Finite |
 | `collection/theme-escape.html` | Escape · Infinite |
-| `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports) |
+| `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
+| `collection/index.html` | Desk tile grid — **Hex Sphere** under Experiments (Open only) |
 
 Regenerate after production or lab skin changes:
 

@@ -4271,19 +4271,25 @@ body[data-mode="escape"] .menu-links {
   }
 
   /**
-   * Escape-only visual LOD: at open zoom the endless plate can be thousands of
+   * Soft UI / Escape visual LOD: at open zoom the endless plate can be thousands of
    * extruded hexes — drop walls/specular/ground shadows and paint seams only.
-   * Light/Dark always use full Soft UI paint (seam-only LOD popped darker + jittery digits).
+   * Light/Dark prefer seam-only when zoomed out; full extrusion when zoomed in.
+   * Hysteresis around 0.78–0.82 reduces seam/digit flicker at the crossover.
    * Gates on viewZoom (not viewport-fit cellSize — same rule as Plague LOD).
    */
   function useSoftUiLod(th, s) {
     if (!th || th.material !== "neumorph" || th.flatPlate) return false;
-    if (th.id === "light" || th.id === "dark") return false;
     const z = s && Number.isFinite(s.viewZoom) ? s.viewZoom : 1;
     const n = s && s.map ? s.map.size : 0;
-    if (z < 0.78) return true;
-    if (n > 520 && z < 0.88) return true;
-    return false;
+    const enter = z < 0.78 || (n > 520 && z < 0.88);
+    const exit = z >= 0.82 && (n <= 520 || z >= 0.92);
+    if (s._softUiLod == null) s._softUiLod = enter;
+    else if (s._softUiLod) {
+      if (exit) s._softUiLod = false;
+    } else if (enter) {
+      s._softUiLod = true;
+    }
+    return s._softUiLod;
   }
 
   function emit(x, y, n, color) {
@@ -5507,7 +5513,8 @@ body[data-mode="escape"] .menu-links {
    * iron = brushed steel grain + cold vignette.
    * Escape keeps its own cool bloom via glow alone.
    */
-  function drawInfinitePlateField(ctx, s, th) {
+  function drawInfinitePlateField(ctx, s, th, opts) {
+    const watermark = !opts || opts.watermark !== false;
     const style = th.plateStyle;
     if (style !== "porcelain" && style !== "iron") return;
     const w = s.canvas.width;
@@ -5531,28 +5538,30 @@ body[data-mode="escape"] .menu-links {
       ctx.fillStyle = wash;
       ctx.fillRect(0, 0, w, h);
 
-      // Faint honeycomb watermark (reads as porcelain lattice, not a second board)
-      ctx.strokeStyle = "rgba(90,110,140,0.06)";
-      ctx.lineWidth = Math.max(0.9, size * 0.02);
-      const r0 = Math.floor((-40 - cy) / pitchY) - 1;
-      const r1 = Math.ceil((h + 40 - cy) / pitchY) + 1;
-      const q0 = Math.floor((-40 - cx) / pitchX) - 1;
-      const q1 = Math.ceil((w + 40 - cx) / pitchX) + 1;
-      for (let r = r0; r <= r1; r++) {
-        for (let q = q0; q <= q1; q++) {
-          if ((q + r) & 1) continue;
-          const x = cx + pitchX * (q + r / 2);
-          const y = cy + pitchY * r;
-          ctx.beginPath();
-          for (let i = 0; i < 6; i++) {
-            const ang = (Math.PI / 180) * (30 + 60 * i);
-            const vx = x + Math.cos(ang) * size * 0.9;
-            const vy = y + Math.sin(ang) * size * 0.9;
-            if (i === 0) ctx.moveTo(vx, vy);
-            else ctx.lineTo(vx, vy);
+      if (watermark) {
+        // Faint honeycomb watermark (reads as porcelain lattice, not a second board)
+        ctx.strokeStyle = "rgba(90,110,140,0.06)";
+        ctx.lineWidth = Math.max(0.9, size * 0.02);
+        const r0 = Math.floor((-40 - cy) / pitchY) - 1;
+        const r1 = Math.ceil((h + 40 - cy) / pitchY) + 1;
+        const q0 = Math.floor((-40 - cx) / pitchX) - 1;
+        const q1 = Math.ceil((w + 40 - cx) / pitchX) + 1;
+        for (let r = r0; r <= r1; r++) {
+          for (let q = q0; q <= q1; q++) {
+            if ((q + r) & 1) continue;
+            const x = cx + pitchX * (q + r / 2);
+            const y = cy + pitchY * r;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+              const ang = (Math.PI / 180) * (30 + 60 * i);
+              const vx = x + Math.cos(ang) * size * 0.9;
+              const vy = y + Math.sin(ang) * size * 0.9;
+              if (i === 0) ctx.moveTo(vx, vy);
+              else ctx.lineTo(vx, vy);
+            }
+            ctx.closePath();
+            ctx.stroke();
           }
-          ctx.closePath();
-          ctx.stroke();
         }
       }
     } else {
@@ -5855,7 +5864,7 @@ body[data-mode="escape"] .menu-links {
         const camY = s.camY || 0;
         // Endless: only layout cells near the camera frustum (huge maps)
         const softLod = useSoftUiLod(th, s);
-        const layoutBudget = endless && s.map.size > 220;
+        const layoutBudget = endless && s.map.size > (softLod ? 80 : 220);
         const viewPad = s.cellSize * 6;
         const vw = s.canvas.width;
         const vh = s.canvas.height;
@@ -6013,9 +6022,10 @@ body[data-mode="escape"] .menu-links {
         // Desk: ambient pool, then per-tile ground shadows, then faces on top
         if (!th.flatPlate) {
           if (softLod) {
-            // Cheap wash — skip watermark loops (100+ strokes/frame) at open zoom
+            // Cheap wash — porcelain/iron radial only (no watermark loops at open zoom)
             ctx.fillStyle = th.bodyBg || th.css["--bg-color"] || "#e8eaee";
             ctx.fillRect(0, 0, s.canvas.width, s.canvas.height);
+            drawInfinitePlateField(ctx, s, th, { watermark: false });
           } else {
             drawBoardGroundShadow(ctx, s, th, flat);
             drawInfinitePlateField(ctx, s, th);
@@ -6082,7 +6092,7 @@ body[data-mode="escape"] .menu-links {
 
         // Ground shadows already painted in beforeFrame (desk plane only).
 
-        // —— Flat / LOD plate (legacy flatPlate, or Escape when zoomed way out) ——
+        // —— Flat / LOD plate (legacy flatPlate, or Soft UI/Escape when zoomed way out) ——
         if (neo && (th.flatPlate || useSoftUiLod(th, s))) {
           const path = cell.hexPath(size, 0.96);
           const stateKey = cell.flagged && !cell.revealed ? "flagged" : cell.revealed ? "revealed" : "covered";

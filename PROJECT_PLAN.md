@@ -13,7 +13,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 
 ## Current status (2026-08-05)
 
-- [x] **Plate perf** — Light/Dark: always full Soft UI paint (removed visual LOD pop); Escape keeps viewZoom-gated seam LOD; frustum cull @ 220 cells, IntersectionObserver + iframe blur + idle RAF throttle in `core.js`
+- [x] **Plate perf** — Light/Dark: seam-only Soft UI LOD when zoomed out (0.78 enter / 0.82 exit hysteresis); full extrusion when zoomed in; Escape keeps its own seam LOD; frustum cull @ 80 cells in LOD / 220 full; IntersectionObserver + iframe blur + idle RAF throttle in `core.js`
 - [x] **No dig auto-pan** — `core.js` no longer calls `focusOnCell` on dig/chord; Escape intro zoom on Reset unchanged
 - [x] **Lab → collection** — `export-collection.py` exports `collection/skin-*.html`; desk lists Production + Lab with Open + Copy HTML (copy on index only)
 - [x] **Choices lab redirects** — `choices/lab/*.html` redirect to collection pens; playable pages are game-only (no Copy bar)
@@ -21,7 +21,8 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] Sphere MVP — ~3× boards (S/M/L = 362/1002/1442 faces), flood expand FX, backface cull, idle RAF throttle
 - [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12)
 - [x] Sphere polish — trimmed icon help, size-cycle fix, endgame FX, no theme toast
-- [x] Sphere chrome — icon bar (Reset · Size · Theme · Flag · Help); five themes; first-visit instructions; no cross-game nav
+- [x] Sphere on collection desk — Experiments tile (Open → `../sphere/`; no Copy HTML)
+- [x] OG social cards — production themes, ten lab skins (`skin-*-og.png`), and `sphere-og.png`; wired on collection pens + `sphere/index.html`
 
 ## Current status (2026-08-04)
 
@@ -44,7 +45,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Escape MS-first rethink: dig/flag/chord primary; rift is glacial secondary threat (no dig-budget hex hops)
 - [x] Escape finish tile: offscreen exit hex + edge direction cue; win on reveal (autosaved)
 - [x] Escape rift polish: heartbeat pulse, intake motes, hunt arms; introZoom pull-back; RM-safe cues
-- [x] Soft UI / Escape LOD: Escape only — seam-only paint when zoomed out / huge map; Light/Dark always extruded plate; RAF pauses on hidden tabs, offscreen canvas (IntersectionObserver), and throttles idle zoomed-out endless pens (including collection embeds)
+- [x] Soft UI / Escape LOD: Light/Dark + Escape seam-only paint when zoomed out / huge map; hysteresis at crossover; RAF pauses on hidden tabs, offscreen canvas (IntersectionObserver), and throttles idle zoomed-out endless pens (including collection embeds)
 - [x] Help / metadata describe modes, not the skin lab
 - [x] Bare URL opens infinite Light
 - [x] Light↔Dark keeps the run (cosmetic swap)

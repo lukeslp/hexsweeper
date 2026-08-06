@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <!--
-  File Purpose: Render 1200x630 OG cards for each Hexsweeper theme.
+  File Purpose: Render 1200x630 OG cards for Hexsweeper themes, lab skins, and sphere.
   Primary Functions/Classes: CARDS table; live game iframe backdrop + title/desc plate.
-  Inputs: ?card=<light|dark|fire|plague|escape|home>. Outputs: an on-screen 1200x630 stage
-          to screenshot into assets/social/<card>-og.png.
+  Inputs: ?card=<home|light|dark|fire|plague|escape|sphere|skin-<id>>.
+  Outputs: an on-screen 1200x630 stage to screenshot into assets/social/<card>-og.png.
   Note: Authoring tool, not a public page. Uses the game's own IBM Plex faces so the
         cards match the site rather than whatever a compositor has installed.
 -->
@@ -61,7 +61,7 @@
     <div class="rule"></div>
     <h1 id="t"></h1>
     <p id="d"></p>
-    <p class="url">dr.eamer.dev/games/hexsweeper</p>
+    <p class="url" id="u">dr.eamer.dev/games/hexsweeper</p>
   </div>
 </div>
 <script>
@@ -69,40 +69,124 @@
   // Ink and scrim per theme: porcelain needs dark type, the rest need light.
   const CARDS = {
     home: {
-      mode: "fire",
+      src: "../?mode=fire&deal=1",
       title: "Hexsweeper",
       desc: "Hexagonal minesweeper: six neighbors instead of eight.",
       accent: "#ff6400", bg: "#100a06", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper",
     },
     light: {
-      mode: "light",
+      src: "../?mode=light&deal=1",
       title: "Hexsweeper · Light",
       desc: "A porcelain chalk desk that keeps growing as you dig.",
       accent: "#1d4ed8", bg: "#d4dce8", dark: false,
+      url: "dr.eamer.dev/games/hexsweeper",
     },
     dark: {
-      mode: "dark",
+      src: "../?mode=dark&deal=1",
       title: "Hexsweeper · Dark",
       desc: "A night-iron plate. The same endless run, brushed and dim.",
       accent: "#60a5fa", bg: "#10151d", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper",
     },
     fire: {
-      mode: "fire",
+      src: "../?mode=fire&deal=1",
       title: "Hexsweeper · Fire",
       desc: "A magma shaft that burns upward while you clear it.",
       accent: "#ff6400", bg: "#1c120c", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper",
     },
     plague: {
-      mode: "plague",
+      src: "../?mode=plague&deal=1",
       title: "Hexsweeper · Plague",
       desc: "A specimen slide of verdigris faces on a hyphal mat.",
       accent: "#7ec8a8", bg: "#141e1c", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper",
     },
     escape: {
-      mode: "escape",
+      src: "../?mode=escape&deal=1",
       title: "Hexsweeper · Escape",
       desc: "Dig toward an exit beyond the view. A rift seeps after you.",
       accent: "#7fd8c4", bg: "#0e1218", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper",
+    },
+    sphere: {
+      src: "../sphere/",
+      title: "Hex Sphere",
+      desc: "Minesweeper on a closed Goldberg sphere — drag to rotate and clear.",
+      accent: "#7eb8ff", bg: "#0c1018", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/sphere",
+      hide: ".hud-actions,#modal-overlay,.sphere-help,#theme-toast",
+    },
+    "skin-classic": {
+      src: "../collection/skin-classic.html",
+      title: "Classic Neumorph",
+      desc: "Original soft raised honeycomb — the control sample.",
+      accent: "#718096", bg: "#e0e5ec", dark: false,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-particle-bloom": {
+      src: "../collection/skin-particle-bloom.html",
+      title: "Particle Bloom",
+      desc: "Ambient dust field; cells burst seed particles on reveal.",
+      accent: "#ff6400", bg: "#080a0f", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-glass-lens": {
+      src: "../collection/skin-glass-lens.html",
+      title: "Glass Magnifier",
+      desc: "Frostpane tokens and a cursor-following glass lens.",
+      accent: "#7eb8ff", bg: "#0a1420", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-parallax-depth": {
+      src: "../collection/skin-parallax-depth.html",
+      title: "Parallax Rings",
+      desc: "Ring depth and pointer parallax — Fire mode's lab ancestor.",
+      accent: "#ff6400", bg: "#1c120c", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-brass-plaque": {
+      src: "../collection/skin-brass-plaque.html",
+      title: "Brass Plaque",
+      desc: "Warm ceramic-metal desk from the materials pack.",
+      accent: "#c9a86c", bg: "#141820", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-frostpane": {
+      src: "../collection/skin-frostpane.html",
+      title: "Frostpane Night",
+      desc: "Dark frosted glass with cyan–violet glow and rim light.",
+      accent: "#7eb8ff", bg: "#0a1420", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-paper-relief": {
+      src: "../collection/skin-paper-relief.html",
+      title: "Paper Relief",
+      desc: "Paper-systems cream stock with multi-shadow emboss depth.",
+      accent: "#4a5568", bg: "#f4efe6", dark: false,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-comet-void": {
+      src: "../collection/skin-comet-void.html",
+      title: "Comet Void",
+      desc: "Void black, ember sparks, and meteor streaks.",
+      accent: "#ffd24a", bg: "#080a0f", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-mycelium": {
+      src: "../collection/skin-mycelium.html",
+      title: "Mycelium Web",
+      desc: "Hyphal links grow between revealed cells; nutrient particles flow.",
+      accent: "#7ec8a8", bg: "#141e1c", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-caustic-lens": {
+      src: "../collection/skin-caustic-lens.html",
+      title: "Caustic Lens",
+      desc: "Under-board light caustics and hover refraction bulge.",
+      accent: "#34d399", bg: "#0a1420", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
     },
   };
 
@@ -111,8 +195,6 @@
   const card = CARDS[key] || CARDS.home;
   const root = document.documentElement.style;
 
-  // Capture aid: `zoom` re-lays-out, so the board canvas renders natively at the
-  // larger size and survives the capture pipeline's downscale back to 1200x630.
   const scale = parseFloat(params.get("scale") || "1");
   if (Number.isFinite(scale) && scale > 0 && scale !== 1) {
     document.getElementById("stage").style.zoom = String(scale);
@@ -136,30 +218,26 @@
 
   document.getElementById("t").textContent = card.title;
   document.getElementById("d").textContent = card.desc;
+  document.getElementById("u").textContent = card.url || "dr.eamer.dev/games/hexsweeper";
 
-  // Same-origin: seed the game's own keys so the board opens clean and dealt.
   try {
     localStorage.setItem("hexsweeper-welcome-v1", "1");
     localStorage.removeItem("hexsweeper-endless-plate-v1");
     localStorage.removeItem("hexsweeper-endless-escape-v1");
+    localStorage.removeItem("hexsweeper-sphere-welcome-v1");
   } catch (_) {}
 
   const board = document.getElementById("board");
+  const hideSel = card.hide || ".hud-actions,#modal-overlay,#theme-toast";
   board.addEventListener("load", () => {
-    // Hide the in-game chrome so the card shows board, not buttons.
     try {
       const doc = board.contentDocument;
       const hide = doc.createElement("style");
-      // #theme-toast doubles as the rift's "Something stirs" notice, which the
-      // opening dig triggers. The Escape finish cue is canvas-drawn, so it stays.
-      hide.textContent = ".hud-actions,#modal-overlay,#theme-toast{display:none!important}";
+      hide.textContent = hideSel + "{display:none!important}";
       doc.head.appendChild(hide);
     } catch (_) {}
   });
-  // `deal=1` digs during the game's own boot, so the opened patch is already
-  // on screen when the capture fires. Dispatching a synthetic click from here
-  // would depend on timers the headless capture does not run.
-  board.src = `../?mode=${card.mode}&deal=1`;
+  board.src = card.src;
 })();
 </script>
 </body>
