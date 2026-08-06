@@ -26,7 +26,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] Sphere autosave — `hexsweeper-sphere-run-v1` resume on refresh; confirm before Reset / size change
 - [x] Sphere flags — pure red fill only (no tile glyph)
 - [x] Sphere valley — rim skirts + inset face strokes; Light colorMix rgb() border fix
-- [x] Sphere mono invert — white-on-white + black wells/core ↔ black-on-black + white wells/core
+- [x] Sphere mono quartet — Light · Shell · Dark · Ink (tile·field: white/white, white/black, black/black, black/white)
 - [x] OG social cards — production themes, ten lab skins (`skin-*-og.png`), and `sphere-og.png`; wired on collection pens + `sphere/index.html`
 
 ## Current status (2026-08-04)

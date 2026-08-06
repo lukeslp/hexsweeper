@@ -2,8 +2,8 @@
  * File Purpose: Hexsweeper on a closed hex sphere — dig/flag/flood via neighborIndices.
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
- * Chrome: Reset·Size·Theme | Flag | Help; sizes XS–XL; themes Light/Dark mono invert.
- * Light: white tiles on white + black reveal/core. Dark: black tiles on black + white reveal/core.
+ * Chrome: Reset·Size·Theme | Flag | Help; sizes XS–XL; themes Light·Shell·Dark·Ink.
+ * Mono: white/white, white/black, black/black, black/white (tile·field); wells opposite the shell.
  * Zoom: wheel + pinch (clamped); starts pulled back (~0.72×).
  * Hover: lift only activatable covered faces (+ pinned flags); cleared stay put.
  * Cleared: valley recess — rim skirts only; floor grid = stroke on the inset faces.
@@ -54,104 +54,98 @@
   const AMBIENT_SPIN_RAD_PER_MS = 0.000024;
 
   /**
-   * Light: white tiles on white page, black reveal / black sphere underlayer.
-   * Dark: exact invert — black tiles on black page, white reveal / white underlayer.
-   * pureCovered / pureRevealed: flat fills, no normal shading wash.
+   * Four mono pairings (tile · field), flat fills only:
+   *   Light  — white on white · black wells/core
+   *   Shell  — white on black · black wells/core   (light-on-dark)
+   *   Dark   — black on black · white wells/core
+   *   Ink    — black on white · white wells/core   (dark-on-light)
    */
-  const THEME_LIGHT = {
+  function monoTheme(spec) {
+    const whiteShell = spec.shell === "white";
+    const whiteField = spec.field === "white";
+    const whiteWell = !whiteShell; // dig into the opposite of the shell
+    return {
+      id: spec.id,
+      name: spec.name,
+      chrome: whiteField ? "light" : "dark",
+      accent: whiteField ? "#000000" : "#ffffff",
+      pureCovered: true,
+      pureRevealed: true,
+      bg: whiteField ? "#ffffff" : "#000000",
+      bgGlow: whiteField ? "#ffffff" : "#000000",
+      covered: whiteShell ? "#ffffff" : "#000000",
+      coveredHi: whiteShell ? "#ffffff" : "#000000",
+      coveredEdge: whiteShell ? "#000000" : "#ffffff",
+      coveredShadow: whiteShell ? "#cccccc" : "#000000",
+      revealed: whiteWell ? "#ffffff" : "#000000",
+      revealedEmpty: whiteWell ? "#ffffff" : "#000000",
+      revealedEdge: whiteWell ? "#999999" : "#6a6a6a",
+      valleyGroove: whiteWell ? "#777777" : "#8a8a8a",
+      valleyGrooveDeep: whiteWell ? "#cccccc" : "#3a3a3a",
+      flagFill: "#ff0000",
+      flagIcon: "#ffffff",
+      flagEdge: "#ff0000",
+      mine: whiteWell ? "#ffffff" : "#000000",
+      mineCore: whiteWell ? "#000000" : "#ffffff",
+      mineEdge: whiteWell ? "#cccccc" : "#000000",
+      mineBurst: whiteWell ? "#000000" : "#ffffff",
+      pentagon: whiteShell ? "#ffffff" : "#000000",
+      pentagonEdge: whiteShell ? "#000000" : "#ffffff",
+      hoverRing: whiteShell ? "#000000" : "#ffffff",
+      activeRing: whiteShell ? "#222222" : "#dddddd",
+      backface: whiteWell ? "#ffffff" : "#000000",
+      backfaceEdge: whiteWell ? "#cccccc" : "#333333",
+      core: whiteWell ? "#ffffff" : "#000000",
+      text: whiteWell
+        ? {
+            1: "#000000",
+            2: "#222222",
+            3: "#444444",
+            4: "#666666",
+            5: "#888888",
+            6: "#aaaaaa",
+          }
+        : {
+            1: "#ffffff",
+            2: "#eeeeee",
+            3: "#dddddd",
+            4: "#cccccc",
+            5: "#bbbbbb",
+            6: "#aaaaaa",
+          },
+      label: whiteWell ? "#000000" : "#ffffff",
+      labelStroke: whiteWell ? "#ffffff" : "#000000",
+      revealFlash: whiteWell ? "#000000" : "#ffffff",
+      revealGlow: whiteWell ? "#666666" : "#888888",
+    };
+  }
+
+  const THEME_LIGHT = monoTheme({
     id: "light",
     name: "Light",
-    accent: "#000000",
-    pureCovered: true,
-    pureRevealed: true,
-    bg: "#ffffff",
-    bgGlow: "#ffffff",
-    covered: "#ffffff",
-    coveredHi: "#ffffff",
-    coveredEdge: "#000000",
-    coveredShadow: "#cccccc",
-    revealed: "#000000",
-    revealedEmpty: "#000000",
-    revealedEdge: "#6a6a6a",
-    valleyGroove: "#8a8a8a",
-    valleyGrooveDeep: "#3a3a3a",
-    flagFill: "#ff0000",
-    flagIcon: "#ffffff",
-    flagEdge: "#ff0000",
-    mine: "#000000",
-    mineCore: "#ffffff",
-    mineEdge: "#000000",
-    mineBurst: "#ffffff",
-    pentagon: "#ffffff",
-    pentagonEdge: "#000000",
-    hoverRing: "#000000",
-    activeRing: "#222222",
-    /** Black core / far-side underlayer beneath the white shell. */
-    backface: "#000000",
-    backfaceEdge: "#333333",
-    core: "#000000",
-    text: {
-      1: "#ffffff",
-      2: "#eeeeee",
-      3: "#dddddd",
-      4: "#cccccc",
-      5: "#bbbbbb",
-      6: "#aaaaaa",
-    },
-    label: "#ffffff",
-    labelStroke: "#000000",
-    revealFlash: "#ffffff",
-    revealGlow: "#888888",
-  };
-
-  /** Invert of Light. */
-  const THEME_DARK = {
+    shell: "white",
+    field: "white",
+  });
+  const THEME_SHELL = monoTheme({
+    id: "shell",
+    name: "Shell",
+    shell: "white",
+    field: "black",
+  });
+  const THEME_DARK = monoTheme({
     id: "dark",
     name: "Dark",
-    accent: "#ffffff",
-    pureCovered: true,
-    pureRevealed: true,
-    bg: "#000000",
-    bgGlow: "#000000",
-    covered: "#000000",
-    coveredHi: "#000000",
-    coveredEdge: "#ffffff",
-    coveredShadow: "#000000",
-    revealed: "#ffffff",
-    revealedEmpty: "#ffffff",
-    revealedEdge: "#999999",
-    valleyGroove: "#777777",
-    valleyGrooveDeep: "#cccccc",
-    flagFill: "#ff0000",
-    flagIcon: "#ffffff",
-    flagEdge: "#ff0000",
-    mine: "#ffffff",
-    mineCore: "#000000",
-    mineEdge: "#cccccc",
-    mineBurst: "#000000",
-    pentagon: "#000000",
-    pentagonEdge: "#ffffff",
-    hoverRing: "#ffffff",
-    activeRing: "#dddddd",
-    /** White core / far-side underlayer beneath the black shell. */
-    backface: "#ffffff",
-    backfaceEdge: "#cccccc",
-    core: "#ffffff",
-    text: {
-      1: "#000000",
-      2: "#222222",
-      3: "#444444",
-      4: "#666666",
-      5: "#888888",
-      6: "#aaaaaa",
-    },
-    label: "#000000",
-    labelStroke: "#ffffff",
-    revealFlash: "#000000",
-    revealGlow: "#666666",
-  };
+    shell: "black",
+    field: "black",
+  });
+  const THEME_INK = monoTheme({
+    id: "ink",
+    name: "Ink",
+    shell: "black",
+    field: "white",
+  });
 
-  const THEMES = [THEME_LIGHT, THEME_DARK];
+  const THEMES = [THEME_LIGHT, THEME_SHELL, THEME_DARK, THEME_INK];
   const DEFAULT_THEME = THEME_LIGHT;
   const SIZE_ORDER = ["xsmall", "easy", "medium", "hard", "xlarge"];
   const SIZE_LABEL = {
@@ -175,7 +169,7 @@
     hard: 1442,
     xlarge: 2252,
   };
-  const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v4";
+  const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v5";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
@@ -223,10 +217,14 @@
   };
 
   const THEME_ICONS = {
-    dark:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
     light:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>',
+    shell:
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.2"></circle><circle cx="12" cy="12" r="5.5" fill="none" stroke="currentColor" stroke-width="2"></circle><circle cx="12" cy="12" r="2.5" fill="currentColor"></circle></svg>',
+    dark:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
+    ink:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5s5 5.2 5 9.2a5 5 0 1 1-10 0c0-4 5-9.2 5-9.2z"></path><path d="M12 16.5v2"></path></svg>',
   };
 
   function boot(opts) {
@@ -239,6 +237,7 @@
       try {
         const id =
           localStorage.getItem(THEME_STORAGE_KEY) ||
+          localStorage.getItem("hexsweeper-sphere-theme-v4") ||
           localStorage.getItem("hexsweeper-sphere-theme-v3");
         if (id && THEMES.some((t) => t.id === id)) return id;
       } catch (_) {}
@@ -423,11 +422,16 @@
 
     function syncChromeTheme() {
       const t = currentThemeDef();
+      // Page chrome follows field (bg); dataset keeps the concrete theme id.
       document.body.dataset.sphereTheme = t.id;
+      document.body.dataset.sphereChrome = t.chrome || "light";
       if (themeBtn) {
-        themeBtn.title = `Theme — ${t.name}`;
-        themeBtn.setAttribute("aria-label", `Theme: ${t.name}`);
-        themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.dark;
+        themeBtn.title = `Theme — ${t.name} (T)`;
+        themeBtn.setAttribute(
+          "aria-label",
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink.`
+        );
+        themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
     }
 
@@ -1756,9 +1760,13 @@
       });
     }
 
-    /** Cliff/skirt fill — Light drops into black wells; Dark into white wells. */
+    /** Cliff/skirt fill — into black wells vs into white wells. */
     function skirtFill(nw) {
-      if (state.theme.id === "dark") {
+      const well = parseCssColor(
+        state.theme.revealedEmpty || state.theme.revealed || "#000000"
+      );
+      const lightWell = (well[0] + well[1] + well[2]) / 3 > 128;
+      if (lightWell) {
         return colorMix("#2a2a2a", "#c8c8c8", 1 - nw);
       }
       return colorMix("#dddddd", "#777777", 1 - nw);

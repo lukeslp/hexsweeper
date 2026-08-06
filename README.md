@@ -115,7 +115,7 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Densities: **XS** = 162 · **S** = 362 · **M** = 1002 · **L** = 1442 · **XL** = 2252 (~17% mines; size button cycles XS→XL)
 - Flood expand: BFS ring stagger + brief flash/pop (logic opens immediately; paint catch-up; RM-safe)
 - **Chrome:** three BR glass pills — Reset·Size·Theme | Flag | Help; size/theme icons morph per state (no corner badges)
-- **Themes:** Light = white tiles on white + black reveal/core; Dark = invert (black tiles on black + white reveal/core) — `hexsweeper-sphere-theme-v4`
+- **Themes:** Light (white·white) · Shell (white·black) · Dark (black·black) · Ink (black·white); wells opposite the shell — `hexsweeper-sphere-theme-v5`
 - **First visit:** short icon help modal (`hexsweeper-sphere-welcome-v1`); `?welcome=1` forces, `?welcome=0` skips
 - **Endgame FX:** lose — graph-distance mine cascade + particle burst + shock ring; win — clearance pulse + confetti-lite (`prefers-reduced-motion`: instant states)
 

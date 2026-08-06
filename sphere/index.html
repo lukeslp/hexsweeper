@@ -24,16 +24,20 @@
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
 <style>
-/* Sphere chrome tokens — pure mono dark/light via body[data-sphere-theme] */
+/* Sphere chrome follows field (bg): light page for Light/Ink, dark for Shell/Dark */
 :root,
-body[data-sphere-theme="light"] {
+body[data-sphere-chrome="light"],
+body[data-sphere-theme="light"],
+body[data-sphere-theme="ink"] {
   --bg-color: #ffffff;
   --text-main: #000000;
   --text-sub: #666666;
   --nav-bg: #f0f0f0;
   --nav-ink: #000000;
 }
-body[data-sphere-theme="dark"] {
+body[data-sphere-chrome="dark"],
+body[data-sphere-theme="dark"],
+body[data-sphere-theme="shell"] {
   --bg-color: #000000;
   --text-main: #ffffff;
   --text-sub: #888888;
@@ -166,7 +170,6 @@ body.help-open { overflow: hidden; }
   opacity: 1;
 }
 #flag-toggle.active { color: #ff0000; }
-body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
 /* Board size: XS/S/M/L/XL letter (scaled) — readable at a glance when static */
 #size-btn .size-mark {
   display: block;
@@ -409,7 +412,7 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
 }
 </style>
 </head>
-<body data-sphere-theme="light">
+<body data-sphere-theme="light" data-sphere-chrome="light">
 <div class="canvas-container">
   <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
 </div>
@@ -475,7 +478,7 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hex Sphere</h2>
-    <p class="help-lede">Dig and flag on a closed hex sphere.<br>Six neighbors · first dig is safe · drag to spin · progress autosaves.<br>Size cycles XS→XL · Light is white-on-white with black wells (Dark inverts).<br><kbd>N</kbd> cycles count styles (numerals · rings · yellow · flush · borderless).</p>
+    <p class="help-lede">Dig and flag on a closed hex sphere.<br>Six neighbors · first dig is safe · drag to spin · progress autosaves.<br>Size XS→XL · Theme cycles Light · Shell · Dark · Ink (tile·field pairings).<br><kbd>N</kbd> cycles count styles (numerals · rings · yellow · flush · borderless).</p>
     <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic Minesweeper screenshot">
       <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper" width="320" height="240" loading="lazy">
     </button>
@@ -497,8 +500,8 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
-<script src="hexasphere.js?v=20260806w"></script>
-<script src="sphere.js?v=20260806w"></script>
+<script src="hexasphere.js?v=20260806x"></script>
+<script src="sphere.js?v=20260806x"></script>
 <script>
 SphereSweeper.boot({ canvasId: "gameCanvas" });
 (function () {
