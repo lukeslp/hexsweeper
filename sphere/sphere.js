@@ -6,7 +6,7 @@
  * Mono: white/white, white/black, black/black, black/white (tile·field); wells opposite the shell.
  * Zoom: wheel + pinch (clamped); starts pulled back (~0.72×).
  * Hover: lift only activatable covered faces (+ pinned flags); cleared stay put.
- * Cleared: valley recess — rim skirts only; floor grid = stroke on the inset faces.
+ * Cleared: empty (0) faces recess; numbered clears stay flush. Rim skirts on the basin edge.
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
@@ -1743,12 +1743,13 @@
     }
 
     /**
-     * Valley floor: all safe clears recess together (numerals/rings/borderless).
-     * Flush/yellow stay shell-flat. Covered always flush.
+     * Only fully opened empties (0) recess. Numbered clears stay flush with the shell.
+     * Flush/yellow: nothing recesses. Covered always flush.
      */
     function tileShouldInset(cell, styleId) {
       if (!cell.revealed || cell.flagged || cell.isMine) return false;
       if (styleId === "flush" || styleId === "yellow") return false;
+      if (cell.neighborMines !== 0) return false;
       return (
         styleId === "numerals" ||
         styleId === "rings" ||

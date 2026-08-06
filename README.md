@@ -109,7 +109,7 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Canvas 2D projection of vendored hexasphere math (no Three.js)
 - Dig / flag / flood over geodesic `neighborIndices`; first dig safe; win/lose
 - Starts pulled back (~0.72×); scroll/pinch to zoom; drag for full 360° tumble (yaw+pitch); flag mode + long-hold; RM-safe camera
-- Hover lifts **covered** faces only (cleared stay put); flags stay pinned at lift height (pure red fill, no glyph). Cleared faces form a **valley** (numerals/rings/borderless): grey cliffs only on the outer rim; internal borders are the stroke on the recessed faces themselves. Light shell borders restored (`colorMix` rgb parse). **N** / count button cycles numerals · rings · yellow · flush · borderless (`hexsweeper-sphere-countstyle-v1`)
+- Hover lifts **covered** faces only (cleared stay put); flags stay pinned at lift height (pure red fill, no glyph). Empty clears recess (numerals/rings/borderless); numbered clears stay flush. Borderless drops the recessed-floor grid. **N** / count button cycles numerals · rings · yellow · flush · borderless (`hexsweeper-sphere-countstyle-v1`)
 - **Autosave:** mid-run state in `hexsweeper-sphere-run-v1` (resume on refresh); Reset and size changes confirm before discarding progress
 - Minimal help: short lede, color history tile → [CoolmathGames history](https://www.coolmathgames.com/blog/the-history-of-minesweeper) + lightbox
 - Densities: **XS** = 162 · **S** = 362 · **M** = 1002 · **L** = 1442 · **XL** = 2252 (~17% mines; size button cycles XS→XL)
