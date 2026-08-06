@@ -286,9 +286,8 @@
     const sizeBtn = document.getElementById("size-btn");
     const themeBtn = document.getElementById("theme-btn");
     const helpOverlay = document.getElementById("help-overlay");
+    const helpPanel = document.getElementById("help-panel");
     const helpBtn = document.getElementById("help-btn");
-    const helpClose = document.getElementById("help-close");
-    const helpPlay = document.getElementById("help-play");
     let helpFocusReturn = null;
 
     function hudClick(fn) {
@@ -413,7 +412,7 @@
       requestAnimationFrame(() => helpOverlay.classList.add("open"));
       if (releaseFocusTrap) releaseFocusTrap();
       releaseFocusTrap = trapFocus(helpOverlay);
-      (helpClose || helpPlay)?.focus();
+      (helpPanel || helpOverlay).focus?.();
     }
 
     function closeHelp() {
@@ -1513,10 +1512,10 @@
     if (sizeBtn) sizeBtn.addEventListener("click", hudClick(cycleSize));
     if (themeBtn) themeBtn.addEventListener("click", hudClick(cycleTheme));
     if (helpBtn) helpBtn.addEventListener("click", hudClick(() => openHelp(false)));
-    if (helpClose) helpClose.addEventListener("click", closeHelp);
-    if (helpPlay) helpPlay.addEventListener("click", closeHelp);
+    // Any click dismisses (links still navigate). No X / Got it controls.
     helpOverlay?.addEventListener("click", (e) => {
-      if (e.target === helpOverlay) closeHelp();
+      if (e.target.closest("a")) return;
+      closeHelp();
     });
 
     window.addEventListener("keydown", (e) => {
