@@ -15,8 +15,9 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 
 - [x] **Plate perf** — Soft UI / Escape: viewZoom-gated LOD at default 0.55, skip watermark underlay in LOD, single seam stroke, tighter frustum cull, IntersectionObserver + iframe blur + idle RAF throttle in `core.js`
 - [x] **No dig auto-pan** — `core.js` no longer calls `focusOnCell` on dig/chord; Escape intro zoom on Reset unchanged
-- [x] **Choices lab exports** — `tools/export-choices-lab.py` → self-contained `choices/lab/*.html` with Copy for CodePen (no cross-links)
-- [x] **Choices hub** — `choices.html` + `choices/lab/*` one-pagers (curated; not in production theme switcher)
+- [x] **Lab → collection** — `export-collection.py` exports `collection/skin-*.html`; desk lists Production + Lab with Open + Copy HTML (copy on index only)
+- [x] **Choices lab redirects** — `choices/lab/*.html` redirect to collection pens; playable pages are game-only (no Copy bar)
+- [x] **Choices hub** — `choices.html` points re-eval/copy to collection desk (curated; not in production theme switcher)
 - [x] Sphere MVP — ~3× boards (S/M/L = 362/1002/1442 faces), flood expand FX, backface cull, idle RAF throttle
 - [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12)
 - [x] Sphere polish — trimmed icon help, size-cycle fix, endgame FX, no theme toast
@@ -88,7 +89,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Nested git repo for production folder (commit/push history)
 - [x] Self-hosted fonts committed (`fonts/` + OFL) so GitHub clones match live typography
 - [x] Docs / `skins.json` production surface aligned to five themes
-- [x] Collection one-pagers: `collection/theme-*.html` + Copy HTML desk + `tools/export-collection.py`
+- [x] Collection one-pagers: `collection/theme-*.html` + `collection/skin-*.html` + Copy HTML desk + `tools/export-collection.py`
 - [x] Production `HEXSWEEPER_ONEPAGER` (strict single theme, or scoped `allowModes` for Light/Dark plate)
 - [x] Light/Dark collection cut is one file (`theme-plate.html`) with in-file toggle
 - [x] Production chrome: BR Appearance · Reset · Menu (scores/modes/links inside Menu)

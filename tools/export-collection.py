@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# File Purpose: Build CodePen-ready Hexsweeper theme one-pagers under collection/.
-# Primary Functions/Classes: export_theme, inline_assets, write_collection_index.
-# Inputs: ../index.html, ../core.js, ../skin-chrome.css, ../fonts/*; CLI --check.
-# Outputs: collection/theme-*.html + regenerates collection/index.html.
+# File Purpose: Build CodePen-ready Hexsweeper one-pagers under collection/.
+# Primary Functions/Classes: export_theme, export_skin, inline_assets, write_collection_index.
+# Inputs: ../index.html, ../core.js, ../skin-chrome.css, ../fonts/*, ../skins.json, ../skins/*.
+# Outputs: collection/theme-*.html, collection/skin-*.html + regenerates collection/index.html.
 
 from __future__ import annotations
 
@@ -64,6 +64,16 @@ THEMES = [
     },
 ]
 
+TAG_SWATCH: dict[str, tuple[str, str, str, str]] = {
+    "baseline": ("#e0e5ec", "#4a5568", "#a0aec0", "#718096"),
+    "particles": ("#080a0f", "#ff6400", "#ffd24a", "#7eb8ff"),
+    "lensing": ("#0a1420", "#7eb8ff", "#a78bfa", "#34d399"),
+    "depth": ("#1c120c", "#ff6400", "#3d2818", "#ffd24a"),
+    "materials": ("#141820", "#c9a86c", "#7eb8ff", "#e8dcc8"),
+    "organic": ("#141e1c", "#7ec8a8", "#d4a08c", "#5a8f78"),
+}
+DEFAULT_LAB_SWATCH = ("#080a0f", "#7eb8ff", "#34d399", "#fbbf24")
+
 
 def data_uri(path: Path) -> str:
     mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
@@ -92,6 +102,71 @@ def safe_script(text: str) -> str:
     return text.replace("</script", "<\\/script")
 
 
+def load_skins() -> list[dict]:
+    data = json.loads((ROOT / "skins.json").read_text(encoding="utf-8"))
+    skins = data.get("skins", [])
+    if not skins:
+        raise SystemExit("skins.json has no skins")
+    return skins
+
+
+def skin_swatch(skin: dict) -> tuple[str, str, str, str]:
+    return TAG_SWATCH.get(skin.get("tag", ""), DEFAULT_LAB_SWATCH)
+
+
+def strip_skin_nav(markup: str) -> str:
+    """Remove lab navigation chrome; keep in-game Reset/Menu and modal menu-links."""
+    markup = re.sub(
+        r'<nav class="skin-nav"[^>]*>.*?</nav>\s*',
+        "",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    markup = re.sub(
+        r"// keyboard prev/next\s*\(function\(\)\{.*?\}\)\(\);\s*",
+        "",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    markup = markup.replace(
+        "Menu holds scores · Reset on the board · ← → skins",
+        "Menu holds scores · Reset on the board",
+    )
+    return markup
+
+
+def inline_skin_assets(markup: str) -> str:
+    chrome = (ROOT / "skin-chrome.css").read_text(encoding="utf-8")
+    markup = re.sub(
+        r'<link rel="stylesheet" href="\.\./skin-chrome\.css">\s*',
+        f"<style>\n/* skin-chrome.css */\n{chrome}\n</style>\n",
+        markup,
+        count=1,
+    )
+    markup = re.sub(
+        r'<link rel="stylesheet" href="skin-chrome\.css">\s*',
+        f"<style>\n/* skin-chrome.css */\n{chrome}\n</style>\n",
+        markup,
+        count=1,
+    )
+    core = safe_script((ROOT / "core.js").read_text(encoding="utf-8"))
+    markup = re.sub(
+        r'<script src="\.\./core\.js"></script>\s*',
+        f"<script>\n/* core.js */\n{core}\n</script>\n",
+        markup,
+        count=1,
+    )
+    markup = re.sub(
+        r'<script src="core\.js"></script>\s*',
+        f"<script>\n/* core.js */\n{core}\n</script>\n",
+        markup,
+        count=1,
+    )
+    return markup
+
+
 def banner(theme: dict) -> str:
     return "\n".join(
         (
@@ -103,6 +178,25 @@ def banner(theme: dict) -> str:
             "  Author: Luke Steuber",
             "  Note: Self-contained collection export. Live multi-theme game:",
             "        https://dr.eamer.dev/games/hexsweeper/",
+            "-->",
+        )
+    )
+
+
+def skin_banner(skin: dict) -> str:
+    name = skin["name"]
+    tag = skin.get("tag", "lab")
+    blurb = skin.get("blurb", "")
+    techniques = ", ".join(skin.get("techniques", []))
+    return "\n".join(
+        (
+            "<!--",
+            f"  Quick Take: Hexsweeper lab — {name} ({tag}). {blurb}",
+            f"  Techniques: {techniques or 'visual study'}.",
+            "  Stack: Vanilla HTML, CSS, and JavaScript; Canvas 2D; no external libraries.",
+            f"  Source: {PUBLIC_BASE}/skin-{skin['id']}.html",
+            "  License: MIT · Author: Luke Steuber",
+            "  Note: Self-contained collection export. Regenerate: python3 tools/export-collection.py",
             "-->",
         )
     )
@@ -209,9 +303,47 @@ def export_theme(theme: dict, source: str) -> str:
     return markup
 
 
-def tile_html(theme: dict) -> str:
+def export_skin(skin: dict) -> str:
+    src_path = ROOT / skin["file"]
+    markup = src_path.read_text(encoding="utf-8")
+    markup = re.sub(
+        r"<!DOCTYPE html>\s*<!--.*?-->\s*<html",
+        "<!DOCTYPE html>\n<html",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    markup = markup.replace(
+        "<!DOCTYPE html>\n<html",
+        f"<!DOCTYPE html>\n{skin_banner(skin)}\n<html",
+        1,
+    )
+    title = f"{skin['name']} — Hexsweeper Lab"
+    description = f"Hexsweeper lab skin: {skin['name']} — {skin.get('blurb', '')}"
+    markup = re.sub(r"<title>.*?</title>", f"<title>{title}</title>", markup, count=1, flags=re.S)
+    if re.search(r'<meta name="description"', markup):
+        markup = re.sub(
+            r'<meta name="description" content="[^"]*">',
+            f'<meta name="description" content="{description}">',
+            markup,
+            count=1,
+        )
+    else:
+        markup = re.sub(
+            r"(<meta name=\"viewport\"[^>]*>)",
+            rf"\1\n<meta name=\"description\" content=\"{description}\">",
+            markup,
+            count=1,
+        )
+    markup = strip_skin_nav(markup)
+    markup = inline_skin_assets(markup)
+    markup = markup.replace('<html lang="en">', '<html lang="en" class="collection-export">', 1)
+    return markup
+
+
+def tile_html(theme: dict, *, prefix: str = "theme") -> str:
     a, b, c, d = theme["swatch"]
-    file = f"theme-{theme['id']}.html"
+    file = f"{prefix}-{theme['id']}.html"
     return f"""      <article class="study" data-filter="{theme['filter']}" style="--swatch-bg:{a};--swatch-a:{b};--swatch-b:{c};--swatch-c:{d}">
         <a class="study-copy" href="{file}">
           <span class="swatch" aria-hidden="true"></span>
@@ -226,19 +358,43 @@ def tile_html(theme: dict) -> str:
       </article>"""
 
 
-def write_index() -> str:
-    tiles = "\n".join(tile_html(t) for t in THEMES)
+def skin_tile_html(skin: dict) -> str:
+    swatch = skin_swatch(skin)
+    a, b, c, d = swatch
+    tag = skin.get("tag", "lab")
+    techniques = skin.get("techniques", [])
+    filter_terms = " ".join(
+        [skin["id"], tag, skin["name"].lower(), "lab skin"] + [t.lower() for t in techniques]
+    )
+    file = f"skin-{skin['id']}.html"
+    return f"""      <article class="study" data-filter="{filter_terms}" style="--swatch-bg:{a};--swatch-a:{b};--swatch-b:{c};--swatch-c:{d}">
+        <a class="study-copy" href="{file}">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · {tag}</span>
+          <span class="study-title">{skin['name']}</span>
+          <p>{skin.get('blurb', '')}</p>
+        </a>
+        <div class="actions">
+          <a href="{file}" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="{file}">Copy HTML</button>
+        </div>
+      </article>"""
+
+
+def write_index(themes: list[dict], skins: list[dict]) -> str:
+    theme_tiles = "\n".join(tile_html(t) for t in themes)
+    skin_tiles = "\n".join(skin_tile_html(s) for s in skins)
     return f"""<!DOCTYPE html>
 <!--
-  File Purpose: Hexsweeper Collection desk — Open + Copy HTML for theme one-pagers.
+  File Purpose: Hexsweeper Collection desk — Open + Copy HTML for theme and lab one-pagers.
   Primary Functions/Classes: Tile grid; data-copy clipboard fetch (Choice One-Pagers pattern).
-  Inputs: theme-*.html siblings. Outputs: browsable index + clipboard full HTML.
+  Inputs: theme-*.html, skin-*.html siblings. Outputs: browsable index + clipboard full HTML.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Standalone Hexsweeper theme one-pagers with copy-ready HTML by Luke Steuber.">
+<meta name="description" content="Standalone Hexsweeper theme and lab one-pagers with copy-ready HTML by Luke Steuber.">
 <meta name="author" content="Luke Steuber">
 <meta name="theme-color" content="#e8eaee">
 <link rel="canonical" href="{PUBLIC_BASE}/">
@@ -266,8 +422,10 @@ main{{width:min(1100px,100%);margin:auto;padding:max(1rem,env(safe-area-inset-to
 header{{margin:2.4rem 0 1.6rem}}
 h1{{margin:0;font:800 clamp(2.4rem,8vw,4.6rem)/.9 var(--display);letter-spacing:-.04em}}
 .lede{{max-width:40rem;margin:.85rem 0 0;color:var(--muted);line-height:1.55}}
+.section{{margin-top:2.2rem}}
+.section h2{{margin:0 0 .85rem;font:700 .72rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}}
 #status{{min-height:1.4rem;margin:.75rem 0 0;color:var(--status);font:600 .75rem var(--mono)}}
-.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,14rem),1fr));gap:.7rem;margin-top:1.4rem}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,14rem),1fr));gap:.7rem;margin-top:.4rem}}
 .study{{display:flex;min-height:12.5rem;flex-direction:column;border:1px solid var(--line);background:var(--panel)}}
 .study-copy{{display:grid;gap:.4rem;flex:1;padding:1rem;text-decoration:none;color:inherit}}
 .study-copy:hover{{background:rgba(255,255,255,.55)}}
@@ -290,15 +448,24 @@ footer a{{color:var(--accent)}}
   <a class="back" href="../">&lsaquo; Play Hexsweeper</a>
   <header>
     <h1>Hexsweeper Collection</h1>
-    <p class="lede">Four copy-ready HTML files for CodePen or local paste. Light and Dark share one infinite file with an in-file toggle, but each gets its own material: porcelain chalk or night iron. Fire, Plague, and Escape each stand alone. The live multi-theme game stays on the Play link.</p>
+    <p class="lede">Copy-ready HTML for CodePen or local paste. Production themes and lab skins each get a self-contained one-pager — use <strong>Open</strong> to play, <strong>Copy HTML</strong> here on the desk (not on the playable page). Light and Dark share one infinite file with an in-file toggle. The live multi-theme game stays on the Play link.</p>
     <p id="status" role="status" aria-live="polite"></p>
   </header>
   <!-- generated-hexsweeper-collection:begin -->
-  <div class="grid">
-{tiles}
-  </div>
+  <section class="section" aria-labelledby="production-heading">
+    <h2 id="production-heading">Production themes</h2>
+    <div class="grid">
+{theme_tiles}
+    </div>
+  </section>
+  <section class="section" aria-labelledby="lab-heading">
+    <h2 id="lab-heading">Lab skins</h2>
+    <div class="grid">
+{skin_tiles}
+    </div>
+  </section>
   <!-- generated-hexsweeper-collection:end -->
-  <footer>By <a href="https://lukesteuber.com">Luke Steuber</a> · <a href="../LICENSE">MIT</a> · IBM Plex under <a href="../fonts/OFL.txt">OFL</a></footer>
+  <footer>By <a href="https://lukesteuber.com">Luke Steuber</a> · <a href="../LICENSE">MIT</a> · IBM Plex under <a href="../fonts/OFL.txt">OFL</a> · <a href="../choices.html">Choices hub</a></footer>
 </main>
 <script>
 (function () {{
@@ -334,7 +501,7 @@ footer a{{color:var(--accent)}}
       btn.disabled = false;
       btn.textContent = old;
     }}, 1600);
-  }});
+  }};
 }})();
 </script>
 </body>
@@ -355,17 +522,23 @@ def main() -> int:
         print("error: index.html missing HEXSWEEPER_ONEPAGER allowModes support", file=sys.stderr)
         return 2
 
+    skins = load_skins()
     COLLECTION.mkdir(parents=True, exist_ok=True)
     planned: dict[Path, str] = {}
     for theme in THEMES:
         path = COLLECTION / f"theme-{theme['id']}.html"
         planned[path] = export_theme(theme, source)
-    planned[COLLECTION / "index.html"] = write_index()
+    for skin in skins:
+        path = COLLECTION / f"skin-{skin['id']}.html"
+        planned[path] = export_skin(skin)
+    planned[COLLECTION / "index.html"] = write_index(THEMES, skins)
 
-    expected_names = {p.name for p in planned}
+    expected_theme = {f"theme-{t['id']}.html" for t in THEMES}
+    expected_skin = {f"skin-{s['id']}.html" for s in skins}
+    expected_names = expected_theme | expected_skin | {"index.html"}
     orphans = sorted(
         p
-        for p in COLLECTION.glob("theme-*.html")
+        for p in COLLECTION.glob("*.html")
         if p.name not in expected_names
     )
 

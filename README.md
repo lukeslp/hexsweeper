@@ -47,35 +47,37 @@ Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Ligh
 | `core.js` | Shared engine: hex grid, endless growth, input, hooks |
 | `skin-chrome.css` | Shared nav / settings / overlay chrome (lab + classic) |
 | `fonts/` | Self-hosted IBM Plex Sans/Mono + `OFL.txt` |
-| `collection/` | Theme one-pagers + Copy HTML desk (CodePen-ready) |
-| `tools/export-collection.py` | Regenerates `collection/theme-*.html` + index |
+| `collection/` | Production + lab one-pagers; Copy HTML desk (CodePen-ready) |
+| `tools/export-collection.py` | Regenerates `collection/theme-*.html`, `skin-*.html`, and index |
 | `sphere/` | **Experimental** closed hex sphere minesweeper (Canvas projection) |
-| `choices.html` | Curated hub: production, sphere, lab one-pagers — not in theme switcher |
-| `choices/lab/` | Generated self-contained lab skins + **Copy for CodePen** |
-| `tools/export-choices-lab.py` | Regenerates `choices/lab/*.html` from `skins.json` |
+| `choices.html` | Curated hub: production, sphere, lab links — not in theme switcher |
+| `choices/lab/` | Generated redirects to `collection/skin-*.html` |
+| `tools/export-choices-lab.py` | Regenerates `choices/lab/*.html` redirect stubs |
 | `classic.html` | Lab baseline neumorph skin |
 | `lab.html` + `skins.json` + `skins/` | Dormant visual lab — not linked from production |
 
 ## Collection (one-pagers)
 
-Four self-contained files for paste into CodePen (or anywhere HTML runs):
+Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML** lives on the [collection desk](collection/) only — playable pens are game-only (Reset/Menu).
 
 | File | Theme |
 |------|--------|
-| [`collection/`](collection/) | Desk with **Open** + **Copy HTML** |
+| [`collection/`](collection/) | Desk with **Open** + **Copy HTML** (Production + Lab sections) |
 | `collection/theme-plate.html` | Light / Dark · Infinite (in-file toggle; keeps the run) |
 | `collection/theme-fire.html` | Fire · Finite |
 | `collection/theme-plague.html` | Plague · Finite |
 | `collection/theme-escape.html` | Escape · Infinite |
+| `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports) |
 
-Regenerate after production changes:
+Regenerate after production or lab skin changes:
 
 ```bash
 python3 tools/export-collection.py
 python3 tools/export-collection.py --check   # CI / drift guard
+python3 tools/export-choices-lab.py          # choices/lab redirect stubs
 ```
 
-Exports inline `core.js`, chrome CSS, and IBM Plex (base64 woff2). Each file sets `window.HEXSWEEPER_ONEPAGER` (`allowModes: ["light","dark"]` on the plate; single `mode` on the others). Welcome stays hidden; Fire/Plague/Escape hide the theme switch. The live multi-theme game remains `index.html`.
+Production exports inline `core.js`, chrome CSS, and IBM Plex (base64 woff2). Each theme file sets `window.HEXSWEEPER_ONEPAGER` (`allowModes: ["light","dark"]` on the plate; single `mode` on the others). Lab skins boot via `Hexsweeper.boot` in their source files. Welcome stays hidden on production pens. The live multi-theme game remains `index.html`.
 
 ## Engine API
 
@@ -121,7 +123,7 @@ Flat game remains the default at `index.html`.
 
 [`choices.html`](choices.html) — https://dr.eamer.dev/games/hexsweeper/choices.html
 
-Curated entry for production play, the sphere experiment, and ten lab one-pagers under `choices/lab/`. Each lab page is playable in-browser and includes **Copy for CodePen** (full self-contained HTML). Regenerate with `python3 tools/export-choices-lab.py` after skin or engine changes. Not linked from the production theme switcher.
+Curated entry for production play, the sphere experiment, and ten lab skins (play via `choices/lab/` redirects or open from the collection desk). Copy HTML for lab pens is on [`collection/`](collection/) only. Regenerate with `python3 tools/export-collection.py` and `python3 tools/export-choices-lab.py` after skin or engine changes. Not linked from the production theme switcher.
 
 ## Lab (prior art)
 

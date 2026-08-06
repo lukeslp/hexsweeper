@@ -21,23 +21,24 @@ Production is **only** Light / Dark / Fire / Plague / Escape in `index.html`. Do
 
 ## Collection exports
 
-After changing `index.html`, `core.js`, `skin-chrome.css`, or `fonts/`, regenerate:
+After changing `index.html`, `core.js`, `skin-chrome.css`, `fonts/`, `classic.html`, or `skins/*`, regenerate:
 
 ```bash
 python3 tools/export-collection.py
+python3 tools/export-collection.py --check   # drift guard
 ```
 
-Do not hand-edit `collection/theme-*.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`). Light/Dark ship as `theme-plate.html` with `allowModes`; do not re-split them into separate pens.
+Do not hand-edit `collection/theme-*.html` or `collection/skin-*.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`): **Open** + **Copy HTML** on `collection/index.html` only (not on playable pens). Light/Dark ship as `theme-plate.html` with `allowModes`; lab skins ship as `skin-*.html` (game-only: Reset/Menu, no skin nav or Copy bar).
 
-## Choices lab exports
+## Choices lab redirects
 
-After changing `core.js`, `skin-chrome.css`, `classic.html`, or `skins/*`, regenerate:
+After changing `skins.json` or collection lab pens, regenerate redirect stubs:
 
 ```bash
 python3 tools/export-choices-lab.py
 ```
 
-Do not hand-edit `choices/lab/*.html` — they are generated from `skins.json` + skin sources. Each page is self-contained (inlined engine + chrome) with **Copy for CodePen**; the copy strips the lab header bar.
+Do not hand-edit `choices/lab/*.html` — they redirect to `collection/skin-*.html`. Canonical playable + copy-ready HTML lives in `collection/`.
 
 ## Safety
 

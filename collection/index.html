@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <!--
-  File Purpose: Hexsweeper Collection desk — Open + Copy HTML for theme one-pagers.
+  File Purpose: Hexsweeper Collection desk — Open + Copy HTML for theme and lab one-pagers.
   Primary Functions/Classes: Tile grid; data-copy clipboard fetch (Choice One-Pagers pattern).
-  Inputs: theme-*.html siblings. Outputs: browsable index + clipboard full HTML.
+  Inputs: theme-*.html, skin-*.html siblings. Outputs: browsable index + clipboard full HTML.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Standalone Hexsweeper theme one-pagers with copy-ready HTML by Luke Steuber.">
+<meta name="description" content="Standalone Hexsweeper theme and lab one-pagers with copy-ready HTML by Luke Steuber.">
 <meta name="author" content="Luke Steuber">
 <meta name="theme-color" content="#e8eaee">
 <link rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/collection/">
@@ -36,8 +36,10 @@ main{width:min(1100px,100%);margin:auto;padding:max(1rem,env(safe-area-inset-top
 header{margin:2.4rem 0 1.6rem}
 h1{margin:0;font:800 clamp(2.4rem,8vw,4.6rem)/.9 var(--display);letter-spacing:-.04em}
 .lede{max-width:40rem;margin:.85rem 0 0;color:var(--muted);line-height:1.55}
+.section{margin-top:2.2rem}
+.section h2{margin:0 0 .85rem;font:700 .72rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 #status{min-height:1.4rem;margin:.75rem 0 0;color:var(--status);font:600 .75rem var(--mono)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,14rem),1fr));gap:.7rem;margin-top:1.4rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,14rem),1fr));gap:.7rem;margin-top:.4rem}
 .study{display:flex;min-height:12.5rem;flex-direction:column;border:1px solid var(--line);background:var(--panel)}
 .study-copy{display:grid;gap:.4rem;flex:1;padding:1rem;text-decoration:none;color:inherit}
 .study-copy:hover{background:rgba(255,255,255,.55)}
@@ -60,11 +62,13 @@ footer a{color:var(--accent)}
   <a class="back" href="../">&lsaquo; Play Hexsweeper</a>
   <header>
     <h1>Hexsweeper Collection</h1>
-    <p class="lede">Four copy-ready HTML files for CodePen or local paste. Light and Dark share one infinite file with an in-file toggle, but each gets its own material: porcelain chalk or night iron. Fire, Plague, and Escape each stand alone. The live multi-theme game stays on the Play link.</p>
+    <p class="lede">Copy-ready HTML for CodePen or local paste. Production themes and lab skins each get a self-contained one-pager — use <strong>Open</strong> to play, <strong>Copy HTML</strong> here on the desk (not on the playable page). Light and Dark share one infinite file with an in-file toggle. The live multi-theme game stays on the Play link.</p>
     <p id="status" role="status" aria-live="polite"></p>
   </header>
   <!-- generated-hexsweeper-collection:begin -->
-  <div class="grid">
+  <section class="section" aria-labelledby="production-heading">
+    <h2 id="production-heading">Production themes</h2>
+    <div class="grid">
       <article class="study" data-filter="light dark infinite soft ui neumorph honeycomb plate night toggle porcelain chalk graphite iron steel watermark" style="--swatch-bg:#d4dce8;--swatch-a:#10151d;--swatch-b:#1d4ed8;--swatch-c:#60a5fa">
         <a class="study-copy" href="theme-plate.html">
           <span class="swatch" aria-hidden="true"></span>
@@ -113,9 +117,135 @@ footer a{color:var(--accent)}
           <button type="button" data-copy="theme-escape.html">Copy HTML</button>
         </div>
       </article>
-  </div>
+    </div>
+  </section>
+  <section class="section" aria-labelledby="lab-heading">
+    <h2 id="lab-heading">Lab skins</h2>
+    <div class="grid">
+      <article class="study" data-filter="classic baseline classic neumorph lab skin neumorphism hover scale reveal press" style="--swatch-bg:#e0e5ec;--swatch-a:#4a5568;--swatch-b:#a0aec0;--swatch-c:#718096">
+        <a class="study-copy" href="skin-classic.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · baseline</span>
+          <span class="study-title">Classic Neumorph</span>
+          <p>Original soft raised honeycomb — the control sample.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-classic.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-classic.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="particle-bloom particles particle bloom lab skin particle field emit on reveal additive bloom" style="--swatch-bg:#080a0f;--swatch-a:#ff6400;--swatch-b:#ffd24a;--swatch-c:#7eb8ff">
+        <a class="study-copy" href="skin-particle-bloom.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · particles</span>
+          <span class="study-title">Particle Bloom</span>
+          <p>Ambient dust field; cells burst seed particles on reveal.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-particle-bloom.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-particle-bloom.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="glass-lens lensing glass magnifier lab skin backdrop blur magnifier lens frosted glass materials" style="--swatch-bg:#0a1420;--swatch-a:#7eb8ff;--swatch-b:#a78bfa;--swatch-c:#34d399">
+        <a class="study-copy" href="skin-glass-lens.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · lensing</span>
+          <span class="study-title">Glass Magnifier</span>
+          <p>Frostpane tokens + cursor-following glass lens with radial distortion.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-glass-lens.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-glass-lens.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="parallax-depth depth parallax rings lab skin ring depth pointer parallax theme cycle sorted draw order" style="--swatch-bg:#1c120c;--swatch-a:#ff6400;--swatch-b:#3d2818;--swatch-c:#ffd24a">
+        <a class="study-copy" href="skin-parallax-depth.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · depth</span>
+          <span class="study-title">Parallax Rings</span>
+          <p>Lab copy of ring-depth + pointer parallax. Production Fire mode lives in index.html.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-parallax-depth.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-parallax-depth.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="brass-plaque materials brass plaque lab skin material tokens metal gradient cells desk atmosphere" style="--swatch-bg:#141820;--swatch-a:#c9a86c;--swatch-b:#7eb8ff;--swatch-c:#e8dcc8">
+        <a class="study-copy" href="skin-brass-plaque.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · materials</span>
+          <span class="study-title">Brass Plaque</span>
+          <p>Finish tokens from materials/brass — warm ceramic-metal desk.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-brass-plaque.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-brass-plaque.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="frostpane materials frostpane night lab skin frosted-glass pack luminous mist glass fill" style="--swatch-bg:#141820;--swatch-a:#c9a86c;--swatch-b:#7eb8ff;--swatch-c:#e8dcc8">
+        <a class="study-copy" href="skin-frostpane.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · materials</span>
+          <span class="study-title">Frostpane Night</span>
+          <p>Dark frosted glass: cyan–violet glow, translucent faces, rim light.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-frostpane.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-frostpane.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="paper-relief materials paper relief lab skin paper tokens soft multi-shadow score ink" style="--swatch-bg:#141820;--swatch-a:#c9a86c;--swatch-b:#7eb8ff;--swatch-c:#e8dcc8">
+        <a class="study-copy" href="skin-paper-relief.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · materials</span>
+          <span class="study-title">Paper Relief</span>
+          <p>Paper-systems cream stock with multi-shadow emboss depth.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-paper-relief.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-paper-relief.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="comet-void particles comet void lab skin meteor sky motif spark particles trail streaks" style="--swatch-bg:#080a0f;--swatch-a:#ff6400;--swatch-b:#ffd24a;--swatch-c:#7eb8ff">
+        <a class="study-copy" href="skin-comet-void.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · particles</span>
+          <span class="study-title">Comet Void</span>
+          <p>Shader-comet palette: void black, ember sparks, meteor streaks.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-comet-void.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-comet-void.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="mycelium organic mycelium web lab skin seeded growth network edges nutrient flow" style="--swatch-bg:#141e1c;--swatch-a:#7ec8a8;--swatch-b:#d4a08c;--swatch-c:#5a8f78">
+        <a class="study-copy" href="skin-mycelium.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · organic</span>
+          <span class="study-title">Mycelium Web</span>
+          <p>Hyphal links grow between revealed cells; nutrient particles flow.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-mycelium.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-mycelium.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="caustic-lens lensing caustic lens lab skin caustic field refraction warp specular ridge" style="--swatch-bg:#0a1420;--swatch-a:#7eb8ff;--swatch-b:#a78bfa;--swatch-c:#34d399">
+        <a class="study-copy" href="skin-caustic-lens.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · lensing</span>
+          <span class="study-title">Caustic Lens</span>
+          <p>Under-board light caustics + hover refraction bulge.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-caustic-lens.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-caustic-lens.html">Copy HTML</button>
+        </div>
+      </article>
+    </div>
+  </section>
   <!-- generated-hexsweeper-collection:end -->
-  <footer>By <a href="https://lukesteuber.com">Luke Steuber</a> · <a href="../LICENSE">MIT</a> · IBM Plex under <a href="../fonts/OFL.txt">OFL</a></footer>
+  <footer>By <a href="https://lukesteuber.com">Luke Steuber</a> · <a href="../LICENSE">MIT</a> · IBM Plex under <a href="../fonts/OFL.txt">OFL</a> · <a href="../choices.html">Choices hub</a></footer>
 </main>
 <script>
 (function () {
@@ -151,7 +281,7 @@ footer a{color:var(--accent)}
       btn.disabled = false;
       btn.textContent = old;
     }, 1600);
-  });
+  };
 })();
 </script>
 </body>
