@@ -410,7 +410,8 @@ body {
   transition: background 0.35s ease, color 0.35s ease;
 }
 body.flag-mode { cursor: cell; }
-body.welcome-open { overflow: hidden; }
+body.welcome-open,
+body.help-open { overflow: hidden; }
 /* Collection one-pagers: strict = one theme; scoped = allowModes only (e.g. Light/Dark) */
 body.onepager-locked #plate-toggle,
 body.onepager-locked .mode-switch { display: none !important; }
@@ -653,13 +654,13 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   transform: translate(-50%, 0);
 }
 
-/* Help panel */
+/* Help panel — minimalist sheet aligned with sphere/index help */
 .help-overlay {
   position: fixed;
   inset: 0;
   z-index: 110;
-  background: color-mix(in srgb, var(--bg-color) 88%, transparent);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg-color) 72%, transparent);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -671,59 +672,158 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
 .help-overlay.open { opacity: 1; pointer-events: auto; }
 .help-panel {
   width: min(360px, 100%);
-  max-height: min(70vh, 420px);
+  max-height: min(82vh, 520px);
   overflow: auto;
-  background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+  background: color-mix(in srgb, var(--nav-bg, var(--bg-color)) 96%, transparent);
   color: var(--text-main);
-  border: 0;
-  border-radius: 22px;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  padding: 1.35rem 1.3rem 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  border-radius: 16px;
+  padding: 1.1rem 1.15rem 1rem;
   position: relative;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+  text-align: left;
+}
+.help-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.help-close:hover,
+.help-close:focus-visible {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  outline: none;
 }
 .help-panel h2 {
-  font-size: 1.15rem;
-  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+  margin: 0 2rem 0.55rem 0;
   letter-spacing: -0.02em;
 }
-.help-panel p {
-  font-size: 0.92rem;
+.help-lede {
+  margin: 0 0 0.85rem;
+  font-size: 0.84rem;
   line-height: 1.45;
-  margin: 0 0 0.7rem;
-  color: color-mix(in srgb, var(--text-main) 88%, var(--text-sub));
+  color: var(--text-sub);
 }
-.help-panel p:last-child { margin-bottom: 0; }
+.help-glyphs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 0.85rem;
+}
+.help-glyph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 4.5rem;
+  padding: 0.55rem 0.35rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--text-main) 88%, var(--text-sub));
+  text-align: center;
+  line-height: 1.25;
+}
+.help-glyph-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.help-glyph svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke: var(--text-main);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.92;
+}
+.help-body {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-sub);
+}
+.help-body p {
+  margin: 0 0 0.55rem;
+}
+.help-body p:last-child { margin-bottom: 0; }
 .help-panel .help-keys {
-  margin-top: 0.85rem;
-  font-size: 0.82rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.74rem;
+  line-height: 1.45;
   color: var(--text-sub);
 }
 .help-panel kbd {
   font-family: ui-monospace, monospace;
   font-size: 0.8em;
-  border: 1px solid color-mix(in srgb, var(--text-main) 30%, transparent);
-  border-radius: 5px;
-  padding: 0.05em 0.4em;
+  border: 1px solid color-mix(in srgb, var(--text-main) 24%, transparent);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+.help-more {
+  margin: 0 0 0.85rem;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+.help-more a {
+  color: var(--text-main);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+.help-more a:hover { opacity: 0.85; }
+.help-done {
+  appearance: none;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--text-main) 18%, transparent);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
   background: color-mix(in srgb, var(--text-main) 8%, transparent);
-}
-.help-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--text-sub);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
-.help-close:hover { color: var(--text-main); }
+.help-done:hover,
+.help-done:focus-visible {
+  background: color-mix(in srgb, var(--text-main) 12%, transparent);
+  outline: none;
+}
+.help-panel .menu-links {
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  text-align: center;
+  font-size: 0.72rem;
+}
+.help-panel .menu-links a {
+  color: var(--text-sub);
+  text-decoration: none;
+}
+.help-panel .menu-links a:hover { color: var(--text-main); }
+.help-panel .menu-links-sep { opacity: 0.45; margin: 0 0.35rem; }
 
 /* Menu modal inherits skin-chrome; production widens + left-aligns */
 .modal-content {
@@ -1272,17 +1372,50 @@ body[data-mode="escape"] .menu-links {
 
 <!-- Help -->
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
-  <div class="help-panel">
-    <button type="button" class="help-close" id="help-close" aria-label="Close help">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-    </button>
-    <h2 id="help-title">How to play</h2>
-    <p>Minesweeper on hexes. Six neighbors.</p>
-    <p>Click to dig (first click is safe). The number is mines on the sides. Empties open out to those numbers. When flags match a number, click it again to clear the rest. Flag with right-click, press-and-hold, or <kbd>F</kbd>.</p>
-    <p><strong>Light / Dark</strong> — infinite field.<br>
-    <strong>Fire / Plague</strong> — finite clear.<br>
-    <strong>Escape</strong> — find the finish hex before the rift reaches you.</p>
-    <p class="help-keys">Drag pan · scroll zoom · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
+  <div class="help-panel" id="help-panel" tabindex="-1">
+    <button type="button" class="help-close" id="help-close" aria-label="Close help">×</button>
+    <h2 id="help-title">Hexsweeper</h2>
+    <p class="help-lede" id="help-lede">Minesweeper on an infinite hex plate.<br>Six neighbors per cell · first dig is always safe.</p>
+    <div class="help-glyphs" aria-label="Controls">
+      <div class="help-glyph">
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+        Dig
+      </div>
+      <div class="help-glyph">
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
+        Flag
+      </div>
+      <div class="help-glyph">
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></span>
+        Chord
+      </div>
+      <div class="help-glyph">
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 9l-4 3 4 3M19 9l4 3-4 3M9 5l3-4 3 4M9 19l3 4 3-4"/></svg></span>
+        Pan
+      </div>
+      <div class="help-glyph">
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg></span>
+        Zoom
+      </div>
+      <div class="help-glyph">
+        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg></span>
+        Reset
+      </div>
+    </div>
+    <div class="help-body" id="help-body">
+      <p>Reveal every safe cell without detonating a mine.<br>Numbers count mines among the six touching neighbors.</p>
+      <p>Flag suspected mines, then dig elsewhere.<br>When a revealed cell’s flags match its count, tap it again to chord-open the rest.</p>
+      <p>Drag to pan the field; scroll or pinch to zoom.<br>The board expands as you dig — there is no win screen.</p>
+    </div>
+    <p class="help-keys" id="help-keys"><kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>Esc</kbd> close</p>
+    <p class="help-more">New to the genre? <a href="https://en.wikipedia.org/wiki/Minesweeper_(video_game)" target="_blank" rel="noopener noreferrer">Minesweeper on Wikipedia</a> — classic rules on a square grid.</p>
+    <p class="help-more" id="help-modes" hidden></p>
+    <button type="button" class="help-done" id="help-done">Done</button>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" rel="noopener noreferrer">datapoems.io</a>
+    </nav>
   </div>
 </div>
 
@@ -7117,6 +7250,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       else if (plateSwap && previousIndex !== themeIndex) schedulePersist();
     }
     syncSettingsRows();
+    syncHelpContent();
     if (!ONEPAGER_ACTIVE) {
       try {
         const url = new URL(location.href);
@@ -8217,21 +8351,145 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.restore();
   }
 
-  // Help panel
+  // Help panel — minimalist sheet (structure aligned with sphere/index help)
   const helpOverlay = document.getElementById("help-overlay");
+  const helpPanel = document.getElementById("help-panel");
   const helpBtn = document.getElementById("help-btn");
   const helpClose = document.getElementById("help-close");
+  const helpDone = document.getElementById("help-done");
+  let helpFocusReturn = null;
+
+  function gameModeHref(mode) {
+    const inCollection =
+      ONEPAGER_ACTIVE && window.HEXSWEEPER_COLLECTION_EXPORT;
+    return inCollection ? `../index.html?mode=${mode}` : `?mode=${mode}`;
+  }
+
+  const HELP_COPY = {
+    light: {
+      title: "Hexsweeper",
+      lede:
+        "Minesweeper on an infinite hex plate.<br>Six neighbors per cell · first dig is always safe.",
+      body: [
+        "Reveal every safe cell without detonating a mine.<br>Numbers count mines among the six touching neighbors.",
+        "Flag suspected mines, then dig elsewhere.<br>When a revealed cell’s flags match its count, tap it again to chord-open the rest.",
+        "Drag to pan the field; scroll or pinch to zoom.<br>The board expands as you dig — there is no win screen.",
+      ],
+      keys:
+        "<kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>Esc</kbd> close",
+      modes: [
+        { mode: "fire", label: "Fire" },
+        { mode: "plague", label: "Plague" },
+      ],
+    },
+    fire: {
+      title: "Hexsweeper · Fire",
+      lede:
+        "Finite magma pit.<br>Six neighbors per cell · first dig is always safe.",
+      body: [
+        "Clear every safe cell without detonating a mine.<br>Numbers count mines among the six touching neighbors.",
+        "Flag suspected mines, then dig elsewhere.<br>When a revealed cell’s flags match its count, tap it again to chord-open the rest.",
+        "Drag to tilt the pit; zoom in to pan when the board outgrows the frame.<br>Clear all safe cells to win.",
+      ],
+      keys:
+        "<kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>Esc</kbd> close",
+      modes: [
+        { mode: "light", label: "Light / Dark plate" },
+        { mode: "plague", label: "Plague" },
+      ],
+    },
+    plague: {
+      title: "Hexsweeper · Plague",
+      lede:
+        "Finite biolume reef.<br>Six neighbors per cell · first dig is always safe.",
+      body: [
+        "Clear every safe cell without detonating a mine.<br>Numbers count mines among the six touching neighbors.",
+        "Flag suspected mines, then dig elsewhere.<br>When a revealed cell’s flags match its count, tap it again to chord-open the rest.",
+        "Drag to explore; scroll or pinch to zoom when the reef fills the view.<br>Clear all safe cells to win.",
+      ],
+      keys:
+        "<kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>Esc</kbd> close",
+      modes: [
+        { mode: "light", label: "Light / Dark plate" },
+        { mode: "fire", label: "Fire" },
+      ],
+    },
+    escape: {
+      title: "Hexsweeper · Escape",
+      lede:
+        "Rift chase on an endless field.<br>Six neighbors · reach the finish hex before the rift catches you.",
+      body: [
+        "Dig toward the finish — its edge glows when you are close.<br>Mines and the creeping rift both end the run.",
+        "Flag suspected mines; chord when flags match a revealed count.<br>Every dig lets the rift advance.",
+        "Drag to pan; scroll or pinch to zoom.<br>Reveal the finish hex to win.",
+      ],
+      keys:
+        "<kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>Esc</kbd> close",
+      modes: [
+        { mode: "light", label: "Light / Dark plate" },
+        { mode: "fire", label: "Fire" },
+        { mode: "plague", label: "Plague" },
+      ],
+    },
+  };
+
+  function getHelpCopy(modeId) {
+    if (modeId === "dark") return HELP_COPY.light;
+    return HELP_COPY[modeId] || HELP_COPY.light;
+  }
+
+  function syncHelpContent() {
+    const copy = getHelpCopy(THEMES[themeIndex]?.id || "light");
+    const titleEl = document.getElementById("help-title");
+    const ledeEl = document.getElementById("help-lede");
+    const bodyEl = document.getElementById("help-body");
+    const keysEl = document.getElementById("help-keys");
+    const modesEl = document.getElementById("help-modes");
+    if (titleEl) titleEl.textContent = copy.title;
+    if (ledeEl) ledeEl.innerHTML = copy.lede;
+    if (bodyEl) {
+      bodyEl.innerHTML = copy.body.map((p) => `<p>${p}</p>`).join("");
+    }
+    if (keysEl) keysEl.innerHTML = copy.keys;
+    if (modesEl) {
+      if (copy.modes?.length) {
+        const links = copy.modes
+          .map(
+            ({ mode, label }) =>
+              `<a href="${gameModeHref(mode)}">${label}</a>`
+          )
+          .join(' <span aria-hidden="true">·</span> ');
+        modesEl.innerHTML = `Also try ${links}.`;
+        modesEl.hidden = false;
+      } else {
+        modesEl.hidden = true;
+        modesEl.textContent = "";
+      }
+    }
+  }
 
   function openHelp() {
+    syncHelpContent();
+    helpFocusReturn =
+      document.activeElement && document.activeElement !== document.body
+        ? document.activeElement
+        : helpBtn;
     helpOverlay.hidden = false;
+    document.body.classList.add("help-open");
     requestAnimationFrame(() => helpOverlay.classList.add("open"));
-    helpClose?.focus();
+    (helpPanel || helpOverlay).focus?.();
   }
+
   function closeHelp() {
     helpOverlay.classList.remove("open");
+    document.body.classList.remove("help-open");
     setTimeout(() => {
       helpOverlay.hidden = true;
     }, 200);
+    if (helpFocusReturn && typeof helpFocusReturn.focus === "function") {
+      helpFocusReturn.focus();
+    }
+    helpFocusReturn = null;
   }
 
   helpBtn?.addEventListener("click", () => {
@@ -8239,9 +8497,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     openHelp();
   });
   helpClose?.addEventListener("click", closeHelp);
-  helpOverlay?.addEventListener("click", (e) => {
-    if (e.target === helpOverlay) closeHelp();
-  });
+  helpDone?.addEventListener("click", closeHelp);
 
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {
