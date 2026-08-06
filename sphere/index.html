@@ -180,6 +180,40 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
 #size-btn .size-mark[data-size="S"] { font-size: 14px; }
 #size-btn .size-mark[data-size="M"] { font-size: 17px; }
 #size-btn .size-mark[data-size="L"] { font-size: 20px; }
+/* Count-style btn — morphing icon per mode */
+#nest-btn .count-mark {
+  display: block;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  user-select: none;
+}
+#nest-btn.active { opacity: 1; }
+/* Count-style toast — above BR chrome */
+.count-style-toast {
+  position: fixed;
+  bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 64px));
+  left: 50%;
+  z-index: 28;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--nav-bg) 55%, transparent);
+  backdrop-filter: blur(14px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  opacity: 0;
+  transform: translate(-50%, -6px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.count-style-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
 /* Minimal help — mono chrome; classic Minesweeper tile is the only color */
 .help-overlay {
   position: fixed;
@@ -368,7 +402,8 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
 @media (prefers-reduced-motion: reduce) {
   .sphere-banner,
   .help-overlay,
-  .lightbox { transition: none; }
+  .lightbox,
+  .count-style-toast { transition: none; }
 }
 </style>
 </head>
@@ -409,12 +444,8 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
         <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
       </svg>
     </button>
-    <button type="button" id="nest-btn" class="hud-btn" aria-label="Count style: numerals" aria-pressed="false" title="Count style — numerals (N)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polygon points="12 3 20 8 20 16 12 21 4 16 4 8"></polygon>
-        <polygon points="12 7 17 10 17 14 12 17 7 14 7 10"></polygon>
-        <polygon points="12 11 14.5 12.5 14.5 14.5 12 16 9.5 14.5 9.5 12.5"></polygon>
-      </svg>
+    <button type="button" id="nest-btn" class="hud-btn" aria-label="Count style: Numerals. Activate to cycle." title="Count style — Numerals (N)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><text x="12" y="16" text-anchor="middle" font-family="IBM Plex Sans,system-ui,sans-serif" font-size="13" font-weight="700" fill="currentColor" stroke="none">1</text></svg>
     </button>
   </div>
   <div class="hud-actions" aria-label="Flag mode">
@@ -436,11 +467,13 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   </div>
 </div>
 
+<div id="count-style-toast" class="count-style-toast" role="status" aria-live="polite"></div>
+
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hex Sphere</h2>
-    <p class="help-lede">Dig and flag on a closed hex sphere.<br>Six neighbors · first dig is safe · drag to spin.<br><kbd>N</kbd> toggles nested-ring counts (danger by density).</p>
+    <p class="help-lede">Dig and flag on a closed hex sphere.<br>Six neighbors · first dig is safe · drag to spin.<br><kbd>N</kbd> cycles count styles (numerals · rings · yellow · flush · borderless).</p>
     <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic Minesweeper screenshot">
       <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper" width="320" height="240" loading="lazy">
     </button>

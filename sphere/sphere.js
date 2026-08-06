@@ -6,7 +6,7 @@
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
  * Hover: radial lift along face normal + skirt walls (no white-overpaint border wipe).
  * Cleared: inverse of hover — slight inward inset along normal + skirt.
- * Counts: numerals (default) or nested hex rings (Nest btn / N).
+ * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
@@ -146,7 +146,29 @@
   const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v3";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v1";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
+  const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
+  /** History-tile accent — mark only, never well fill. */
+  const YELLOW_COUNT = "#facc15";
+  const COUNT_STYLES = [
+    { id: "numerals", name: "Numerals" },
+    { id: "rings", name: "Rings" },
+    { id: "yellow", name: "Yellow" },
+    { id: "flush", name: "Flush" },
+    { id: "borderless", name: "Borderless" },
+  ];
+  const COUNT_STYLE_ICONS = {
+    numerals:
+      '<span class="count-mark" aria-hidden="true">1</span>',
+    rings:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 3 20 8 20 16 12 21 4 16 4 8"></polygon><polygon points="12 7 17 10 17 14 12 17 7 14 7 10"></polygon><polygon points="12 11 14.5 12.5 14.5 14.5 12 16 9.5 14.5 9.5 12.5"></polygon></svg>',
+    yellow:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 3 20 8 20 16 12 21 4 16 4 8"></polygon><polygon points="12 7 17 10 17 14 12 17 7 14 7 10" stroke="#facc15"></polygon></svg>',
+    flush:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 4 19 8.5 19 15.5 12 20 5 15.5 5 8.5"></polygon></svg>',
+    borderless:
+      '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 4 19 8.5 19 15.5 12 20 5 15.5 5 8.5" opacity="0.55"></polygon></svg>',
+  };
   const ZOOM_MIN = 0.55;
   const ZOOM_MAX = 2.25;
   /** Start pulled back — prior 1.0 filled the frame too aggressively. */
@@ -186,12 +208,13 @@
       return DEFAULT_THEME.id;
     }
 
-    function readStoredNest() {
+    function readStoredCountStyle() {
       try {
-        return localStorage.getItem(NEST_STORAGE_KEY) === "1";
-      } catch (_) {
-        return false;
-      }
+        const id = localStorage.getItem(COUNT_STYLE_STORAGE_KEY);
+        if (id && COUNT_STYLES.some((s) => s.id === id)) return id;
+        if (localStorage.getItem(NEST_STORAGE_KEY) === "1") return "rings";
+      } catch (_) {}
+      return COUNT_STYLES[0].id;
     }
 
     function readStoredSize() {
@@ -250,7 +273,7 @@
           matchMedia("(prefers-reduced-motion: reduce)").matches
         ),
       lastFrameAt: 0,
-      nestCounts: readStoredNest(),
+      countStyle: readStoredCountStyle(),
     };
 
     const END_FX = {
@@ -329,6 +352,7 @@
     const sizeBtn = document.getElementById("size-btn");
     const themeBtn = document.getElementById("theme-btn");
     const nestBtn = document.getElementById("nest-btn");
+    const countStyleToast = document.getElementById("count-style-toast");
     const helpOverlay = document.getElementById("help-overlay");
     const helpPanel = document.getElementById("help-panel");
     const helpBtn = document.getElementById("help-btn");
@@ -1325,6 +1349,7 @@
       if (!drawHexPath(proj)) return;
       ctx.fillStyle = fill;
       ctx.fill();
+      if (lineWidth != null && lineWidth <= 0) return;
       ctx.strokeStyle = stroke;
       ctx.lineWidth = lineWidth != null ? lineWidth : 1.4;
       ctx.stroke();
@@ -1370,31 +1395,76 @@
       }
     }
 
-    function syncNestChrome() {
-      if (!nestBtn) return;
-      const on = !!state.nestCounts;
-      nestBtn.setAttribute("aria-pressed", on ? "true" : "false");
-      nestBtn.classList.toggle("active", on);
-      nestBtn.title = on
-        ? "Count style — nested rings (N)"
-        : "Count style — numerals (N)";
-      nestBtn.setAttribute(
-        "aria-label",
-        on ? "Count style: nested rings" : "Count style: numerals"
-      );
+    function countStyleById(id) {
+      return COUNT_STYLES.find((s) => s.id === id) || COUNT_STYLES[0];
     }
 
-    function setNestCounts(on) {
-      state.nestCounts = !!on;
+    function countStyleIndex() {
+      const i = COUNT_STYLES.findIndex((s) => s.id === state.countStyle);
+      return i >= 0 ? i : 0;
+    }
+
+    /** Empty clears recess in numerals/rings; flush modes stay shell-flat. */
+    function tileShouldInset(cell, styleId) {
+      if (
+        !cell.revealed ||
+        cell.flagged ||
+        cell.isMine ||
+        cell.neighborMines !== 0
+      ) {
+        return false;
+      }
+      return styleId === "numerals" || styleId === "rings";
+    }
+
+    /** Borderless: silhouette from fill only; hover lift still reads. */
+    function drawColorsForStyle(colors, styleId) {
+      if (styleId !== "borderless") return colors;
+      return {
+        ...colors,
+        stroke: colors.fill,
+        lineWidth: 0,
+      };
+    }
+
+    let countStyleToastTimer = null;
+
+    function showCountStyleToast(name) {
+      if (!countStyleToast) return;
+      countStyleToast.textContent = name;
+      countStyleToast.classList.add("show");
+      clearTimeout(countStyleToastTimer);
+      countStyleToastTimer = setTimeout(() => {
+        countStyleToast.classList.remove("show");
+      }, 1400);
+    }
+
+    function syncCountStyleChrome() {
+      if (!nestBtn) return;
+      const def = countStyleById(state.countStyle);
+      nestBtn.classList.toggle("active", state.countStyle !== "numerals");
+      nestBtn.title = `Count style — ${def.name} (N)`;
+      nestBtn.setAttribute("aria-label", `Count style: ${def.name}. Activate to cycle.`);
+      nestBtn.innerHTML =
+        COUNT_STYLE_ICONS[state.countStyle] || COUNT_STYLE_ICONS.numerals;
+    }
+
+    function setCountStyle(id, optsSet) {
+      optsSet = optsSet || {};
+      const def = COUNT_STYLES.find((s) => s.id === id);
+      if (!def) return;
+      state.countStyle = def.id;
       try {
-        localStorage.setItem(NEST_STORAGE_KEY, state.nestCounts ? "1" : "0");
+        localStorage.setItem(COUNT_STYLE_STORAGE_KEY, def.id);
       } catch (_) {}
-      syncNestChrome();
+      syncCountStyleChrome();
+      if (optsSet.toast !== false) showCountStyleToast(def.name);
       scheduleFrame();
     }
 
-    function toggleNestCounts() {
-      setNestCounts(!state.nestCounts);
+    function cycleCountStyle() {
+      const next = COUNT_STYLES[(countStyleIndex() + 1) % COUNT_STYLES.length];
+      setCountStyle(next.id);
     }
 
     function paintCountMark(tile, proj, cell, colors, lift) {
@@ -1404,8 +1474,11 @@
         !cell.isMine &&
         !cell.flagged &&
         cell.neighborMines > 0;
-      if (state.nestCounts && isDigit) {
-        drawNestedCount(proj, cell.neighborMines, colors.labelColor);
+      const styleId = state.countStyle;
+      if ((styleId === "rings" || styleId === "yellow") && isDigit) {
+        const ringColor =
+          styleId === "yellow" ? YELLOW_COUNT : colors.labelColor;
+        drawNestedCount(proj, cell.neighborMines, ringColor);
         return;
       }
       drawLabelUpright(tile, colors.label, colors.labelColor, {
@@ -1682,6 +1755,7 @@
         (state.pressed >= 0 ? state.pressed : state.hovered);
       const darkMono =
         !!(state.theme.pureCovered || state.theme.id === "dark");
+      const styleId = state.countStyle;
 
       for (const proj of projected) {
         const idx = proj.index;
@@ -1695,19 +1769,15 @@
           continue;
         }
         const tile = state.tiles[idx];
-        const colors = tileColors(idx, proj, cell, tile, now);
+        let colors = tileColors(idx, proj, cell, tile, now);
+        colors = drawColorsForStyle(colors, styleId);
         const visualReady =
           state.reduceMotion ||
           now >= cell.visualDue ||
           cell.animReveal >= 0.98;
-        // Empty clears recess; numbered clears stay flush with the shell.
+        // Empty clears recess in numerals/rings; flush modes stay shell-flat.
         const shouldInset =
-          cell.revealed &&
-          visualReady &&
-          !cell.flagged &&
-          !cell.isMine &&
-          cell.neighborMines === 0 &&
-          proj.z > 0.02;
+          tileShouldInset(cell, styleId) && visualReady && proj.z > 0.02;
         let drawProj = proj;
         let markLift = 0;
         if (shouldInset) {
@@ -1755,7 +1825,10 @@
         if (!base) continue;
         const tile = state.tiles[idx];
         const cell = state.cells[idx];
-        const colors = tileColors(idx, base, cell, tile, now);
+        let colors = drawColorsForStyle(
+          tileColors(idx, base, cell, tile, now),
+          styleId
+        );
         const pinnedFlag = cell.flagged && !cell.revealed;
         const lift =
           pinnedFlag
@@ -1980,7 +2053,7 @@
     }
     if (sizeBtn) sizeBtn.addEventListener("click", hudClick(cycleSize));
     if (themeBtn) themeBtn.addEventListener("click", hudClick(cycleTheme));
-    if (nestBtn) nestBtn.addEventListener("click", hudClick(toggleNestCounts));
+    if (nestBtn) nestBtn.addEventListener("click", hudClick(cycleCountStyle));
     if (helpBtn) helpBtn.addEventListener("click", hudClick(() => openHelp(false)));
     if (helpCloseBtn) helpCloseBtn.addEventListener("click", hudClick(closeHelp));
     if (helpDoneBtn) helpDoneBtn.addEventListener("click", hudClick(closeHelp));
@@ -2009,7 +2082,7 @@
       if (e.key === "n" || e.key === "N") {
         if (!e.metaKey && !e.ctrlKey) {
           e.preventDefault();
-          toggleNestCounts();
+          cycleCountStyle();
         }
       }
       if (e.key === "r" || e.key === "R") {
@@ -2032,7 +2105,7 @@
 
     syncChromeTheme();
     syncSizeChrome();
-    syncNestChrome();
+    syncCountStyleChrome();
     if (opts.theme) state.theme = Object.assign({}, state.theme, opts.theme);
 
     try {
