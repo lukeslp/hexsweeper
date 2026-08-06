@@ -4,9 +4,10 @@
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
- * Hover: radial lift along face normal + skirt walls (no white-overpaint border wipe).
- * Cleared: inverse of hover — slight inward inset along normal + skirt.
+ * Hover: lift only activatable covered faces (+ pinned flags); cleared stay put.
+ * Cleared: recess empty (numerals/rings) or all clears (borderless); flush never.
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
+ * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
@@ -1405,19 +1406,15 @@
     }
 
     /**
-     * Recess cleared faces. Borderless: all clears. Numerals/rings/yellow: empty only.
-     * Flush: never. Covered always flush.
+     * Recess cleared faces. Borderless: all clears. Numerals/rings: empty only.
+     * Flush/yellow: shell-flat. Covered always flush.
      */
     function tileShouldInset(cell, styleId) {
       if (!cell.revealed || cell.flagged || cell.isMine) return false;
-      if (styleId === "flush") return false;
+      if (styleId === "flush" || styleId === "yellow") return false;
       if (styleId === "borderless") return true;
       if (cell.neighborMines !== 0) return false;
-      return (
-        styleId === "numerals" ||
-        styleId === "rings" ||
-        styleId === "yellow"
-      );
+      return styleId === "numerals" || styleId === "rings";
     }
 
     /**
