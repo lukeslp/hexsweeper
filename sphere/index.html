@@ -125,6 +125,19 @@ body.help-open { overflow: hidden; }
 }
 #flag-toggle.active { color: #ff0000; }
 body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
+/* Board size: plain S/M/L letter (scaled) — readable at a glance when static */
+#size-btn .size-mark {
+  display: block;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+#size-btn .size-mark[data-size="S"] { font-size: 14px; }
+#size-btn .size-mark[data-size="M"] { font-size: 17px; }
+#size-btn .size-mark[data-size="L"] { font-size: 20px; }
 /* Instructions modal */
 .help-overlay {
   position: fixed;
@@ -290,11 +303,8 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <button type="button" id="size-btn" class="hud-btn" aria-label="Board size: Medium" title="Size — Medium (1002 faces)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <circle cx="12" cy="12" r="9"></circle>
-        <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-20 12 12)"></ellipse>
-      </svg>
+    <button type="button" id="size-btn" class="hud-btn" aria-label="Board size M, Medium, 1002 faces. Activate to cycle small, medium, large." title="Board size M — Medium (1002 faces). Click to cycle S → M → L.">
+      <span class="size-mark" data-size="M" aria-hidden="true">M</span>
     </button>
     <button type="button" id="theme-btn" class="hud-btn" aria-label="Theme: Light" title="Theme — Light">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -358,7 +368,7 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
         Clear all
       </div>
     </div>
-    <p class="help-keys"><kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>T</kbd> theme · size icon cycles · scroll or pinch to zoom</p>
+    <p class="help-keys"><kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>T</kbd> theme · <kbd>S</kbd>/<kbd>M</kbd>/<kbd>L</kbd> size · scroll or pinch to zoom</p>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener">lukesteuber.com</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>
@@ -368,8 +378,8 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   </div>
 </div>
 
-<script src="hexasphere.js?v=20260806d"></script>
-<script src="sphere.js?v=20260806d"></script>
+<script src="hexasphere.js?v=20260806e"></script>
+<script src="sphere.js?v=20260806e"></script>
 <script>
 SphereSweeper.boot({ canvasId: "gameCanvas" });
 </script>

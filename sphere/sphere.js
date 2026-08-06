@@ -136,13 +136,11 @@
   const ZOOM_MIN = 0.55;
   const ZOOM_MAX = 2.25;
 
+  /** Static letter marks — globes looked decorative and hid S/M/L meaning. */
   const SIZE_ICONS = {
-    easy:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><ellipse cx="12" cy="12" rx="6" ry="2.5" transform="rotate(-20 12 12)"></ellipse></svg>',
-    medium:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-20 12 12)"></ellipse></svg>',
-    hard:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10.5"></circle><ellipse cx="12" cy="12" rx="10.5" ry="4.5" transform="rotate(-20 12 12)"></ellipse><ellipse cx="12" cy="12" rx="10.5" ry="4.5" transform="rotate(40 12 12)"></ellipse></svg>',
+    easy: '<span class="size-mark" data-size="S" aria-hidden="true">S</span>',
+    medium: '<span class="size-mark" data-size="M" aria-hidden="true">M</span>',
+    hard: '<span class="size-mark" data-size="L" aria-hidden="true">L</span>',
   };
 
   const THEME_ICONS = {
@@ -325,12 +323,17 @@
     }
 
     function syncSizeChrome() {
-      const name = SIZE_NAMES[state.difficulty] || "Medium";
-      const faces = SIZE_FACES[state.difficulty] || 1002;
+      const key = state.difficulty;
+      const letter = SIZE_LABEL[key] || "M";
+      const name = SIZE_NAMES[key] || "Medium";
+      const faces = SIZE_FACES[key] || 1002;
       if (sizeBtn) {
-        sizeBtn.title = `Size — ${name} (${faces} faces)`;
-        sizeBtn.setAttribute("aria-label", `Board size: ${name}`);
-        sizeBtn.innerHTML = SIZE_ICONS[state.difficulty] || SIZE_ICONS.medium;
+        sizeBtn.title = `Board size ${letter} — ${name} (${faces} faces). Click to cycle S → M → L.`;
+        sizeBtn.setAttribute(
+          "aria-label",
+          `Board size ${letter}, ${name}, ${faces} faces. Activate to cycle small, medium, large.`
+        );
+        sizeBtn.innerHTML = SIZE_ICONS[key] || SIZE_ICONS.medium;
       }
     }
 
