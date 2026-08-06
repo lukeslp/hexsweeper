@@ -68,7 +68,8 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-plague.html` | Plague · Finite |
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
-| `collection/index.html` | Desk tile grid — **Hex Sphere** under Experiments (Open only) |
+| `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
+| `collection/index.html` | Desk tile grid — sphere under Experiments (Open + Copy HTML) |
 
 Regenerate after production or lab skin changes:
 

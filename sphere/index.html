@@ -11,15 +11,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hexsweeper 3D</title>
-<meta name="description" content="Minimalist minesweeper on a sphere — themes, controls, and sharing.">
+<meta name="description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hexsweeper 3D">
-<meta property="og:description" content="Minimalist minesweeper on a sphere — themes, controls, and sharing.">
+<meta property="og:description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
 <meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/sphere/">
 <meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Hexsweeper 3D">
-<meta name="twitter:description" content="Minimalist minesweeper on a sphere — themes, controls, and sharing.">
+<meta name="twitter:description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
 <meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -540,8 +540,8 @@ body.help-open { overflow: hidden; }
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
-    <h2 id="help-title">Hex Sphere</h2>
-    <p class="help-lede">Minesweeper on a closed sphere of hex faces.<br>Each face has six neighbors. First dig is always safe.</p>
+    <h2 id="help-title">Hexsweeper 3D</h2>
+    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Dig a face</span></li>
       <li><span class="act">Hold</span><span>Flag a face (mobile)</span></li>
@@ -555,11 +555,11 @@ body.help-open { overflow: hidden; }
     </div>
     <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
-      <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic Minesweeper screenshot">
-        <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper" width="44" height="33" loading="lazy">
+      <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic square-grid Minesweeper screenshot">
+        <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper (square grid)" width="44" height="33" loading="lazy">
       </button>
       <p class="help-history-cap">
-        <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">The history of Minesweeper</a>
+        Riding on the original — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
       </p>
     </div>
     <p class="help-more">Also <a href="../">flat Hexsweeper</a> · <a href="../?mode=fire">Fire</a> · <a href="../?mode=plague">Plague</a></p>
@@ -577,8 +577,8 @@ body.help-open { overflow: hidden; }
   <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
-<script src="hexasphere.js?v=20260807g"></script>
-<script src="sphere.js?v=20260807g"></script>
+<script src="hexasphere.js?v=20260807h"></script>
+<script src="sphere.js?v=20260807h"></script>
 <script>
 SphereSweeper.boot({ canvasId: "gameCanvas" });
 (function () {

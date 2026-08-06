@@ -22,7 +22,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 4, 6, 10, 12, 15)
 - [x] Sphere polish — trimmed icon help, size-cycle fix, endgame FX, no theme toast
 - [x] Sphere framing — initial zoom pulled back (~0.72×)
-- [x] Sphere on collection desk — Experiments tile (Open → `../sphere/`; no Copy HTML)
+- [x] Sphere on collection desk — Experiments tile with CodePen one-pager (`collection/sphere.html`, Open + Copy HTML)
 - [x] Sphere autosave — `hexsweeper-sphere-run-v1` resume on refresh; confirm before Reset / size change
 - [x] Sphere flags — pure red fill only (no tile glyph)
 - [x] Sphere valley — four height tiers (covered → flagged → numbered → empty); borderless seamless basin floor

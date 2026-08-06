@@ -83,14 +83,16 @@ TAG_SWATCH: dict[str, tuple[str, str, str, str]] = {
 EXPERIMENTS = [
     {
         "id": "sphere",
-        "title": "Hex Sphere",
-        "ogTitle": "Hexagonal Minesweeper on a Sphere",
-        "ogDescription": "Classic Minesweeper wrapped around a Goldberg sphere you rotate to dig, flag, and clear every face.",
-        "tag": "Experiment · Open only",
-        "blurb": "Minesweeper on a closed Goldberg sphere — drag to rotate, dig, flag, and clear the geodesic board.",
-        "filter": "sphere experiment goldberg geodesic rotate 3d closed",
-        "swatch": ("#0c1018", "#7eb8ff", "#34d399", "#c8d4e8"),
-        "href": "../sphere/",
+        "title": "Hexsweeper 3D",
+        "ogTitle": "Hexsweeper 3D",
+        "ogDescription": "The hex-tile take on classic Minesweeper — on a sphere. Themes, controls, and sharing.",
+        "tag": "Experiment · CodePen",
+        "blurb": "Hexsweeper on a closed Goldberg sphere — six neighbors, dig/flag, rotate, themes. Riding on classic Minesweeper.",
+        "filter": "sphere experiment goldberg geodesic rotate 3d closed hexsweeper codepen",
+        "swatch": ("#ffffff", "#111111", "#888888", "#ff0000"),
+        "file": "sphere.html",
+        "href": "sphere.html",
+        "liveHref": "../sphere/",
         "ogImage": f"{OG}/sphere-og.png",
     },
 ]
@@ -434,7 +436,13 @@ def skin_tile_html(skin: dict) -> str:
 
 def experiment_tile_html(exp: dict) -> str:
     a, b, c, d = exp["swatch"]
-    href = exp["href"]
+    href = exp.get("href") or exp.get("file") or exp.get("liveHref", "#")
+    file = exp.get("file")
+    copy_btn = (
+        f'\n          <button type="button" data-copy="{file}">Copy HTML</button>'
+        if file
+        else ""
+    )
     return f"""      <article class="study" data-filter="{exp['filter']}" style="--swatch-bg:{a};--swatch-a:{b};--swatch-b:{c};--swatch-c:{d}">
         <a class="study-copy" href="{href}">
           <span class="swatch" aria-hidden="true"></span>
@@ -443,9 +451,152 @@ def experiment_tile_html(exp: dict) -> str:
           <p>{exp['blurb']}</p>
         </a>
         <div class="actions">
-          <a href="{href}" target="_blank" rel="noopener">Open</a>
+          <a href="{href}" target="_blank" rel="noopener">Open</a>{copy_btn}
         </div>
       </article>"""
+
+
+def sphere_banner(exp: dict) -> str:
+    return "\n".join(
+        (
+            "<!--",
+            f"  Quick Take: {exp['ogTitle']} — {exp['blurb']}",
+            "  Stack: Vanilla HTML, CSS, and JavaScript; Canvas 2D; no frameworks.",
+            f"  Source: {PUBLIC_BASE}/{exp['file']}",
+            "  Live: https://dr.eamer.dev/games/hexsweeper/sphere/",
+            "  License: MIT · Author: Luke Steuber",
+            "  Note: Self-contained collection export for CodePen. Regenerate:",
+            "        python3 tools/export-collection.py",
+            "-->",
+        )
+    )
+
+
+def export_sphere(exp: dict) -> str:
+    """Inline sphere/ into a single CodePen-ready HTML file."""
+    markup = (ROOT / "sphere" / "index.html").read_text(encoding="utf-8")
+    title = exp.get("ogTitle", exp["title"])
+    description = exp.get("ogDescription", exp["blurb"])
+    file_name = exp["file"]
+    public_url = f"{PUBLIC_BASE}/{file_name}"
+    history_img = "https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"
+
+    # Strip existing file banner; attach collection banner.
+    markup = re.sub(
+        r"<!DOCTYPE html>\s*<!--.*?-->\s*<html",
+        "<!DOCTYPE html>\n<html",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    markup = markup.replace(
+        "<!DOCTYPE html>\n<html",
+        f"<!DOCTYPE html>\n{sphere_banner(exp)}\n<html",
+        1,
+    )
+    markup = markup.replace(
+        '<html lang="en">',
+        '<html lang="en" class="collection-export">',
+        1,
+    )
+
+    markup = re.sub(
+        r"<title>.*?</title>",
+        f"<title>{title}</title>",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    markup = re.sub(
+        r'<meta name="description" content="[^"]*">',
+        f'<meta name="description" content="{description}">',
+        markup,
+        count=1,
+    )
+    # Replace social meta with collection-scoped URLs.
+    markup = re.sub(r'\n?<meta property="og:[^"]+" content="[^"]*">', "", markup)
+    markup = re.sub(r'\n?<meta name="twitter:[^"]+" content="[^"]*">', "", markup)
+    social = "\n".join(
+        [
+            '<meta property="og:type" content="website">',
+            f'<meta property="og:title" content="{title}">',
+            f'<meta property="og:description" content="{description}">',
+            f'<meta property="og:url" content="{public_url}">',
+            f'<meta property="og:image" content="{exp["ogImage"]}">',
+            '<meta name="twitter:card" content="summary_large_image">',
+            f'<meta name="twitter:title" content="{title}">',
+            f'<meta name="twitter:description" content="{description}">',
+            f'<meta name="twitter:image" content="{exp["ogImage"]}">',
+        ]
+    )
+    markup = re.sub(
+        r'(<meta name="description" content="[^"]*">)',
+        r"\1\n" + social,
+        markup,
+        count=1,
+    )
+
+    # Inline CSS: fonts (woff2 data URIs) + skin-chrome + keep sphere <style> block.
+    chrome = (ROOT / "skin-chrome.css").read_text(encoding="utf-8")
+    fonts_css = inline_css_urls(
+        (ROOT / "fonts" / "fonts.css").read_text(encoding="utf-8"),
+        ROOT / "fonts",
+    )
+    markup = re.sub(
+        r'<link rel="stylesheet" href="\.\./fonts/fonts\.css">\s*',
+        f"<style>\n/* fonts/fonts.css (woff2 inlined) */\n{fonts_css}\n</style>\n",
+        markup,
+        count=1,
+    )
+    markup = re.sub(
+        r'<link rel="stylesheet" href="\.\./skin-chrome\.css">\s*',
+        f"<style>\n/* skin-chrome.css */\n{chrome}\n</style>\n",
+        markup,
+        count=1,
+    )
+
+    # History screenshot: absolute URL (not inlined — keeps the pen under ~250KB).
+    markup = markup.replace('src="assets/classic-minesweeper.png"', f'src="{history_img}"')
+
+    hexasphere = safe_script((ROOT / "sphere" / "hexasphere.js").read_text(encoding="utf-8"))
+    sphere_js = safe_script((ROOT / "sphere" / "sphere.js").read_text(encoding="utf-8"))
+    # Skip welcome + prefer a clean first paint; CodePen origin has its own storage.
+    boot = (
+        "<script>\n"
+        "/* collection / CodePen boot */\n"
+        "try {\n"
+        "  localStorage.setItem('hexsweeper-sphere-welcome-v1', '1');\n"
+        "} catch (_) {}\n"
+        "window.HEXSWEEPER_SPHERE_COLLECTION = true;\n"
+        "</script>\n"
+    )
+    # Do not use re.sub with JS source as the replacement — backslashes break the template.
+    m = re.search(
+        r'<script src="hexasphere\.js[^"]*"></script>\s*'
+        r'<script src="sphere\.js[^"]*"></script>\s*',
+        markup,
+    )
+    if not m:
+        raise SystemExit("export_sphere: could not find hexasphere.js / sphere.js script tags")
+    scripts = (
+        f"{boot}"
+        f"<script>\n/* hexasphere.js */\n{hexasphere}\n</script>\n"
+        f"<script>\n/* sphere.js */\n{sphere_js}\n</script>\n"
+    )
+    markup = markup[: m.start()] + scripts + markup[m.end() :]
+
+    # Point flat-mode links at the live site (relative ../ breaks in CodePen).
+    markup = markup.replace('href="../"', 'href="https://dr.eamer.dev/games/hexsweeper/"')
+    markup = markup.replace(
+        'href="../?mode=fire"',
+        'href="https://dr.eamer.dev/games/hexsweeper/?mode=fire"',
+    )
+    markup = markup.replace(
+        'href="../?mode=plague"',
+        'href="https://dr.eamer.dev/games/hexsweeper/?mode=plague"',
+    )
+
+    return markup
 
 
 def write_index(themes: list[dict], skins: list[dict], experiments: list[dict] | None = None) -> str:
@@ -525,7 +676,7 @@ footer a{{color:var(--accent)}}
   <a class="back" href="../">&lsaquo; Play Hexsweeper</a>
   <header>
     <h1>Hexsweeper Collection</h1>
-    <p class="lede">Copy-ready HTML for CodePen or local paste. Production themes and lab skins each get a self-contained one-pager — use <strong>Open</strong> to play, <strong>Copy HTML</strong> here on the desk (not on the playable page). Light and Dark share one infinite file with an in-file toggle. The live multi-theme game stays on the Play link.</p>
+    <p class="lede">Copy-ready HTML for CodePen or local paste. Production themes, lab skins, and the Hexsweeper 3D sphere each get a self-contained one-pager — use <strong>Open</strong> to play, <strong>Copy HTML</strong> here on the desk (not on the playable page). Light and Dark share one infinite file with an in-file toggle. The live multi-theme game stays on the Play link.</p>
     <p id="status" role="status" aria-live="polite"></p>
   </header>
   <!-- generated-hexsweeper-collection:begin -->
@@ -608,11 +759,15 @@ def main() -> int:
     for skin in skins:
         path = COLLECTION / f"skin-{skin['id']}.html"
         planned[path] = export_skin(skin)
+    for exp in EXPERIMENTS:
+        if exp.get("file"):
+            planned[COLLECTION / exp["file"]] = export_sphere(exp)
     planned[COLLECTION / "index.html"] = write_index(THEMES, skins, EXPERIMENTS)
 
     expected_theme = {f"theme-{t['id']}.html" for t in THEMES}
     expected_skin = {f"skin-{s['id']}.html" for s in skins}
-    expected_names = expected_theme | expected_skin | {"index.html"}
+    expected_exp = {e["file"] for e in EXPERIMENTS if e.get("file")}
+    expected_names = expected_theme | expected_skin | expected_exp | {"index.html"}
     orphans = sorted(
         p
         for p in COLLECTION.glob("*.html")

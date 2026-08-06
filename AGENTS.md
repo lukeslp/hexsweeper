@@ -28,7 +28,7 @@ python3 tools/export-collection.py
 python3 tools/export-collection.py --check   # drift guard
 ```
 
-Do not hand-edit `collection/theme-*.html` or `collection/skin-*.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`): **Open** + **Copy HTML** on `collection/index.html` only (not on playable pens). Light/Dark ship as `theme-plate.html` with `allowModes`; lab skins ship as `skin-*.html` (game-only: Reset/Menu, no skin nav or Copy bar). **Hex Sphere** is an Experiments tile (Open only → `../sphere/`).
+Do not hand-edit `collection/theme-*.html`, `collection/skin-*.html`, or `collection/sphere.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`): **Open** + **Copy HTML** on `collection/index.html` only (not on playable pens). Light/Dark ship as `theme-plate.html` with `allowModes`; lab skins ship as `skin-*.html` (game-only: Reset/Menu, no skin nav or Copy bar). **Hexsweeper 3D** ships as `collection/sphere.html` (CodePen-ready inline of `sphere/`) and is listed under Experiments.
 
 After changing OG card keys in `tools/og-card.html`, regenerate PNGs: `bash tools/shoot-og-cards.sh` (Chromium + Pillow on Drummer).
 
