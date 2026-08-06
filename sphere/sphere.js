@@ -3,7 +3,8 @@
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
- * Zoom: wheel + pinch adjust projection scale (clamped); rotate/dig/flag unchanged.
+ * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
+ * Cleared tiles: inset cutaway (shell wall + recessed face) for depth; covered stay flush.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
@@ -139,8 +140,12 @@
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const ZOOM_MIN = 0.55;
   const ZOOM_MAX = 2.25;
-  /** Sphere is the hero — fill most of the short viewport edge. */
-  const BASE_SCALE_FRAC = 0.5;
+  /** Start pulled back — prior 1.0 filled the frame too aggressively. */
+  const INITIAL_ZOOM = 0.72;
+  /** Sphere fill of the short viewport edge at zoomFactor = 1. */
+  const BASE_SCALE_FRAC = 0.42;
+  /** Recess amount for cleared faces (fraction of hex radius). */
+  const CUTAWAY_INSET = 0.16;
 
   /** Static letter marks — globes looked decorative and hid S/M/L meaning. */
   const SIZE_ICONS = {
@@ -210,7 +215,7 @@
         matchMedia("(prefers-reduced-motion: reduce)").matches,
       radius: 1,
       baseScale: 200,
-      zoomFactor: 1,
+      zoomFactor: INITIAL_ZOOM,
       scale: 200,
       centerX: 0,
       centerY: 0,
@@ -1287,6 +1292,74 @@
       ctx.stroke();
     }
 
+    /** Shrink boundary toward center (inset 0 = full, 1 = point). */
+    function insetProjected(proj, inset) {
+      const t = Math.max(0.05, 1 - inset);
+      if (t > 0.998) return proj;
+      const cx = proj.center.x;
+      const cy = proj.center.y;
+      return {
+        ...proj,
+        boundary: proj.boundary.map((p) => ({
+          x: cx + (p.x - cx) * t,
+          y: cy + (p.y - cy) * t,
+        })),
+        area: proj.area * t * t,
+      };
+    }
+
+    /**
+     * Cleared-tile cutaway: outer shell wall + recessed face.
+     * depth 0 = flush; 1 = full inset. Returns the face proj for labels.
+     */
+    function drawCutawayHex(proj, fill, stroke, lineWidth, depth) {
+      const d = Math.max(0, Math.min(1, depth));
+      if (d < 0.04 || proj.boundary.length < 3) {
+        drawHex(proj, fill, stroke, lineWidth);
+        return proj;
+      }
+      const inset = CUTAWAY_INSET * (0.55 + 0.45 * d);
+      const inner = insetProjected(proj, inset);
+      const darkMono = state.theme.id === "dark" || state.theme.pureCovered;
+      const wallDeep = darkMono
+        ? colorMix(fill, "#000000", 0.55)
+        : colorMix(fill, "#1a1a1a", 0.42);
+      const wallLite = darkMono
+        ? colorMix(fill, "#ffffff", 0.12)
+        : colorMix(fill, "#ffffff", 0.2);
+
+      const outer = proj.boundary;
+      const inn = inner.boundary;
+      const n = outer.length;
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        const mx =
+          (outer[i].x + outer[j].x + inn[i].x + inn[j].x) * 0.25;
+        const my =
+          (outer[i].y + outer[j].y + inn[i].y + inn[j].y) * 0.25;
+        const vx = mx - proj.center.x;
+        const vy = my - proj.center.y;
+        const len = Math.hypot(vx, vy) || 1;
+        // Upper-left light bias on the shell wall.
+        const light = Math.max(
+          0,
+          Math.min(1, (-vx / len - vy / len) * 0.45 + 0.5)
+        );
+        ctx.beginPath();
+        ctx.moveTo(outer[i].x, outer[i].y);
+        ctx.lineTo(outer[j].x, outer[j].y);
+        ctx.lineTo(inn[j].x, inn[j].y);
+        ctx.lineTo(inn[i].x, inn[i].y);
+        ctx.closePath();
+        ctx.fillStyle = colorMix(wallDeep, wallLite, light * 0.75);
+        ctx.fill();
+      }
+
+      // Recessed face sits slightly “into” the sphere.
+      drawHex(inner, fill, stroke, lineWidth != null ? lineWidth : 1.1);
+      return inner;
+    }
+
     function labelFontSize(area) {
       const base = Math.sqrt(area) * 0.42;
       return Math.max(9, Math.min(18, base));
@@ -1502,10 +1575,34 @@
           drawProj = popProjected(proj, pop, cell.endPop);
         }
 
-        drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
+        const visualReady =
+          state.reduceMotion ||
+          now >= cell.visualDue ||
+          cell.animReveal >= 0.98;
+        const useCutaway =
+          cell.revealed &&
+          visualReady &&
+          !cell.isMine &&
+          !cell.flagged &&
+          proj.z > 0.02;
+        let labelProj = drawProj;
+        if (useCutaway) {
+          const depth = state.reduceMotion
+            ? 1
+            : Math.max(0.35, Math.min(1, cell.animReveal || 1));
+          labelProj = drawCutawayHex(
+            drawProj,
+            colors.fill,
+            colors.stroke,
+            colors.lineWidth,
+            depth
+          );
+        } else {
+          drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
+        }
 
         if (colors.showLabel && colors.label) {
-          drawLabel(drawProj, colors.label, colors.labelColor, {
+          drawLabel(labelProj, colors.label, colors.labelColor, {
             stroke: colors.labelStroke,
             weight: cell.flagged ? "600" : "700",
           });
