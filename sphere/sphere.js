@@ -45,47 +45,49 @@
   const AMBIENT_SPIN_RAD_PER_MS = 0.000024;
 
   /**
-   * Light mono is the reference board.
-   * Dark is its invert (black field, white covered tiles) except flags stay pure red.
+   * Light mono: white page + pale covered shell, rich black cleared wells.
+   * Dark is the invert (black field, white covers). Flags stay pure red.
+   * pureRevealed: skip shadeByNormal on cleared faces so blacks stay black.
    */
   const THEME_LIGHT = {
     id: "light",
     name: "Light",
     accent: "#000000",
+    pureRevealed: true,
     bg: "#ffffff",
     bgGlow: "#f5f5f5",
     covered: "#e8e8e8",
     coveredHi: "#f2f2f2",
-    coveredEdge: "#999999",
+    coveredEdge: "#000000",
     coveredShadow: "#cccccc",
-    revealed: "#fafafa",
-    revealedEmpty: "#ffffff",
-    revealedEdge: "#b0b0b0",
+    revealed: "#000000",
+    revealedEmpty: "#000000",
+    revealedEdge: "#000000",
     flagFill: "#ff0000",
     flagIcon: "#ffffff",
     flagEdge: "#ff0000",
     mine: "#000000",
     mineCore: "#ffffff",
-    mineEdge: "#333333",
-    mineBurst: "#000000",
+    mineEdge: "#000000",
+    mineBurst: "#ffffff",
     pentagon: "#e0e0e0",
-    pentagonEdge: "#888888",
+    pentagonEdge: "#000000",
     hoverRing: "#000000",
     activeRing: "#222222",
     backface: "#f0f0f0",
     backfaceEdge: "#d0d0d0",
     text: {
-      1: "#000000",
-      2: "#222222",
-      3: "#444444",
-      4: "#666666",
-      5: "#888888",
+      1: "#ffffff",
+      2: "#eeeeee",
+      3: "#dddddd",
+      4: "#cccccc",
+      5: "#bbbbbb",
       6: "#aaaaaa",
     },
-    label: "#555555",
-    labelStroke: "#ffffff",
-    revealFlash: "#000000",
-    revealGlow: "#333333",
+    label: "#ffffff",
+    labelStroke: "#000000",
+    revealFlash: "#ffffff",
+    revealGlow: "#888888",
   };
 
   /**
@@ -1568,8 +1570,9 @@
       }
 
       if (cell.revealed && visualReady) {
+        const pureWell = !!(T.pureRevealed || darkMono);
         if (cell.isMine) {
-          let fill = darkMono ? T.mine : lit(T.mine, proj.normalZ, 0.25);
+          let fill = pureWell ? T.mine : lit(T.mine, proj.normalZ, 0.25);
           if (cell.endFlash > 0) {
             fill = colorMix(fill, T.mineBurst, cell.endFlash * 0.65);
           }
@@ -1584,7 +1587,7 @@
           };
         }
         const empty = cell.neighborMines === 0;
-        let fill = darkMono
+        let fill = pureWell
           ? empty
             ? T.revealedEmpty
             : T.revealed
@@ -1600,8 +1603,9 @@
           fill = colorMix(fill, T.revealGlow, flash * 0.22);
         }
         if (cell.endFlash > 0) {
+          // Stay mono — no warm yellow wash.
           fill = colorMix(fill, T.revealGlow, cell.endFlash * 0.55);
-          fill = colorMix(fill, "#fef08a", cell.endFlash * 0.25);
+          fill = colorMix(fill, T.revealFlash, cell.endFlash * 0.25);
         }
         return {
           fill,
@@ -1681,22 +1685,28 @@
 
       for (const proj of projected) {
         const idx = proj.index;
-        // Hovered / pressed face is redrawn raised after the pass.
-        if (highlightIdx >= 0 && idx === highlightIdx && proj.z > 0.02) {
+        const cell = state.cells[idx];
+        // Hovered / pressed / pinned flags are drawn raised after the pass.
+        const pinnedFlag = cell.flagged && !cell.revealed;
+        if (
+          proj.z > 0.02 &&
+          (pinnedFlag || (highlightIdx >= 0 && idx === highlightIdx))
+        ) {
           continue;
         }
-        const cell = state.cells[idx];
         const tile = state.tiles[idx];
         const colors = tileColors(idx, proj, cell, tile, now);
         const visualReady =
           state.reduceMotion ||
           now >= cell.visualDue ||
           cell.animReveal >= 0.98;
-        // Cleared faces recess inward (inverse of hover); covered/flags stay flush.
+        // Empty clears recess; numbered clears stay flush with the shell.
         const shouldInset =
           cell.revealed &&
           visualReady &&
           !cell.flagged &&
+          !cell.isMine &&
+          cell.neighborMines === 0 &&
           proj.z > 0.02;
         let drawProj = proj;
         let markLift = 0;
@@ -1731,43 +1741,46 @@
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
-      if (highlightIdx >= 0) {
-        const base = projected.find(
-          (p) => p.index === highlightIdx && p.z > 0.02
-        );
-        if (base) {
-          const tile = state.tiles[highlightIdx];
-          const cell = state.cells[highlightIdx];
-          const colors = tileColors(highlightIdx, base, cell, tile, now);
-          const lift =
-            state.pressed === highlightIdx ? PRESS_LIFT : HOVER_LIFT;
-          const raised = projectTile(
-            tile,
-            state.rotY,
-            state.rotX,
-            lift
-          );
-          const baseBoundary =
-            raised.baseBoundary ||
-            tile.boundary.map((b) =>
-              projectPoint(b, state.rotY, state.rotX)
-            );
-          drawExtrusionSkirt(baseBoundary, raised.boundary, darkMono);
-          // Keep real tile colors + edge; only a hair of lift cue in fill.
-          let fill = colors.fill;
-          if (!cell.revealed && !cell.flagged) {
-            fill = darkMono
-              ? colors.fill
-              : colorMix(colors.fill, state.theme.coveredHi, 0.2);
-          }
-          drawHex(
-            raised,
-            fill,
-            colors.stroke,
-            Math.max(colors.lineWidth || 1.5, 1.8)
-          );
-          paintCountMark(tile, raised, cell, colors, lift);
+      // Raised pass: pinned flags (always) + hover/press (temporary).
+      const raisedIdxs = new Set();
+      for (let i = 0; i < state.cells.length; i++) {
+        if (state.cells[i].flagged && !state.cells[i].revealed) {
+          raisedIdxs.add(i);
         }
+      }
+      if (highlightIdx >= 0) raisedIdxs.add(highlightIdx);
+
+      for (const idx of raisedIdxs) {
+        const base = projected.find((p) => p.index === idx && p.z > 0.02);
+        if (!base) continue;
+        const tile = state.tiles[idx];
+        const cell = state.cells[idx];
+        const colors = tileColors(idx, base, cell, tile, now);
+        const pinnedFlag = cell.flagged && !cell.revealed;
+        const lift =
+          pinnedFlag
+            ? HOVER_LIFT
+            : state.pressed === idx
+              ? PRESS_LIFT
+              : HOVER_LIFT;
+        const raised = projectTile(tile, state.rotY, state.rotX, lift);
+        const baseBoundary =
+          raised.baseBoundary ||
+          tile.boundary.map((b) => projectPoint(b, state.rotY, state.rotX));
+        drawExtrusionSkirt(baseBoundary, raised.boundary, darkMono);
+        let fill = colors.fill;
+        if (!cell.revealed && !cell.flagged) {
+          fill = darkMono
+            ? colors.fill
+            : colorMix(colors.fill, state.theme.coveredHi, 0.2);
+        }
+        drawHex(
+          raised,
+          fill,
+          colors.stroke,
+          Math.max(colors.lineWidth || 1.5, 1.8)
+        );
+        paintCountMark(tile, raised, cell, colors, lift);
       }
 
       drawEndFxOverlay(now);
