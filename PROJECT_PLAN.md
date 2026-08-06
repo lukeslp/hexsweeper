@@ -14,6 +14,8 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 ## Current status (2026-08-05)
 
 - [x] **Plate perf** — Soft UI / Escape: viewZoom-gated LOD at default 0.55, skip watermark underlay in LOD, single seam stroke, tighter frustum cull, IntersectionObserver + iframe blur + idle RAF throttle in `core.js`
+- [x] **No dig auto-pan** — `core.js` no longer calls `focusOnCell` on dig/chord; Escape intro zoom on Reset unchanged
+- [x] **Choices lab exports** — `tools/export-choices-lab.py` → self-contained `choices/lab/*.html` with Copy for CodePen (no cross-links)
 - [x] **Choices hub** — `choices.html` + `choices/lab/*` one-pagers (curated; not in production theme switcher)
 - [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 1–2)
 

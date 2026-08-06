@@ -31,7 +31,7 @@ Fresh runs (cold load or Reset) share one `startFreshRun` path after theme chrom
 |--------|-----|
 | Dig | Click / tap — empty floods open outward in rings |
 | Flag | Right-click, Ctrl/⌘-click, long-hold, or Menu → Flag (`F`) |
-| Pan / tilt | Infinite: drag pans. Fire: drag tilts the pit (hold flags). Space/middle-drag pans anywhere |
+| Pan / tilt | Infinite: drag pans (view stays put on dig/flood). Fire: drag tilts the pit (hold flags). Space/middle-drag pans anywhere |
 | Zoom | Scroll · pinch · `+` / `−` (persists as `hexsweeper-zoom-v1`) |
 | Chord | Click a revealed number whose neighbor flags match the count |
 | Restart / size | `R`, Restart, or S·M·L (finite only) — each clears that lane’s autosave |
@@ -51,7 +51,8 @@ Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Ligh
 | `tools/export-collection.py` | Regenerates `collection/theme-*.html` + index |
 | `sphere/` | **Experimental** closed hex sphere minesweeper (Canvas projection) |
 | `choices.html` | Curated hub: production, sphere, lab one-pagers — not in theme switcher |
-| `choices/lab/` | Improved one-pagers for each lab skin |
+| `choices/lab/` | Generated self-contained lab skins + **Copy for CodePen** |
+| `tools/export-choices-lab.py` | Regenerates `choices/lab/*.html` from `skins.json` |
 | `classic.html` | Lab baseline neumorph skin |
 | `lab.html` + `skins.json` + `skins/` | Dormant visual lab — not linked from production |
 
@@ -115,7 +116,7 @@ Flat game remains the default at `index.html`.
 
 [`choices.html`](choices.html) — https://dr.eamer.dev/games/hexsweeper/choices.html
 
-Curated entry for production play, the sphere experiment, and lab skins with improved one-pagers under `choices/lab/`. Not linked from the production theme switcher.
+Curated entry for production play, the sphere experiment, and ten lab one-pagers under `choices/lab/`. Each lab page is playable in-browser and includes **Copy for CodePen** (full self-contained HTML). Regenerate with `python3 tools/export-choices-lab.py` after skin or engine changes. Not linked from the production theme switcher.
 
 ## Lab (prior art)
 

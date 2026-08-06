@@ -29,6 +29,16 @@ python3 tools/export-collection.py
 
 Do not hand-edit `collection/theme-*.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`). Light/Dark ship as `theme-plate.html` with `allowModes`; do not re-split them into separate pens.
 
+## Choices lab exports
+
+After changing `core.js`, `skin-chrome.css`, `classic.html`, or `skins/*`, regenerate:
+
+```bash
+python3 tools/export-choices-lab.py
+```
+
+Do not hand-edit `choices/lab/*.html` — they are generated from `skins.json` + skin sources. Each page is self-contained (inlined engine + chrome) with **Copy for CodePen**; the copy strips the lab header bar.
+
 ## Safety
 
 No new public ports. No secrets in this tree. Prefer loopback + Caddy for any future backend (none required today).
