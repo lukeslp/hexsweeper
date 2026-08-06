@@ -81,11 +81,13 @@
    * Dark invert: black page, pure white covered hexes (no gray wells),
    * dark revealed interiors, pure red flags. Rim/backface stay light so
    * the board reads as a white honeycomb, not a dark ball.
+   * pureCovered: true → tileColors forces flat covered fill (do not shade).
    */
   const THEME_DARK = {
     id: "dark",
     name: "Dark",
     accent: "#ffffff",
+    pureCovered: true,
     bg: "#000000",
     bgGlow: "#000000",
     covered: "#ffffff",
@@ -106,8 +108,8 @@
     pentagonEdge: "#000000",
     hoverRing: "#ffffff",
     activeRing: "#dddddd",
-    backface: "#e8e8e8",
-    backfaceEdge: "#888888",
+    backface: "#ffffff",
+    backfaceEdge: "#666666",
     text: {
       1: "#ffffff",
       2: "#dddddd",
@@ -300,9 +302,9 @@
     }
 
     function themePalette(themeDef) {
+      // Keep id/name — coveredStyle / tileColors branch on theme.id (dark = pure white hexes).
       const out = {};
       for (const key of Object.keys(themeDef)) {
-        if (key === "id" || key === "name" || key === "accent") continue;
         out[key] = themeDef[key];
       }
       return out;
@@ -1107,10 +1109,10 @@
 
     function coveredStyle(proj, tile, isFront) {
       const T = state.theme;
-      // Dark: flat pure white hexes — no normal shading (that was graying them out).
-      if (T.id === "dark") {
+      // Flat pure covered (dark mono): white hexes, no normal shading.
+      if (T.pureCovered || T.id === "dark") {
         return {
-          fill: "#ffffff",
+          fill: T.covered || "#ffffff",
           stroke: T.coveredEdge,
           lineWidth: tile.isPentagon ? 1.8 : 1.5,
           showLabel: false,
@@ -1133,7 +1135,7 @@
       const lit = shadeByNormal;
       const isBack = proj.z <= 0.02;
       const isFront = proj.z > 0.08;
-      const darkMono = T.id === "dark";
+      const darkMono = !!(T.pureCovered || T.id === "dark");
 
       // Flags always pure red (front or rim).
       if (cell.flagged && !cell.revealed) {
@@ -1149,10 +1151,10 @@
       }
 
       // Dark mono: unrevealed hexes are always pure white — including the rim.
-      // (Old backface pass painted them near-black and killed the invert look.)
+      // Must run before isBack: the old backface pass painted them near-black.
       if (darkMono && !cell.revealed) {
         return {
-          fill: "#ffffff",
+          fill: T.covered || "#ffffff",
           stroke: isBack ? T.backfaceEdge : T.coveredEdge,
           lineWidth: isBack ? 1.1 : tile.isPentagon ? 1.8 : 1.5,
           showLabel: false,
