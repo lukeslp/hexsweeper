@@ -11,7 +11,7 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 
 | Theme | Board | Feel |
 |------|--------|------|
-| **Light** | Infinite | Porcelain chalk desk — bright raised covers, graphite wells (seam-only LOD at default zoom-out; idle throttle + offscreen RAF pause) |
+| **Light** | Infinite | Porcelain chalk desk — bright raised covers, graphite wells (full extruded paint at all zoom; idle throttle + offscreen RAF pause) |
 | **Dark** | Infinite | Night-iron plate — cold steel bevels, deep wells (same infinite run as Light) |
 | **Fire** | Finite | Magma shaft / hell-mine well — dense viewport-filling honeycomb; drag tilts the pit (camera locked); hold to flag |
 | **Plague** | Finite | Soil hive bed + living mycelial underlay + green specimen tiles + hyphal mat (seam-only LOD at extreme zoom-out) |
