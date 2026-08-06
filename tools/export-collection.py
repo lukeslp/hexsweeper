@@ -24,6 +24,8 @@ THEMES = [
     {
         "id": "plate",
         "title": "Light / Dark",
+        "ogTitle": "Neumorphic Hexagonal Minesweeper",
+        "ogDescription": "A minimalist take on old school Minesweeper, with soft porcelain and night iron plates that keep growing as you dig.",
         "tag": "Infinite · toggle",
         "blurb": "Two materials on one infinite run — porcelain chalk desk with graphite wells, or night-iron plate with brushed grain.",
         "filter": "light dark infinite soft ui neumorph honeycomb plate night toggle porcelain chalk graphite iron steel watermark",
@@ -35,6 +37,8 @@ THEMES = [
     {
         "id": "fire",
         "title": "Fire",
+        "ogTitle": "Magma Hexagonal Minesweeper",
+        "ogDescription": "Classic Minesweeper in a molten honeycomb pit where burns rise upward and drag tilts the shaft instead of panning it.",
         "tag": "Finite",
         "blurb": "Magma shaft / hell-mine — dense honeycomb, rising burns, molten digs; drag tilts the pit instead of panning it.",
         "filter": "fire finite magma pit boil bowl hell mine tilt parallax camera lock",
@@ -45,6 +49,8 @@ THEMES = [
     {
         "id": "plague",
         "title": "Plague",
+        "ogTitle": "Mycelium Hexagonal Minesweeper",
+        "ogDescription": "Old school Minesweeper on a culture dish, with verdigris faces and a hyphal mat creeping between the hexes.",
         "tag": "Finite",
         "blurb": "Specimen slide; irregular verdigris faces and hyphal mat.",
         "filter": "plague finite specimen verdigris mycelium",
@@ -55,6 +61,8 @@ THEMES = [
     {
         "id": "escape",
         "title": "Escape",
+        "ogTitle": "Rift Chase Hexagonal Minesweeper",
+        "ogDescription": "Dig toward an offscreen exit on slate while a glacial rift seeps after your clears, with six neighbors instead of eight.",
         "tag": "Infinite",
         "blurb": "Minesweeper on slate — dig toward an offscreen exit while a glacial rift seeps toward your digs.",
         "filter": "escape infinite rift chase slate crawl finish exit",
@@ -76,6 +84,8 @@ EXPERIMENTS = [
     {
         "id": "sphere",
         "title": "Hex Sphere",
+        "ogTitle": "Hexagonal Minesweeper on a Sphere",
+        "ogDescription": "Classic Minesweeper wrapped around a Goldberg sphere you rotate to dig, flag, and clear every face.",
         "tag": "Experiment · Open only",
         "blurb": "Minesweeper on a closed Goldberg sphere — drag to rotate, dig, flag, and clear the geodesic board.",
         "filter": "sphere experiment goldberg geodesic rotate 3d closed",
@@ -232,8 +242,8 @@ def onepager_boot(theme: dict) -> str:
 
 
 def export_theme(theme: dict, source: str) -> str:
-    title = f"Hexsweeper — {theme['title']}"
-    description = f"Hexagonal minesweeper one-pager: {theme['title']} — {theme['blurb']}"
+    title = theme.get("ogTitle", theme["title"])
+    description = theme.get("ogDescription", theme["blurb"])
 
     markup = source
     markup = re.sub(
@@ -331,8 +341,8 @@ def export_skin(skin: dict) -> str:
         f"<!DOCTYPE html>\n{skin_banner(skin)}\n<html",
         1,
     )
-    title = f"{skin['name']} — Hexsweeper Lab"
-    description = f"Hexsweeper lab skin: {skin['name']} — {skin.get('blurb', '')}"
+    title = skin.get("ogTitle", skin["name"])
+    description = skin.get("ogDescription", skin.get("blurb", ""))
     markup = re.sub(r"<title>.*?</title>", f"<title>{title}</title>", markup, count=1, flags=re.S)
     if re.search(r'<meta name="description"', markup):
         markup = re.sub(
