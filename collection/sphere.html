@@ -1437,6 +1437,186 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     THEME_CARD,
   ];
   const DEFAULT_THEME = THEME_LIGHT;
+
+  /**
+   * Model-authored one-pager takes (Kimi / Claude / Muse).
+   * Applied via ?take=<id> or window.HEXSWEEPER_SPHERE_TAKE.
+   */
+  function paletteTheme(p) {
+    const field = p.field || "#ffffff";
+    const shell = p.shell || "#ffffff";
+    const well = p.well || "#000000";
+    const numbered = p.numberedWell || well;
+    const edge = p.edge || "#888888";
+    const flag = p.flag || "#ff0000";
+    const text = p.text || "#ffffff";
+    const chrome = p.chrome === "light" ? "light" : "dark";
+    const accent = p.accent || text;
+    // Gradient number ink from base text toward accent by count.
+    const textMap = {};
+    for (let n = 1; n <= 6; n++) {
+      textMap[n] = text;
+    }
+    return {
+      id: p.id || "take",
+      name: p.name || "Take",
+      chrome,
+      float: !!p.float,
+      accent,
+      pureCovered: false,
+      pureRevealed: false,
+      bg: field,
+      bgGlow: field,
+      covered: shell,
+      coveredHi: shell,
+      coveredEdge: edge,
+      coveredShadow: edge,
+      tierCovered: shell,
+      tierFlagged: flag,
+      tierNumbered: numbered,
+      tierEmpty: well,
+      revealed: numbered,
+      revealedEmpty: well,
+      revealedEdge: edge,
+      valleyGroove: edge,
+      valleyGrooveDeep: edge,
+      flagFill: flag,
+      flagIcon: text,
+      flagEdge: flag,
+      mine: shell,
+      mineCore: text,
+      mineEdge: edge,
+      mineBurst: accent,
+      pentagon: shell,
+      pentagonEdge: edge,
+      hoverRing: accent,
+      activeRing: accent,
+      backface: well,
+      backfaceEdge: edge,
+      core: well,
+      floatShadow: p.float
+        ? chrome === "light"
+          ? "rgba(0,0,0,0.18)"
+          : "rgba(255,255,255,0.12)"
+        : null,
+      text: textMap,
+      label: text,
+      labelStroke: field,
+      revealFlash: p.revealFlash || accent,
+      revealGlow: p.revealGlow || accent,
+      // Take-specific render flags (read by tileColors / drawCounts)
+      takeInkDepth: !!p.takeInkDepth,
+      takeCountTint: !!p.takeCountTint,
+      takeFlagHalo: !!p.takeFlagHalo,
+      countTintRamp: p.countTintRamp || null,
+    };
+  }
+
+  const SPHERE_TAKES = {
+    "kimi-moon-ink-orrery": {
+      id: "kimi-moon-ink-orrery",
+      author: "kimi",
+      title: "Hexsweeper 3D — Moon Ink Orrery",
+      tagline:
+        "Hex minesweeper on a Goldberg sphere, restyled as an ink-brushed lunar orrery.",
+      helpLede:
+        "Hexsweeper on a paper-moon sphere — six neighbors, first dig always safe. Read the brush rings; vermillion marks a mine.",
+      hudNote: "The moon turns while you think.",
+      countStyleDefault: "rings",
+      defaultZoom: 0.85,
+      ambientSpin: true,
+      boardSizeDefault: "medium",
+      theme: paletteTheme({
+        id: "kimi-moon-ink",
+        name: "Moon Ink",
+        field: "#0c0f1d",
+        shell: "#e8e4d8",
+        well: "#1a2033",
+        numberedWell: "#232c47",
+        edge: "#3d4666",
+        flag: "#c9372c",
+        text: "#9fd8e8",
+        chrome: "dark",
+        accent: "#7dd3c0",
+        float: true,
+        revealFlash: "#9fd8e8",
+        revealGlow: "#7dd3c0",
+        takeInkDepth: true,
+        takeFlagHalo: true,
+      }),
+    },
+    "claude-amber-codex": {
+      id: "claude-amber-codex",
+      author: "claude",
+      title: "Hexsweeper 3D — Amber Codex",
+      tagline:
+        "A hex-tile minesweeper on a Goldberg sphere, like a scholar's annotated globe.",
+      helpLede:
+        "Hexsweeper as a lacquered codex-globe — dig parchment faces, flag in sealing-wax red. First dig is always safe.",
+      hudNote: "Every safe cell is a folio turned.",
+      countStyleDefault: "numerals",
+      defaultZoom: 0.88,
+      ambientSpin: true,
+      boardSizeDefault: "medium",
+      theme: paletteTheme({
+        id: "claude-amber",
+        name: "Amber Codex",
+        field: "#1c1f2b",
+        shell: "#4a3f2f",
+        well: "#e8dcc8",
+        numberedWell: "#f5e6c8",
+        edge: "#8c7a5e",
+        flag: "#c0392b",
+        text: "#2c1a0e",
+        chrome: "dark",
+        accent: "#d4a240",
+        float: true,
+        revealFlash: "#d4a240",
+        revealGlow: "#f5e6c8",
+      }),
+    },
+    "muse-constellation-void": {
+      id: "muse-constellation-void",
+      author: "muse",
+      title: "Hexsweeper 3D — Starlit Void",
+      tagline:
+        "Hexsweeper's Goldberg sphere adrift in a soft void — a constellation to chart.",
+      helpLede:
+        "Six neighbors, one sphere, first dig always safe. Flag the coral stars; trust the rings of starlight.",
+      hudNote: "The void holds its breath — chart lightly.",
+      countStyleDefault: "rings",
+      defaultZoom: 0.88,
+      ambientSpin: true,
+      boardSizeDefault: "medium",
+      theme: paletteTheme({
+        id: "muse-void",
+        name: "Starlit Void",
+        field: "#0b1020",
+        shell: "#2e3a52",
+        well: "#141c33",
+        numberedWell: "#1b2547",
+        edge: "#3d4e6e",
+        flag: "#ff8a6b",
+        text: "#d8e2ff",
+        chrome: "dark",
+        accent: "#8bb8ff",
+        float: true,
+        revealFlash: "#8bb8ff",
+        revealGlow: "#ff8a6b",
+        takeCountTint: true,
+        takeFlagHalo: true,
+        countTintRamp: [
+          null,
+          "#1b2547",
+          "#1e2a52",
+          "#24305e",
+          "#2a3568",
+          "#3a3060",
+          "#4a2e4a",
+        ],
+      }),
+    },
+  };
   const SIZE_ORDER = ["xsmall", "easy", "medium", "hard", "xlarge"];
   const SIZE_LABEL = {
     xsmall: "XS",
@@ -3174,11 +3354,15 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const n = Math.max(0, Math.min(6, count | 0));
       if (n < 1 || !proj.boundary || proj.boundary.length < 3) return;
       const outer = Math.sqrt(proj.area);
+      const inkDepth = !!(state.theme && state.theme.takeInkDepth);
       for (let k = 1; k <= n; k++) {
         // Even spacing into ~72% of the face; outer ring near the rim.
         const inset = (k / (n + 0.85)) * 0.7;
         const ring = insetProjected(proj, inset);
-        const lw = Math.max(1.1, Math.min(2.4, outer * (0.055 - k * 0.004)));
+        // Kimi take: denser/heavier brush rings as count rises (calligraphy weight).
+        const lw = inkDepth
+          ? Math.max(1.2, Math.min(3.4, outer * (0.04 + n * 0.01) - k * 0.003))
+          : Math.max(1.1, Math.min(2.4, outer * (0.055 - k * 0.004)));
         drawHexRing(ring, color, lw);
       }
     }
@@ -3508,12 +3692,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const isFront = proj.z > 0.08;
       const darkMono = !!(T.pureCovered || T.id === "dark");
 
-      // Flags: pure red fill only — no glyph (red is enough).
+      // Flags: pure fill only — no glyph (color is enough). Optional halo for takes.
       if (cell.flagged && !cell.revealed) {
         return {
           fill: T.tierFlagged || T.flagFill,
           stroke: T.flagEdge,
-          lineWidth: 2,
+          lineWidth: T.takeFlagHalo ? 3.4 : 2,
           showLabel: false,
         };
       }
@@ -3564,9 +3748,18 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         }
         const empty = cell.neighborMines === 0;
         // Numbered shares empty well fill for now (tier color slots reserved).
-        const wellFill = empty
+        let wellFill = empty
           ? T.tierEmpty || T.revealedEmpty
           : T.tierNumbered || T.revealed;
+        // Muse take: faint count-tint ramp on numbered wells.
+        if (
+          !empty &&
+          T.takeCountTint &&
+          Array.isArray(T.countTintRamp) &&
+          T.countTintRamp[cell.neighborMines]
+        ) {
+          wellFill = T.countTintRamp[cell.neighborMines];
+        }
         let fill = pureWell ? wellFill : lit(wellFill, proj.normalZ, 0.28);
         const pulseAge = now - cell.pulseAt;
         if (
@@ -4092,6 +4285,53 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     });
     resize();
 
+    // Model-authored takes (?take=… or window.HEXSWEEPER_SPHERE_TAKE).
+    let activeTake = null;
+    try {
+      const fromWin =
+        typeof global.HEXSWEEPER_SPHERE_TAKE === "string"
+          ? global.HEXSWEEPER_SPHERE_TAKE
+          : null;
+      const fromQs = new URLSearchParams(location.search).get("take");
+      const takeId = fromWin || fromQs;
+      if (takeId && SPHERE_TAKES[takeId]) activeTake = SPHERE_TAKES[takeId];
+    } catch (_) {}
+
+    function applyActiveTake() {
+      if (!activeTake) return;
+      state.theme = themePalette(activeTake.theme);
+      document.body.dataset.sphereTake = activeTake.id;
+      document.body.dataset.sphereTheme = activeTake.theme.id;
+      document.body.dataset.sphereChrome = activeTake.theme.chrome || "dark";
+      if (activeTake.countStyleDefault) {
+        state.countStyle = activeTake.countStyleDefault;
+        syncCountStyleChrome();
+      }
+      if (Number.isFinite(activeTake.defaultZoom)) {
+        state.zoomFactor = Math.max(
+          ZOOM_MIN,
+          Math.min(ZOOM_MAX, activeTake.defaultZoom)
+        );
+        state.scale = state.baseScale * state.zoomFactor;
+      }
+      if (typeof activeTake.ambientSpin === "boolean") {
+        state.ambientSpin = activeTake.ambientSpin && !state.reduceMotion;
+      }
+      // Help modal: title + lede for the take (keep controls list).
+      const titleEl = document.getElementById("help-title");
+      const ledeEl = document.querySelector(".help-lede");
+      if (titleEl && activeTake.title) titleEl.textContent = activeTake.title;
+      if (ledeEl && activeTake.helpLede) {
+        ledeEl.textContent = activeTake.helpLede;
+      }
+      document.title = activeTake.title || document.title;
+      if (activeTake.hudNote && typeof showCountStyleToast === "function") {
+        setTimeout(() => showCountStyleToast(activeTake.hudNote), 480);
+      }
+      // Don't persist take boards into the main sphere save slot.
+      persistSuspended = true;
+    }
+
     // ?deal=1 — preview/OG board with a dig already open (does not wipe player save).
     let wantDeal = false;
     try {
@@ -4099,7 +4339,18 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     } catch (_) {}
 
     let restored = false;
-    if (wantDeal) {
+    if (activeTake) {
+      // Takes always start clean (no restore of main-run progress).
+      if (
+        activeTake.boardSizeDefault &&
+        SIZE_ORDER.includes(activeTake.boardSizeDefault)
+      ) {
+        state.difficulty = activeTake.boardSizeDefault;
+        syncSizeChrome();
+      }
+      resetGame({ keepPersist: true });
+      applyActiveTake();
+    } else if (wantDeal) {
       persistSuspended = true;
       resetGame({ keepPersist: true });
       // Prefer a readable size for social stills.
@@ -4127,7 +4378,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const skipWelcome =
         /(?:\?|&)welcome=0(?:&|$)/.test(location.search) ||
         restored ||
-        wantDeal;
+        wantDeal ||
+        !!activeTake;
       if (forceWelcome) openHelp(true);
       else if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openHelp(true);
     } catch (_) {

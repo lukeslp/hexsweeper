@@ -95,6 +95,49 @@ EXPERIMENTS = [
         "liveHref": "../sphere/",
         "ogImage": f"{OG}/sphere-og.png",
     },
+    # Model-authored unique takes (specs from Kimi / Claude / Muse; wired via ?take=)
+    {
+        "id": "sphere-kimi",
+        "title": "Moon Ink Orrery",
+        "ogTitle": "Hexsweeper 3D — Moon Ink Orrery",
+        "ogDescription": "Hex minesweeper on a Goldberg sphere, restyled as an ink-brushed lunar orrery. Authored with Kimi.",
+        "tag": "Take · Kimi",
+        "blurb": "Kimi: paper-moon shells over indigo void, vermillion flags, brush-weight rings that thicken with danger.",
+        "filter": "sphere take kimi moon ink orrery lunar calligraphy codepen",
+        "swatch": ("#0c0f1d", "#e8e4d8", "#7dd3c0", "#c9372c"),
+        "file": "sphere-kimi.html",
+        "href": "sphere-kimi.html",
+        "take": "kimi-moon-ink-orrery",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-claude",
+        "title": "Amber Codex",
+        "ogTitle": "Hexsweeper 3D — Amber Codex",
+        "ogDescription": "A hex-tile minesweeper on a Goldberg sphere, like a scholar's annotated globe. Authored with Claude.",
+        "tag": "Take · Claude",
+        "blurb": "Claude: lacquered amber shells, parchment wells, sealing-wax flags, amber flood pulse on survey.",
+        "filter": "sphere take claude amber codex scholarly parchment codepen",
+        "swatch": ("#1c1f2b", "#4a3f2f", "#d4a240", "#e8dcc8"),
+        "file": "sphere-claude.html",
+        "href": "sphere-claude.html",
+        "take": "claude-amber-codex",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-muse",
+        "title": "Starlit Void",
+        "ogTitle": "Hexsweeper 3D — Starlit Void",
+        "ogDescription": "Hexsweeper's Goldberg sphere adrift in a soft void — a constellation to chart. Authored with Muse.",
+        "tag": "Take · Muse",
+        "blurb": "Muse: brushed-slate shell in deep void, coral lighthouse flags, starlight rings and count-tint wells.",
+        "filter": "sphere take muse constellation void starlit cosmic codepen",
+        "swatch": ("#0b1020", "#2e3a52", "#8bb8ff", "#ff8a6b"),
+        "file": "sphere-muse.html",
+        "href": "sphere-muse.html",
+        "take": "muse-constellation-void",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
 ]
 
 DEFAULT_LAB_SWATCH = ("#080a0f", "#7eb8ff", "#34d399", "#fbbf24")
@@ -561,6 +604,12 @@ def export_sphere(exp: dict) -> str:
     hexasphere = safe_script((ROOT / "sphere" / "hexasphere.js").read_text(encoding="utf-8"))
     sphere_js = safe_script((ROOT / "sphere" / "sphere.js").read_text(encoding="utf-8"))
     # Skip welcome + prefer a clean first paint; CodePen origin has its own storage.
+    take_id = exp.get("take")
+    take_line = (
+        f"window.HEXSWEEPER_SPHERE_TAKE = {json.dumps(take_id)};\n"
+        if take_id
+        else ""
+    )
     boot = (
         "<script>\n"
         "/* collection / CodePen boot */\n"
@@ -568,6 +617,7 @@ def export_sphere(exp: dict) -> str:
         "  localStorage.setItem('hexsweeper-sphere-welcome-v1', '1');\n"
         "} catch (_) {}\n"
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;\n"
+        f"{take_line}"
         "</script>\n"
     )
     # Do not use re.sub with JS source as the replacement — backslashes break the template.

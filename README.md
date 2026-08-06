@@ -69,7 +69,11 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
 | `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
-| `collection/index.html` | Desk tile grid — sphere under Experiments (Open + Copy HTML) |
+| `collection/sphere-kimi.html` | Take: Moon Ink Orrery (Kimi) |
+| `collection/sphere-claude.html` | Take: Amber Codex (Claude) |
+| `collection/sphere-muse.html` | Take: Starlit Void (Muse) |
+| `sphere/takes/*.json` | Model design specs for the three takes |
+| `collection/index.html` | Desk tile grid — sphere + takes under Experiments (Open + Copy HTML) |
 
 Regenerate after production or lab skin changes:
 
