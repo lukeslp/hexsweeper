@@ -109,7 +109,8 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Canvas 2D projection of vendored hexasphere math (no Three.js)
 - Dig / flag / flood over geodesic `neighborIndices`; first dig safe; win/lose
 - Starts pulled back (~0.72×); scroll/pinch to zoom; drag to rotate; flag mode + long-hold; RM-safe camera
-- Cleared tiles recess with a cutaway shell wall; covered faces stay flush
+- Cleared tiles recess like classic Minesweeper wells; covered faces stay raised
+- Minimal help: short lede, color history tile → [CoolmathGames history](https://www.coolmathgames.com/blog/the-history-of-minesweeper) + lightbox
 - Densities: **S** = 362 faces · 62 mines · **M** = 1002 · 170 · **L** = 1442 · 245 (~17% mine density; ~3× prior boards)
 - Flood expand: BFS ring stagger + brief flash/pop (logic opens immediately; paint catch-up; RM-safe)
 - **Chrome:** three BR glass pills — Reset·Size·Theme | Flag | Help; size/theme icons morph per state (no corner badges)
