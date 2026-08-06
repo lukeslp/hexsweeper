@@ -3,6 +3,7 @@
  * Primary Functions/Classes: generateHexasphere, floodClosure, vec3 helpers.
  * Inputs: radius, subdivisions (0–6). Outputs: { tiles, radius, subdivisions }.
  * Notes: Plain-object Vec3 — no Three.js. Ported from Rind hexasphere.ts (Rob Scanlon lineage).
+ * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
   "use strict";
@@ -50,7 +51,12 @@
 
   function vecKey(v, precision) {
     const p = precision != null ? precision : 6;
-    return `${v.x.toFixed(p)},${v.y.toFixed(p)},${v.z.toFixed(p)}`;
+    const scale = Math.pow(10, p);
+    function q(n) {
+      const r = Math.round(n * scale) / scale;
+      return Object.is(r, -0) ? 0 : r;
+    }
+    return `${q(v.x)},${q(v.y)},${q(v.z)}`;
   }
 
   function cartesianToSpherical(v) {

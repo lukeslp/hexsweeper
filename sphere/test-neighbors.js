@@ -2,7 +2,8 @@
 /**
  * File Purpose: Smoke test — sphere neighbor graph + flood closure parity.
  * Primary Functions: assertNeighborSymmetry, assertFloodClosure, assertFlagBlocksFlood.
- * Inputs: hexasphere.js (subdivisions 1–2). Outputs: exit 0 on pass, 1 on fail.
+ * Inputs: hexasphere.js (subdivisions 2, 4, 6). Outputs: exit 0 on pass, 1 on fail.
+ * Author: Luke Steuber <luke@lukesteuber.com>
  */
 "use strict";
 
@@ -144,9 +145,11 @@ function assertFloodClosure(subdivisions) {
 }
 
 console.log("Hexasphere neighbor + flood tests…");
-for (const sub of [1, 2]) {
+const LEVELS = [2, 4, 6];
+for (const sub of LEVELS) {
+  const { tiles } = Hexasphere.generateHexasphere(1, sub);
   assertFloodClosure(sub);
-  console.log(`  subdivisions ${sub}: OK`);
+  console.log(`  subdivisions ${sub}: ${tiles.length} tiles — OK`);
 }
 
 if (failed) {

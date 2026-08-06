@@ -106,9 +106,9 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Canvas 2D projection of vendored hexasphere math (no Three.js)
 - Dig / flag / flood over geodesic `neighborIndices`; first dig safe; win/lose
 - Drag to rotate; flag mode + long-hold; RM-safe camera (no lerp when reduced motion)
-- Densities: S = 12 faces · M = 42 · L = 92
+- Densities: **S** = 42 faces · 8 mines · **M** = 162 · 28 · **L** = 362 · 62 (~17–19% mine density)
 
-Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 1–2).
+Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 2, 4, 6).
 
 Flat game remains the default at `index.html`.
 
