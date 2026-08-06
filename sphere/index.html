@@ -130,6 +130,7 @@ body.help-open { overflow: hidden; }
   pointer-events: auto;
 }
 .hud-actions { /* skin-chrome base + sphere glass */
+  z-index: 50;
   background: color-mix(in srgb, var(--nav-bg) 52%, transparent);
   border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
 }
@@ -156,27 +157,6 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
   right: 6px;
 }
 .hud-btn { position: relative; }
-.theme-toast {
-  position: fixed;
-  left: 50%;
-  bottom: max(72px, calc(env(safe-area-inset-bottom) + 58px));
-  transform: translate(-50%, 8px);
-  z-index: 42;
-  padding: 8px 14px;
-  border-radius: 999px;
-  font: 600 0.78rem/1 "IBM Plex Sans", system-ui, sans-serif;
-  color: var(--text-main);
-  background: color-mix(in srgb, var(--nav-bg) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
-  backdrop-filter: blur(12px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s, transform 0.2s;
-}
-.theme-toast.show {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
 /* Instructions modal */
 .help-overlay {
   position: fixed;
@@ -209,24 +189,54 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
   text-align: left;
 }
 .help-panel h2 {
-  font-size: 1.15rem;
-  margin: 0 0 0.65rem;
+  font-size: 1.1rem;
+  margin: 0 0 0.85rem;
   letter-spacing: -0.02em;
+  text-align: center;
 }
-.help-panel p, .help-panel li {
-  font-size: 0.92rem;
-  line-height: 1.45;
-  margin: 0 0 0.7rem;
-  color: color-mix(in srgb, var(--text-main) 88%, var(--text-sub));
+.help-glyphs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0 0 0.75rem;
 }
-.help-panel ul {
-  margin: 0 0 0.7rem;
-  padding-left: 1.15rem;
+.help-glyph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--text-main) 90%, var(--text-sub));
+  text-align: center;
+  line-height: 1.2;
 }
-.help-panel li { margin: 0.35rem 0; }
-.help-panel .help-keys {
-  margin-top: 0.85rem;
+.help-glyph svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--text-main);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.92;
+}
+.help-tagline {
+  margin: 0 0 0.65rem;
   font-size: 0.82rem;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--text-sub);
+}
+.help-panel .help-keys {
+  margin-top: 0.65rem;
+  font-size: 0.78rem;
+  text-align: center;
   color: var(--text-sub);
 }
 .help-panel kbd {
@@ -260,7 +270,9 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
 .help-play {
   appearance: none;
   border: 0;
-  margin-top: 0.5rem;
+  display: block;
+  width: 100%;
+  margin-top: 0.65rem;
   padding: 10px 18px;
   border-radius: 999px;
   font: 600 0.9rem/1 "IBM Plex Sans", system-ui, sans-serif;
@@ -273,13 +285,20 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
   outline-offset: 3px;
 }
 .menu-links {
-  margin-top: 1rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  text-align: center;
+  font-size: 0.72rem;
 }
+.menu-links a {
+  color: var(--text-sub);
+  text-decoration: none;
+}
+.menu-links a:hover { color: var(--text-main); }
+.menu-links-sep { opacity: 0.45; margin: 0 0.35rem; }
 @media (prefers-reduced-motion: reduce) {
   .sphere-banner,
-  .theme-toast,
   .help-overlay { transition: none; }
 }
 </style>
@@ -295,8 +314,6 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
 <div class="canvas-container">
   <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
 </div>
-
-<div id="theme-toast" class="theme-toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <div class="hud-actions" role="toolbar" aria-label="Game controls">
   <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
@@ -344,17 +361,34 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
       </svg>
     </button>
     <h2 id="help-title">Hex Sphere</h2>
-    <p>Minesweeper on a closed Goldberg sphere — six geodesic neighbors per face instead of a flat grid.</p>
-    <ul>
-      <li><strong>Drag</strong> to rotate the sphere.</li>
-      <li><strong>Tap / click</strong> a covered face to dig. The first dig is always safe.</li>
-      <li>Numbers count adjacent mines. Empty regions expand in a wave over neighbors.</li>
-      <li><strong>Flag</strong> suspected mines: right-click, long-press, <kbd>F</kbd>, or the flag button.</li>
-      <li><strong>Pentagons</strong> mark the twelve icosahedron poles — still playable hexes.</li>
-      <li>Clear every safe face to win. Hit a mine and the run ends — reset to try again.</li>
-    </ul>
-    <p><strong>Size</strong> — <kbd>S</kbd> / <kbd>M</kbd> / <kbd>L</kbd> cycles density (362 · 1002 · 1442 faces). <strong>Theme</strong> — palette icon or <kbd>T</kbd> cycles visual skins (Void, Light, Dusk, Ember, Moss).</p>
-    <p class="help-keys">Drag rotate · <kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>T</kbd> theme</p>
+    <p class="help-tagline">Minesweeper on a closed sphere · six neighbors · first dig safe</p>
+    <div class="help-glyphs" aria-label="Controls">
+      <div class="help-glyph">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Dig
+      </div>
+      <div class="help-glyph">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        Flag
+      </div>
+      <div class="help-glyph">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7-7 7 7"/><path d="M12 2v20"/></svg>
+        Drag rotate
+      </div>
+      <div class="help-glyph">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="4"/></svg>
+        S · M · L
+      </div>
+      <div class="help-glyph">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41"/></svg>
+        Themes
+      </div>
+      <div class="help-glyph">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+        Clear all
+      </div>
+    </div>
+    <p class="help-keys"><kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>T</kbd> theme · size icon cycles</p>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener">lukesteuber.com</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>

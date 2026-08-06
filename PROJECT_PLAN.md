@@ -19,6 +19,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] **Choices hub** — `choices.html` + `choices/lab/*` one-pagers (curated; not in production theme switcher)
 - [x] Sphere MVP — ~3× boards (S/M/L = 362/1002/1442 faces), flood expand FX, backface cull, idle RAF throttle
 - [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12)
+- [x] Sphere polish — trimmed icon help, size-cycle fix, endgame FX, no theme toast
 - [x] Sphere chrome — icon bar (Reset · Size · Theme · Flag · Help); five themes; first-visit instructions; no cross-game nav
 
 ## Current status (2026-08-04)

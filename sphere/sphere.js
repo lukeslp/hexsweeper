@@ -3,6 +3,7 @@
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
  * Chrome: Reset · Size · Theme · Flag · Help; themes Void/Light/Dusk/Ember/Moss.
+ * Endgame: lose mine cascade + burst; win ring pulse + confetti-lite (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
  * Author: Luke Steuber <luke@lukesteuber.com>
@@ -22,6 +23,10 @@
   const REVEAL_LERP = 0.18;
   const REVEAL_FLASH_MS = 240;
   const IDLE_FRAME_MS = 200;
+  const END_MINE_STEP_MS = 42;
+  const END_MINE_CAP_MS = 1200;
+  const END_SHAKE_DECAY = 0.88;
+  const END_PARTICLE_CAP = 120;
 
   const THEME_VOID = {
     id: "void",
@@ -292,6 +297,19 @@
       projectedCache: null,
       rotCacheKey: "",
       rafScheduled: false,
+      detonatorIdx: -1,
+      endFx: null,
+      camShake: 0,
+    };
+
+    const END_FX = {
+      active: false,
+      won: false,
+      t0: 0,
+      detonator: -1,
+      particles: [],
+      rings: [],
+      mineDue: null,
     };
 
     const statsMines = document.getElementById("stats-mines");
@@ -302,13 +320,19 @@
     const sizeBadge = document.getElementById("size-badge");
     const themeBtn = document.getElementById("theme-btn");
     const themeDot = document.getElementById("theme-dot");
-    const themeToast = document.getElementById("theme-toast");
     const helpOverlay = document.getElementById("help-overlay");
     const helpBtn = document.getElementById("help-btn");
     const helpClose = document.getElementById("help-close");
     const helpPlay = document.getElementById("help-play");
     let helpFocusReturn = null;
-    let themeToastTimer = 0;
+
+    function hudClick(fn) {
+      return (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fn(e);
+      };
+    }
 
     function themePalette(themeDef) {
       const out = {};
@@ -344,14 +368,6 @@
       }
     }
 
-    function showThemeToast(name) {
-      if (!themeToast) return;
-      themeToast.textContent = name;
-      themeToast.classList.add("show");
-      clearTimeout(themeToastTimer);
-      themeToastTimer = setTimeout(() => themeToast.classList.remove("show"), 1400);
-    }
-
     function applyTheme(index, optsApply) {
       optsApply = optsApply || {};
       themeIndex = ((index % THEMES.length) + THEMES.length) % THEMES.length;
@@ -361,7 +377,6 @@
       try {
         localStorage.setItem(THEME_STORAGE_KEY, def.id);
       } catch (_) {}
-      if (optsApply.toast !== false) showThemeToast(def.name);
       scheduleFrame();
     }
 
@@ -379,12 +394,13 @@
       if (restart !== false) {
         hideBanner();
         resetGame();
+        scheduleFrame();
       }
     }
 
     function cycleSize() {
       const i = SIZE_ORDER.indexOf(state.difficulty);
-      const next = SIZE_ORDER[(i + 1) % SIZE_ORDER.length];
+      const next = SIZE_ORDER[(i < 0 ? 1 : i + 1) % SIZE_ORDER.length];
       setDifficulty(next, true);
     }
 
@@ -635,7 +651,11 @@
 
     function resetGame() {
       stopTimer();
+      clearEndFx();
       const cfg = CONFIG[state.difficulty];
+      if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
+        throw new Error("SphereSweeper: Hexasphere not loaded");
+      }
       state.sphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
       state.tiles = state.sphere.tiles;
       state.cells = state.tiles.map(() => ({
@@ -646,17 +666,276 @@
         animReveal: 0,
         visualDue: 0,
         pulseAt: 0,
+        endFlash: 0,
+        endPop: 0,
       }));
       state.isFirstClick = true;
       state.isGameOver = false;
       state.won = false;
+      state.detonatorIdx = -1;
       state.flagsPlaced = 0;
       state.timeElapsed = 0;
       state.hovered = -1;
       state.pressed = -1;
+      state.camShake = 0;
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
       invalidateProjection();
       updateUI();
+    }
+
+    function clearEndFx() {
+      END_FX.active = false;
+      END_FX.won = false;
+      END_FX.t0 = 0;
+      END_FX.detonator = -1;
+      END_FX.particles.length = 0;
+      END_FX.rings.length = 0;
+      END_FX.mineDue = null;
+      state.camShake = 0;
+    }
+
+    function graphDistancesFrom(startIdx) {
+      const dist = new Map([[startIdx, 0]]);
+      const queue = [startIdx];
+      while (queue.length) {
+        const idx = queue.shift();
+        const d = dist.get(idx);
+        for (const n of state.tiles[idx].neighborIndices) {
+          if (dist.has(n)) continue;
+          dist.set(n, d + 1);
+          queue.push(n);
+        }
+      }
+      return dist;
+    }
+
+    function spawnBurstParticles(sx, sy, count, palette) {
+      const calm = state.reduceMotion;
+      const n = calm ? Math.min(8, count) : count;
+      for (let i = 0; i < n; i++) {
+        if (END_FX.particles.length >= END_PARTICLE_CAP) break;
+        const a = Math.random() * Math.PI * 2;
+        const sp = calm ? 0.6 + Math.random() * 1.2 : 1.5 + Math.random() * 4.5;
+        END_FX.particles.push({
+          x: sx,
+          y: sy,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp - (calm ? 0.2 : 0.8),
+          life: 1,
+          decay: calm ? 0.04 : 0.012 + Math.random() * 0.018,
+          r: calm ? 1.2 : 1.5 + Math.random() * 3.2,
+          color: palette[i % palette.length],
+        });
+      }
+    }
+
+    function startLoseFx(detonatorIdx) {
+      const now = performance.now();
+      END_FX.active = true;
+      END_FX.won = false;
+      END_FX.t0 = now;
+      END_FX.detonator = detonatorIdx;
+      END_FX.particles.length = 0;
+      END_FX.rings.length = 0;
+      state.camShake = state.reduceMotion ? 0 : 14;
+
+      const distMap = graphDistancesFrom(detonatorIdx);
+      END_FX.mineDue = new Map();
+
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        if (!c.isMine) continue;
+        if (i === detonatorIdx) {
+          c.revealed = true;
+          c.animReveal = 1;
+          c.visualDue = 0;
+          c.endFlash = 1;
+          c.endPop = 1.08;
+          continue;
+        }
+        if (state.reduceMotion) {
+          c.revealed = true;
+          c.animReveal = 1;
+          c.visualDue = 0;
+          continue;
+        }
+        c.revealed = false;
+        c.animReveal = 0;
+        const d = distMap.get(i);
+        const delay =
+          d != null
+            ? Math.min(d * END_MINE_STEP_MS, END_MINE_CAP_MS)
+            : END_MINE_CAP_MS;
+        END_FX.mineDue.set(i, now + delay);
+      }
+
+      if (!state.reduceMotion) {
+        const proj = projectTile(state.tiles[detonatorIdx], state.rotY, state.rotX);
+        const palette = [
+          state.theme.mineBurst,
+          state.theme.mine,
+          state.theme.mineEdge,
+          "#fef3c7",
+        ];
+        spawnBurstParticles(proj.center.x, proj.center.y, 48, palette);
+        END_FX.rings.push({
+          x: proj.center.x,
+          y: proj.center.y,
+          r: 0,
+          life: 1,
+          speed: Math.max(2.8, state.scale * 0.018),
+        });
+      } else {
+        for (let i = 0; i < state.cells.length; i++) {
+          const c = state.cells[i];
+          if (c.isMine) {
+            c.revealed = true;
+            c.animReveal = 1;
+          }
+        }
+        END_FX.mineDue = null;
+      }
+      scheduleFrame();
+    }
+
+    function startWinFx() {
+      const now = performance.now();
+      END_FX.active = true;
+      END_FX.won = true;
+      END_FX.t0 = now;
+      END_FX.detonator = -1;
+      END_FX.particles.length = 0;
+      END_FX.mineDue = null;
+      END_FX.rings.length = 0;
+
+      const distMap = graphDistancesFrom(0);
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        if (!c.revealed || c.isMine) continue;
+        const d = distMap.get(i) || 0;
+        c.endFlash = state.reduceMotion ? 0.85 : 1;
+        c.endPop = state.reduceMotion ? 1 : 1.06;
+        c.pulseAt = now + (state.reduceMotion ? 0 : Math.min(d * 22, 900));
+      }
+
+      if (!state.reduceMotion) {
+        spawnBurstParticles(state.centerX, state.centerY, 36, [
+          state.theme.revealGlow,
+          state.theme.revealFlash,
+          state.theme.hoverRing,
+          "#fef08a",
+        ]);
+        END_FX.rings.push({
+          x: state.centerX,
+          y: state.centerY,
+          r: 0,
+          life: 1,
+          speed: Math.max(2.2, state.scale * 0.014),
+        });
+      }
+      scheduleFrame();
+    }
+
+    function tickEndFx(now) {
+      if (!END_FX.active) return false;
+      let busy = false;
+      const elapsed = now - END_FX.t0;
+
+      if (state.camShake > 0.2 && !state.reduceMotion) {
+        state.camShake *= END_SHAKE_DECAY;
+        busy = true;
+      } else {
+        state.camShake = 0;
+      }
+
+      if (END_FX.mineDue && END_FX.mineDue.size) {
+        for (const [idx, due] of END_FX.mineDue) {
+          if (now >= due) {
+            const c = state.cells[idx];
+            c.revealed = true;
+            c.animReveal = 0;
+            c.visualDue = now;
+            c.pulseAt = now;
+            c.endFlash = 1;
+            c.endPop = 1.05;
+            END_FX.mineDue.delete(idx);
+            if (!state.reduceMotion && END_FX.particles.length < END_PARTICLE_CAP - 6) {
+              const proj = projectTile(state.tiles[idx], state.rotY, state.rotX);
+              if (proj.z > 0) {
+                spawnBurstParticles(proj.center.x, proj.center.y, 6, [
+                  state.theme.mineBurst,
+                  state.theme.mine,
+                ]);
+              }
+            }
+          } else {
+            busy = true;
+          }
+        }
+        if (END_FX.mineDue.size === 0) END_FX.mineDue = null;
+      }
+
+      for (let i = END_FX.particles.length - 1; i >= 0; i--) {
+        const p = END_FX.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.06;
+        p.vx *= 0.985;
+        p.life -= p.decay;
+        if (p.life <= 0) END_FX.particles.splice(i, 1);
+        else busy = true;
+      }
+
+      for (const ring of END_FX.rings) {
+        ring.r += ring.speed;
+        ring.life -= state.reduceMotion ? 0.04 : 0.016;
+        if (ring.life > 0) busy = true;
+      }
+      END_FX.rings = END_FX.rings.filter((r) => r.life > 0);
+
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        if (c.endFlash > 0.01) {
+          c.endFlash *= state.reduceMotion ? 0.82 : 0.94;
+          busy = true;
+        } else {
+          c.endFlash = 0;
+        }
+        if (c.endPop > 1.001) {
+          c.endPop += (1 - c.endPop) * 0.12;
+          if (Math.abs(c.endPop - 1) < 0.004) c.endPop = 1;
+          else busy = true;
+        }
+      }
+
+      const duration = END_FX.won ? 1600 : 2400;
+      if (!busy && elapsed > duration) clearEndFx();
+      else if (busy || elapsed < duration) busy = true;
+      return busy;
+    }
+
+    function drawEndFxOverlay(now) {
+      if (!END_FX.active) return;
+      const T = state.theme;
+      for (const ring of END_FX.rings) {
+        ctx.beginPath();
+        ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
+        ctx.strokeStyle = END_FX.won
+          ? colorMix(T.revealGlow, T.hoverRing, 1 - ring.life)
+          : colorMix(T.mineBurst, T.mine, 1 - ring.life);
+        ctx.globalAlpha = ring.life * 0.55;
+        ctx.lineWidth = END_FX.won ? 2.4 : 3.2;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      for (const p of END_FX.particles) {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
     }
 
     function scheduleRevealVisual(idx, dist) {
@@ -706,6 +985,7 @@
       scheduleRevealVisual(idx, 0);
       if (cell.isMine) {
         cell.animReveal = 1;
+        state.detonatorIdx = idx;
         gameOver(false);
         return;
       }
@@ -767,14 +1047,9 @@
       state.won = won;
       stopTimer();
       if (!won) {
-        for (let i = 0; i < state.cells.length; i++) {
-          const c = state.cells[i];
-          if (c.isMine) {
-            c.revealed = true;
-            c.animReveal = 1;
-            c.visualDue = 0;
-          }
-        }
+        startLoseFx(state.detonatorIdx >= 0 ? state.detonatorIdx : 0);
+      } else {
+        startWinFx();
       }
       showBanner(won ? "Cleared the sphere!" : "Mine detonated.");
     }
@@ -901,8 +1176,12 @@
 
       if (cell.revealed && visualReady) {
         if (cell.isMine) {
+          let fill = lit(T.mine, proj.normalZ, 0.25);
+          if (cell.endFlash > 0) {
+            fill = colorMix(fill, T.mineBurst, cell.endFlash * 0.65);
+          }
           return {
-            fill: lit(T.mine, proj.normalZ, 0.25),
+            fill,
             stroke: T.mineEdge,
             lineWidth: 2,
             showLabel: true,
@@ -922,6 +1201,10 @@
           const flash = 1 - pulseAge / REVEAL_FLASH_MS;
           fill = colorMix(fill, T.revealFlash, flash * 0.5);
           fill = colorMix(fill, T.revealGlow, flash * 0.22);
+        }
+        if (cell.endFlash > 0) {
+          fill = colorMix(fill, T.revealGlow, cell.endFlash * 0.55);
+          fill = colorMix(fill, "#fef08a", cell.endFlash * 0.25);
         }
         return {
           fill,
@@ -949,17 +1232,19 @@
       return coveredStyle(proj, tile, isFront);
     }
 
-    function popProjected(proj, pop) {
-      if (pop >= 0.999) return proj;
+    function popProjected(proj, pop, endPop) {
+      const extra = endPop != null && endPop > 1.001 ? endPop : 1;
+      const scale = pop * extra;
+      if (Math.abs(scale - 1) < 0.001) return proj;
       const cx = proj.center.x;
       const cy = proj.center.y;
       return {
         ...proj,
         boundary: proj.boundary.map((p) => ({
-          x: cx + (p.x - cx) * pop,
-          y: cy + (p.y - cy) * pop,
+          x: cx + (p.x - cx) * scale,
+          y: cy + (p.y - cy) * scale,
         })),
-        area: proj.area * pop * pop,
+        area: proj.area * scale * scale,
       };
     }
 
@@ -967,6 +1252,18 @@
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
       ctx.clearRect(0, 0, w, h);
+
+      const shakeX =
+        state.camShake > 0.2 && !state.reduceMotion
+          ? (Math.random() - 0.5) * state.camShake
+          : 0;
+      const shakeY =
+        state.camShake > 0.2 && !state.reduceMotion
+          ? (Math.random() - 0.5) * state.camShake
+          : 0;
+
+      ctx.save();
+      if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
 
       const grd = ctx.createRadialGradient(
         state.centerX,
@@ -998,14 +1295,15 @@
         const tile = state.tiles[idx];
         const colors = tileColors(idx, proj, cell, tile, now);
         let drawProj = proj;
-        if (
+        const pop =
           cell.revealed &&
           now >= cell.visualDue &&
           cell.animReveal < 1 &&
           !state.reduceMotion
-        ) {
-          const pop = 0.86 + cell.animReveal * 0.14;
-          drawProj = popProjected(proj, pop);
+            ? 0.86 + cell.animReveal * 0.14
+            : 1;
+        if (pop < 1 || (cell.endPop && cell.endPop > 1.001)) {
+          drawProj = popProjected(proj, pop, cell.endPop);
         }
 
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
@@ -1037,12 +1335,17 @@
           }
         }
       }
+
+      drawEndFxOverlay(now);
+      ctx.restore();
     }
 
     function frameNeedsPaint(now) {
       if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
       if (revealAnimBusy(now)) return true;
-      if (state.isGameOver) return true;
+      if (END_FX.active) return true;
+      if (state.camShake > 0.2) return true;
+      if (state.isGameOver && END_FX.particles.length) return true;
       if (state.reduceMotion) return false;
       return (
         Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
@@ -1062,6 +1365,7 @@
       state.rafScheduled = false;
       const now = ts || performance.now();
       tickRevealAnim(now);
+      tickEndFx(now);
       draw();
       if (frameNeedsPaint(now)) scheduleFrame();
       else scheduleFrame(IDLE_FRAME_MS);
@@ -1147,21 +1451,22 @@
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
     if (restartBtn) {
-      restartBtn.addEventListener("click", () => {
+      restartBtn.addEventListener("click", hudClick(() => {
         hideBanner();
         resetGame();
-      });
+        scheduleFrame();
+      }));
     }
     if (flagToggle) {
-      flagToggle.addEventListener("click", () => {
+      flagToggle.addEventListener("click", hudClick(() => {
         state.flagMode = !state.flagMode;
         flagToggle.setAttribute("aria-pressed", state.flagMode ? "true" : "false");
         flagToggle.classList.toggle("active", state.flagMode);
-      });
+      }));
     }
-    if (sizeBtn) sizeBtn.addEventListener("click", cycleSize);
-    if (themeBtn) themeBtn.addEventListener("click", cycleTheme);
-    if (helpBtn) helpBtn.addEventListener("click", () => openHelp(false));
+    if (sizeBtn) sizeBtn.addEventListener("click", hudClick(cycleSize));
+    if (themeBtn) themeBtn.addEventListener("click", hudClick(cycleTheme));
+    if (helpBtn) helpBtn.addEventListener("click", hudClick(() => openHelp(false)));
     if (helpClose) helpClose.addEventListener("click", closeHelp);
     if (helpPlay) helpPlay.addEventListener("click", closeHelp);
     helpOverlay?.addEventListener("click", (e) => {
