@@ -13,6 +13,8 @@
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
  * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
+ * Persist: autosave mid-run (`hexsweeper-sphere-run-v1`); confirm before Reset / size change.
+ * Flags: pure red fill only (no glyph on the tile).
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
@@ -149,6 +151,7 @@
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
+  const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v1";
   /** History-tile accent — mark only, never well fill. */
   const YELLOW_COUNT = "#facc15";
   const COUNT_STYLES = [
@@ -424,8 +427,34 @@
       applyTheme(themeIndex + 1);
     }
 
-    function setDifficulty(val, restart) {
-      if (!SIZE_ORDER.includes(val)) return;
+    function boardIsFresh() {
+      return state.isFirstClick && state.flagsPlaced === 0 && !state.isGameOver;
+    }
+
+    /** Confirm before wiping a started (or finished) board. */
+    function confirmDiscard(message) {
+      if (boardIsFresh()) return true;
+      try {
+        return window.confirm(message);
+      } catch (_) {
+        return true;
+      }
+    }
+
+    function setDifficulty(val, restart, optsSet) {
+      optsSet = optsSet || {};
+      if (!SIZE_ORDER.includes(val)) return false;
+      // Same size already — no wipe (S/M/L keys while already there).
+      if (val === state.difficulty && restart !== false) return true;
+      if (restart !== false && !optsSet.force) {
+        if (
+          !confirmDiscard(
+            "Change board size? Current progress will be lost."
+          )
+        ) {
+          return false;
+        }
+      }
       state.difficulty = val;
       syncSizeChrome();
       try {
@@ -436,12 +465,27 @@
         resetGame();
         scheduleFrame();
       }
+      return true;
     }
 
     function cycleSize() {
       const i = SIZE_ORDER.indexOf(state.difficulty);
       const next = SIZE_ORDER[(i < 0 ? 1 : i + 1) % SIZE_ORDER.length];
       setDifficulty(next, true);
+    }
+
+    function requestReset(optsReset) {
+      optsReset = optsReset || {};
+      if (
+        !optsReset.force &&
+        !confirmDiscard("Start a new sphere? Current progress will be lost.")
+      ) {
+        return false;
+      }
+      hideBanner();
+      resetGame();
+      scheduleFrame();
+      return true;
     }
 
     function trapFocus(container) {
@@ -529,6 +573,7 @@
       state.scale = state.baseScale * state.zoomFactor;
       invalidateProjection();
       scheduleFrame();
+      schedulePersist();
     }
 
     function touchDistance(touches) {
@@ -701,11 +746,15 @@
       }
     }
 
-    function startTimer() {
+    function startTimer(resumeAt) {
+      if (Number.isFinite(resumeAt)) {
+        state.timeElapsed = Math.max(0, resumeAt | 0);
+      }
       if (state.timerInterval) return;
       state.timerInterval = setInterval(() => {
         state.timeElapsed++;
         updateUI();
+        schedulePersist();
       }, 1000);
     }
 
@@ -778,6 +827,203 @@
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
       invalidateProjection();
       updateUI();
+      clearPersist();
+    }
+
+    let persistSuspended = false;
+    let persistTimer = null;
+
+    function exportRunState() {
+      if (boardIsFresh()) return null;
+      if (!state.cells.length) return null;
+      const mines = [];
+      const revealed = [];
+      const flagged = [];
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        if (c.isMine) mines.push(i);
+        if (c.revealed) revealed.push(i);
+        else if (state.isGameOver && !state.won && c.isMine) revealed.push(i);
+        if (c.flagged) flagged.push(i);
+      }
+      return {
+        v: 1,
+        kind: "sphere",
+        difficulty: state.difficulty,
+        first: !!state.isFirstClick,
+        over: !!state.isGameOver,
+        won: !!state.won,
+        flags: state.flagsPlaced | 0,
+        mineCount: state.mineCount | 0,
+        time: state.timeElapsed | 0,
+        rotY: state.rotY,
+        rotX: state.rotX,
+        zoom: state.zoomFactor,
+        mines,
+        revealed,
+        flagged,
+        savedAt: Date.now(),
+      };
+    }
+
+    function clearPersist() {
+      try {
+        localStorage.removeItem(RUN_STORAGE_KEY);
+      } catch (_) {}
+    }
+
+    function flushPersist() {
+      if (persistSuspended) return false;
+      const data = exportRunState();
+      if (!data) {
+        clearPersist();
+        return false;
+      }
+      try {
+        localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(data));
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function schedulePersist() {
+      if (persistSuspended) return;
+      clearTimeout(persistTimer);
+      persistTimer = setTimeout(() => flushPersist(), 400);
+    }
+
+    function applyRunState(data) {
+      if (!data || data.v !== 1 || data.kind !== "sphere") return false;
+      if (!SIZE_ORDER.includes(data.difficulty)) return false;
+      if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
+        return false;
+      }
+
+      persistSuspended = true;
+      stopTimer();
+      clearEndFx();
+      hideBanner();
+
+      state.difficulty = data.difficulty;
+      syncSizeChrome();
+      try {
+        localStorage.setItem(SIZE_STORAGE_KEY, data.difficulty);
+      } catch (_) {}
+
+      const cfg = CONFIG[state.difficulty];
+      state.sphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
+      state.tiles = state.sphere.tiles;
+      state.cells = state.tiles.map(() => freshCell());
+      const n = state.cells.length;
+
+      const mineList = Array.isArray(data.mines) ? data.mines : [];
+      const revealedList = Array.isArray(data.revealed) ? data.revealed : [];
+      const flaggedList = Array.isArray(data.flagged) ? data.flagged : [];
+
+      for (const idx of mineList) {
+        if ((idx | 0) === idx && idx >= 0 && idx < n) state.cells[idx].isMine = true;
+      }
+      for (const idx of revealedList) {
+        if ((idx | 0) !== idx || idx < 0 || idx >= n) continue;
+        const c = state.cells[idx];
+        c.revealed = true;
+        c.animReveal = 1;
+        c.visualDue = 0;
+        c.pulseAt = 0;
+      }
+      let flags = 0;
+      for (const idx of flaggedList) {
+        if ((idx | 0) !== idx || idx < 0 || idx >= n) continue;
+        const c = state.cells[idx];
+        if (c.revealed) continue;
+        c.flagged = true;
+        flags++;
+      }
+      computeAllCounts();
+
+      state.isFirstClick = !!data.first;
+      state.isGameOver = !!data.over;
+      state.won = !!data.won;
+      state.detonatorIdx = -1;
+      state.flagsPlaced =
+        Number.isFinite(data.flags) ? data.flags | 0 : flags;
+      state.mineCount = Number.isFinite(data.mineCount)
+        ? data.mineCount | 0
+        : mineList.length || mineTargetForDifficulty(n);
+      state.timeElapsed = data.time | 0;
+      state.hovered = -1;
+      state.pressed = -1;
+      state.camShake = 0;
+      state.ambientSpin = false;
+
+      if (Number.isFinite(data.rotY)) {
+        state.rotY = data.rotY;
+        state.targetRotY = data.rotY;
+      }
+      if (Number.isFinite(data.rotX)) {
+        state.rotX = data.rotX;
+        state.targetRotX = data.rotX;
+      }
+      if (Number.isFinite(data.zoom)) {
+        state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, data.zoom));
+        state.scale = state.baseScale * state.zoomFactor;
+      }
+
+      invalidateProjection();
+      updateUI();
+
+      if (!state.isFirstClick && !state.isGameOver) {
+        startTimer(state.timeElapsed);
+      }
+      if (state.isGameOver) {
+        if (state.won) {
+          showBanner("Cleared the sphere!", {
+            share: true,
+            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
+          });
+        } else {
+          showBanner("Mine detonated.", { share: false });
+        }
+      }
+
+      persistSuspended = false;
+      return true;
+    }
+
+    function tryRestoreRun() {
+      let raw;
+      try {
+        raw = localStorage.getItem(RUN_STORAGE_KEY);
+      } catch (_) {
+        return false;
+      }
+      if (!raw) return false;
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch (_) {
+        clearPersist();
+        return false;
+      }
+      const ok = applyRunState(data);
+      if (!ok) {
+        clearPersist();
+        return false;
+      }
+      if (typeof showCountStyleToast === "function") {
+        const cleared = Array.isArray(data.revealed) ? data.revealed.length : 0;
+        showCountStyleToast(
+          data.over
+            ? data.won
+              ? "Restored · cleared"
+              : "Restored · ended"
+            : cleared > 0
+              ? `Restored · ${cleared} open`
+              : "Restored"
+        );
+      }
+      return true;
     }
 
     function clearEndFx() {
@@ -1088,6 +1334,7 @@
       }
       if (cell.neighborMines === 0) floodFrom(idx);
       checkWin();
+      schedulePersist();
     }
 
     function tickRevealAnim(now) {
@@ -1125,6 +1372,7 @@
       cell.flagged = !cell.flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
+      schedulePersist();
     }
 
     function checkWin() {
@@ -1153,6 +1401,7 @@
           meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
         });
       }
+      flushPersist();
     }
 
     function showBanner(msg, opts) {
@@ -1611,16 +1860,13 @@
       const isFront = proj.z > 0.08;
       const darkMono = !!(T.pureCovered || T.id === "dark");
 
-      // Flags always pure red (front or rim).
+      // Flags: pure red fill only — no glyph (red is enough).
       if (cell.flagged && !cell.revealed) {
         return {
           fill: T.flagFill,
           stroke: T.flagEdge,
           lineWidth: 2,
-          showLabel: true,
-          label: "⚑",
-          labelColor: T.flagIcon,
-          labelStroke: T.flagFill,
+          showLabel: false,
         };
       }
 
@@ -2003,14 +2249,14 @@
           if (state.flagMode || e.button === 2) toggleFlag(idx);
           else reveal(idx);
         } else if (state.isGameOver) {
-          hideBanner();
-          resetGame();
+          requestReset({ force: true });
         }
       }
       state.dragging = false;
       state.dragStart = null;
       state.pressed = -1;
       touchMoved = false;
+      schedulePersist();
     }
 
     canvas.addEventListener("mousedown", onPointerDown);
@@ -2036,9 +2282,7 @@
 
     if (restartBtn) {
       restartBtn.addEventListener("click", hudClick(() => {
-        hideBanner();
-        resetGame();
-        scheduleFrame();
+        requestReset();
       }));
     }
     if (shareWinBtn) {
@@ -2050,9 +2294,7 @@
     }
     if (bannerAgainBtn) {
       bannerAgainBtn.addEventListener("click", hudClick(() => {
-        hideBanner();
-        resetGame();
-        scheduleFrame();
+        requestReset({ force: true });
       }));
     }
     if (flagToggle) {
@@ -2097,8 +2339,7 @@
         }
       }
       if (e.key === "r" || e.key === "R") {
-        hideBanner();
-        resetGame();
+        requestReset();
       }
       if (e.key === "t" || e.key === "T") {
         if (!e.metaKey && !e.ctrlKey) cycleTheme();
@@ -2130,17 +2371,23 @@
     }
 
     window.addEventListener("resize", resize);
+    window.addEventListener("pagehide", () => flushPersist());
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushPersist();
+    });
     resize();
-    resetGame();
+    if (!tryRestoreRun()) resetGame();
     scheduleFrame();
 
     return {
-      reset: resetGame,
+      reset: () => requestReset({ force: true }),
       floodFrom,
       getState: () => state,
       pickTile,
       projectTile,
       mineTargetForDifficulty,
+      exportRunState,
+      applyRunState,
     };
   }
 
