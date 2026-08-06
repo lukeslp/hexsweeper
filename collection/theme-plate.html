@@ -3206,18 +3206,60 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
 
     function updateCell(cell) {
+      if (cell._offscreen) return;
       const isHovered = state.hoveredKey === `${cell.q},${cell.r}` && !state.isGameOver;
       cell.animHover += ((isHovered ? 1 : 0) - cell.animHover) * 0.2;
       cell.animReveal += ((cell.revealed ? 1 : 0) - cell.animReveal) * 0.15;
     }
 
+    /** Canvas on-screen (IntersectionObserver) — offscreen iframes / desk pens rest. */
+    let frameVisible = true;
+    let lastPaintTs = 0;
+    const inIframe = typeof window !== "undefined" && window.self !== window.top;
+
+    function isEndlessIdle(ts) {
+      if (!state.endless) return false;
+      const z = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
+      if (z >= 0.78) return false;
+      const camMoving =
+        Math.abs(state.camTX - state.camX) > 0.5 || Math.abs(state.camTY - state.camY) > 0.5;
+      if (camMoving || state.pointer.active) return false;
+      if (state.revealWave && state.revealWave.length) return false;
+      if (state.hoveredKey) return false;
+      if (typeof state.hooks.isFrameBusy === "function" && state.hooks.isFrameBusy(api, ts)) {
+        return false;
+      }
+      return true;
+    }
+
+    function framePaintInterval(ts) {
+      if (!isEndlessIdle(ts)) return 0;
+      // Zoomed-out endless plate: 15 fps standalone, 5 fps in embeds / background pens.
+      if (inIframe || !frameVisible) return 200;
+      return 66;
+    }
+
+    function resumeGameLoop() {
+      if (rafId) return;
+      if (typeof document !== "undefined" && document.hidden) return;
+      if (!frameVisible) return;
+      rafId = requestAnimationFrame(gameLoop);
+    }
+
     let rafId = 0;
     function gameLoop(ts) {
-      // Hidden tabs: stop the loop so endless Soft UI / Escape don't spin coolers.
-      if (typeof document !== "undefined" && document.hidden) {
-        rafId = 0;
+      rafId = 0;
+      // Hidden tabs / offscreen canvas: stop painting so endless Soft UI rests.
+      if (typeof document !== "undefined" && document.hidden) return;
+      if (!frameVisible) return;
+
+      const minGap = framePaintInterval(ts);
+      if (minGap > 0 && ts - lastPaintTs < minGap) {
+        rafId = requestAnimationFrame(gameLoop);
         return;
       }
+      lastPaintTs = ts;
+
       state.now = ts - state.t0;
       stepRevealWave();
       stepCamera();
@@ -3229,15 +3271,17 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
       // Draw far rings first for depth skins that sort
       let cells = Array.from(state.map.values());
-      // Endless: skip off-screen tiles for perf when the field gets huge.
-      // beforeFrame already set screen-space x/y (camera-adjusted).
-      if (state.endless && cells.length > 200) {
-        const pad = state.cellSize * 4;
-        const w = canvas.width;
-        const h = canvas.height;
-        cells = cells.filter(
-          (c) => c.x > -pad && c.y > -pad && c.x < w + pad && c.y < h + pad
-        );
+      // Endless: cull parked / off-screen tiles (beforeFrame sets _offscreen).
+      if (state.endless) {
+        cells = cells.filter((c) => !c._offscreen);
+        if (cells.length > 200) {
+          const pad = state.cellSize * 3;
+          const w = canvas.width;
+          const h = canvas.height;
+          cells = cells.filter(
+            (c) => c.x > -pad && c.y > -pad && c.x < w + pad && c.y < h + pad
+          );
+        }
       }
       if (state.hooks.sortCells) cells.sort(state.hooks.sortCells);
       else cells.sort((a, b) => a.ring - b.ring || a.y - b.y);
@@ -3255,7 +3299,26 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
     if (typeof document !== "undefined" && document.addEventListener) {
       document.addEventListener("visibilitychange", () => {
-        if (!document.hidden && !rafId) rafId = requestAnimationFrame(gameLoop);
+        resumeGameLoop();
+      });
+    }
+    if (typeof IntersectionObserver !== "undefined") {
+      const frameObserver = new IntersectionObserver(
+        (entries) => {
+          frameVisible = entries.some((e) => e.isIntersecting && e.intersectionRatio > 0);
+          if (frameVisible) resumeGameLoop();
+        },
+        { threshold: [0, 0.01] }
+      );
+      frameObserver.observe(canvas);
+    }
+    if (typeof document !== "undefined" && document.addEventListener && inIframe) {
+      window.addEventListener("focus", resumeGameLoop);
+      window.addEventListener("blur", () => {
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
       });
     }
 
@@ -6750,13 +6813,15 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   /**
    * Soft UI / Escape LOD: at open zoom the endless plate can be thousands of
    * extruded hexes — drop walls/specular/ground shadows and paint seams only.
+   * Gates on viewZoom (not viewport-fit cellSize — same rule as Plague LOD).
    */
   function useSoftUiLod(th, s) {
     if (!th || th.material !== "neumorph" || th.flatPlate) return false;
     const z = s && Number.isFinite(s.viewZoom) ? s.viewZoom : 1;
-    const size = s && s.cellSize ? s.cellSize : 28;
     const n = s && s.map ? s.map.size : 0;
-    return z < 0.78 || size < 20 || n > 800;
+    if (z < 0.78) return true;
+    if (n > 520 && z < 0.88) return true;
+    return false;
   }
 
   function emit(x, y, n, color) {
@@ -8235,6 +8300,15 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         if (th.flatGrid) return a.y - b.y || a.x - b.x;
         return a.ring - b.ring || a.y - b.y;
       },
+      isFrameBusy(api) {
+        if (introZoomFrame) return true;
+        if (BLAST.active) return true;
+        if (SEEP.active) return true;
+        const th = THEMES[themeIndex];
+        if (th && th.rift && RIFT.intensity > 0.04) return true;
+        if (th && isFxTheme(th) && particles.some((p) => !p.ambient)) return true;
+        return false;
+      },
       onReveal(cell, api, meta) {
         const th = THEMES[themeIndex];
         if (th.rift) noteRiftReveal(cell, api, meta);
@@ -8318,7 +8392,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         const camX = s.camX || 0;
         const camY = s.camY || 0;
         // Endless: only layout cells near the camera frustum (huge maps)
-        const layoutBudget = endless && s.map.size > 220;
+        const softLodEarly = useSoftUiLod(th, s);
+        const layoutBudget = endless && s.map.size > (softLodEarly ? 80 : 220);
         const viewPad = s.cellSize * 6;
         const vw = s.canvas.width;
         const vh = s.canvas.height;
@@ -8474,13 +8549,12 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         }
 
         // Desk: ambient pool, then per-tile ground shadows, then faces on top
-        const softLod = useSoftUiLod(th, s);
+        const softLod = softLodEarly;
         if (!th.flatPlate) {
           if (softLod) {
-            // Cheap wash — no per-tile footprints / multi-layer glow at open zoom
+            // Cheap wash — skip watermark loops (100+ strokes/frame) at open zoom
             ctx.fillStyle = th.bodyBg || th.css["--bg-color"] || "#e8eaee";
             ctx.fillRect(0, 0, s.canvas.width, s.canvas.height);
-            drawInfinitePlateField(ctx, s, th);
           } else {
             drawBoardGroundShadow(ctx, s, th, flat);
             drawInfinitePlateField(ctx, s, th);
@@ -8555,33 +8629,19 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
           const dark = th.id === "dark" || th.id === "escape";
           ctx.fillStyle = `hsl(${st.h} ${st.s}% ${st.l}%)`;
           ctx.fill(path);
-          // Floor stroke width in CSS pixels so zoomed-out lattices don't disappear
-          // into sub-pixel hairlines (the failure mode in Dark floods).
-          const seam = Math.max(1.75, size * 0.065);
+          // Single seam stroke at open zoom — half the canvas work vs double-bevel.
+          const seam = Math.max(1.5, size * 0.055);
           ctx.lineJoin = "round";
           ctx.lineCap = "round";
           ctx.lineWidth = seam;
-          if (dark) {
-            ctx.strokeStyle = cell.revealed
-              ? "rgba(255,255,255,0.2)"
-              : "rgba(255,255,255,0.28)";
-            ctx.stroke(path);
-            ctx.lineWidth = Math.max(1.15, size * 0.04);
-            ctx.strokeStyle = cell.revealed
-              ? "rgba(0,0,0,0.65)"
-              : "rgba(0,0,0,0.4)";
-            ctx.stroke(path);
-          } else {
-            ctx.strokeStyle = cell.revealed
-              ? "rgba(0,0,0,0.22)"
-              : "rgba(0,0,0,0.3)";
-            ctx.stroke(path);
-            ctx.lineWidth = Math.max(1.1, size * 0.035);
-            ctx.strokeStyle = cell.revealed
-              ? "rgba(255,255,255,0.5)"
-              : "rgba(255,255,255,0.4)";
-            ctx.stroke(path);
-          }
+          ctx.strokeStyle = dark
+            ? cell.revealed
+              ? "rgba(255,255,255,0.22)"
+              : "rgba(255,255,255,0.26)"
+            : cell.revealed
+              ? "rgba(0,0,0,0.24)"
+              : "rgba(0,0,0,0.28)";
+          ctx.stroke(path);
           if (cell.animReveal > 0.1) {
             ctx.globalAlpha = cell.animReveal;
             if (cell.isMine) {

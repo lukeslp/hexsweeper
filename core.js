@@ -1903,18 +1903,60 @@
     }
 
     function updateCell(cell) {
+      if (cell._offscreen) return;
       const isHovered = state.hoveredKey === `${cell.q},${cell.r}` && !state.isGameOver;
       cell.animHover += ((isHovered ? 1 : 0) - cell.animHover) * 0.2;
       cell.animReveal += ((cell.revealed ? 1 : 0) - cell.animReveal) * 0.15;
     }
 
+    /** Canvas on-screen (IntersectionObserver) — offscreen iframes / desk pens rest. */
+    let frameVisible = true;
+    let lastPaintTs = 0;
+    const inIframe = typeof window !== "undefined" && window.self !== window.top;
+
+    function isEndlessIdle(ts) {
+      if (!state.endless) return false;
+      const z = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
+      if (z >= 0.78) return false;
+      const camMoving =
+        Math.abs(state.camTX - state.camX) > 0.5 || Math.abs(state.camTY - state.camY) > 0.5;
+      if (camMoving || state.pointer.active) return false;
+      if (state.revealWave && state.revealWave.length) return false;
+      if (state.hoveredKey) return false;
+      if (typeof state.hooks.isFrameBusy === "function" && state.hooks.isFrameBusy(api, ts)) {
+        return false;
+      }
+      return true;
+    }
+
+    function framePaintInterval(ts) {
+      if (!isEndlessIdle(ts)) return 0;
+      // Zoomed-out endless plate: 15 fps standalone, 5 fps in embeds / background pens.
+      if (inIframe || !frameVisible) return 200;
+      return 66;
+    }
+
+    function resumeGameLoop() {
+      if (rafId) return;
+      if (typeof document !== "undefined" && document.hidden) return;
+      if (!frameVisible) return;
+      rafId = requestAnimationFrame(gameLoop);
+    }
+
     let rafId = 0;
     function gameLoop(ts) {
-      // Hidden tabs: stop the loop so endless Soft UI / Escape don't spin coolers.
-      if (typeof document !== "undefined" && document.hidden) {
-        rafId = 0;
+      rafId = 0;
+      // Hidden tabs / offscreen canvas: stop painting so endless Soft UI rests.
+      if (typeof document !== "undefined" && document.hidden) return;
+      if (!frameVisible) return;
+
+      const minGap = framePaintInterval(ts);
+      if (minGap > 0 && ts - lastPaintTs < minGap) {
+        rafId = requestAnimationFrame(gameLoop);
         return;
       }
+      lastPaintTs = ts;
+
       state.now = ts - state.t0;
       stepRevealWave();
       stepCamera();
@@ -1926,15 +1968,17 @@
 
       // Draw far rings first for depth skins that sort
       let cells = Array.from(state.map.values());
-      // Endless: skip off-screen tiles for perf when the field gets huge.
-      // beforeFrame already set screen-space x/y (camera-adjusted).
-      if (state.endless && cells.length > 200) {
-        const pad = state.cellSize * 4;
-        const w = canvas.width;
-        const h = canvas.height;
-        cells = cells.filter(
-          (c) => c.x > -pad && c.y > -pad && c.x < w + pad && c.y < h + pad
-        );
+      // Endless: cull parked / off-screen tiles (beforeFrame sets _offscreen).
+      if (state.endless) {
+        cells = cells.filter((c) => !c._offscreen);
+        if (cells.length > 200) {
+          const pad = state.cellSize * 3;
+          const w = canvas.width;
+          const h = canvas.height;
+          cells = cells.filter(
+            (c) => c.x > -pad && c.y > -pad && c.x < w + pad && c.y < h + pad
+          );
+        }
       }
       if (state.hooks.sortCells) cells.sort(state.hooks.sortCells);
       else cells.sort((a, b) => a.ring - b.ring || a.y - b.y);
@@ -1952,7 +1996,26 @@
     }
     if (typeof document !== "undefined" && document.addEventListener) {
       document.addEventListener("visibilitychange", () => {
-        if (!document.hidden && !rafId) rafId = requestAnimationFrame(gameLoop);
+        resumeGameLoop();
+      });
+    }
+    if (typeof IntersectionObserver !== "undefined") {
+      const frameObserver = new IntersectionObserver(
+        (entries) => {
+          frameVisible = entries.some((e) => e.isIntersecting && e.intersectionRatio > 0);
+          if (frameVisible) resumeGameLoop();
+        },
+        { threshold: [0, 0.01] }
+      );
+      frameObserver.observe(canvas);
+    }
+    if (typeof document !== "undefined" && document.addEventListener && inIframe) {
+      window.addEventListener("focus", resumeGameLoop);
+      window.addEventListener("blur", () => {
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
       });
     }
 

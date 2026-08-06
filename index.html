@@ -4273,13 +4273,15 @@ body[data-mode="escape"] .menu-links {
   /**
    * Soft UI / Escape LOD: at open zoom the endless plate can be thousands of
    * extruded hexes — drop walls/specular/ground shadows and paint seams only.
+   * Gates on viewZoom (not viewport-fit cellSize — same rule as Plague LOD).
    */
   function useSoftUiLod(th, s) {
     if (!th || th.material !== "neumorph" || th.flatPlate) return false;
     const z = s && Number.isFinite(s.viewZoom) ? s.viewZoom : 1;
-    const size = s && s.cellSize ? s.cellSize : 28;
     const n = s && s.map ? s.map.size : 0;
-    return z < 0.78 || size < 20 || n > 800;
+    if (z < 0.78) return true;
+    if (n > 520 && z < 0.88) return true;
+    return false;
   }
 
   function emit(x, y, n, color) {
@@ -5758,6 +5760,15 @@ body[data-mode="escape"] .menu-links {
         if (th.flatGrid) return a.y - b.y || a.x - b.x;
         return a.ring - b.ring || a.y - b.y;
       },
+      isFrameBusy(api) {
+        if (introZoomFrame) return true;
+        if (BLAST.active) return true;
+        if (SEEP.active) return true;
+        const th = THEMES[themeIndex];
+        if (th && th.rift && RIFT.intensity > 0.04) return true;
+        if (th && isFxTheme(th) && particles.some((p) => !p.ambient)) return true;
+        return false;
+      },
       onReveal(cell, api, meta) {
         const th = THEMES[themeIndex];
         if (th.rift) noteRiftReveal(cell, api, meta);
@@ -5841,7 +5852,8 @@ body[data-mode="escape"] .menu-links {
         const camX = s.camX || 0;
         const camY = s.camY || 0;
         // Endless: only layout cells near the camera frustum (huge maps)
-        const layoutBudget = endless && s.map.size > 220;
+        const softLodEarly = useSoftUiLod(th, s);
+        const layoutBudget = endless && s.map.size > (softLodEarly ? 80 : 220);
         const viewPad = s.cellSize * 6;
         const vw = s.canvas.width;
         const vh = s.canvas.height;
@@ -5997,13 +6009,12 @@ body[data-mode="escape"] .menu-links {
         }
 
         // Desk: ambient pool, then per-tile ground shadows, then faces on top
-        const softLod = useSoftUiLod(th, s);
+        const softLod = softLodEarly;
         if (!th.flatPlate) {
           if (softLod) {
-            // Cheap wash — no per-tile footprints / multi-layer glow at open zoom
+            // Cheap wash — skip watermark loops (100+ strokes/frame) at open zoom
             ctx.fillStyle = th.bodyBg || th.css["--bg-color"] || "#e8eaee";
             ctx.fillRect(0, 0, s.canvas.width, s.canvas.height);
-            drawInfinitePlateField(ctx, s, th);
           } else {
             drawBoardGroundShadow(ctx, s, th, flat);
             drawInfinitePlateField(ctx, s, th);
@@ -6078,33 +6089,19 @@ body[data-mode="escape"] .menu-links {
           const dark = th.id === "dark" || th.id === "escape";
           ctx.fillStyle = `hsl(${st.h} ${st.s}% ${st.l}%)`;
           ctx.fill(path);
-          // Floor stroke width in CSS pixels so zoomed-out lattices don't disappear
-          // into sub-pixel hairlines (the failure mode in Dark floods).
-          const seam = Math.max(1.75, size * 0.065);
+          // Single seam stroke at open zoom — half the canvas work vs double-bevel.
+          const seam = Math.max(1.5, size * 0.055);
           ctx.lineJoin = "round";
           ctx.lineCap = "round";
           ctx.lineWidth = seam;
-          if (dark) {
-            ctx.strokeStyle = cell.revealed
-              ? "rgba(255,255,255,0.2)"
-              : "rgba(255,255,255,0.28)";
-            ctx.stroke(path);
-            ctx.lineWidth = Math.max(1.15, size * 0.04);
-            ctx.strokeStyle = cell.revealed
-              ? "rgba(0,0,0,0.65)"
-              : "rgba(0,0,0,0.4)";
-            ctx.stroke(path);
-          } else {
-            ctx.strokeStyle = cell.revealed
-              ? "rgba(0,0,0,0.22)"
-              : "rgba(0,0,0,0.3)";
-            ctx.stroke(path);
-            ctx.lineWidth = Math.max(1.1, size * 0.035);
-            ctx.strokeStyle = cell.revealed
-              ? "rgba(255,255,255,0.5)"
-              : "rgba(255,255,255,0.4)";
-            ctx.stroke(path);
-          }
+          ctx.strokeStyle = dark
+            ? cell.revealed
+              ? "rgba(255,255,255,0.22)"
+              : "rgba(255,255,255,0.26)"
+            : cell.revealed
+              ? "rgba(0,0,0,0.24)"
+              : "rgba(0,0,0,0.28)";
+          ctx.stroke(path);
           if (cell.animReveal > 0.1) {
             ctx.globalAlpha = cell.animReveal;
             if (cell.isMine) {

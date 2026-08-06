@@ -13,7 +13,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 
 ## Current status (2026-08-05)
 
-- [x] **Sphere MVP** — `sphere/` experimental closed hex minesweeper (Canvas projection, hexasphere math, dig/flag/flood, first-dig safe, RM-safe camera)
+- [x] **Plate perf** — Soft UI / Escape: viewZoom-gated LOD at default 0.55, skip watermark underlay in LOD, single seam stroke, tighter frustum cull, IntersectionObserver + iframe blur + idle RAF throttle in `core.js`
 - [x] **Choices hub** — `choices.html` + `choices/lab/*` one-pagers (curated; not in production theme switcher)
 - [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 1–2)
 
@@ -38,7 +38,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Escape MS-first rethink: dig/flag/chord primary; rift is glacial secondary threat (no dig-budget hex hops)
 - [x] Escape finish tile: offscreen exit hex + edge direction cue; win on reveal (autosaved)
 - [x] Escape rift polish: heartbeat pulse, intake motes, hunt arms; introZoom pull-back; RM-safe cues
-- [x] Soft UI / Escape LOD: seam-only paint when zoomed out / huge map; RAF pauses on hidden tabs
+- [x] Soft UI / Escape LOD: seam-only paint when zoomed out / huge map; RAF pauses on hidden tabs, offscreen canvas (IntersectionObserver), and throttles idle zoomed-out endless pens (including collection embeds)
 - [x] Help / metadata describe modes, not the skin lab
 - [x] Bare URL opens infinite Light
 - [x] Light↔Dark keeps the run (cosmetic swap)
