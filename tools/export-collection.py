@@ -578,7 +578,7 @@ footer a{{color:var(--accent)}}
       btn.disabled = false;
       btn.textContent = old;
     }}, 1600);
-  }};
+  }});
 }})();
 </script>
 </body>
