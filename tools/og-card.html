@@ -111,12 +111,12 @@
       url: "dr.eamer.dev/games/hexsweeper/collection",
     },
     sphere: {
-      src: "../sphere/",
-      title: "Hexagonal Minesweeper on a Sphere",
-      desc: "Classic Minesweeper wrapped around a Goldberg sphere you rotate to dig, flag, and clear every face.",
-      accent: "#7eb8ff", bg: "#0c1018", dark: true,
+      src: "../sphere/?deal=1&welcome=0",
+      title: "Hexsweeper 3D",
+      desc: "Minimalist minesweeper on a sphere — themes, controls, and sharing.",
+      accent: "#111111", bg: "#ffffff", dark: false,
       url: "dr.eamer.dev/games/hexsweeper/sphere",
-      hide: ".hud-actions,#modal-overlay,.sphere-help,#theme-toast",
+      hide: ".hud-cluster,.hud-stats,.sphere-banner,.help-overlay,.count-style-toast,#history-lightbox",
     },
     "skin-classic": {
       src: "../collection/skin-classic.html",
@@ -222,9 +222,9 @@
 
   try {
     localStorage.setItem("hexsweeper-welcome-v1", "1");
+    localStorage.setItem("hexsweeper-sphere-welcome-v1", "1");
     localStorage.removeItem("hexsweeper-endless-plate-v1");
     localStorage.removeItem("hexsweeper-endless-escape-v1");
-    localStorage.removeItem("hexsweeper-sphere-welcome-v1");
   } catch (_) {}
 
   const board = document.getElementById("board");

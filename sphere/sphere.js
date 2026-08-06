@@ -14,7 +14,9 @@
  * Idle: ambient yaw until first canvas interaction (off under reduced motion).
  * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
- * Persist: autosave mid-run (`hexsweeper-sphere-run-v1`); confirm before Reset / size change.
+ * Persist: autosave mid-run (localStorage + sessionStorage `hexsweeper-sphere-run-v2`).
+ * Soft/hard browser reload restores; only UX Reset (or size change) clears the run.
+ * No window.confirm dialogs — Reset/size are deliberate. Welcome help only once, not over a restored run.
  * Flags: pure red fill only (no glyph); sit at the flagged height tier.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
@@ -213,7 +215,8 @@
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
-  const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v1";
+  const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v2";
+  const RUN_STORAGE_KEY_LEGACY = "hexsweeper-sphere-run-v1";
   /** History-tile accent — mark only, never well fill. */
   const YELLOW_COUNT = "#facc15";
   const COUNT_STYLES = [
@@ -522,30 +525,12 @@
       return state.isFirstClick && state.flagsPlaced === 0 && !state.isGameOver;
     }
 
-    /** Confirm before wiping a started (or finished) board. */
-    function confirmDiscard(message) {
-      if (boardIsFresh()) return true;
-      try {
-        return window.confirm(message);
-      } catch (_) {
-        return true;
-      }
-    }
-
     function setDifficulty(val, restart, optsSet) {
       optsSet = optsSet || {};
       if (!SIZE_ORDER.includes(val)) return false;
       // Same size already — no wipe (S/M/L keys while already there).
       if (val === state.difficulty && restart !== false) return true;
-      if (restart !== false && !optsSet.force) {
-        if (
-          !confirmDiscard(
-            "Change board size? Current progress will be lost."
-          )
-        ) {
-          return false;
-        }
-      }
+      // No browser confirm — size button is the deliberate wipe (same as Reset).
       state.difficulty = val;
       syncSizeChrome();
       try {
@@ -554,6 +539,11 @@
       if (restart !== false) {
         hideBanner();
         resetGame();
+        if (typeof showCountStyleToast === "function") {
+          showCountStyleToast(
+            `${SIZE_LABEL[val] || val} · new board`
+          );
+        }
         scheduleFrame();
       }
       return true;
@@ -566,15 +556,12 @@
     }
 
     function requestReset(optsReset) {
-      optsReset = optsReset || {};
-      if (
-        !optsReset.force &&
-        !confirmDiscard("Start a new sphere? Current progress will be lost.")
-      ) {
-        return false;
-      }
+      // Reset control is intentional — no window.confirm dialog.
       hideBanner();
       resetGame();
+      if (typeof showCountStyleToast === "function") {
+        showCountStyleToast("New sphere");
+      }
       scheduleFrame();
       return true;
     }
@@ -922,7 +909,12 @@
       return true;
     }
 
-    function resetGame() {
+    /**
+     * Start a clean board. Callers: UX Reset, size change, failed restore, ?deal=1.
+     * Drops saved run unless keepPersist (OG deal must not wipe the player’s save).
+     */
+    function resetGame(optsReset) {
+      optsReset = optsReset || {};
       stopTimer();
       clearEndFx();
       const cfg = CONFIG[state.difficulty];
@@ -947,13 +939,124 @@
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
       invalidateProjection();
       updateUI();
-      clearPersist();
+      if (!optsReset.keepPersist) clearPersist();
+    }
+
+    /**
+     * ?deal=1 — open a starting flood for OG cards / previews.
+     * Digs the front-center face; retries a few nearby seeds if the flood is tiny.
+     */
+    function dealOpeningDig() {
+      if (!state.tiles.length) return;
+      invalidateProjection();
+      const cx = state.centerX;
+      const cy = state.centerY;
+      const ranked = getProjected()
+        .filter((p) => p.z > 0.2)
+        .slice()
+        .sort((a, b) => {
+          const da = Math.hypot(a.center.x - cx, a.center.y - cy);
+          const db = Math.hypot(b.center.x - cx, b.center.y - cy);
+          return da - db;
+        });
+      const seeds = ranked.length
+        ? ranked.slice(0, 8).map((p) => p.index)
+        : [0];
+
+      let best = { open: -1, mines: null, revealed: null, counts: null, seed: seeds[0] };
+
+      for (const seed of seeds) {
+        // Fresh layout for this seed
+        for (let i = 0; i < state.cells.length; i++) {
+          const c = state.cells[i];
+          c.isMine = false;
+          c.revealed = false;
+          c.flagged = false;
+          c.neighborMines = 0;
+        }
+        state.isFirstClick = true;
+        state.isGameOver = false;
+        placeMines(seed);
+        // Mark flood as revealed without paint side-effects
+        const opened = new Set([seed]);
+        state.cells[seed].revealed = true;
+        if (state.cells[seed].neighborMines === 0) {
+          const q = [seed];
+          while (q.length) {
+            const cur = q.shift();
+            for (const n of state.tiles[cur].neighborIndices) {
+              if (opened.has(n)) continue;
+              const c = state.cells[n];
+              if (c.isMine || c.flagged) continue;
+              opened.add(n);
+              c.revealed = true;
+              if (c.neighborMines === 0) q.push(n);
+            }
+          }
+        }
+        if (opened.size > best.open) {
+          best = {
+            open: opened.size,
+            seed,
+            mines: state.cells.map((c) => c.isMine),
+            revealed: state.cells.map((c) => c.revealed),
+            counts: state.cells.map((c) => c.neighborMines),
+            mineCount: state.mineCount,
+          };
+        }
+        // Early out if we already have a generous opening
+        if (best.open >= 40) break;
+      }
+
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        c.isMine = !!best.mines[i];
+        c.revealed = !!best.revealed[i];
+        c.flagged = false;
+        c.neighborMines = best.counts[i] | 0;
+        c.animReveal = c.revealed ? 1 : 0;
+        c.visualDue = 0;
+        c.pulseAt = 0;
+      }
+      state.isFirstClick = false;
+      state.isGameOver = false;
+      state.won = false;
+      state.flagsPlaced = 0;
+      state.mineCount = best.mineCount | 0;
+      state.timeElapsed = 0;
+      state.ambientSpin = false;
+      stopTimer();
+      updateUI();
     }
 
     let persistSuspended = false;
     let persistTimer = null;
 
+    function storageGet(store, key) {
+      try {
+        return store.getItem(key);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function storageSet(store, key, val) {
+      try {
+        store.setItem(key, val);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function storageRemove(store, key) {
+      try {
+        store.removeItem(key);
+      } catch (_) {}
+    }
+
     function exportRunState() {
+      // Save any non-pristine board (flags, digs, or finished run).
       if (boardIsFresh()) return null;
       if (!state.cells.length) return null;
       const mines = [];
@@ -966,8 +1069,9 @@
         else if (state.isGameOver && !state.won && c.isMine) revealed.push(i);
         if (c.flagged) flagged.push(i);
       }
+      // Pre-first-dig with only flags: still persist flags + camera.
       return {
-        v: 1,
+        v: 2,
         kind: "sphere",
         difficulty: state.difficulty,
         first: !!state.isFirstClick,
@@ -986,35 +1090,49 @@
       };
     }
 
+    /** Explicit clear only — Reset button / size change / invalid save. */
     function clearPersist() {
-      try {
-        localStorage.removeItem(RUN_STORAGE_KEY);
-      } catch (_) {}
+      storageRemove(localStorage, RUN_STORAGE_KEY);
+      storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
+      storageRemove(sessionStorage, RUN_STORAGE_KEY);
+      storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+    }
+
+    function writePersistPayload(json) {
+      // Dual-write: session for same-tab reload resilience, local for return visits.
+      const a = storageSet(localStorage, RUN_STORAGE_KEY, json);
+      const b = storageSet(sessionStorage, RUN_STORAGE_KEY, json);
+      return a || b;
     }
 
     function flushPersist() {
       if (persistSuspended) return false;
       const data = exportRunState();
       if (!data) {
-        clearPersist();
+        // Fresh board: do NOT wipe an existing save here. Only clearPersist()
+        // (Reset / size) should drop a stored run. Avoids races wiping progress.
         return false;
       }
-      try {
-        localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(data));
-        return true;
-      } catch (_) {
-        return false;
-      }
+      return writePersistPayload(JSON.stringify(data));
     }
 
     function schedulePersist() {
       if (persistSuspended) return;
       clearTimeout(persistTimer);
-      persistTimer = setTimeout(() => flushPersist(), 400);
+      persistTimer = setTimeout(() => flushPersist(), 200);
+    }
+
+    /** Immediate write after dig/flag/end — reload-safe even if tab dies mid-debounce. */
+    function persistNow() {
+      if (persistSuspended) return false;
+      clearTimeout(persistTimer);
+      persistTimer = null;
+      return flushPersist();
     }
 
     function applyRunState(data) {
-      if (!data || data.v !== 1 || data.kind !== "sphere") return false;
+      if (!data || data.kind !== "sphere") return false;
+      if (data.v !== 1 && data.v !== 2) return false;
       if (!SIZE_ORDER.includes(data.difficulty)) return false;
       if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
         return false;
@@ -1041,6 +1159,12 @@
       const mineList = Array.isArray(data.mines) ? data.mines : [];
       const revealedList = Array.isArray(data.revealed) ? data.revealed : [];
       const flaggedList = Array.isArray(data.flagged) ? data.flagged : [];
+
+      // Started game with no mines recorded = corrupt save (post-first-dig always has mines).
+      if (!data.first && mineList.length === 0 && !data.over) {
+        persistSuspended = false;
+        return false;
+      }
 
       for (const idx of mineList) {
         if ((idx | 0) === idx && idx >= 0 && idx < n) state.cells[idx].isMine = true;
@@ -1076,7 +1200,8 @@
       state.hovered = -1;
       state.pressed = -1;
       state.camShake = 0;
-      state.ambientSpin = false;
+      // Fresh-ish (flags only, no dig yet): allow ambient spin again.
+      state.ambientSpin = !!data.first && !state.reduceMotion && flags === 0;
 
       if (Number.isFinite(data.rotY)) {
         state.rotY = data.rotY;
@@ -1109,26 +1234,50 @@
       }
 
       persistSuspended = false;
+      // Re-write under v2 key so legacy saves migrate.
+      flushPersist();
       return true;
     }
 
+    function readStoredRun() {
+      const keys = [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY];
+      const stores = [sessionStorage, localStorage];
+      let best = null;
+      let bestAt = -1;
+      for (const store of stores) {
+        for (const key of keys) {
+          const raw = storageGet(store, key);
+          if (!raw) continue;
+          try {
+            const data = JSON.parse(raw);
+            if (!data || data.kind !== "sphere") continue;
+            const at = Number(data.savedAt) || 0;
+            if (at >= bestAt) {
+              best = data;
+              bestAt = at;
+            }
+          } catch (_) {
+            /* skip bad payload */
+          }
+        }
+      }
+      return best;
+    }
+
     function tryRestoreRun() {
-      let raw;
+      // ?fresh=1 forces a clean board (dev / explicit wipe) without touching themes.
       try {
-        raw = localStorage.getItem(RUN_STORAGE_KEY);
-      } catch (_) {
-        return false;
-      }
-      if (!raw) return false;
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch (_) {
-        clearPersist();
-        return false;
-      }
+        if (/(?:\?|&)fresh=1(?:&|$)/.test(location.search)) {
+          clearPersist();
+          return false;
+        }
+      } catch (_) {}
+
+      const data = readStoredRun();
+      if (!data) return false;
       const ok = applyRunState(data);
       if (!ok) {
+        // Corrupt for current build — drop so we do not loop-fail.
         clearPersist();
         return false;
       }
@@ -1455,7 +1604,7 @@
       }
       if (cell.neighborMines === 0) floodFrom(idx);
       checkWin();
-      schedulePersist();
+      persistNow();
     }
 
     function tickRevealAnim(now) {
@@ -1493,7 +1642,7 @@
       cell.flagged = !cell.flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
-      schedulePersist();
+      persistNow();
     }
 
     function checkWin() {
@@ -1522,7 +1671,7 @@
           meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
         });
       }
-      flushPersist();
+      persistNow();
     }
 
     function showBanner(msg, opts) {
@@ -2473,6 +2622,10 @@
 
     function onPointerDown(e) {
       stopAmbientSpin();
+      // Block iOS/Android long-press selection / callout on the canvas.
+      if (e.type === "touchstart") {
+        e.preventDefault();
+      }
       if (e.type === "touchstart" && e.touches && e.touches.length >= 2) {
         pinching = true;
         touchMoved = true;
@@ -2580,6 +2733,16 @@
     }, { passive: false });
     canvas.addEventListener("touchend", onPointerUp);
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    canvas.addEventListener("selectstart", (e) => e.preventDefault());
+    // Suppress OS text-selection / magnifier (long-press flag on mobile)
+    document.addEventListener(
+      "selectionchange",
+      () => {
+        const sel = window.getSelection && window.getSelection();
+        if (sel && !sel.isCollapsed) sel.removeAllRanges();
+      },
+      { passive: true }
+    );
     canvas.addEventListener(
       "wheel",
       (e) => {
@@ -2632,7 +2795,7 @@
       }
       if (e.key === "Escape") {
         const lb = document.getElementById("history-lightbox");
-        if (lb?.classList.contains("open")) return;
+        if (lb?.classList.contains("open")) return; // lightbox owns Esc
         if (helpOverlay?.classList.contains("open")) closeHelp();
         return;
       }
@@ -2671,23 +2834,58 @@
     syncCountStyleChrome();
     if (opts.theme) state.theme = Object.assign({}, state.theme, opts.theme);
 
+    window.addEventListener("resize", resize);
+    // Flush on every leave path so F5 / mobile background never loses a dig.
+    window.addEventListener("pagehide", () => persistNow());
+    window.addEventListener("beforeunload", () => persistNow());
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") persistNow();
+    });
+    resize();
+
+    // ?deal=1 — preview/OG board with a dig already open (does not wipe player save).
+    let wantDeal = false;
+    try {
+      wantDeal = /(?:\?|&)deal=1(?:&|$)/.test(location.search);
+    } catch (_) {}
+
+    let restored = false;
+    if (wantDeal) {
+      persistSuspended = true;
+      resetGame({ keepPersist: true });
+      // Prefer a readable size for social stills.
+      if (state.difficulty === "xlarge" || state.difficulty === "xsmall") {
+        state.difficulty = "medium";
+        syncSizeChrome();
+      }
+      // Slight tilt so the dig reads as a globe, not a flat disk.
+      state.rotY = -0.35;
+      state.rotX = 0.42;
+      state.targetRotY = state.rotY;
+      state.targetRotX = state.rotX;
+      state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, 0.88));
+      state.scale = state.baseScale * state.zoomFactor;
+      invalidateProjection();
+      dealOpeningDig();
+    } else {
+      // Restore before any welcome UI so a saved sphere is not hidden under help.
+      restored = tryRestoreRun();
+      if (!restored) resetGame();
+    }
+
     try {
       const forceWelcome = /(?:\?|&)welcome=1(?:&|$)/.test(location.search);
       const skipWelcome =
-        /(?:\?|&)welcome=0(?:&|$)/.test(location.search);
+        /(?:\?|&)welcome=0(?:&|$)/.test(location.search) ||
+        restored ||
+        wantDeal;
       if (forceWelcome) openHelp(true);
       else if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openHelp(true);
     } catch (_) {
-      openHelp(true);
+      // Storage blocked — only show help on a truly fresh first board.
+      if (!restored && !wantDeal) openHelp(true);
     }
 
-    window.addEventListener("resize", resize);
-    window.addEventListener("pagehide", () => flushPersist());
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") flushPersist();
-    });
-    resize();
-    if (!tryRestoreRun()) resetGame();
     scheduleFrame();
 
     return {
