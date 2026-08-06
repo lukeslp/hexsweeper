@@ -6,8 +6,9 @@
  * Globe maps: Earth/Moon equirectangular daymaps sampled per face (lat/lon).
  * Mono: four shell·field pairings + two light-field float themes (contact shadow under sphere).
  * Zoom: wheel + pinch (clamped); starts pulled back (~0.72×).
- * Heights (highest→lowest): covered → flagged → numbered clear → empty clear.
- * Hover: temporary lift on activatable covered only (cleared stay put).
+ * Heights (highest→lowest): flagged → covered → numbered clear → empty clear.
+ * Tiers apply in numerals·rings·borderless only; flush/yellow stay flat.
+ * Hover: temporary lift over the tile's own tier (cleared stay put).
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
@@ -18,7 +19,7 @@
  * Persist: autosave mid-run (localStorage + sessionStorage `hexsweeper-sphere-run-v2`).
  * Soft/hard browser reload restores; only UX Reset (or size change) clears the run.
  * No window.confirm dialogs — Reset/size are deliberate. Welcome help only once, not over a restored run.
- * Flags: pure red fill only (no glyph); sit at the flagged height tier.
+ * Flags: pure red fill only (no glyph); stand proud of the shell as pins.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
@@ -583,12 +584,16 @@
   const PRESS_LIFT = 0.011;
   /**
    * Four permanent height tiers (radial, sphere-radius units).
-   * Covered highest → empty deepest. Hover adds HOVER_LIFT on covered only.
+   * Flagged proudest → empty deepest. Hover adds HOVER_LIFT over the tier.
+   * Flags only stand proud in styles that extrude; flush/yellow keep them
+   * at shell height so those styles stay a flat mono field.
    */
+  const TIER_FLAGGED = 0.01;
   const TIER_COVERED = 0;
-  const TIER_FLAGGED = -0.009;
   const TIER_NUMBERED = -0.018;
   const TIER_EMPTY = -0.034;
+  /** Count styles that recess clears — the only ones that pin flags high. */
+  const EXTRUDED_STYLES = new Set(["numerals", "rings", "borderless"]);
   /** @deprecated kept as alias of TIER_NUMBERED for any external callers */
   const REVEAL_INSET = TIER_NUMBERED;
   /** Static letter marks — readable size at a glance. */
@@ -2480,36 +2485,31 @@
 
     /**
      * Permanent radial height for a cell (before hover/press).
-     * Covered → flagged → numbered clear → empty clear.
-     * Flush/yellow keep clears flush with the covered shell.
+     * Flagged → covered → numbered clear → empty clear.
+     * Only extruded styles tier at all; flush/yellow stay at shell height.
      */
     function tileHeight(cell, styleId) {
       if (!cell) return TIER_COVERED;
-      if (cell.flagged && !cell.revealed) return TIER_FLAGGED;
-      if (!cell.revealed) return TIER_COVERED;
-      if (styleId === "flush" || styleId === "yellow") return TIER_COVERED;
-      if (cell.isMine) return TIER_NUMBERED;
-      if (
-        styleId !== "numerals" &&
-        styleId !== "rings" &&
-        styleId !== "borderless"
-      ) {
-        return TIER_COVERED;
+      const extruded = EXTRUDED_STYLES.has(styleId);
+      if (cell.flagged && !cell.revealed) {
+        return extruded ? TIER_FLAGGED : TIER_COVERED;
       }
+      if (!cell.revealed) return TIER_COVERED;
+      if (!extruded) return TIER_COVERED;
+      if (cell.isMine) return TIER_NUMBERED;
       if (cell.neighborMines === 0) return TIER_EMPTY;
       return TIER_NUMBERED;
     }
 
     /** True when a clear sits below the shell (numbered or empty recess). */
     function tileShouldInset(cell, styleId) {
-      const h = tileHeight(cell, styleId);
-      return h < TIER_COVERED - 1e-6 && !(cell.flagged && !cell.revealed);
+      return tileHeight(cell, styleId) < TIER_COVERED - 1e-6;
     }
 
     /** Quantize height for skirt comparisons (float noise guard). */
     function heightBucket(h) {
-      if (h >= TIER_COVERED - 0.002) return 0;
-      if (h >= TIER_FLAGGED - 0.002) return 1;
+      if (h >= TIER_FLAGGED - 0.002) return 0;
+      if (h >= TIER_COVERED - 0.002) return 1;
       if (h >= TIER_NUMBERED - 0.002) return 2;
       return 3;
     }
@@ -3047,17 +3047,9 @@
         else heights[i] = tileHeight(c, styleId);
       }
 
-      for (const proj of projected) {
+      function drawTile(proj) {
         const idx = proj.index;
         const cell = state.cells[idx];
-        // Hover/press on activatable covered faces draw in the raised pass.
-        const hoverRaise =
-          highlightIdx >= 0 &&
-          idx === highlightIdx &&
-          tileCanActivate(cell);
-        if (proj.z > 0.02 && hoverRaise) {
-          continue;
-        }
         const tile = state.tiles[idx];
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
@@ -3071,15 +3063,20 @@
             tile.boundary.map((b) =>
               projectPoint(b, state.rotY, state.rotX)
             );
-          // Cliff only toward a strictly higher neighbor (same-depth edges stay open).
-          const myBucket = heightBucket(h);
-          drawSelectiveSkirt(
-            idx,
-            baseBoundary,
-            lifted.boundary,
-            darkMono,
-            (ni) => heightBucket(heights[ni]) >= myBucket
-          );
+          if (h > 1e-6) {
+            // Proud flag pin: wall on every edge, it sits above the whole shell.
+            drawExtrusionSkirt(baseBoundary, lifted.boundary);
+          } else {
+            // Cliff only toward a strictly higher neighbor (same-depth edges stay open).
+            const myBucket = heightBucket(h);
+            drawSelectiveSkirt(
+              idx,
+              baseBoundary,
+              lifted.boundary,
+              darkMono,
+              (ni) => heightBucket(heights[ni]) >= myBucket
+            );
+          }
           drawProj = lifted;
           markLift = h;
           if (h < -1e-6) {
@@ -3090,7 +3087,7 @@
                 stroke: colors.fill,
                 lineWidth: 0,
               };
-            } else if (!(cell.flagged && !cell.revealed)) {
+            } else {
               // Recessed clears: groove rides the inset face.
               const groove =
                 state.theme.valleyGroove ||
@@ -3120,7 +3117,29 @@
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
-      // Raised pass: hover/press on covered only (flags sit at TIER_FLAGGED).
+      // Flags stand above the shell, so they paint after their neighbors
+      // (still back-to-front among themselves) or the shell clips their skirts.
+      const proudFlags = [];
+      for (const proj of projected) {
+        const idx = proj.index;
+        const cell = state.cells[idx];
+        // Hover/press on activatable covered faces draw in the raised pass.
+        const hoverRaise =
+          highlightIdx >= 0 &&
+          idx === highlightIdx &&
+          tileCanActivate(cell);
+        if (proj.z > 0.02 && hoverRaise) {
+          continue;
+        }
+        if (proj.z > 0.02 && heights[idx] > 1e-6) {
+          proudFlags.push(proj);
+          continue;
+        }
+        drawTile(proj);
+      }
+      for (const proj of proudFlags) drawTile(proj);
+
+      // Raised pass: hover/press on covered or flagged, lifted over its tier.
       if (
         highlightIdx >= 0 &&
         tileCanActivate(state.cells[highlightIdx])
@@ -3135,8 +3154,10 @@
             styleId,
             cell
           );
+          // Additive over the tile's tier, so a proud flag still lifts on hover.
           const lift =
-            state.pressed === idx ? PRESS_LIFT : HOVER_LIFT;
+            tileHeight(cell, styleId) +
+            (state.pressed === idx ? PRESS_LIFT : HOVER_LIFT);
           const raised = projectTile(tile, state.rotY, state.rotX, lift);
           const baseBoundary =
             raised.baseBoundary ||
