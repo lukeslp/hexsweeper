@@ -6,6 +6,7 @@
  * Zoom: wheel + pinch adjust projection scale (clamped); rotate/dig/flag unchanged.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
+ * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
@@ -32,6 +33,8 @@
   const BLAST_KICK = 9.4;
   const MAX_SHARDS = 420;
   const END_PARTICLE_CAP = 180;
+  /** Idle yaw before first interact — ~1.4°/s, one turn ≈ 4.3 min. */
+  const AMBIENT_SPIN_RAD_PER_MS = 0.000024;
 
   /**
    * Light mono is the reference board.
@@ -214,6 +217,12 @@
       detonatorIdx: -1,
       endFx: null,
       camShake: 0,
+      ambientSpin:
+        !(
+          typeof matchMedia === "function" &&
+          matchMedia("(prefers-reduced-motion: reduce)").matches
+        ),
+      lastFrameAt: 0,
     };
 
     const END_FX = {
@@ -631,6 +640,25 @@
       }
     }
 
+    function stopAmbientSpin() {
+      if (!state.ambientSpin) return;
+      state.ambientSpin = false;
+      state.targetRotY = state.rotY;
+      state.targetRotX = state.rotX;
+    }
+
+    function tickAmbientSpin(now) {
+      if (!state.ambientSpin || state.reduceMotion || state.dragging) return false;
+      const prev = state.lastFrameAt || now;
+      const dt = Math.min(48, Math.max(0, now - prev));
+      if (dt <= 0) return true;
+      const dY = AMBIENT_SPIN_RAD_PER_MS * dt;
+      state.rotY += dY;
+      state.targetRotY = state.rotY;
+      invalidateProjection();
+      return true;
+    }
+
     function resetGame() {
       stopTimer();
       clearEndFx();
@@ -650,6 +678,8 @@
       state.hovered = -1;
       state.pressed = -1;
       state.camShake = 0;
+      // Fresh board: resume idle spin until the player touches the canvas again.
+      state.ambientSpin = !state.reduceMotion;
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
       invalidateProjection();
       updateUI();
@@ -1338,6 +1368,7 @@
     }
 
     function frameNeedsPaint(now) {
+      if (state.ambientSpin && !state.reduceMotion) return true;
       if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
       if (revealAnimBusy(now)) return true;
       if (END_FX.active) return true;
@@ -1361,9 +1392,11 @@
     function loop(ts) {
       state.rafScheduled = false;
       const now = ts || performance.now();
+      tickAmbientSpin(now);
       tickRevealAnim(now);
       tickEndFx(now);
       draw();
+      state.lastFrameAt = now;
       if (frameNeedsPaint(now)) scheduleFrame();
       else scheduleFrame(IDLE_FRAME_MS);
     }
@@ -1381,6 +1414,7 @@
     let pinchStartZoom = 1;
 
     function onPointerDown(e) {
+      stopAmbientSpin();
       if (e.type === "touchstart" && e.touches && e.touches.length >= 2) {
         pinching = true;
         touchMoved = true;
@@ -1489,6 +1523,7 @@
       "wheel",
       (e) => {
         e.preventDefault();
+        stopAmbientSpin();
         const delta = -e.deltaY * 0.0012;
         setZoomFactor(state.zoomFactor * (1 + delta));
       },
