@@ -167,7 +167,7 @@ body.help-open { overflow: hidden; }
 }
 #flag-toggle.active { color: #ff0000; }
 body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
-/* Board size: plain S/M/L letter (scaled) — readable at a glance when static */
+/* Board size: XS/S/M/L/XL letter (scaled) — readable at a glance when static */
 #size-btn .size-mark {
   display: block;
   font-family: "IBM Plex Sans", system-ui, sans-serif;
@@ -177,9 +177,11 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   letter-spacing: 0.02em;
   user-select: none;
 }
+#size-btn .size-mark[data-size="XS"] { font-size: 11px; }
 #size-btn .size-mark[data-size="S"] { font-size: 14px; }
 #size-btn .size-mark[data-size="M"] { font-size: 17px; }
 #size-btn .size-mark[data-size="L"] { font-size: 20px; }
+#size-btn .size-mark[data-size="XL"] { font-size: 12px; }
 /* Count-style btn — morphing icon per mode */
 #nest-btn .count-mark {
   display: block;
@@ -435,7 +437,7 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <button type="button" id="size-btn" class="hud-btn" aria-label="Board size M, Medium, 1002 faces. Activate to cycle small, medium, large." title="Board size M — Medium (1002 faces). Click to cycle S → M → L.">
+    <button type="button" id="size-btn" class="hud-btn" aria-label="Board size M, Medium, 1002 faces. Activate to cycle XS, S, M, L, XL." title="Board size M — Medium (1002 faces). Click to cycle XS → S → M → L → XL.">
       <span class="size-mark" data-size="M" aria-hidden="true">M</span>
     </button>
     <button type="button" id="theme-btn" class="hud-btn" aria-label="Theme: Light" title="Theme — Light">
@@ -473,7 +475,7 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hex Sphere</h2>
-    <p class="help-lede">Dig and flag on a closed hex sphere.<br>Six neighbors · first dig is safe · drag to spin · progress autosaves.<br><kbd>N</kbd> cycles count styles (numerals · rings · yellow · flush · borderless).</p>
+    <p class="help-lede">Dig and flag on a closed hex sphere.<br>Six neighbors · first dig is safe · drag to spin · progress autosaves.<br>Size cycles XS→XL · Light is white-on-white with black wells (Dark inverts).<br><kbd>N</kbd> cycles count styles (numerals · rings · yellow · flush · borderless).</p>
     <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic Minesweeper screenshot">
       <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper" width="320" height="240" loading="lazy">
     </button>
@@ -495,8 +497,8 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
-<script src="hexasphere.js?v=20260806v"></script>
-<script src="sphere.js?v=20260806v"></script>
+<script src="hexasphere.js?v=20260806w"></script>
+<script src="sphere.js?v=20260806w"></script>
 <script>
 SphereSweeper.boot({ canvasId: "gameCanvas" });
 (function () {

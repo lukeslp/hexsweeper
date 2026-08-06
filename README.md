@@ -112,10 +112,10 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Hover lifts **covered** faces only (cleared stay put); flags stay pinned at lift height (pure red fill, no glyph). Cleared faces form a **valley** (numerals/rings/borderless): grey cliffs only on the outer rim; internal borders are the stroke on the recessed faces themselves. Light shell borders restored (`colorMix` rgb parse). **N** / count button cycles numerals · rings · yellow · flush · borderless (`hexsweeper-sphere-countstyle-v1`)
 - **Autosave:** mid-run state in `hexsweeper-sphere-run-v1` (resume on refresh); Reset and size changes confirm before discarding progress
 - Minimal help: short lede, color history tile → [CoolmathGames history](https://www.coolmathgames.com/blog/the-history-of-minesweeper) + lightbox
-- Densities: **S** = 362 faces · 62 mines · **M** = 1002 · 170 · **L** = 1442 · 245 (~17% mine density; ~3× prior boards)
+- Densities: **XS** = 162 · **S** = 362 · **M** = 1002 · **L** = 1442 · **XL** = 2252 (~17% mines; size button cycles XS→XL)
 - Flood expand: BFS ring stagger + brief flash/pop (logic opens immediately; paint catch-up; RM-safe)
 - **Chrome:** three BR glass pills — Reset·Size·Theme | Flag | Help; size/theme icons morph per state (no corner badges)
-- **Themes:** Light / Dark (pure mono) — persisted in `localStorage`
+- **Themes:** Light = white tiles on white + black reveal/core; Dark = invert (black tiles on black + white reveal/core) — `hexsweeper-sphere-theme-v4`
 - **First visit:** short icon help modal (`hexsweeper-sphere-welcome-v1`); `?welcome=1` forces, `?welcome=0` skips
 - **Endgame FX:** lose — graph-distance mine cascade + particle burst + shock ring; win — clearance pulse + confetti-lite (`prefers-reduced-motion`: instant states)
 

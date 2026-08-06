@@ -18,14 +18,15 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] **Lab → collection** — `export-collection.py` exports `collection/skin-*.html`; desk lists Production + Lab with Open + Copy HTML (copy on index only)
 - [x] **Choices lab redirects** — `choices/lab/*.html` redirect to collection pens; playable pages are game-only (no Copy bar)
 - [x] **Choices hub** — `choices.html` points re-eval/copy to collection desk (curated; not in production theme switcher)
-- [x] Sphere MVP — ~3× boards (S/M/L = 362/1002/1442 faces), flood expand FX, backface cull, idle RAF throttle
-- [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12)
+- [x] Sphere MVP — boards XS–XL (162/362/1002/1442/2252 faces), flood expand FX, backface cull, idle RAF throttle
+- [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 4, 6, 10, 12, 15)
 - [x] Sphere polish — trimmed icon help, size-cycle fix, endgame FX, no theme toast
 - [x] Sphere framing — initial zoom pulled back (~0.72×)
 - [x] Sphere on collection desk — Experiments tile (Open → `../sphere/`; no Copy HTML)
 - [x] Sphere autosave — `hexsweeper-sphere-run-v1` resume on refresh; confirm before Reset / size change
 - [x] Sphere flags — pure red fill only (no tile glyph)
-- [x] Sphere valley grooves — inset shared-edge seams; Light colorMix rgb() border fix
+- [x] Sphere valley — rim skirts + inset face strokes; Light colorMix rgb() border fix
+- [x] Sphere mono invert — white-on-white + black wells/core ↔ black-on-black + white wells/core
 - [x] OG social cards — production themes, ten lab skins (`skin-*-og.png`), and `sphere-og.png`; wired on collection pens + `sphere/index.html`
 
 ## Current status (2026-08-04)

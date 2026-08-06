@@ -2,11 +2,11 @@
  * File Purpose: Hexsweeper on a closed hex sphere — dig/flag/flood via neighborIndices.
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
- * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
- * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
+ * Chrome: Reset·Size·Theme | Flag | Help; sizes XS–XL; themes Light/Dark mono invert.
+ * Light: white tiles on white + black reveal/core. Dark: black tiles on black + white reveal/core.
+ * Zoom: wheel + pinch (clamped); starts pulled back (~0.72×).
  * Hover: lift only activatable covered faces (+ pinned flags); cleared stay put.
- * Cleared: valley recess — rim skirts only; floor grid = stroke on the inset faces themselves.
- * Light shell: colorMix accepts rgb() (fixes NaN→charcoal covered fill / lost borders).
+ * Cleared: valley recess — rim skirts only; floor grid = stroke on the inset faces.
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
@@ -21,11 +21,16 @@
 (function (global) {
   "use strict";
 
-  /** S=362 · M=1002 · L=1442 faces (~3× prior); mines ≈17%. Goldberg dual: 10n²+2. */
+  /**
+   * Board sizes (Goldberg dual faces = 10n²+2), mines ≈17%.
+   * XS=162 · S=362 · M=1002 · L=1442 · XL=2252.
+   */
   const CONFIG = {
+    xsmall: { subdivisions: 4, minePct: 0.17 },
     easy: { subdivisions: 6, minePct: 0.17 },
     medium: { subdivisions: 10, minePct: 0.17 },
     hard: { subdivisions: 12, minePct: 0.17 },
+    xlarge: { subdivisions: 15, minePct: 0.17 },
   };
 
   const REVEAL_STEP_MS = 28;
@@ -49,24 +54,24 @@
   const AMBIENT_SPIN_RAD_PER_MS = 0.000024;
 
   /**
-   * Light mono: white page + pale covered shell, rich black cleared wells.
-   * Dark is the invert (black field, white covers). Flags stay pure red.
-   * pureRevealed: skip shadeByNormal on cleared faces so blacks stay black.
+   * Light: white tiles on white page, black reveal / black sphere underlayer.
+   * Dark: exact invert — black tiles on black page, white reveal / white underlayer.
+   * pureCovered / pureRevealed: flat fills, no normal shading wash.
    */
   const THEME_LIGHT = {
     id: "light",
     name: "Light",
     accent: "#000000",
+    pureCovered: true,
     pureRevealed: true,
     bg: "#ffffff",
-    bgGlow: "#f5f5f5",
-    covered: "#e8e8e8",
-    coveredHi: "#f2f2f2",
+    bgGlow: "#ffffff",
+    covered: "#ffffff",
+    coveredHi: "#ffffff",
     coveredEdge: "#000000",
     coveredShadow: "#cccccc",
     revealed: "#000000",
     revealedEmpty: "#000000",
-    /** Mid grey so valley-floor seams read on black wells. */
     revealedEdge: "#6a6a6a",
     valleyGroove: "#8a8a8a",
     valleyGrooveDeep: "#3a3a3a",
@@ -77,12 +82,14 @@
     mineCore: "#ffffff",
     mineEdge: "#000000",
     mineBurst: "#ffffff",
-    pentagon: "#e0e0e0",
+    pentagon: "#ffffff",
     pentagonEdge: "#000000",
     hoverRing: "#000000",
     activeRing: "#222222",
-    backface: "#f0f0f0",
-    backfaceEdge: "#b0b0b0",
+    /** Black core / far-side underlayer beneath the white shell. */
+    backface: "#000000",
+    backfaceEdge: "#333333",
+    core: "#000000",
     text: {
       1: "#ffffff",
       2: "#eeeeee",
@@ -97,63 +104,79 @@
     revealGlow: "#888888",
   };
 
-  /**
-   * Dark invert: black page, pure white covered hexes (no gray wells),
-   * dark revealed interiors, pure red flags. Rim/backface stay light so
-   * the board reads as a white honeycomb, not a dark ball.
-   * pureCovered: true → tileColors forces flat covered fill (do not shade).
-   */
+  /** Invert of Light. */
   const THEME_DARK = {
     id: "dark",
     name: "Dark",
     accent: "#ffffff",
     pureCovered: true,
+    pureRevealed: true,
     bg: "#000000",
     bgGlow: "#000000",
-    covered: "#ffffff",
-    coveredHi: "#ffffff",
-    coveredEdge: "#000000",
+    covered: "#000000",
+    coveredHi: "#000000",
+    coveredEdge: "#ffffff",
     coveredShadow: "#000000",
-    revealed: "#111111",
-    revealedEmpty: "#000000",
-    revealedEdge: "#666666",
+    revealed: "#ffffff",
+    revealedEmpty: "#ffffff",
+    revealedEdge: "#999999",
     valleyGroove: "#777777",
-    valleyGrooveDeep: "#222222",
+    valleyGrooveDeep: "#cccccc",
     flagFill: "#ff0000",
     flagIcon: "#ffffff",
     flagEdge: "#ff0000",
     mine: "#ffffff",
     mineCore: "#000000",
     mineEdge: "#cccccc",
-    mineBurst: "#ffffff",
-    pentagon: "#ffffff",
-    pentagonEdge: "#000000",
+    mineBurst: "#000000",
+    pentagon: "#000000",
+    pentagonEdge: "#ffffff",
     hoverRing: "#ffffff",
     activeRing: "#dddddd",
+    /** White core / far-side underlayer beneath the black shell. */
     backface: "#ffffff",
-    backfaceEdge: "#666666",
+    backfaceEdge: "#cccccc",
+    core: "#ffffff",
     text: {
-      1: "#ffffff",
-      2: "#dddddd",
-      3: "#bbbbbb",
-      4: "#999999",
-      5: "#777777",
-      6: "#555555",
+      1: "#000000",
+      2: "#222222",
+      3: "#444444",
+      4: "#666666",
+      5: "#888888",
+      6: "#aaaaaa",
     },
-    label: "#aaaaaa",
-    labelStroke: "#000000",
-    revealFlash: "#ffffff",
-    revealGlow: "#cccccc",
+    label: "#000000",
+    labelStroke: "#ffffff",
+    revealFlash: "#000000",
+    revealGlow: "#666666",
   };
 
   const THEMES = [THEME_LIGHT, THEME_DARK];
   const DEFAULT_THEME = THEME_LIGHT;
-  const SIZE_ORDER = ["easy", "medium", "hard"];
-  const SIZE_LABEL = { easy: "S", medium: "M", hard: "L" };
-  const SIZE_NAMES = { easy: "Small", medium: "Medium", hard: "Large" };
-  const SIZE_FACES = { easy: 362, medium: 1002, hard: 1442 };
-  const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v3";
-  const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v1";
+  const SIZE_ORDER = ["xsmall", "easy", "medium", "hard", "xlarge"];
+  const SIZE_LABEL = {
+    xsmall: "XS",
+    easy: "S",
+    medium: "M",
+    hard: "L",
+    xlarge: "XL",
+  };
+  const SIZE_NAMES = {
+    xsmall: "Extra small",
+    easy: "Small",
+    medium: "Medium",
+    hard: "Large",
+    xlarge: "Extra large",
+  };
+  const SIZE_FACES = {
+    xsmall: 162,
+    easy: 362,
+    medium: 1002,
+    hard: 1442,
+    xlarge: 2252,
+  };
+  const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v4";
+  const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
@@ -190,11 +213,13 @@
   const PRESS_LIFT = 0.011;
   /** Cleared faces recess inward (inverse of hover lift). */
   const REVEAL_INSET = -0.018;
-  /** Static letter marks — globes looked decorative and hid S/M/L meaning. */
+  /** Static letter marks — readable size at a glance. */
   const SIZE_ICONS = {
+    xsmall: '<span class="size-mark" data-size="XS" aria-hidden="true">XS</span>',
     easy: '<span class="size-mark" data-size="S" aria-hidden="true">S</span>',
     medium: '<span class="size-mark" data-size="M" aria-hidden="true">M</span>',
     hard: '<span class="size-mark" data-size="L" aria-hidden="true">L</span>',
+    xlarge: '<span class="size-mark" data-size="XL" aria-hidden="true">XL</span>',
   };
 
   const THEME_ICONS = {
@@ -212,7 +237,9 @@
 
     function readStoredThemeId() {
       try {
-        const id = localStorage.getItem(THEME_STORAGE_KEY);
+        const id =
+          localStorage.getItem(THEME_STORAGE_KEY) ||
+          localStorage.getItem("hexsweeper-sphere-theme-v3");
         if (id && THEMES.some((t) => t.id === id)) return id;
       } catch (_) {}
       return DEFAULT_THEME.id;
@@ -229,7 +256,9 @@
 
     function readStoredSize() {
       try {
-        const val = localStorage.getItem(SIZE_STORAGE_KEY);
+        const val =
+          localStorage.getItem(SIZE_STORAGE_KEY) ||
+          localStorage.getItem("hexsweeper-sphere-size-v1");
         if (val && SIZE_ORDER.includes(val)) return val;
       } catch (_) {}
       return opts.difficulty || "medium";
@@ -408,10 +437,10 @@
       const name = SIZE_NAMES[key] || "Medium";
       const faces = SIZE_FACES[key] || 1002;
       if (sizeBtn) {
-        sizeBtn.title = `Board size ${letter} — ${name} (${faces} faces). Click to cycle S → M → L.`;
+        sizeBtn.title = `Board size ${letter} — ${name} (${faces} faces). Click to cycle XS → S → M → L → XL.`;
         sizeBtn.setAttribute(
           "aria-label",
-          `Board size ${letter}, ${name}, ${faces} faces. Activate to cycle small, medium, large.`
+          `Board size ${letter}, ${name}, ${faces} faces. Activate to cycle XS, S, M, L, XL.`
         );
         sizeBtn.innerHTML = SIZE_ICONS[key] || SIZE_ICONS.medium;
       }
@@ -1727,6 +1756,14 @@
       });
     }
 
+    /** Cliff/skirt fill — Light drops into black wells; Dark into white wells. */
+    function skirtFill(nw) {
+      if (state.theme.id === "dark") {
+        return colorMix("#2a2a2a", "#c8c8c8", 1 - nw);
+      }
+      return colorMix("#dddddd", "#777777", 1 - nw);
+    }
+
     /**
      * Extrusion skirts only on edges that leave the raised/inset set —
      * shared edges between two valley (or two hover) faces stay open.
@@ -1735,7 +1772,7 @@
       tileIdx,
       baseBoundary,
       faceBoundary,
-      darkMono,
+      _unused,
       skipNeighbor
     ) {
       if (!baseBoundary || !faceBoundary) return;
@@ -1774,9 +1811,7 @@
         ctx.lineTo(faceBoundary[j].x, faceBoundary[j].y);
         ctx.lineTo(faceBoundary[i].x, faceBoundary[i].y);
         ctx.closePath();
-        ctx.fillStyle = darkMono
-          ? colorMix("#dddddd", "#777777", 1 - nw)
-          : colorMix("#e8e8e8", "#888888", 1 - nw);
+        ctx.fillStyle = skirtFill(nw);
         ctx.fill();
       }
     }
@@ -1863,7 +1898,7 @@
     }
 
     /** Full skirt (hover/flag pins) — every edge. */
-    function drawExtrusionSkirt(baseBoundary, raisedBoundary, darkMono) {
+    function drawExtrusionSkirt(baseBoundary, raisedBoundary) {
       if (!baseBoundary || !raisedBoundary) return;
       const n = Math.min(baseBoundary.length, raisedBoundary.length);
       for (let i = 0; i < n; i++) {
@@ -1894,9 +1929,7 @@
         ctx.lineTo(raisedBoundary[j].x, raisedBoundary[j].y);
         ctx.lineTo(raisedBoundary[i].x, raisedBoundary[i].y);
         ctx.closePath();
-        ctx.fillStyle = darkMono
-          ? colorMix("#dddddd", "#777777", 1 - nw)
-          : colorMix("#e8e8e8", "#888888", 1 - nw);
+        ctx.fillStyle = skirtFill(nw);
         ctx.fill();
       }
     }
@@ -2111,6 +2144,19 @@
       ctx.fillStyle = grd;
       ctx.fillRect(0, 0, w, h);
 
+      // Sphere underlayer / core — black beneath white shell (and inverse).
+      const coreFill = state.theme.core || state.theme.backface || "#000000";
+      ctx.beginPath();
+      ctx.arc(
+        state.centerX,
+        state.centerY,
+        Math.max(12, state.scale * 1.02),
+        0,
+        Math.PI * 2
+      );
+      ctx.fillStyle = coreFill;
+      ctx.fill();
+
       if (!state.reduceMotion) {
         state.rotY += (state.targetRotY - state.rotY) * 0.12;
         state.rotX += (state.targetRotX - state.rotX) * 0.12;
@@ -2239,12 +2285,11 @@
         const baseBoundary =
           raised.baseBoundary ||
           tile.boundary.map((b) => projectPoint(b, state.rotY, state.rotX));
-        drawExtrusionSkirt(baseBoundary, raised.boundary, darkMono);
+        drawExtrusionSkirt(baseBoundary, raised.boundary);
         let fill = colors.fill;
         if (!cell.revealed && !cell.flagged) {
-          fill = darkMono
-            ? colors.fill
-            : colorMix(colors.fill, state.theme.coveredHi, 0.2);
+          // Nudge toward the edge ink so hover reads on pure white *and* pure black.
+          fill = colorMix(colors.fill, state.theme.coveredEdge, 0.14);
         }
         // Covered tiles always keep a visible edge (even in borderless mode).
         const edgeW = Math.max(colors.lineWidth || 1.5, 1.8);
