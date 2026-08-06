@@ -4,7 +4,6 @@
  * Inputs: canvas, difficulty, theme id (localStorage). Outputs: playable sphere minesweeper.
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
- * Cleared tiles: inset cutaway (shell wall + recessed face) for depth; covered stay flush.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
@@ -144,12 +143,6 @@
   const INITIAL_ZOOM = 0.72;
   /** Sphere fill of the short viewport edge at zoomFactor = 1. */
   const BASE_SCALE_FRAC = 0.42;
-  /**
-   * Cleared-face recess (fraction of hex radius) — classic Minesweeper well.
-   * Kept large so the cutaway reads at sphere scale.
-   */
-  const CUTAWAY_INSET = 0.32;
-
   /** Static letter marks — globes looked decorative and hid S/M/L meaning. */
   const SIZE_ICONS = {
     easy: '<span class="size-mark" data-size="S" aria-hidden="true">S</span>',
@@ -1295,139 +1288,6 @@
       ctx.stroke();
     }
 
-    /** Shrink boundary toward center (inset 0 = full, 1 = point). */
-    function insetProjected(proj, inset) {
-      const t = Math.max(0.05, 1 - inset);
-      if (t > 0.998) return proj;
-      const cx = proj.center.x;
-      const cy = proj.center.y;
-      return {
-        ...proj,
-        boundary: proj.boundary.map((p) => ({
-          x: cx + (p.x - cx) * t,
-          y: cy + (p.y - cy) * t,
-        })),
-        area: proj.area * t * t,
-      };
-    }
-
-    /**
-     * Classic Minesweeper well: dark NW inner lip, lighter SE, recessed floor.
-     * depth 0 = flush; 1 = full inset. Returns the face proj for labels.
-     */
-    function drawCutawayHex(proj, fill, stroke, lineWidth, depth) {
-      const d = Math.max(0, Math.min(1, depth));
-      if (d < 0.04 || proj.boundary.length < 3) {
-        drawHex(proj, fill, stroke, lineWidth);
-        return proj;
-      }
-      const inset = CUTAWAY_INSET * (0.7 + 0.3 * d);
-      const inner = insetProjected(proj, inset);
-      const darkMono = state.theme.id === "dark" || state.theme.pureCovered;
-
-      // Well cavity under the floor (reads as thickness of the shell).
-      const cavity = darkMono
-        ? colorMix("#ffffff", "#888888", 0.35)
-        : colorMix(fill, "#000000", 0.55);
-      drawHex(proj, cavity, stroke, Math.max(1.2, (lineWidth || 1.2) * 0.8));
-
-      const outer = proj.boundary;
-      const inn = inner.boundary;
-      const n = outer.length;
-      // NW edges get the deep shadow; SE get a thin highlight — like WinXP wells.
-      for (let i = 0; i < n; i++) {
-        const j = (i + 1) % n;
-        const mx =
-          (outer[i].x + outer[j].x + inn[i].x + inn[j].x) * 0.25;
-        const my =
-          (outer[i].y + outer[j].y + inn[i].y + inn[j].y) * 0.25;
-        const vx = mx - proj.center.x;
-        const vy = my - proj.center.y;
-        const len = Math.hypot(vx, vy) || 1;
-        const nw = Math.max(0, Math.min(1, (-vx / len - vy / len) * 0.55 + 0.5));
-        let wall;
-        if (darkMono) {
-          // White shell → gray lip into black floor.
-          wall = colorMix("#bbbbbb", "#444444", 1 - nw);
-        } else {
-          wall = colorMix("#3a3a3a", "#c8c8c8", nw * 0.15 + (1 - nw) * 0.85);
-          wall = colorMix(wall, "#1a1a1a", nw * 0.55);
-        }
-        ctx.beginPath();
-        ctx.moveTo(outer[i].x, outer[i].y);
-        ctx.lineTo(outer[j].x, outer[j].y);
-        ctx.lineTo(inn[j].x, inn[j].y);
-        ctx.lineTo(inn[i].x, inn[i].y);
-        ctx.closePath();
-        ctx.fillStyle = wall;
-        ctx.fill();
-      }
-
-      // Floor — slightly darker than covered face so the recess pops.
-      const floor = darkMono
-        ? fill
-        : colorMix(fill, "#000000", 0.06);
-      drawHex(inner, floor, stroke, lineWidth != null ? lineWidth : 1);
-      // Inner NW shadow stroke (classic indented bevel).
-      if (drawHexPath(inner)) {
-        ctx.save();
-        ctx.clip();
-        ctx.strokeStyle = darkMono
-          ? "rgba(255,255,255,0.22)"
-          : "rgba(0,0,0,0.35)";
-        ctx.lineWidth = Math.max(1.5, Math.sqrt(inner.area) * 0.08);
-        ctx.lineJoin = "round";
-        ctx.beginPath();
-        // Offset stroke toward NW by drawing a second path inset further.
-        const lip = insetProjected(inner, 0.06);
-        if (drawHexPath(lip)) {
-          ctx.strokeStyle = darkMono
-            ? "rgba(0,0,0,0.55)"
-            : "rgba(0,0,0,0.4)";
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-      return inner;
-    }
-
-    /** Covered tiles: slight raised bevel so wells read against them. */
-    function drawRaisedHex(proj, fill, stroke, lineWidth) {
-      if (!drawHexPath(proj) || proj.boundary.length < 3) {
-        drawHex(proj, fill, stroke, lineWidth);
-        return;
-      }
-      drawHex(proj, fill, stroke, lineWidth);
-      const darkMono = state.theme.id === "dark" || state.theme.pureCovered;
-      const n = proj.boundary.length;
-      const cx = proj.center.x;
-      const cy = proj.center.y;
-      for (let i = 0; i < n; i++) {
-        const j = (i + 1) % n;
-        const a = proj.boundary[i];
-        const b = proj.boundary[j];
-        const mx = (a.x + b.x) * 0.5;
-        const my = (a.y + b.y) * 0.5;
-        const vx = mx - cx;
-        const vy = my - cy;
-        const len = Math.hypot(vx, vy) || 1;
-        const nw = (-vx / len - vy / len) * 0.5 + 0.5;
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        // Edge highlight toward NW, shadow toward SE.
-        ctx.strokeStyle = darkMono
-          ? nw > 0.55
-            ? "rgba(0,0,0,0.35)"
-            : "rgba(0,0,0,0.12)"
-          : nw > 0.55
-            ? "rgba(255,255,255,0.55)"
-            : "rgba(0,0,0,0.28)";
-        ctx.lineWidth = Math.max(1.2, Math.sqrt(proj.area) * 0.06);
-        ctx.stroke();
-      }
-    }
-
     function labelFontSize(area) {
       const base = Math.sqrt(area) * 0.42;
       return Math.max(9, Math.min(18, base));
@@ -1643,45 +1503,10 @@
           drawProj = popProjected(proj, pop, cell.endPop);
         }
 
-        const visualReady =
-          state.reduceMotion ||
-          now >= cell.visualDue ||
-          cell.animReveal >= 0.98;
-        const useCutaway =
-          cell.revealed &&
-          visualReady &&
-          !cell.isMine &&
-          !cell.flagged &&
-          proj.z > 0.02;
-        const useRaised =
-          !cell.revealed &&
-          !cell.flagged &&
-          proj.z > 0.02;
-        let labelProj = drawProj;
-        if (useCutaway) {
-          const depth = state.reduceMotion
-            ? 1
-            : Math.max(0.55, Math.min(1, cell.animReveal || 1));
-          labelProj = drawCutawayHex(
-            drawProj,
-            colors.fill,
-            colors.stroke,
-            colors.lineWidth,
-            depth
-          );
-        } else if (useRaised) {
-          drawRaisedHex(
-            drawProj,
-            colors.fill,
-            colors.stroke,
-            colors.lineWidth
-          );
-        } else {
-          drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
-        }
+        drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
 
         if (colors.showLabel && colors.label) {
-          drawLabel(labelProj, colors.label, colors.labelColor, {
+          drawLabel(drawProj, colors.label, colors.labelColor, {
             stroke: colors.labelStroke,
             weight: cell.flagged ? "600" : "700",
           });

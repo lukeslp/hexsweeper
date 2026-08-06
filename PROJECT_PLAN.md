@@ -21,7 +21,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] Sphere MVP — ~3× boards (S/M/L = 362/1002/1442 faces), flood expand FX, backface cull, idle RAF throttle
 - [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12)
 - [x] Sphere polish — trimmed icon help, size-cycle fix, endgame FX, no theme toast
-- [x] Sphere framing — initial zoom pulled back (~0.72×); cleared tiles draw as cutaway recesses
+- [x] Sphere framing — initial zoom pulled back (~0.72×)
 - [x] Sphere on collection desk — Experiments tile (Open → `../sphere/`; no Copy HTML)
 - [x] OG social cards — production themes, ten lab skins (`skin-*-og.png`), and `sphere-og.png`; wired on collection pens + `sphere/index.html`
 
