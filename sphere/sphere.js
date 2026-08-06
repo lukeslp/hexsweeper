@@ -8,7 +8,7 @@
 (function (global) {
   "use strict";
 
-  /** S=42 · M=162 · L=368 faces; mines ≈17–19% of tile count. */
+  /** S=42 · M=162 · L=362 faces; mines ≈17–19% of tile count. */
   const CONFIG = {
     easy: { subdivisions: 2, minePct: 0.19 },
     medium: { subdivisions: 4, minePct: 0.17 },
