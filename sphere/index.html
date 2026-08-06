@@ -3,21 +3,53 @@
   File Purpose: Experimental Hexsweeper on a closed hex sphere (Canvas projection).
   Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
   Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
+  Chrome: BR icon cluster — Reset · Size · Theme · Flag · Help; first-visit instructions modal.
+  Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hex Sphere — Hexsweeper (experimental)</title>
+<meta name="description" content="Hexagonal minesweeper on a closed Goldberg sphere. Drag to rotate; dig, flag, and clear the geodesic board.">
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
 <style>
+/* Sphere chrome tokens — overridden per theme via body[data-sphere-theme] */
 :root {
   --bg-color: #0c1018;
   --text-main: #c8d4e8;
   --text-sub: #6b7a94;
   --nav-bg: #141a26;
   --nav-ink: #c8d4e8;
+}
+body[data-sphere-theme="light"] {
+  --bg-color: #e8ecf2;
+  --text-main: #334155;
+  --text-sub: #64748b;
+  --nav-bg: #f0f3f8;
+  --nav-ink: #475569;
+}
+body[data-sphere-theme="dusk"] {
+  --bg-color: #14101c;
+  --text-main: #ddd6f0;
+  --text-sub: #8b7fad;
+  --nav-bg: #1c1628;
+  --nav-ink: #ddd6f0;
+}
+body[data-sphere-theme="ember"] {
+  --bg-color: #120a08;
+  --text-main: #fde8dc;
+  --text-sub: #b8907a;
+  --nav-bg: #1a100c;
+  --nav-ink: #fde8dc;
+}
+body[data-sphere-theme="moss"] {
+  --bg-color: #0a100c;
+  --text-main: #c8dcc8;
+  --text-sub: #6b8a6e;
+  --nav-bg: #101810;
+  --nav-ink: #c8dcc8;
 }
 html, body {
   height: 100%;
@@ -29,6 +61,7 @@ html, body {
   user-select: none;
   touch-action: none;
 }
+body.help-open { overflow: hidden; }
 .canvas-container {
   position: fixed;
   inset: 0;
@@ -46,7 +79,7 @@ html, body {
 .experimental-badge {
   position: fixed;
   top: max(12px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
+  left: max(12px, env(safe-area-inset-left));
   z-index: 35;
   pointer-events: none;
   font-family: "IBM Plex Mono", monospace;
@@ -59,6 +92,22 @@ html, body {
   border-radius: 999px;
   padding: 6px 12px;
 }
+.sphere-stats {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 35;
+  display: flex;
+  gap: 14px;
+  pointer-events: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--nav-bg) 52%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+}
+.sphere-stats .stat-item { opacity: 1; min-width: 36px; font-size: 15px; }
 .sphere-banner {
   position: fixed;
   left: 50%;
@@ -67,8 +116,8 @@ html, body {
   z-index: 45;
   padding: 12px 20px;
   border-radius: 12px;
-  background: rgba(20, 26, 38, 0.92);
-  border: 1px solid rgba(200, 212, 232, 0.2);
+  background: color-mix(in srgb, var(--nav-bg) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 20%, transparent);
   color: var(--text-main);
   font-size: 14px;
   opacity: 0;
@@ -80,40 +129,176 @@ html, body {
   transform: translateX(-50%) translateY(0);
   pointer-events: auto;
 }
-@media (prefers-reduced-motion: reduce) {
-  .sphere-banner { transition: none; }
+.hud-actions { /* skin-chrome base + sphere glass */
+  background: color-mix(in srgb, var(--nav-bg) 52%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
 }
-.modal-content {
-  background: #141a26;
-  border-color: rgba(200, 212, 232, 0.15);
+.hud-btn.active {
+  background: color-mix(in srgb, var(--text-main) 14%, transparent);
+  opacity: 1;
+}
+#flag-toggle.active { color: #f87171; }
+body[data-sphere-theme="light"] #flag-toggle.active { color: #e11d48; }
+.hud-btn .size-badge,
+.hud-btn .theme-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font: 700 9px/1 "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+.hud-btn .theme-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  bottom: 6px;
+  right: 6px;
+}
+.hud-btn { position: relative; }
+.theme-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(72px, calc(env(safe-area-inset-bottom) + 58px));
+  transform: translate(-50%, 8px);
+  z-index: 42;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font: 600 0.78rem/1 "IBM Plex Sans", system-ui, sans-serif;
   color: var(--text-main);
+  background: color-mix(in srgb, var(--nav-bg) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
 }
-.modal-row .icon-label { color: var(--text-sub); }
-.diff-option.active { background: rgba(96, 165, 250, 0.25); }
-#flag-toggle.active { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-.instructions-text { color: var(--text-sub); }
+.theme-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+/* Instructions modal */
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.help-overlay.open { opacity: 1; pointer-events: auto; }
+.help-panel {
+  width: min(380px, 100%);
+  max-height: min(75vh, 480px);
+  overflow: auto;
+  background: color-mix(in srgb, var(--nav-bg) 94%, transparent);
+  color: var(--text-main);
+  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  border-radius: 22px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  padding: 1.35rem 1.3rem 1.2rem;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  text-align: left;
+}
+.help-panel h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.65rem;
+  letter-spacing: -0.02em;
+}
+.help-panel p, .help-panel li {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 0 0 0.7rem;
+  color: color-mix(in srgb, var(--text-main) 88%, var(--text-sub));
+}
+.help-panel ul {
+  margin: 0 0 0.7rem;
+  padding-left: 1.15rem;
+}
+.help-panel li { margin: 0.35rem 0; }
+.help-panel .help-keys {
+  margin-top: 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-sub);
+}
+.help-panel kbd {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8em;
+  border: 1px solid color-mix(in srgb, var(--text-main) 30%, transparent);
+  border-radius: 5px;
+  padding: 0.05em 0.4em;
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+.help-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.help-close:hover { color: var(--text-main); }
+.help-close:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent);
+  outline-offset: 2px;
+}
+.help-play {
+  appearance: none;
+  border: 0;
+  margin-top: 0.5rem;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font: 600 0.9rem/1 "IBM Plex Sans", system-ui, sans-serif;
+  cursor: pointer;
+  background: var(--text-main);
+  color: var(--bg-color);
+}
+.help-play:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent);
+  outline-offset: 3px;
+}
+.menu-links {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sphere-banner,
+  .theme-toast,
+  .help-overlay { transition: none; }
+}
 </style>
 </head>
-<body>
+<body data-sphere-theme="void">
 <div class="experimental-badge" aria-hidden="true">Experimental · Sphere</div>
 
-<nav class="skin-nav" aria-label="Navigation">
-  <a href="../choices.html">Choices</a>
-  <a href="../index.html">Flat game</a>
-  <span class="meta"><span class="tag">sphere</span> · Hex Sphere</span>
-</nav>
+<div class="sphere-stats" aria-label="Score">
+  <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
+  <div id="stats-time" class="stat-item visible" data-label="time" title="Elapsed seconds">000</div>
+</div>
 
 <div class="canvas-container">
   <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
 </div>
 
+<div id="theme-toast" class="theme-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
 <div class="hud-actions" role="toolbar" aria-label="Game controls">
-  <button type="button" id="flag-toggle" class="hud-btn" aria-label="Flag mode" aria-pressed="false" title="Flag mode (F)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
-      <line x1="4" y1="22" x2="4" y2="15"></line>
-    </svg>
-  </button>
   <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <polyline points="23 4 23 10 17 10"></polyline>
@@ -121,50 +306,61 @@ html, body {
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
     </svg>
   </button>
-  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu" title="Menu">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <line x1="5" y1="7" x2="19" y2="7"></line>
-      <line x1="5" y1="12" x2="15" y2="12"></line>
-      <line x1="5" y1="17" x2="19" y2="17"></line>
+  <button type="button" id="size-btn" class="hud-btn" aria-label="Board size: Medium" title="Size — Medium (1002 faces)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"></circle>
+      <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-20 12 12)"></ellipse>
+    </svg>
+    <span class="size-badge" id="size-badge" aria-hidden="true">M</span>
+  </button>
+  <button type="button" id="theme-btn" class="hud-btn" aria-label="Theme: Void" title="Theme — Void">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="5"></circle>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+    </svg>
+    <span class="theme-dot" id="theme-dot" aria-hidden="true" style="background:#60a5fa"></span>
+  </button>
+  <button type="button" id="flag-toggle" class="hud-btn" aria-label="Flag mode" aria-pressed="false" title="Flag mode (F)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+      <line x1="4" y1="22" x2="4" y2="15"></line>
+    </svg>
+  </button>
+  <button type="button" id="help-btn" class="hud-btn" aria-label="Help" title="Help (?)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
     </svg>
   </button>
 </div>
 
-<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
-  <div class="modal-content">
-    <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+<div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+  <div class="help-panel">
+    <button type="button" class="help-close" id="help-close" aria-label="Close help">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     </button>
-    <h2 id="menu-title" class="menu-title">Sphere</h2>
-    <div class="modal-row" id="run-row">
-      <div class="modal-section-label">Run</div>
-      <div class="menu-stats" aria-label="Score">
-        <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
-        <div id="stats-time" class="stat-item visible" data-label="time" title="Elapsed seconds">000</div>
-      </div>
-    </div>
-    <div class="modal-row">
-      <div class="icon-label" title="Sphere density">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle></svg>
-      </div>
-      <div class="diff-selector" id="diff-selector" role="group" aria-label="Sphere density">
-        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="362 faces · 62 mines">S</button>
-        <button type="button" class="diff-option active" data-val="medium" aria-pressed="true" title="1002 faces · 170 mines">M</button>
-        <button type="button" class="diff-option" data-val="hard" aria-pressed="false" title="1442 faces · 245 mines">L</button>
-      </div>
-    </div>
-    <div class="instructions-text">
-      Drag to rotate the sphere · tap to dig · flag: right-click, F, long-hold, or flag button<br>
-      First dig is always safe · pentagons mark icosahedron poles · flat game stays default
-    </div>
+    <h2 id="help-title">Hex Sphere</h2>
+    <p>Minesweeper on a closed Goldberg sphere — six geodesic neighbors per face instead of a flat grid.</p>
+    <ul>
+      <li><strong>Drag</strong> to rotate the sphere.</li>
+      <li><strong>Tap / click</strong> a covered face to dig. The first dig is always safe.</li>
+      <li>Numbers count adjacent mines. Empty regions expand in a wave over neighbors.</li>
+      <li><strong>Flag</strong> suspected mines: right-click, long-press, <kbd>F</kbd>, or the flag button.</li>
+      <li><strong>Pentagons</strong> mark the twelve icosahedron poles — still playable hexes.</li>
+      <li>Clear every safe face to win. Hit a mine and the run ends — reset to try again.</li>
+    </ul>
+    <p><strong>Size</strong> — <kbd>S</kbd> / <kbd>M</kbd> / <kbd>L</kbd> cycles density (362 · 1002 · 1442 faces). <strong>Theme</strong> — palette icon or <kbd>T</kbd> cycles visual skins (Void, Light, Dusk, Ember, Moss).</p>
+    <p class="help-keys">Drag rotate · <kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>T</kbd> theme</p>
     <nav class="menu-links" aria-label="Elsewhere">
-      <a href="../index.html">Flat Hexsweeper</a>
+      <a href="https://lukesteuber.com" rel="noopener">lukesteuber.com</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>
-      <a href="../choices.html">Choices hub</a>
+      <a href="https://datapoems.io" rel="noopener">datapoems.io</a>
     </nav>
+    <button type="button" class="help-play" id="help-play">Got it — play</button>
   </div>
 </div>
 

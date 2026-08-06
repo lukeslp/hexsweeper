@@ -107,7 +107,10 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Dig / flag / flood over geodesic `neighborIndices`; first dig safe; win/lose
 - Drag to rotate; flag mode + long-hold; RM-safe camera (no lerp when reduced motion)
 - Densities: **S** = 362 faces · 62 mines · **M** = 1002 · 170 · **L** = 1442 · 245 (~17% mine density; ~3× prior boards)
-- Flood expand: BFS ring stagger + brief blue-gray flash/pop (logic opens immediately; paint catch-up; RM-safe)
+- Flood expand: BFS ring stagger + brief flash/pop (logic opens immediately; paint catch-up; RM-safe)
+- **Chrome:** BR icon cluster — Reset · Size (S/M/L badge) · Theme · Flag · Help; no outbound game links
+- **Themes:** Void (default dark/blue), Light (porcelain), Dusk, Ember, Moss — persisted in `localStorage`
+- **First visit:** instructions modal (`hexsweeper-sphere-welcome-v1`); `?welcome=1` forces, `?welcome=0` skips
 
 Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12).
 
