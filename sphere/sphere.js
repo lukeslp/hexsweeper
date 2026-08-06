@@ -10,7 +10,7 @@
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
- * Notes: Canvas 2D projection; drag tumbles freely (full 360° yaw+pitch); first dig safe; RM-safe camera lerp.
+ * Notes: Canvas 2D projection; drag tumbles freely; camera angles stay continuous (no ±π wrap yoink).
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
  * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
@@ -621,13 +621,32 @@
       return Math.hypot(dx, dy);
     }
 
-    /** Keep angles in (-π, π] so lerp/cache stay well-behaved over long tumbles. */
-    function wrapAngle(a) {
+    /** Shortest signed delta from → to on the circle (avoids lerp yoink across ±π). */
+    function angleDelta(from, to) {
+      let d = to - from;
       const tau = Math.PI * 2;
-      let x = a % tau;
-      if (x > Math.PI) x -= tau;
-      if (x <= -Math.PI) x += tau;
-      return x;
+      d = ((d + Math.PI) % tau + tau) % tau - Math.PI;
+      return d;
+    }
+
+    /** When idle, fold huge angles back without changing orientation. */
+    function normalizeIdleRotation() {
+      if (state.dragging) return;
+      if (
+        Math.abs(state.targetRotY - state.rotY) > 0.001 ||
+        Math.abs(state.targetRotX - state.rotX) > 0.001
+      ) {
+        return;
+      }
+      const tau = Math.PI * 2;
+      if (Math.abs(state.rotY) > tau * 2) {
+        state.rotY = ((state.rotY + Math.PI) % tau + tau) % tau - Math.PI;
+        state.targetRotY = state.rotY;
+      }
+      if (Math.abs(state.rotX) > tau * 2) {
+        state.rotX = ((state.rotX + Math.PI) % tau + tau) % tau - Math.PI;
+        state.targetRotX = state.rotX;
+      }
     }
 
     function rotatePoint(p, rotY, rotX) {
@@ -2166,12 +2185,13 @@
       ctx.fill();
 
       if (!state.reduceMotion) {
-        state.rotY += (state.targetRotY - state.rotY) * 0.12;
-        state.rotX += (state.targetRotX - state.rotX) * 0.12;
+        state.rotY += angleDelta(state.rotY, state.targetRotY) * 0.12;
+        state.rotX += angleDelta(state.rotX, state.targetRotX) * 0.12;
       } else {
         state.rotY = state.targetRotY;
         state.rotX = state.targetRotX;
       }
+      normalizeIdleRotation();
 
       const projected = getProjected();
       const now = performance.now();
@@ -2372,7 +2392,10 @@
       const p = canvasPoint(e);
       touchMoved = false;
       state.dragging = true;
-      state.dragStart = { x: p.x, y: p.y, rotY: state.targetRotY, rotX: state.targetRotX };
+      // Anchor on the live camera, not a lagging target (avoids catch-up snap).
+      state.dragStart = { x: p.x, y: p.y, rotY: state.rotY, rotX: state.rotX };
+      state.targetRotY = state.rotY;
+      state.targetRotX = state.rotX;
       state.hovered = pickTile(p.x, p.y);
       state.pressed = state.hovered;
       if (e.type === "touchstart") {
@@ -2411,13 +2434,11 @@
           touchMoved = true;
           clearTimeout(longPressTimer);
           state.pressed = -1;
-          // Free tumble — no pitch clamp (full 360° on both drag axes).
-          state.targetRotY = wrapAngle(
-            state.dragStart.rotY + dx * 0.0105
-          );
-          state.targetRotX = wrapAngle(
-            state.dragStart.rotX + dy * 0.0105
-          );
+          // Free tumble — keep continuous angles (do not wrap mid-drag).
+          state.targetRotY = state.dragStart.rotY + dx * 0.0105;
+          state.targetRotX = state.dragStart.rotX + dy * 0.0105;
+          state.rotY = state.targetRotY;
+          state.rotX = state.targetRotX;
           invalidateProjection();
         }
       }
