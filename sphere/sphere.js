@@ -5,7 +5,7 @@
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
  * Hover: lift only activatable covered faces (+ pinned flags); cleared stay put.
- * Cleared: recess empty (numerals/rings) or all clears (borderless); flush never.
+ * Cleared: valley recess (numerals/rings/borderless) — perimeter skirts only, no honeycomb walls.
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
@@ -821,6 +821,7 @@
       }
       state.sphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
       state.tiles = state.sphere.tiles;
+      attachEdgeNeighbors();
       state.cells = state.tiles.map(() => freshCell());
       state.isFirstClick = true;
       state.isGameOver = false;
@@ -923,6 +924,7 @@
       const cfg = CONFIG[state.difficulty];
       state.sphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
       state.tiles = state.sphere.tiles;
+      attachEdgeNeighbors();
       state.cells = state.tiles.map(() => freshCell());
       const n = state.cells.length;
 
@@ -1664,15 +1666,94 @@
     }
 
     /**
-     * Recess cleared faces. Borderless: all clears. Numerals/rings: empty only.
-     * Flush/yellow: shell-flat. Covered always flush.
+     * Valley floor: all safe clears recess together (numerals/rings/borderless).
+     * Flush/yellow stay shell-flat. Covered always flush.
      */
     function tileShouldInset(cell, styleId) {
       if (!cell.revealed || cell.flagged || cell.isMine) return false;
       if (styleId === "flush" || styleId === "yellow") return false;
-      if (styleId === "borderless") return true;
-      if (cell.neighborMines !== 0) return false;
-      return styleId === "numerals" || styleId === "rings";
+      return (
+        styleId === "numerals" ||
+        styleId === "rings" ||
+        styleId === "borderless"
+      );
+    }
+
+    /** Map each boundary edge → neighbor tile index (for valley perimeter skirts). */
+    function attachEdgeNeighbors() {
+      const pointKey = (p) =>
+        `${p.x.toFixed(6)},${p.y.toFixed(6)},${p.z.toFixed(6)}`;
+      const edgeMap = new Map();
+      for (let ti = 0; ti < state.tiles.length; ti++) {
+        const b = state.tiles[ti].boundary;
+        state.tiles[ti].edgeNeighbors = new Array(b.length).fill(-1);
+        for (let i = 0; i < b.length; i++) {
+          const j = (i + 1) % b.length;
+          const key = [pointKey(b[i]), pointKey(b[j])].sort().join("|");
+          if (!edgeMap.has(key)) edgeMap.set(key, []);
+          edgeMap.get(key).push({ ti, ei: i });
+        }
+      }
+      edgeMap.forEach((ends) => {
+        if (ends.length !== 2) return;
+        const [a, b] = ends;
+        state.tiles[a.ti].edgeNeighbors[a.ei] = b.ti;
+        state.tiles[b.ti].edgeNeighbors[b.ei] = a.ti;
+      });
+    }
+
+    /**
+     * Extrusion skirts only on edges that leave the raised/inset set —
+     * shared edges between two valley (or two hover) faces stay open.
+     */
+    function drawSelectiveSkirt(
+      tileIdx,
+      baseBoundary,
+      faceBoundary,
+      darkMono,
+      skipNeighbor
+    ) {
+      if (!baseBoundary || !faceBoundary) return;
+      const tile = state.tiles[tileIdx];
+      const edgeN = tile.edgeNeighbors || [];
+      const n = Math.min(baseBoundary.length, faceBoundary.length);
+      for (let i = 0; i < n; i++) {
+        const ni = edgeN[i];
+        if (ni >= 0 && typeof skipNeighbor === "function" && skipNeighbor(ni)) {
+          continue;
+        }
+        const j = (i + 1) % n;
+        const mx =
+          (baseBoundary[i].x +
+            baseBoundary[j].x +
+            faceBoundary[i].x +
+            faceBoundary[j].x) *
+          0.25;
+        const my =
+          (baseBoundary[i].y +
+            baseBoundary[j].y +
+            faceBoundary[i].y +
+            faceBoundary[j].y) *
+          0.25;
+        const cx =
+          faceBoundary.reduce((s, p) => s + p.x, 0) / faceBoundary.length;
+        const cy =
+          faceBoundary.reduce((s, p) => s + p.y, 0) / faceBoundary.length;
+        const vx = mx - cx;
+        const vy = my - cy;
+        const len = Math.hypot(vx, vy) || 1;
+        const nw = Math.max(0, Math.min(1, (-vx / len - vy / len) * 0.5 + 0.5));
+        ctx.beginPath();
+        ctx.moveTo(baseBoundary[i].x, baseBoundary[i].y);
+        ctx.lineTo(baseBoundary[j].x, baseBoundary[j].y);
+        ctx.lineTo(faceBoundary[j].x, faceBoundary[j].y);
+        ctx.lineTo(faceBoundary[i].x, faceBoundary[i].y);
+        ctx.closePath();
+        ctx.fillStyle = darkMono
+          ? colorMix("#dddddd", "#777777", 1 - nw)
+          : colorMix("#e8e8e8", "#888888", 1 - nw);
+        ctx.fill();
+      }
     }
 
     /**
@@ -1756,7 +1837,7 @@
       });
     }
 
-    /** Skirt walls between base and raised face (true radial extrusion cue). */
+    /** Full skirt (hover/flag pins) — every edge. */
     function drawExtrusionSkirt(baseBoundary, raisedBoundary, darkMono) {
       if (!baseBoundary || !raisedBoundary) return;
       const n = Math.min(baseBoundary.length, raisedBoundary.length);
@@ -2021,6 +2102,17 @@
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
 
+      // Valley membership for this frame — skirts only on the outer rim.
+      const valleyInset = new Uint8Array(state.cells.length);
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        const ready =
+          state.reduceMotion ||
+          now >= c.visualDue ||
+          c.animReveal >= 0.98;
+        if (tileShouldInset(c, styleId) && ready) valleyInset[i] = 1;
+      }
+
       for (const proj of projected) {
         const idx = proj.index;
         const cell = state.cells[idx];
@@ -2036,12 +2128,7 @@
         const tile = state.tiles[idx];
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
-        const visualReady =
-          state.reduceMotion ||
-          now >= cell.visualDue ||
-          cell.animReveal >= 0.98;
-        const shouldInset =
-          tileShouldInset(cell, styleId) && visualReady && proj.z > 0.02;
+        const shouldInset = valleyInset[idx] && proj.z > 0.02;
         let drawProj = proj;
         let markLift = 0;
         if (shouldInset) {
@@ -2056,9 +2143,22 @@
             tile.boundary.map((b) =>
               projectPoint(b, state.rotY, state.rotX)
             );
-          drawExtrusionSkirt(baseBoundary, inset.boundary, darkMono);
+          // Cliff only where the valley meets a non-valley neighbor.
+          drawSelectiveSkirt(
+            idx,
+            baseBoundary,
+            inset.boundary,
+            darkMono,
+            (ni) => !!valleyInset[ni]
+          );
           drawProj = inset;
           markLift = REVEAL_INSET;
+          // Seamless valley floor — no per-hex stroke grid.
+          colors = {
+            ...colors,
+            stroke: colors.fill,
+            lineWidth: 0,
+          };
         }
         const pop =
           cell.revealed &&
