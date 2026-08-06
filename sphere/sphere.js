@@ -77,20 +77,24 @@
     revealGlow: "#333333",
   };
 
-  /** Invert of light — white unactivated tiles on black; red flags unchanged. */
+  /**
+   * Dark invert: black page, pure white covered hexes (no gray wells),
+   * dark revealed interiors, pure red flags. Rim/backface stay light so
+   * the board reads as a white honeycomb, not a dark ball.
+   */
   const THEME_DARK = {
     id: "dark",
     name: "Dark",
     accent: "#ffffff",
     bg: "#000000",
-    bgGlow: "#0a0a0a",
+    bgGlow: "#000000",
     covered: "#ffffff",
-    coveredHi: "#f2f2f2",
-    coveredEdge: "#666666",
-    coveredShadow: "#333333",
-    revealed: "#050505",
+    coveredHi: "#ffffff",
+    coveredEdge: "#000000",
+    coveredShadow: "#000000",
+    revealed: "#111111",
     revealedEmpty: "#000000",
-    revealedEdge: "#4f4f4f",
+    revealedEdge: "#555555",
     flagFill: "#ff0000",
     flagIcon: "#ffffff",
     flagEdge: "#ff0000",
@@ -98,12 +102,12 @@
     mineCore: "#000000",
     mineEdge: "#cccccc",
     mineBurst: "#ffffff",
-    pentagon: "#f5f5f5",
-    pentagonEdge: "#777777",
+    pentagon: "#ffffff",
+    pentagonEdge: "#000000",
     hoverRing: "#ffffff",
     activeRing: "#dddddd",
-    backface: "#0f0f0f",
-    backfaceEdge: "#2f2f2f",
+    backface: "#e8e8e8",
+    backfaceEdge: "#888888",
     text: {
       1: "#ffffff",
       2: "#dddddd",
@@ -1103,17 +1107,19 @@
 
     function coveredStyle(proj, tile, isFront) {
       const T = state.theme;
+      // Dark: flat pure white hexes — no normal shading (that was graying them out).
+      if (T.id === "dark") {
+        return {
+          fill: "#ffffff",
+          stroke: T.coveredEdge,
+          lineWidth: tile.isPentagon ? 1.8 : 1.5,
+          showLabel: false,
+        };
+      }
       let fill = tile.isPentagon ? T.pentagon : T.covered;
       let stroke = tile.isPentagon ? T.pentagonEdge : T.coveredEdge;
-      // Light: soft gray lift. Dark invert: keep covered near pure white (edge contrast only).
-      if (T.id === "dark") {
-        const dim = isFront ? 0.04 : 0.1;
-        fill = colorMix(fill, "#000000", dim * (1 - Math.max(0, proj.normalZ)));
-        if (isFront) fill = colorMix(fill, T.coveredHi, 0.08);
-      } else {
-        fill = shadeByNormal(fill, proj.normalZ, isFront ? 0.38 : 0.22);
-        if (isFront) fill = colorMix(fill, T.coveredHi, 0.15);
-      }
+      fill = shadeByNormal(fill, proj.normalZ, isFront ? 0.38 : 0.22);
+      if (isFront) fill = colorMix(fill, T.coveredHi, 0.15);
       return {
         fill,
         stroke,
@@ -1127,6 +1133,31 @@
       const lit = shadeByNormal;
       const isBack = proj.z <= 0.02;
       const isFront = proj.z > 0.08;
+      const darkMono = T.id === "dark";
+
+      // Flags always pure red (front or rim).
+      if (cell.flagged && !cell.revealed) {
+        return {
+          fill: T.flagFill,
+          stroke: T.flagEdge,
+          lineWidth: 2,
+          showLabel: true,
+          label: "⚑",
+          labelColor: T.flagIcon,
+          labelStroke: T.flagFill,
+        };
+      }
+
+      // Dark mono: unrevealed hexes are always pure white — including the rim.
+      // (Old backface pass painted them near-black and killed the invert look.)
+      if (darkMono && !cell.revealed) {
+        return {
+          fill: "#ffffff",
+          stroke: isBack ? T.backfaceEdge : T.coveredEdge,
+          lineWidth: isBack ? 1.1 : tile.isPentagon ? 1.8 : 1.5,
+          showLabel: false,
+        };
+      }
 
       if (isBack) {
         return {
@@ -1146,7 +1177,7 @@
 
       if (cell.revealed && visualReady) {
         if (cell.isMine) {
-          let fill = lit(T.mine, proj.normalZ, 0.25);
+          let fill = darkMono ? T.mine : lit(T.mine, proj.normalZ, 0.25);
           if (cell.endFlash > 0) {
             fill = colorMix(fill, T.mineBurst, cell.endFlash * 0.65);
           }
@@ -1161,7 +1192,11 @@
           };
         }
         const empty = cell.neighborMines === 0;
-        let fill = lit(empty ? T.revealedEmpty : T.revealed, proj.normalZ, 0.28);
+        let fill = darkMono
+          ? empty
+            ? T.revealedEmpty
+            : T.revealed
+          : lit(empty ? T.revealedEmpty : T.revealed, proj.normalZ, 0.28);
         const pulseAge = now - cell.pulseAt;
         if (
           !state.reduceMotion &&
@@ -1184,19 +1219,6 @@
           label: cell.neighborMines > 0 ? String(cell.neighborMines) : "",
           labelColor: T.text[cell.neighborMines] || T.label,
           labelStroke: T.labelStroke,
-        };
-      }
-
-      if (cell.flagged) {
-        // Pure red — only non-mono accent; skip normal shading so flags read flat.
-        return {
-          fill: T.flagFill,
-          stroke: T.flagEdge,
-          lineWidth: 2,
-          showLabel: true,
-          label: "⚑",
-          labelColor: T.flagIcon,
-          labelStroke: T.flagFill,
         };
       }
 
