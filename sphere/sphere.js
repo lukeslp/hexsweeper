@@ -5,7 +5,7 @@
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
  * Hover: radial lift along face normal + skirt walls (no white-overpaint border wipe).
- * Labels: drawn in the face plane (inset), not screen-billboarded.
+ * Labels: screen-space upright (2D) at face center — readable to the viewer.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
@@ -145,11 +145,9 @@
   const INITIAL_ZOOM = 0.72;
   /** Sphere fill of the short viewport edge at zoomFactor = 1. */
   const BASE_SCALE_FRAC = 0.42;
-  /** Hover / press radial lift in sphere-radius units (~1). */
-  const HOVER_LIFT = 0.055;
-  const PRESS_LIFT = 0.028;
-  /** Label sits slightly into the face (negative = inset). */
-  const LABEL_INSET = -0.014;
+  /** Hover / press radial lift in sphere-radius units (~1). Cut 60% from first pass. */
+  const HOVER_LIFT = 0.022;
+  const PRESS_LIFT = 0.011;
   /** Static letter marks — globes looked decorative and hid S/M/L meaning. */
   const SIZE_ICONS = {
     easy: '<span class="size-mark" data-size="S" aria-hidden="true">S</span>',
@@ -528,32 +526,6 @@
       const n = rotatePoint(tile.centerPoint, rotY, rotX);
       const len = Math.hypot(n.x, n.y, n.z) || 1;
       return { x: n.x / len, y: n.y / len, z: n.z / len };
-    }
-
-    /** Orthonormal tangent basis (u, v) on the face, with v roughly “up” on screen. */
-    function faceBasis(n) {
-      let ax = 0;
-      let ay = 1;
-      let az = 0;
-      if (Math.abs(n.y) > 0.92) {
-        ax = 1;
-        ay = 0;
-        az = 0;
-      }
-      let ux = ay * n.z - az * n.y;
-      let uy = az * n.x - ax * n.z;
-      let uz = ax * n.y - ay * n.x;
-      let ul = Math.hypot(ux, uy, uz) || 1;
-      ux /= ul;
-      uy /= ul;
-      uz /= ul;
-      const vx = n.y * uz - n.z * uy;
-      const vy = n.z * ux - n.x * uz;
-      const vz = n.x * uy - n.y * ux;
-      return {
-        u: { x: ux, y: uy, z: uz },
-        v: { x: vx, y: vy, z: vz },
-      };
     }
 
     function projectTile(tile, rotY, rotX, lift) {
@@ -1390,64 +1362,36 @@
     }
 
     /**
-     * Draw glyph seated in the tile plane (perspective-correct-ish via
-     * projected tangent basis), slightly inset so it reads as carved in.
+     * Numerals stay screen-upright for the viewer (plain 2D draw at face center).
+     * Optional opts.lift recenters on a radially lifted face.
      */
-    function drawLabelOnFace(tile, text, color, opts) {
+    function drawLabelUpright(tile, text, color, opts) {
       opts = opts || {};
       const rotY = state.rotY;
       const rotX = state.rotX;
       const n = faceNormal(tile, rotY, rotX);
-      const basis = faceBasis(n);
       const c = rotatePoint(tile.centerPoint, rotY, rotX);
-      const along = (opts.lift || 0) + LABEL_INSET;
+      const lift = opts.lift || 0;
       const origin = {
-        x: c.x + n.x * along,
-        y: c.y + n.y * along,
-        z: c.z + n.z * along,
+        x: c.x + n.x * lift,
+        y: c.y + n.y * lift,
+        z: c.z + n.z * lift,
       };
-      // World-space half-height of the glyph on the face.
-      const half = Math.max(0.018, Math.min(0.045, 0.032 * (state.radius || 1)));
       const p0 = projectRotated(origin);
-      const pU = projectRotated({
-        x: origin.x + basis.u.x * half,
-        y: origin.y + basis.u.y * half,
-        z: origin.z + basis.u.z * half,
-      });
-      const pV = projectRotated({
-        x: origin.x + basis.v.x * half,
-        y: origin.y + basis.v.y * half,
-        z: origin.z + basis.v.z * half,
-      });
-      const ax = pU.x - p0.x;
-      const ay = pU.y - p0.y;
-      const bx = pV.x - p0.x;
-      const by = pV.y - p0.y;
-      // Degenerate near silhouette — fall back to screen text.
-      if (Math.abs(ax * by - ay * bx) < 4) {
-        const weight = opts.weight || "700";
-        const size = opts.size || 12;
-        ctx.font = `${weight} ${size}px IBM Plex Sans, system-ui, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        if (opts.stroke) {
-          ctx.lineWidth = opts.strokeWidth || Math.max(2, size * 0.18);
-          ctx.strokeStyle = opts.stroke;
-          ctx.strokeText(text, p0.x, p0.y);
-        }
-        ctx.fillStyle = color;
-        ctx.fillText(text, p0.x, p0.y);
-        return;
-      }
+      const size =
+        opts.size ||
+        labelFontSize(
+          opts.area != null ? opts.area : Math.max(80, state.scale * 0.02)
+        );
+      const weight = opts.weight || "700";
       ctx.save();
       ctx.translate(p0.x, p0.y);
-      ctx.transform(ax, ay, bx, by, 0, 0);
-      const weight = opts.weight || "700";
-      ctx.font = `${weight} 1.15px IBM Plex Sans, system-ui, sans-serif`;
+      // Identity 2D orientation — always faces the user.
+      ctx.font = `${weight} ${size}px IBM Plex Sans, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       if (opts.stroke) {
-        ctx.lineWidth = opts.strokeWidth != null ? opts.strokeWidth : 0.22;
+        ctx.lineWidth = opts.strokeWidth || Math.max(2, size * 0.18);
         ctx.strokeStyle = opts.stroke;
         ctx.strokeText(text, 0, 0);
       }
@@ -1662,9 +1606,10 @@
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
 
         if (colors.showLabel && colors.label) {
-          drawLabelOnFace(tile, colors.label, colors.labelColor, {
+          drawLabelUpright(tile, colors.label, colors.labelColor, {
             stroke: colors.labelStroke,
             weight: cell.flagged ? "600" : "700",
+            area: drawProj.area,
           });
         }
       }
@@ -1705,10 +1650,11 @@
             Math.max(colors.lineWidth || 1.5, 1.8)
           );
           if (colors.showLabel && colors.label) {
-            drawLabelOnFace(tile, colors.label, colors.labelColor, {
+            drawLabelUpright(tile, colors.label, colors.labelColor, {
               stroke: colors.labelStroke,
               weight: cell.flagged ? "600" : "700",
               lift,
+              area: raised.area,
             });
           }
         }
