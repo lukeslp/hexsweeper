@@ -7,6 +7,7 @@
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
+ * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
@@ -138,6 +139,8 @@
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const ZOOM_MIN = 0.55;
   const ZOOM_MAX = 2.25;
+  /** Sphere is the hero — fill most of the short viewport edge. */
+  const BASE_SCALE_FRAC = 0.5;
 
   /** Static letter marks — globes looked decorative and hid S/M/L meaning. */
   const SIZE_ICONS = {
@@ -290,6 +293,12 @@
 
     const statsMines = document.getElementById("stats-mines");
     const statsTime = document.getElementById("stats-time");
+    const bannerEl = document.getElementById("sphere-banner");
+    const bannerMsg = document.getElementById("banner-msg");
+    const bannerMeta = document.getElementById("banner-meta");
+    const bannerActions = document.getElementById("banner-actions");
+    const shareWinBtn = document.getElementById("share-win-btn");
+    const bannerAgainBtn = document.getElementById("banner-again-btn");
     const restartBtn = document.getElementById("reset-btn") || document.getElementById("restart-btn");
     const flagToggle = document.getElementById("flag-toggle");
     const sizeBtn = document.getElementById("size-btn");
@@ -298,6 +307,7 @@
     const helpPanel = document.getElementById("help-panel");
     const helpBtn = document.getElementById("help-btn");
     let helpFocusReturn = null;
+    let shareBusy = false;
 
     function hudClick(fn) {
       return (e) => {
@@ -456,7 +466,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       state.centerX = w / 2;
       state.centerY = h / 2;
-      state.baseScale = Math.min(w, h) * 0.36;
+      state.baseScale = Math.min(w, h) * BASE_SCALE_FRAC;
       state.scale = state.baseScale * state.zoomFactor;
       state.projectedCache = null;
     }
@@ -627,6 +637,14 @@
         clearInterval(state.timerInterval);
         state.timerInterval = null;
       }
+    }
+
+    function formatTime(sec) {
+      const s = Math.max(0, sec | 0);
+      if (s < 60) return `${s}s`;
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${m}:${String(r).padStart(2, "0")}`;
     }
 
     function updateUI() {
@@ -1050,28 +1068,177 @@
       stopTimer();
       if (!won) {
         startLoseFx(state.detonatorIdx >= 0 ? state.detonatorIdx : 0);
+        showBanner("Mine detonated.", { share: false });
       } else {
         startWinFx();
+        showBanner("Cleared the sphere!", {
+          share: true,
+          meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
+        });
       }
-      showBanner(won ? "Cleared the sphere!" : "Mine detonated.");
     }
 
-    function showBanner(msg) {
-      let el = document.getElementById("sphere-banner");
-      if (!el) {
-        el = document.createElement("div");
-        el.id = "sphere-banner";
-        el.setAttribute("role", "status");
-        el.className = "sphere-banner";
-        document.body.appendChild(el);
+    function showBanner(msg, opts) {
+      opts = opts || {};
+      const el = bannerEl || document.getElementById("sphere-banner");
+      if (!el) return;
+      if (bannerMsg) bannerMsg.textContent = msg;
+      else el.textContent = msg;
+      if (bannerMeta) {
+        if (opts.meta) {
+          bannerMeta.hidden = false;
+          bannerMeta.textContent = opts.meta;
+        } else {
+          bannerMeta.hidden = true;
+          bannerMeta.textContent = "";
+        }
       }
-      el.textContent = msg;
+      if (bannerActions) {
+        bannerActions.hidden = !opts.share;
+      }
+      if (shareWinBtn) {
+        shareWinBtn.disabled = false;
+        shareWinBtn.textContent = "Share image";
+      }
+      el.hidden = false;
       el.classList.add("visible");
     }
 
     function hideBanner() {
-      const el = document.getElementById("sphere-banner");
-      if (el) el.classList.remove("visible");
+      const el = bannerEl || document.getElementById("sphere-banner");
+      if (!el) return;
+      el.classList.remove("visible");
+      if (bannerActions) bannerActions.hidden = true;
+      setTimeout(() => {
+        if (!el.classList.contains("visible")) el.hidden = true;
+      }, 200);
+    }
+
+    /**
+     * Square share card: current sphere view + time + mine count.
+     * Web Share with file when available; otherwise download PNG.
+     */
+    function buildShareCard() {
+      const side = 1080;
+      const out = document.createElement("canvas");
+      out.width = side;
+      out.height = side;
+      const octx = out.getContext("2d");
+      const T = state.theme;
+      const dark = T.id === "dark" || T.pureCovered;
+      const bg = T.bg || (dark ? "#000000" : "#ffffff");
+      const ink = dark ? "#ffffff" : "#000000";
+      const muted = dark ? "#999999" : "#666666";
+
+      octx.fillStyle = bg;
+      octx.fillRect(0, 0, side, side);
+
+      // Snapshot live board (device pixels) into the card with margin.
+      const margin = 72;
+      const box = side - margin * 2;
+      const sw = canvas.width;
+      const sh = canvas.height;
+      if (sw > 0 && sh > 0) {
+        const scale = Math.min(box / sw, box / sh);
+        const dw = sw * scale;
+        const dh = sh * scale;
+        const dx = (side - dw) / 2;
+        const dy = (side - dh) / 2 - 28;
+        octx.drawImage(canvas, 0, 0, sw, sh, dx, dy, dw, dh);
+      }
+
+      octx.textAlign = "center";
+      octx.textBaseline = "middle";
+      octx.fillStyle = ink;
+      octx.font = '700 42px "IBM Plex Sans", system-ui, sans-serif';
+      octx.fillText("Hex Sphere", side / 2, side - 118);
+
+      octx.fillStyle = muted;
+      octx.font = '500 28px "IBM Plex Sans", system-ui, sans-serif';
+      const line = `${formatTime(state.timeElapsed)}  ·  ${state.mineCount} mines  ·  ${SIZE_LABEL[state.difficulty] || "M"}`;
+      octx.fillText(line, side / 2, side - 72);
+
+      octx.font = '400 22px "IBM Plex Sans", system-ui, sans-serif';
+      octx.fillStyle = colorMix(muted, bg, 0.15);
+      octx.fillText("lukesteuber.com/games/hexsweeper/sphere/", side / 2, side - 36);
+
+      return out;
+    }
+
+    function shareCardBlob(canvasEl) {
+      return new Promise((resolve, reject) => {
+        canvasEl.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("toBlob failed"))),
+          "image/png"
+        );
+      });
+    }
+
+    async function shareWinImage() {
+      if (shareBusy || !state.won) return;
+      shareBusy = true;
+      if (shareWinBtn) {
+        shareWinBtn.disabled = true;
+        shareWinBtn.textContent = "Making…";
+      }
+      try {
+        // Fresh paint so the card matches the current view.
+        draw();
+        const card = buildShareCard();
+        const blob = await shareCardBlob(card);
+        const file = new File([blob], "hex-sphere-clear.png", {
+          type: "image/png",
+        });
+        const text = `Cleared Hex Sphere in ${formatTime(state.timeElapsed)} · ${state.mineCount} mines`;
+        const url = "https://lukesteuber.com/games/hexsweeper/sphere/";
+        let canFileShare = false;
+        try {
+          canFileShare =
+            typeof navigator !== "undefined" &&
+            typeof navigator.share === "function" &&
+            (!navigator.canShare || navigator.canShare({ files: [file] }));
+        } catch (_) {
+          canFileShare = false;
+        }
+        if (canFileShare) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "Hex Sphere",
+              text: `${text}\n${url}`,
+            });
+          } catch (err) {
+            if (err && err.name === "AbortError") return;
+            downloadBlob(blob, file.name);
+          }
+        } else {
+          downloadBlob(blob, file.name);
+        }
+      } catch (_) {
+        if (shareWinBtn) shareWinBtn.textContent = "Share failed";
+        setTimeout(() => {
+          if (shareWinBtn) shareWinBtn.textContent = "Share image";
+        }, 1600);
+      } finally {
+        shareBusy = false;
+        if (shareWinBtn) {
+          shareWinBtn.disabled = false;
+          if (shareWinBtn.textContent === "Making…") {
+            shareWinBtn.textContent = "Share image";
+          }
+        }
+      }
+    }
+
+    function downloadBlob(blob, name) {
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = name || "hex-sphere.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 2000);
     }
 
     function colorMix(hex, hex2, t) {
@@ -1532,6 +1699,20 @@
 
     if (restartBtn) {
       restartBtn.addEventListener("click", hudClick(() => {
+        hideBanner();
+        resetGame();
+        scheduleFrame();
+      }));
+    }
+    if (shareWinBtn) {
+      shareWinBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        shareWinImage();
+      });
+    }
+    if (bannerAgainBtn) {
+      bannerAgainBtn.addEventListener("click", hudClick(() => {
         hideBanner();
         resetGame();
         scheduleFrame();

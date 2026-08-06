@@ -65,34 +65,38 @@ body.help-open { overflow: hidden; }
   cursor: grab;
 }
 #gameCanvas:active { cursor: grabbing; }
-.sphere-stats {
-  position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
-  z-index: 35;
-  display: flex;
-  gap: 14px;
-  pointer-events: none;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--nav-bg) 52%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+/* Run stats live only in the help sheet — keep the board chrome clean. */
+.help-run-stats {
+  margin: 0 0 0.85rem;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-sub) 88%, transparent);
 }
-.sphere-stats .stat-item { opacity: 1; min-width: 36px; font-size: 15px; }
+.help-run-stats .stat-item {
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--text-main) 55%, var(--text-sub));
+}
 .sphere-banner {
   position: fixed;
   left: 50%;
   bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
   transform: translateX(-50%) translateY(12px);
   z-index: 45;
-  padding: 12px 20px;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 14px 18px;
+  border-radius: 16px;
   background: color-mix(in srgb, var(--nav-bg) 92%, transparent);
   border: 1px solid color-mix(in srgb, var(--text-main) 20%, transparent);
   color: var(--text-main);
   font-size: 14px;
+  text-align: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
@@ -101,6 +105,43 @@ body.help-open { overflow: hidden; }
   opacity: 1;
   transform: translateX(-50%) translateY(0);
   pointer-events: auto;
+}
+.sphere-banner .banner-msg {
+  line-height: 1.35;
+}
+.sphere-banner .banner-meta {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+.sphere-banner .banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.sphere-banner .banner-btn {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--text-main) 22%, transparent);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  color: var(--text-main);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: 600 0.8rem/1 "IBM Plex Sans", system-ui, sans-serif;
+  cursor: pointer;
+}
+.sphere-banner .banner-btn.primary {
+  background: var(--text-main);
+  color: var(--bg-color);
+  border-color: transparent;
+}
+.sphere-banner .banner-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent);
+  outline-offset: 2px;
+}
+.sphere-banner .banner-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 .hud-cluster {
   position: fixed;
@@ -257,13 +298,17 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
 </style>
 </head>
 <body data-sphere-theme="light">
-<div class="sphere-stats" aria-label="Score">
-  <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
-  <div id="stats-time" class="stat-item visible" data-label="time" title="Elapsed seconds">000</div>
-</div>
-
 <div class="canvas-container">
   <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
+</div>
+
+<div id="sphere-banner" class="sphere-banner" role="status" hidden>
+  <div class="banner-msg" id="banner-msg"></div>
+  <div class="banner-meta" id="banner-meta" hidden></div>
+  <div class="banner-actions" id="banner-actions" hidden>
+    <button type="button" class="banner-btn primary" id="share-win-btn">Share image</button>
+    <button type="button" class="banner-btn" id="banner-again-btn">Play again</button>
+  </div>
 </div>
 
 <div class="hud-cluster" role="toolbar" aria-label="Game controls">
@@ -308,6 +353,11 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <h2 id="help-title">Hex Sphere</h2>
     <p class="help-tagline">Minesweeper on a closed sphere · six neighbors · first dig safe</p>
+    <p class="help-run-stats" aria-label="Current run">
+      <span class="stat-item" id="stats-mines" title="Mines remaining">00</span> left
+      <span aria-hidden="true"> · </span>
+      <span class="stat-item" id="stats-time" title="Elapsed seconds">000</span>s
+    </p>
     <div class="help-glyphs" aria-label="Controls">
       <div class="help-glyph">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -344,8 +394,8 @@ body[data-sphere-theme="light"] #flag-toggle.active { color: #ff0000; }
   </div>
 </div>
 
-<script src="hexasphere.js?v=20260806g"></script>
-<script src="sphere.js?v=20260806g"></script>
+<script src="hexasphere.js?v=20260806h"></script>
+<script src="sphere.js?v=20260806h"></script>
 <script>
 SphereSweeper.boot({ canvasId: "gameCanvas" });
 </script>
