@@ -5,7 +5,8 @@
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
  * Hover: radial lift along face normal + skirt walls (no white-overpaint border wipe).
- * Labels: screen-space upright (2D) at face center — readable to the viewer.
+ * Cleared: inverse of hover — slight inward inset along normal + skirt.
+ * Counts: numerals (default) or nested hex rings (Nest btn / N).
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
  * Idle: very subtle ambient yaw until first canvas interaction (off under reduced motion).
@@ -36,6 +37,10 @@
   const BLAST_KICK = 9.4;
   const MAX_SHARDS = 420;
   const END_PARTICLE_CAP = 180;
+  /** Lose FX: mine cascade stagger (restored — used by startLoseFx / tickEndFx). */
+  const END_MINE_STEP_MS = 42;
+  const END_MINE_CAP_MS = 1200;
+  const END_SHAKE_DECAY = 0.88;
   /** Idle yaw before first interact — ~1.4°/s, one turn ≈ 4.3 min. */
   const AMBIENT_SPIN_RAD_PER_MS = 0.000024;
 
@@ -138,6 +143,7 @@
   const SIZE_FACES = { easy: 362, medium: 1002, hard: 1442 };
   const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v3";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v1";
+  const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const ZOOM_MIN = 0.55;
   const ZOOM_MAX = 2.25;
@@ -148,6 +154,8 @@
   /** Hover / press radial lift in sphere-radius units (~1). Cut 60% from first pass. */
   const HOVER_LIFT = 0.022;
   const PRESS_LIFT = 0.011;
+  /** Cleared faces recess inward (inverse of hover lift). */
+  const REVEAL_INSET = -0.018;
   /** Static letter marks — globes looked decorative and hid S/M/L meaning. */
   const SIZE_ICONS = {
     easy: '<span class="size-mark" data-size="S" aria-hidden="true">S</span>',
@@ -174,6 +182,14 @@
         if (id && THEMES.some((t) => t.id === id)) return id;
       } catch (_) {}
       return DEFAULT_THEME.id;
+    }
+
+    function readStoredNest() {
+      try {
+        return localStorage.getItem(NEST_STORAGE_KEY) === "1";
+      } catch (_) {
+        return false;
+      }
     }
 
     function readStoredSize() {
@@ -232,6 +248,7 @@
           matchMedia("(prefers-reduced-motion: reduce)").matches
         ),
       lastFrameAt: 0,
+      nestCounts: readStoredNest(),
     };
 
     const END_FX = {
@@ -309,6 +326,7 @@
     const flagToggle = document.getElementById("flag-toggle");
     const sizeBtn = document.getElementById("size-btn");
     const themeBtn = document.getElementById("theme-btn");
+    const nestBtn = document.getElementById("nest-btn");
     const helpOverlay = document.getElementById("help-overlay");
     const helpPanel = document.getElementById("help-panel");
     const helpBtn = document.getElementById("help-btn");
@@ -1317,6 +1335,85 @@
       ctx.stroke();
     }
 
+    /** Shrink boundary toward center (inset 0 = full, 1 = point). */
+    function insetProjected(proj, inset) {
+      const t = Math.max(0.08, 1 - inset);
+      if (t > 0.998) return proj;
+      const cx = proj.center.x;
+      const cy = proj.center.y;
+      return {
+        ...proj,
+        boundary: proj.boundary.map((p) => ({
+          x: cx + (p.x - cx) * t,
+          y: cy + (p.y - cy) * t,
+        })),
+        area: proj.area * t * t,
+      };
+    }
+
+    /**
+     * Nested hex/pent rings for neighbor count — denser rings = more danger.
+     * Same topology as the tile (5 or 6 sides).
+     */
+    function drawNestedCount(proj, count, color) {
+      const n = Math.max(0, Math.min(6, count | 0));
+      if (n < 1 || !proj.boundary || proj.boundary.length < 3) return;
+      const outer = Math.sqrt(proj.area);
+      for (let k = 1; k <= n; k++) {
+        // Even spacing into ~72% of the face; outer ring near the rim.
+        const inset = (k / (n + 0.85)) * 0.7;
+        const ring = insetProjected(proj, inset);
+        const lw = Math.max(1.1, Math.min(2.4, outer * (0.055 - k * 0.004)));
+        drawHexRing(ring, color, lw);
+      }
+    }
+
+    function syncNestChrome() {
+      if (!nestBtn) return;
+      const on = !!state.nestCounts;
+      nestBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      nestBtn.classList.toggle("active", on);
+      nestBtn.title = on
+        ? "Count style — nested rings (N)"
+        : "Count style — numerals (N)";
+      nestBtn.setAttribute(
+        "aria-label",
+        on ? "Count style: nested rings" : "Count style: numerals"
+      );
+    }
+
+    function setNestCounts(on) {
+      state.nestCounts = !!on;
+      try {
+        localStorage.setItem(NEST_STORAGE_KEY, state.nestCounts ? "1" : "0");
+      } catch (_) {}
+      syncNestChrome();
+      scheduleFrame();
+    }
+
+    function toggleNestCounts() {
+      setNestCounts(!state.nestCounts);
+    }
+
+    function paintCountMark(tile, proj, cell, colors, lift) {
+      if (!colors.showLabel || !colors.label) return;
+      const isDigit =
+        cell.revealed &&
+        !cell.isMine &&
+        !cell.flagged &&
+        cell.neighborMines > 0;
+      if (state.nestCounts && isDigit) {
+        drawNestedCount(proj, cell.neighborMines, colors.labelColor);
+        return;
+      }
+      drawLabelUpright(tile, colors.label, colors.labelColor, {
+        stroke: colors.labelStroke,
+        weight: cell.flagged ? "600" : "700",
+        lift: lift || 0,
+        area: proj.area,
+      });
+    }
+
     /** Skirt walls between base and raised face (true radial extrusion cue). */
     function drawExtrusionSkirt(baseBoundary, raisedBoundary, darkMono) {
       if (!baseBoundary || !raisedBoundary) return;
@@ -1591,7 +1688,34 @@
         const cell = state.cells[idx];
         const tile = state.tiles[idx];
         const colors = tileColors(idx, proj, cell, tile, now);
+        const visualReady =
+          state.reduceMotion ||
+          now >= cell.visualDue ||
+          cell.animReveal >= 0.98;
+        // Cleared faces recess inward (inverse of hover); covered/flags stay flush.
+        const shouldInset =
+          cell.revealed &&
+          visualReady &&
+          !cell.flagged &&
+          proj.z > 0.02;
         let drawProj = proj;
+        let markLift = 0;
+        if (shouldInset) {
+          const inset = projectTile(
+            tile,
+            state.rotY,
+            state.rotX,
+            REVEAL_INSET
+          );
+          const baseBoundary =
+            inset.baseBoundary ||
+            tile.boundary.map((b) =>
+              projectPoint(b, state.rotY, state.rotX)
+            );
+          drawExtrusionSkirt(baseBoundary, inset.boundary, darkMono);
+          drawProj = inset;
+          markLift = REVEAL_INSET;
+        }
         const pop =
           cell.revealed &&
           now >= cell.visualDue &&
@@ -1600,18 +1724,11 @@
             ? 0.86 + cell.animReveal * 0.14
             : 1;
         if (pop < 1 || (cell.endPop && cell.endPop > 1.001)) {
-          drawProj = popProjected(proj, pop, cell.endPop);
+          drawProj = popProjected(drawProj, pop, cell.endPop);
         }
 
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
-
-        if (colors.showLabel && colors.label) {
-          drawLabelUpright(tile, colors.label, colors.labelColor, {
-            stroke: colors.labelStroke,
-            weight: cell.flagged ? "600" : "700",
-            area: drawProj.area,
-          });
-        }
+        paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
       if (highlightIdx >= 0) {
@@ -1649,14 +1766,7 @@
             colors.stroke,
             Math.max(colors.lineWidth || 1.5, 1.8)
           );
-          if (colors.showLabel && colors.label) {
-            drawLabelUpright(tile, colors.label, colors.labelColor, {
-              stroke: colors.labelStroke,
-              weight: cell.flagged ? "600" : "700",
-              lift,
-              area: raised.area,
-            });
-          }
+          paintCountMark(tile, raised, cell, colors, lift);
         }
       }
 
@@ -1857,6 +1967,7 @@
     }
     if (sizeBtn) sizeBtn.addEventListener("click", hudClick(cycleSize));
     if (themeBtn) themeBtn.addEventListener("click", hudClick(cycleTheme));
+    if (nestBtn) nestBtn.addEventListener("click", hudClick(toggleNestCounts));
     if (helpBtn) helpBtn.addEventListener("click", hudClick(() => openHelp(false)));
     if (helpCloseBtn) helpCloseBtn.addEventListener("click", hudClick(closeHelp));
     if (helpDoneBtn) helpDoneBtn.addEventListener("click", hudClick(closeHelp));
@@ -1882,6 +1993,12 @@
           flagToggle.classList.toggle("active", state.flagMode);
         }
       }
+      if (e.key === "n" || e.key === "N") {
+        if (!e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          toggleNestCounts();
+        }
+      }
       if (e.key === "r" || e.key === "R") {
         hideBanner();
         resetGame();
@@ -1902,6 +2019,7 @@
 
     syncChromeTheme();
     syncSizeChrome();
+    syncNestChrome();
     if (opts.theme) state.theme = Object.assign({}, state.theme, opts.theme);
 
     try {
