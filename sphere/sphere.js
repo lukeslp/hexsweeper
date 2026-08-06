@@ -3,17 +3,24 @@
  * Primary Functions/Classes: SphereSweeper.boot, project, pick, render loop.
  * Inputs: canvas, difficulty, theme. Outputs: playable sphere minesweeper (experimental).
  * Notes: Canvas 2D orthographic projection; drag rotates; first dig safe; RM-safe camera lerp.
+ * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
   "use strict";
 
-  /** S=42 · M=162 · L=362 faces; mines ≈17–19% of tile count. */
+  /** S=362 · M=1002 · L=1442 faces (~3× prior); mines ≈17%. Goldberg dual: 10n²+2. */
   const CONFIG = {
-    easy: { subdivisions: 2, minePct: 0.19 },
-    medium: { subdivisions: 4, minePct: 0.17 },
-    hard: { subdivisions: 6, minePct: 0.17 },
+    easy: { subdivisions: 6, minePct: 0.17 },
+    medium: { subdivisions: 10, minePct: 0.17 },
+    hard: { subdivisions: 12, minePct: 0.17 },
   };
+
+  const REVEAL_STEP_MS = 28;
+  const REVEAL_CAP_MS = 880;
+  const REVEAL_LERP = 0.18;
+  const REVEAL_FLASH_MS = 240;
+  const IDLE_FRAME_MS = 200;
 
   const DEFAULT_THEME = {
     bg: "#060a12",
@@ -48,6 +55,8 @@
     },
     label: "#94a3b8",
     labelStroke: "#0c1018",
+    revealFlash: "#8cb4e8",
+    revealGlow: "#c8daf4",
   };
 
   function boot(opts) {
@@ -89,6 +98,7 @@
       centerY: 0,
       projectedCache: null,
       rotCacheKey: "",
+      rafScheduled: false,
     };
 
     const modal = document.getElementById("modal-overlay");
@@ -296,6 +306,9 @@
         revealed: false,
         flagged: false,
         neighborMines: 0,
+        animReveal: 0,
+        visualDue: 0,
+        pulseAt: 0,
       }));
       state.isFirstClick = true;
       state.isGameOver = false;
@@ -309,21 +322,36 @@
       updateUI();
     }
 
-    /** Immediate flood for zeros — returns set of opened indices (excl. start). */
+    function scheduleRevealVisual(idx, dist) {
+      const cell = state.cells[idx];
+      const now = performance.now();
+      const delay = state.reduceMotion
+        ? 0
+        : Math.min(dist * REVEAL_STEP_MS, REVEAL_CAP_MS);
+      cell.visualDue = now + delay;
+      cell.pulseAt = cell.visualDue;
+      cell.animReveal = state.reduceMotion ? 1 : 0;
+    }
+
+    /**
+     * Flood zeros with logic immediate (revealed=true) and paint staggered by
+     * graph distance — mirrors flat core.js BFS wave, capped ~880ms.
+     */
     function floodFrom(startIdx) {
       const opened = new Set();
       const queue = [{ idx: startIdx, dist: 0 }];
       const visited = new Set([startIdx]);
       while (queue.length) {
-        const { idx } = queue.shift();
+        const { idx, dist } = queue.shift();
         for (const n of state.tiles[idx].neighborIndices) {
           if (visited.has(n)) continue;
           visited.add(n);
           const c = state.cells[n];
           if (c.revealed || c.flagged || c.isMine) continue;
           c.revealed = true;
+          scheduleRevealVisual(n, dist + 1);
           opened.add(n);
-          if (c.neighborMines === 0) queue.push({ idx: n, dist: 0 });
+          if (c.neighborMines === 0) queue.push({ idx: n, dist: dist + 1 });
         }
       }
       return opened;
@@ -338,12 +366,43 @@
         startTimer();
       }
       cell.revealed = true;
+      scheduleRevealVisual(idx, 0);
       if (cell.isMine) {
+        cell.animReveal = 1;
         gameOver(false);
         return;
       }
       if (cell.neighborMines === 0) floodFrom(idx);
       checkWin();
+    }
+
+    function tickRevealAnim(now) {
+      let busy = false;
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        if (!c.revealed) continue;
+        if (now < c.visualDue) {
+          busy = true;
+          continue;
+        }
+        if (c.animReveal < 0.995) {
+          c.animReveal += (1 - c.animReveal) * REVEAL_LERP;
+          busy = true;
+        } else {
+          c.animReveal = 1;
+        }
+      }
+      return busy;
+    }
+
+    function revealAnimBusy(now) {
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        if (!c.revealed) continue;
+        if (now < c.visualDue || c.animReveal < 0.995) return true;
+        if (now - c.pulseAt < REVEAL_FLASH_MS) return true;
+      }
+      return false;
     }
 
     function toggleFlag(idx) {
@@ -372,7 +431,12 @@
       stopTimer();
       if (!won) {
         for (let i = 0; i < state.cells.length; i++) {
-          if (state.cells[i].isMine) state.cells[i].revealed = true;
+          const c = state.cells[i];
+          if (c.isMine) {
+            c.revealed = true;
+            c.animReveal = 1;
+            c.visualDue = 0;
+          }
         }
       }
       showBanner(won ? "Cleared the sphere!" : "Mine detonated.");
@@ -461,7 +525,22 @@
       ctx.fillText(text, proj.center.x, proj.center.y);
     }
 
-    function tileColors(idx, proj, cell, tile) {
+    function coveredStyle(proj, tile, isFront) {
+      const T = state.theme;
+      const lit = shadeByNormal;
+      let fill = tile.isPentagon ? T.pentagon : T.covered;
+      let stroke = tile.isPentagon ? T.pentagonEdge : T.coveredEdge;
+      fill = lit(fill, proj.normalZ, isFront ? 0.38 : 0.22);
+      if (isFront) fill = colorMix(fill, T.coveredHi, 0.15);
+      return {
+        fill,
+        stroke,
+        lineWidth: tile.isPentagon ? 1.6 : 1.4,
+        showLabel: false,
+      };
+    }
+
+    function tileColors(idx, proj, cell, tile, now) {
       const T = state.theme;
       const lit = shadeByNormal;
       const isBack = proj.z <= 0.02;
@@ -476,7 +555,14 @@
         };
       }
 
-      if (cell.revealed) {
+      const visualReady =
+        state.reduceMotion || now >= cell.visualDue || cell.animReveal >= 0.98;
+
+      if (cell.revealed && !visualReady) {
+        return coveredStyle(proj, tile, isFront);
+      }
+
+      if (cell.revealed && visualReady) {
         if (cell.isMine) {
           return {
             fill: lit(T.mine, proj.normalZ, 0.25),
@@ -489,8 +575,19 @@
           };
         }
         const empty = cell.neighborMines === 0;
+        let fill = lit(empty ? T.revealedEmpty : T.revealed, proj.normalZ, 0.28);
+        const pulseAge = now - cell.pulseAt;
+        if (
+          !state.reduceMotion &&
+          pulseAge >= 0 &&
+          pulseAge < REVEAL_FLASH_MS
+        ) {
+          const flash = 1 - pulseAge / REVEAL_FLASH_MS;
+          fill = colorMix(fill, T.revealFlash, flash * 0.5);
+          fill = colorMix(fill, T.revealGlow, flash * 0.22);
+        }
         return {
-          fill: lit(empty ? T.revealedEmpty : T.revealed, proj.normalZ, 0.28),
+          fill,
           stroke: T.revealedEdge,
           lineWidth: 1.2,
           showLabel: cell.neighborMines > 0,
@@ -512,16 +609,20 @@
         };
       }
 
-      let fill = tile.isPentagon ? T.pentagon : T.covered;
-      let stroke = tile.isPentagon ? T.pentagonEdge : T.coveredEdge;
-      fill = lit(fill, proj.normalZ, isFront ? 0.38 : 0.22);
-      if (isFront) fill = colorMix(fill, T.coveredHi, 0.15);
+      return coveredStyle(proj, tile, isFront);
+    }
 
+    function popProjected(proj, pop) {
+      if (pop >= 0.999) return proj;
+      const cx = proj.center.x;
+      const cy = proj.center.y;
       return {
-        fill,
-        stroke,
-        lineWidth: tile.isPentagon ? 1.6 : 1.4,
-        showLabel: false,
+        ...proj,
+        boundary: proj.boundary.map((p) => ({
+          x: cx + (p.x - cx) * pop,
+          y: cy + (p.y - cy) * pop,
+        })),
+        area: proj.area * pop * pop,
       };
     }
 
@@ -552,17 +653,28 @@
       }
 
       const projected = getProjected();
+      const now = performance.now();
 
       for (const proj of projected) {
         const idx = proj.index;
         const cell = state.cells[idx];
         const tile = state.tiles[idx];
-        const colors = tileColors(idx, proj, cell, tile);
+        const colors = tileColors(idx, proj, cell, tile, now);
+        let drawProj = proj;
+        if (
+          cell.revealed &&
+          now >= cell.visualDue &&
+          cell.animReveal < 1 &&
+          !state.reduceMotion
+        ) {
+          const pop = 0.86 + cell.animReveal * 0.14;
+          drawProj = popProjected(proj, pop);
+        }
 
-        drawHex(proj, colors.fill, colors.stroke, colors.lineWidth);
+        drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
 
         if (colors.showLabel && colors.label) {
-          drawLabel(proj, colors.label, colors.labelColor, {
+          drawLabel(drawProj, colors.label, colors.labelColor, {
             stroke: colors.labelStroke,
             weight: cell.flagged ? "600" : "700",
           });
@@ -590,9 +702,32 @@
       }
     }
 
-    function loop() {
+    function frameNeedsPaint(now) {
+      if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
+      if (revealAnimBusy(now)) return true;
+      if (state.isGameOver) return true;
+      if (state.reduceMotion) return false;
+      return (
+        Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
+        Math.abs(state.targetRotX - state.rotX) > 0.0008
+      );
+    }
+
+    function scheduleFrame(delay) {
+      if (state.rafScheduled) return;
+      state.rafScheduled = true;
+      const wait = delay != null ? delay : 0;
+      if (wait > 0) setTimeout(() => requestAnimationFrame(loop), wait);
+      else requestAnimationFrame(loop);
+    }
+
+    function loop(ts) {
+      state.rafScheduled = false;
+      const now = ts || performance.now();
+      tickRevealAnim(now);
       draw();
-      requestAnimationFrame(loop);
+      if (frameNeedsPaint(now)) scheduleFrame();
+      else scheduleFrame(IDLE_FRAME_MS);
     }
 
     function canvasPoint(e) {
@@ -722,7 +857,7 @@
     window.addEventListener("resize", resize);
     resize();
     resetGame();
-    loop();
+    scheduleFrame();
 
     return {
       reset: resetGame,

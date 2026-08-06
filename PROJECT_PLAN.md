@@ -17,8 +17,8 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] **No dig auto-pan** — `core.js` no longer calls `focusOnCell` on dig/chord; Escape intro zoom on Reset unchanged
 - [x] **Choices lab exports** — `tools/export-choices-lab.py` → self-contained `choices/lab/*.html` with Copy for CodePen (no cross-links)
 - [x] **Choices hub** — `choices.html` + `choices/lab/*` one-pagers (curated; not in production theme switcher)
-- [x] Sphere MVP — larger boards (S/M/L = 42/162/362 faces), distinctive tile states, backface cull
-- [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 2, 4, 6)
+- [x] Sphere MVP — ~3× boards (S/M/L = 362/1002/1442 faces), flood expand FX, backface cull, idle RAF throttle
+- [x] Sphere smoke — `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12)
 
 ## Current status (2026-08-04)
 
