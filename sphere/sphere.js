@@ -5,7 +5,8 @@
  * Chrome: Reset·Size·Theme | Flag | Help pills; themes Dark/Light (pure mono).
  * Zoom: wheel + pinch adjust projection scale (clamped); starts pulled back (~0.72×).
  * Hover: lift only activatable covered faces (+ pinned flags); cleared stay put.
- * Cleared: valley recess (numerals/rings/borderless) — perimeter skirts only, no honeycomb walls.
+ * Cleared: valley recess — rim skirts + inset shared-edge grooves (no tall honeycomb walls).
+ * Light shell: colorMix accepts rgb() (fixes NaN→charcoal covered fill / lost borders).
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
@@ -65,7 +66,10 @@
     coveredShadow: "#cccccc",
     revealed: "#000000",
     revealedEmpty: "#000000",
-    revealedEdge: "#000000",
+    /** Mid grey so valley-floor seams read on black wells. */
+    revealedEdge: "#6a6a6a",
+    valleyGroove: "#8a8a8a",
+    valleyGrooveDeep: "#3a3a3a",
     flagFill: "#ff0000",
     flagIcon: "#ffffff",
     flagEdge: "#ff0000",
@@ -78,7 +82,7 @@
     hoverRing: "#000000",
     activeRing: "#222222",
     backface: "#f0f0f0",
-    backfaceEdge: "#d0d0d0",
+    backfaceEdge: "#b0b0b0",
     text: {
       1: "#ffffff",
       2: "#eeeeee",
@@ -112,7 +116,9 @@
     coveredShadow: "#000000",
     revealed: "#111111",
     revealedEmpty: "#000000",
-    revealedEdge: "#555555",
+    revealedEdge: "#666666",
+    valleyGroove: "#777777",
+    valleyGrooveDeep: "#222222",
     flagFill: "#ff0000",
     flagIcon: "#ffffff",
     flagEdge: "#ff0000",
@@ -1578,16 +1584,35 @@
       setTimeout(() => URL.revokeObjectURL(href), 2000);
     }
 
-    function colorMix(hex, hex2, t) {
-      function parse(h) {
-        const n = parseInt(h.slice(1), 16);
+    function parseCssColor(c) {
+      if (typeof c !== "string") return [0, 0, 0];
+      const s = c.trim();
+      if (s.charAt(0) === "#") {
+        let h = s.slice(1);
+        if (h.length === 3) {
+          h = h
+            .split("")
+            .map((ch) => ch + ch)
+            .join("");
+        }
+        const n = parseInt(h, 16);
+        if (!Number.isFinite(n)) return [0, 0, 0];
         return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
       }
-      const a = parse(hex);
-      const b = parse(hex2);
-      const r = Math.round(a[0] + (b[0] - a[0]) * t);
-      const g = Math.round(a[1] + (b[1] - a[1]) * t);
-      const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+      const m = s.match(
+        /^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)/i
+      );
+      if (m) return [m[1] | 0, m[2] | 0, m[3] | 0];
+      return [0, 0, 0];
+    }
+
+    function colorMix(c1, c2, t) {
+      const a = parseCssColor(c1);
+      const b = parseCssColor(c2);
+      const u = Math.max(0, Math.min(1, t));
+      const r = Math.round(a[0] + (b[0] - a[0]) * u);
+      const g = Math.round(a[1] + (b[1] - a[1]) * u);
+      const bl = Math.round(a[2] + (b[2] - a[2]) * u);
       return `rgb(${r},${g},${bl})`;
     }
 
@@ -1927,7 +1952,7 @@
         return {
           fill: T.covered || "#ffffff",
           stroke: T.coveredEdge,
-          lineWidth: tile.isPentagon ? 1.8 : 1.5,
+          lineWidth: tile.isPentagon ? 2 : 1.75,
           showLabel: false,
         };
       }
@@ -1938,9 +1963,58 @@
       return {
         fill,
         stroke,
-        lineWidth: tile.isPentagon ? 1.6 : 1.4,
+        // Light shell: keep a crisp black honeycomb (was washing out when thin).
+        lineWidth: tile.isPentagon ? 2 : 1.75,
         showLabel: false,
       };
+    }
+
+    /**
+     * Valley floor seams: one groove per shared cleared-cleared edge, at inset depth.
+     * Outer rim stays as extrusion skirts (not drawn here).
+     */
+    function drawValleyGrooves(valleyInset) {
+      const T = state.theme;
+      const deep = T.valleyGrooveDeep || T.revealedEdge || "#333333";
+      const lip = T.valleyGroove || "#888888";
+      const seen = new Set();
+      const pointKey = (p) =>
+        `${p.x.toFixed(5)},${p.y.toFixed(5)},${p.z.toFixed(5)}`;
+
+      for (let ti = 0; ti < state.tiles.length; ti++) {
+        if (!valleyInset[ti]) continue;
+        const tile = state.tiles[ti];
+        const edgeN = tile.edgeNeighbors || [];
+        const b = tile.boundary;
+        const inset = projectTile(tile, state.rotY, state.rotX, REVEAL_INSET);
+        if (!inset.boundary || inset.z <= 0.02) continue;
+
+        for (let ei = 0; ei < b.length; ei++) {
+          const ni = edgeN[ei];
+          if (!(ni >= 0 && valleyInset[ni])) continue;
+          const ej = (ei + 1) % b.length;
+          const key = [pointKey(b[ei]), pointKey(b[ej])].sort().join("|");
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          const p0 = inset.boundary[ei];
+          const p1 = inset.boundary[ej];
+          if (!p0 || !p1) continue;
+          // Skip edges fully behind the limb.
+          if (p0.z < -0.05 && p1.z < -0.05) continue;
+
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.strokeStyle = deep;
+          ctx.lineWidth = 2.4;
+          ctx.lineCap = "round";
+          ctx.stroke();
+          ctx.strokeStyle = lip;
+          ctx.lineWidth = 1.05;
+          ctx.stroke();
+        }
+      }
     }
 
     function tileColors(idx, proj, cell, tile, now) {
@@ -2102,7 +2176,7 @@
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
 
-      // Valley membership for this frame — skirts only on the outer rim.
+      // Valley membership for this frame — rim skirts + inset floor grooves.
       const valleyInset = new Uint8Array(state.cells.length);
       for (let i = 0; i < state.cells.length; i++) {
         const c = state.cells[i];
@@ -2153,7 +2227,7 @@
           );
           drawProj = inset;
           markLift = REVEAL_INSET;
-          // Seamless valley floor — no per-hex stroke grid.
+          // Floor fill only — internal seams drawn once in groove pass.
           colors = {
             ...colors,
             stroke: colors.fill,
@@ -2172,7 +2246,28 @@
         }
 
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
-        paintCountMark(tile, drawProj, cell, colors, markLift);
+        // Defer valley numerals until after the groove pass so seams stay under ink.
+        if (!shouldInset) {
+          paintCountMark(tile, drawProj, cell, colors, markLift);
+        } else {
+          cell._valleyMark = { tile, drawProj, colors, markLift };
+        }
+      }
+
+      // Inset floor grid: shared cleared–cleared edges only (valley, not honeycomb walls).
+      drawValleyGrooves(valleyInset);
+
+      for (let i = 0; i < state.cells.length; i++) {
+        const mark = state.cells[i]._valleyMark;
+        if (!mark) continue;
+        paintCountMark(
+          mark.tile,
+          mark.drawProj,
+          state.cells[i],
+          mark.colors,
+          mark.markLift
+        );
+        state.cells[i]._valleyMark = null;
       }
 
       // Raised pass: pinned flags (always) + hover/press on covered only.

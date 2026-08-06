@@ -25,6 +25,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] Sphere on collection desk — Experiments tile (Open → `../sphere/`; no Copy HTML)
 - [x] Sphere autosave — `hexsweeper-sphere-run-v1` resume on refresh; confirm before Reset / size change
 - [x] Sphere flags — pure red fill only (no tile glyph)
+- [x] Sphere valley grooves — inset shared-edge seams; Light colorMix rgb() border fix
 - [x] OG social cards — production themes, ten lab skins (`skin-*-og.png`), and `sphere-og.png`; wired on collection pens + `sphere/index.html`
 
 ## Current status (2026-08-04)
