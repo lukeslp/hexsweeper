@@ -1,0 +1,177 @@
+/*
+ * File Purpose: Dev chrome for the sphere — one Customize panel replaces the
+ *   size / theme / count-style icon cycles.
+ * Inputs: skin-chrome.css tokens (--nav-bg, --text-main). Outputs: panel + steppers.
+ * Author: Luke Steuber <luke@lukesteuber.com>
+ */
+
+/* Shipped controls stay in the DOM for sphere.js, but out of sight and out of
+   the a11y tree. Not `display:none` — keeps layout reads cheap and predictable. */
+.legacy-hud {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  pointer-events: none;
+}
+
+.dev-cluster {
+  position: relative;
+}
+
+/* A system stack, deliberately: it renders SF Pro on Apple and Segoe UI
+   Variable on Windows, which sits quieter than the page's IBM Plex Sans and
+   suits a panel meant to recede. Plex Sans does load (fonts.css resolves),
+   so putting it first here is a one-line change if consistency wins. */
+.customize-panel {
+  --cz-font: ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    "Segoe UI Variable Text", "Segoe UI", Inter, Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --cz-ink: var(--text-main, #4a5568);
+}
+
+/* ---- panel ---- */
+/*
+ * Anchored to the cluster's right edge, not its centre. .hud-cluster is
+ * `position: fixed; right: max(12px, safe-area)`, so the old
+ * `left:50% / translateX(-50%)` centred the panel on a control sitting at the
+ * viewport edge and pushed roughly half of it — including every stepper —
+ * off-screen. Right-anchoring keeps the panel and the button it belongs to
+ * aligned, and the width clamp leaves a matching gutter on the left.
+ */
+.customize-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  left: auto;
+  transform: translateY(4px);
+  width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 140px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--nav-bg, #e0e5ec) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cz-ink) 10%, transparent);
+  box-shadow: 0 16px 40px -24px rgba(0, 0, 0, 0.45);
+  /*
+   * No backdrop-filter. Over the full-screen game canvas it did not blur — it breaks the panel's own background
+   * compositing instead, leaving the panel near-transparent with the sphere's
+   * digits reading straight through the top rows. The 6% of translucency left
+   * in the background above is doing the softening honestly.
+   */
+  pointer-events: auto;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+}
+/* `display:flex` above outranks the UA rule for [hidden] — restore it, or the
+   closed panel stays laid out and its steppers keep intercepting clicks. */
+.customize-panel[hidden] { display: none; }
+.customize-panel[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .customize-panel { transition: none; }
+}
+
+.cz-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 8px 9px 12px;
+  border-radius: 10px;
+}
+/* A hairline, and only between rows — no divider under the last one. */
+.cz-row + .cz-row {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--cz-ink) 7%, transparent);
+}
+.cz-row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--cz-ink) 45%, transparent);
+  outline-offset: -2px;
+}
+
+.cz-label {
+  font: 500 9.5px/1.3 var(--cz-font);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.42;
+  color: var(--cz-ink);
+}
+/*
+ * The stepper sits in the grid's `auto` column, so it holds its place no
+ * matter how wide the value gets — the old mono face was guarding against a
+ * reflow the layout already prevents. Tabular figures keep "1002 faces" from
+ * jittering as the count steps.
+ */
+.cz-value {
+  font: 450 14px/1.4 var(--cz-font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+  color: var(--cz-ink);
+  margin-top: 1px;
+}
+.cz-meta { opacity: 0.45; font-weight: 400; }
+
+.cz-dots {
+  display: flex;
+  gap: 3px;
+  padding: 5px 0 0 1px;
+}
+.cz-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--cz-ink);
+  opacity: 0.18;
+  transition: opacity 0.12s ease;
+}
+.cz-dot[data-on="true"] { opacity: 0.6; }
+
+/* Ghost steppers: no chrome at rest, a faint wash on interaction. */
+.cz-stepper { display: flex; gap: 1px; }
+.cz-step {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--cz-ink);
+  opacity: 0.5;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 16px/1 var(--cz-font);
+  padding: 0;
+  transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+@media (hover: hover) {
+  .cz-step:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--cz-ink) 8%, transparent);
+  }
+}
+.cz-step:active { opacity: 1; transform: scale(0.92); }
+.cz-step:focus-visible {
+  opacity: 1;
+  outline: 2px solid color-mix(in srgb, var(--cz-ink) 45%, transparent);
+  outline-offset: 1px;
+}
+
+/* Flag is the game's one semantic colour — only earned when the row is on Flag. */
+.cz-row[data-flag="true"] .cz-value { color: #e02424; }
+
+.cz-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

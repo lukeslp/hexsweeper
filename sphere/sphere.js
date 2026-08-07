@@ -787,6 +787,7 @@
     const bannerMeta = document.getElementById("banner-meta");
     const bannerActions = document.getElementById("banner-actions");
     const shareWinBtn = document.getElementById("share-win-btn");
+    const bannerUndoBtn = document.getElementById("banner-undo-btn");
     const bannerAgainBtn = document.getElementById("banner-again-btn");
     const restartBtn = document.getElementById("reset-btn") || document.getElementById("restart-btn");
     const flagToggle = document.getElementById("flag-toggle");
@@ -801,6 +802,66 @@
     const helpDoneBtn = document.getElementById("help-done-btn");
     let helpFocusReturn = null;
     let shareBusy = false;
+    /*
+     * The share File is built when the win banner appears, not when the button
+     * is tapped. iOS Safari only honours navigator.share() while the user
+     * gesture is still active, and canvas.toBlob() is async — awaiting it
+     * spent the activation, so share() rejected with NotAllowedError and the
+     * download fallback (which iOS also ignores for blob URLs) did nothing
+     * visible. Preparing ahead lets the click call share() synchronously.
+     */
+    let pendingShareFile = null;
+    /*
+     * One-level undo. Only `revealed` and `flagged` are mutable per cell, so a
+     * snapshot is two byte arrays plus a few scalars — cheap enough to take
+     * before every dig. It exists for the game-over banner: a detonation is
+     * the one move players want back.
+     */
+    let undoSnapshot = null;
+
+    function captureUndo() {
+      const n = state.cells.length;
+      const revealed = new Uint8Array(n);
+      const flagged = new Uint8Array(n);
+      for (let i = 0; i < n; i++) {
+        revealed[i] = state.cells[i].revealed ? 1 : 0;
+        flagged[i] = state.cells[i].flagged ? 1 : 0;
+      }
+      undoSnapshot = {
+        revealed,
+        flagged,
+        flagsPlaced: state.flagsPlaced,
+        isFirstClick: state.isFirstClick,
+        timeElapsed: state.timeElapsed,
+      };
+    }
+
+    function restoreUndo() {
+      if (!undoSnapshot) return false;
+      const snap = undoSnapshot;
+      undoSnapshot = null;
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        c.revealed = !!snap.revealed[i];
+        c.flagged = !!snap.flagged[i];
+        // Revealed cells keep their finished animation; undone ones reset so
+        // a re-dig animates again instead of popping in.
+        c.animReveal = c.revealed ? 1 : 0;
+        c.visualDue = 0;
+      }
+      state.flagsPlaced = snap.flagsPlaced;
+      state.isFirstClick = snap.isFirstClick;
+      state.timeElapsed = snap.timeElapsed;
+      state.isGameOver = false;
+      state.won = false;
+      state.detonatorIdx = -1;
+      hideBanner();
+      if (!state.isFirstClick) startTimer();
+      updateUI();
+      draw();
+      persistNow();
+      return true;
+    }
 
     function hudClick(fn) {
       return (e) => {
@@ -2078,6 +2139,7 @@
         state.isFirstClick = false;
         startTimer();
       }
+      captureUndo();
       cell.revealed = true;
       scheduleRevealVisual(idx, 0);
       if (cell.isMine) {
@@ -2174,12 +2236,16 @@
         }
       }
       if (bannerActions) {
-        bannerActions.hidden = !opts.share;
+        bannerActions.hidden = false;
       }
       if (shareWinBtn) {
+        shareWinBtn.hidden = false;
         shareWinBtn.disabled = false;
-        shareWinBtn.textContent = "Share image";
+        setShareState("idle");
       }
+      if (bannerUndoBtn) bannerUndoBtn.hidden = !undoSnapshot;
+      pendingShareFile = null;
+      prepareShareFile();
       el.hidden = false;
       el.classList.add("visible");
     }
@@ -2207,40 +2273,66 @@
       const T = state.theme;
       const dark = T.id === "dark" || T.pureCovered;
       const bg = T.bg || (dark ? "#000000" : "#ffffff");
-      const ink = dark ? "#ffffff" : "#000000";
-      const muted = dark ? "#999999" : "#666666";
+      /*
+       * Contrast against the colour actually painted, not the theme's notion
+       * of "dark". `dark` is true for any pureCovered theme, several of which
+       * paint a white bg — that rendered the headline white on white and made
+       * it vanish, while the grey meta lines survived and hid the problem.
+       */
+      const [br, bgc, bb] = parseCssColor(bg);
+      const bgLight = (0.2126 * br + 0.7152 * bgc + 0.0722 * bb) / 255 > 0.55;
+      const ink = bgLight ? "#000000" : "#ffffff";
+      const muted = bgLight ? "#666666" : "#999999";
 
       octx.fillStyle = bg;
       octx.fillRect(0, 0, side, side);
 
-      // Snapshot live board (device pixels) into the card with margin.
-      const margin = 72;
+      /*
+       * Crop to the sphere, not the viewport. Fitting the whole canvas into a
+       * square meant a tall phone screen contributed mostly empty space and
+       * the sphere landed tiny in the middle of the card.
+       *
+       * state.centerX/centerY/scale are CSS pixels; canvas.width/height are
+       * device pixels, so everything is converted through dpr before it can
+       * index into the bitmap. centerX is w/2, which recovers dpr without
+       * reading devicePixelRatio again — the canvas may have been sized under
+       * a different one.
+       */
+      // Leaves ~190px under the sphere for the caption block.
+      const margin = 110;
       const box = side - margin * 2;
       const sw = canvas.width;
       const sh = canvas.height;
       if (sw > 0 && sh > 0) {
-        const scale = Math.min(box / sw, box / sh);
-        const dw = sw * scale;
-        const dh = sh * scale;
-        const dx = (side - dw) / 2;
-        const dy = (side - dh) / 2 - 28;
-        octx.drawImage(canvas, 0, 0, sw, sh, dx, dy, dw, dh);
+        const dpr = state.centerX > 0 ? sw / (state.centerX * 2) : 1;
+        const half = Math.max(1, state.scale * dpr * 1.16);
+        let cropW = Math.min(sw, half * 2);
+        let cropH = Math.min(sh, half * 2);
+        const span = Math.min(cropW, cropH);
+        cropW = cropH = span;
+        let sx = state.centerX * dpr - span / 2;
+        let sy = state.centerY * dpr - span / 2;
+        sx = Math.max(0, Math.min(sw - span, sx));
+        sy = Math.max(0, Math.min(sh - span, sy));
+        octx.drawImage(canvas, sx, sy, span, span, (side - box) / 2, 26, box, box);
       }
 
       octx.textAlign = "center";
       octx.textBaseline = "middle";
       octx.fillStyle = ink;
-      octx.font = '700 42px "IBM Plex Sans", system-ui, sans-serif';
-      octx.fillText("Hex Sphere", side / 2, side - 118);
+      // Sized for a 1080 card seen as a thumbnail in a feed, where the old
+      // 42/28/22 stack was unreadable.
+      octx.font = '700 66px "IBM Plex Sans", system-ui, sans-serif';
+      octx.fillText(shareLabels().headline, side / 2, side - 142);
 
       octx.fillStyle = muted;
-      octx.font = '500 28px "IBM Plex Sans", system-ui, sans-serif';
+      octx.font = '500 44px "IBM Plex Sans", system-ui, sans-serif';
       const line = `${formatTime(state.timeElapsed)}  ·  ${state.mineCount} mines  ·  ${SIZE_LABEL[state.difficulty] || "M"}`;
-      octx.fillText(line, side / 2, side - 72);
+      octx.fillText(line, side / 2, side - 80);
 
-      octx.font = '400 22px "IBM Plex Sans", system-ui, sans-serif';
+      octx.font = '400 32px "IBM Plex Sans", system-ui, sans-serif';
       octx.fillStyle = colorMix(muted, bg, 0.15);
-      octx.fillText("lukesteuber.com/games/hexsweeper/sphere/", side / 2, side - 36);
+      octx.fillText("dr.eamer.dev/games/hexsweeper/sphere/", side / 2, side - 32);
 
       return out;
     }
@@ -2254,23 +2346,78 @@
       });
     }
 
+    /*
+     * The banner buttons are icon-only, so assigning textContent would delete
+     * the SVG inside them. Share progress therefore lives on the accessible
+     * label and a data-state attribute, which also keeps the state announced
+     * to screen readers rather than conveyed by colour alone.
+     */
+    const SHARE_LABEL = {
+      idle: "Share image",
+      busy: "Preparing image…",
+      error: "Share failed",
+    };
+    function setShareState(kind) {
+      if (!shareWinBtn) return;
+      const label = SHARE_LABEL[kind] || SHARE_LABEL.idle;
+      shareWinBtn.dataset.state = kind;
+      shareWinBtn.title = label;
+      shareWinBtn.setAttribute("aria-label", label);
+      const sr = shareWinBtn.querySelector(".sr-only");
+      if (sr) sr.textContent = label;
+    }
+
+    /** Card headline, share text and filename, all from one outcome check. */
+    function shareLabels() {
+      const time = formatTime(state.timeElapsed);
+      const mines = `${state.mineCount} mines`;
+      const size = SIZE_LABEL[state.difficulty] || "M";
+      return state.won
+        ? {
+            headline: "Hex Sphere · Cleared",
+            text: `Cleared Hex Sphere in ${time} · ${mines} · ${size}`,
+            file: "hex-sphere-cleared.png",
+          }
+        : {
+            headline: "Hex Sphere",
+            text: `Hex Sphere · ${time} · ${mines} · ${size}`,
+            file: "hex-sphere-run.png",
+          };
+    }
+
+    /** Build the share File while the banner animates in, before any tap. */
+    async function prepareShareFile() {
+      try {
+        draw();
+        const blob = await shareCardBlob(buildShareCard());
+        pendingShareFile = new File([blob], shareLabels().file, {
+          type: "image/png",
+        });
+      } catch (_) {
+        pendingShareFile = null;
+      }
+    }
+
     async function shareWinImage() {
-      if (shareBusy || !state.won) return;
+      if (shareBusy) return;
       shareBusy = true;
       if (shareWinBtn) {
         shareWinBtn.disabled = true;
-        shareWinBtn.textContent = "Making…";
+        setShareState("busy");
       }
       try {
-        // Fresh paint so the card matches the current view.
-        draw();
-        const card = buildShareCard();
-        const blob = await shareCardBlob(card);
-        const file = new File([blob], "hex-sphere-clear.png", {
-          type: "image/png",
-        });
-        const text = `Cleared Hex Sphere in ${formatTime(state.timeElapsed)} · ${state.mineCount} mines`;
-        const url = "https://lukesteuber.com/games/hexsweeper/sphere/";
+        // Prepared at banner time so no await sits between the tap and
+        // navigator.share(). Only rebuild if preparation failed.
+        let file = pendingShareFile;
+        if (!file) {
+          draw();
+          file = new File([await shareCardBlob(buildShareCard())], shareLabels().file, {
+            type: "image/png",
+          });
+        }
+        const blob = file;
+        const text = shareLabels().text;
+        const url = "https://dr.eamer.dev/games/hexsweeper/sphere/";
         let canFileShare = false;
         try {
           canFileShare =
@@ -2282,11 +2429,14 @@
         }
         if (canFileShare) {
           try {
-            await navigator.share({
-              files: [file],
-              title: "Hex Sphere",
-              text: `${text}\n${url}`,
-            });
+            /*
+             * File only, no title or text. Bluesky's share target takes one or
+             * the other: given both it posted the text and dropped the image,
+             * producing an empty post. The card already carries the time, mine
+             * count, board size and the URL, so nothing is lost by letting the
+             * image be the whole payload.
+             */
+            await navigator.share({ files: [file] });
           } catch (err) {
             if (err && err.name === "AbortError") return;
             downloadBlob(blob, file.name);
@@ -2295,17 +2445,13 @@
           downloadBlob(blob, file.name);
         }
       } catch (_) {
-        if (shareWinBtn) shareWinBtn.textContent = "Share failed";
-        setTimeout(() => {
-          if (shareWinBtn) shareWinBtn.textContent = "Share image";
-        }, 1600);
+        setShareState("error");
+        setTimeout(() => setShareState("idle"), 1600);
       } finally {
         shareBusy = false;
         if (shareWinBtn) {
           shareWinBtn.disabled = false;
-          if (shareWinBtn.textContent === "Making…") {
-            shareWinBtn.textContent = "Share image";
-          }
+          if (shareWinBtn.dataset.state === "busy") setShareState("idle");
         }
       }
     }
@@ -3256,7 +3402,16 @@
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
           if (state.hovered >= 0 && !touchMoved) {
-            toggleFlag(state.hovered);
+            /*
+             * A long press does the opposite of the tap, which is what the
+             * Tap action row advertises: "Dig · hold to flag" and
+             * "Flag · hold to dig". This used to flag unconditionally, so in
+             * flag mode holding just repeated the tap and there was no way to
+             * dig by touch at all. reveal() and toggleFlag() both guard
+             * isGameOver themselves.
+             */
+            if (state.flagMode) reveal(state.hovered);
+            else toggleFlag(state.hovered);
             touchMoved = true;
             state.pressed = -1;
           }
@@ -3370,6 +3525,11 @@
         e.stopPropagation();
         shareWinImage();
       });
+    }
+    if (bannerUndoBtn) {
+      bannerUndoBtn.addEventListener("click", hudClick(() => {
+        restoreUndo();
+      }));
     }
     if (bannerAgainBtn) {
       bannerAgainBtn.addEventListener("click", hudClick(() => {
@@ -3574,6 +3734,19 @@
       mineTargetForDifficulty,
       exportRunState,
       applyRunState,
+      // Direct setters for alternate chrome (see sphere/dev/). The shipped HUD
+      // still drives the cycle* wrappers; these change no in-game behaviour.
+      setSize: (id) => setDifficulty(id, true),
+      setThemeIndex: (i) => applyTheme(i),
+      getThemeIndex: () => themeIndex,
+      setCountStyle: (id) => setCountStyle(id),
+      setFlagMode: (on) => {
+        state.flagMode = !!on;
+        if (flagToggle) {
+          flagToggle.setAttribute("aria-pressed", state.flagMode ? "true" : "false");
+          flagToggle.classList.toggle("active", state.flagMode);
+        }
+      },
     };
   }
 

@@ -3,7 +3,9 @@
   File Purpose: Experimental Hexsweeper on a closed hex sphere (Canvas projection).
   Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
   Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
-  Chrome: BR pill cluster — Reset·Size·Theme | Flag | Help; mono minimal first-visit help.
+  Chrome: BR pill cluster — Reset · Customize · Help. Customize opens a panel with
+  ‹ › steppers for Board · Theme · Counts · Tap action; the shipped size/theme/nest/
+  flag buttons stay hidden in the DOM so sphere.js wiring is untouched.
   Notes: Starts zoomed out. Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
@@ -25,6 +27,7 @@
 <meta property="og:image:height" content="630">
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
+<link rel="stylesheet" href="dev-chrome.css?v=20260807q">
 <style>
 /* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
 :root,
@@ -164,9 +167,34 @@ body.help-open { overflow: hidden; }
   background: color-mix(in srgb, var(--text-main) 8%, transparent);
   color: var(--text-main);
   border-radius: 999px;
-  padding: 8px 14px;
-  font: 600 0.8rem/1 "IBM Plex Sans", system-ui, sans-serif;
+  /* Icon-only, at the same 44/20 scale as .hud-btn so the banner and the
+     corner cluster read as one control language. 44px also clears the
+     minimum touch target. */
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+}
+.sphere-banner .banner-btn svg { width: 20px; height: 20px; stroke-width: 2; }
+/* The label still exists for screen readers and carries share progress —
+   sphere.js updates this span, never the button, so the icon survives. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Share progress, shown without touching the button's children. */
+.sphere-banner .banner-btn[data-state="busy"] { opacity: 0.6; cursor: wait; }
+.sphere-banner .banner-btn[data-state="error"] {
+  border-color: #e02424;
+  color: #e02424;
+  background: transparent;
 }
 .sphere-banner .banner-btn.primary {
   background: var(--text-main);
@@ -502,12 +530,34 @@ body.help-open { overflow: hidden; }
   <div class="banner-msg" id="banner-msg"></div>
   <div class="banner-meta" id="banner-meta" hidden></div>
   <div class="banner-actions" id="banner-actions" hidden>
-    <button type="button" class="banner-btn primary" id="share-win-btn">Share image</button>
-    <button type="button" class="banner-btn" id="banner-again-btn">Play again</button>
+    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image" title="Share image">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 15V3"></path>
+        <path d="M8 7l4-4 4 4"></path>
+        <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path>
+      </svg>
+      <span class="sr-only">Share image</span>
+    </button>
+    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="3 7 3 13 9 13"></polyline>
+        <path d="M3.51 13a9 9 0 1 0 2.13-5.36L3 11"></path>
+      </svg>
+      <span class="sr-only">Undo last move</span>
+    </button>
+    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+      <span class="sr-only">Play again</span>
+    </button>
   </div>
 </div>
 
-<div class="hud-cluster" role="toolbar" aria-label="Game controls">
+<div class="hud-cluster dev-cluster" role="toolbar" aria-label="Game controls">
+  <div class="customize-panel" id="customize-panel" data-open="false" role="dialog" aria-label="Customize board" hidden></div>
   <div class="hud-actions" aria-label="Board controls">
     <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -516,26 +566,21 @@ body.help-open { overflow: hidden; }
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <button type="button" id="size-btn" class="hud-btn" aria-label="Board size M, Medium, 1002 faces. Activate to cycle XS, S, M, L, XL." title="Board size M — Medium (1002 faces). Click to cycle XS → S → M → L → XL.">
-      <span class="size-mark" data-size="M" aria-hidden="true">M</span>
-    </button>
-    <button type="button" id="theme-btn" class="hud-btn" aria-label="Theme: Light" title="Theme — Light">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="5"></circle>
-        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board" title="Customize board (C)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3.2"></circle>
+        <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.72 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.72a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"></path>
       </svg>
-    </button>
-    <button type="button" id="nest-btn" class="hud-btn" aria-label="Count style: Numerals. Activate to cycle." title="Count style — Numerals (N)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><text x="12" y="16" text-anchor="middle" font-family="IBM Plex Sans,system-ui,sans-serif" font-size="13" font-weight="700" fill="currentColor" stroke="none">1</text></svg>
     </button>
   </div>
-  <div class="hud-actions" aria-label="Flag mode">
-    <button type="button" id="flag-toggle" class="hud-btn" aria-label="Flag mode" aria-pressed="false" title="Flag mode (F)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
-        <line x1="4" y1="22" x2="4" y2="15"></line>
-      </svg>
+  <!-- Shipped controls, kept in the DOM so sphere.js wiring and label sync are untouched. -->
+  <div class="legacy-hud" aria-hidden="true">
+    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Board size M, Medium, 1002 faces. Activate to cycle XS, S, M, L, XL." title="Board size">
+      <span class="size-mark" data-size="M" aria-hidden="true">M</span>
     </button>
+    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light" title="Theme"></button>
+    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle." title="Count style"></button>
+    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false" title="Flag mode"></button>
   </div>
   <div class="hud-actions" aria-label="Help">
     <button type="button" id="help-btn" class="hud-btn" aria-label="Help" title="Help (?)">
@@ -590,10 +635,11 @@ body.help-open { overflow: hidden; }
   <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
-<script src="hexasphere.js?v=20260807m"></script>
-<script src="sphere.js?v=20260807m"></script>
+<script src="hexasphere.js?v=20260807q"></script>
+<script src="sphere.js?v=20260807q"></script>
+<script src="dev-chrome.js?v=20260807q"></script>
 <script>
-SphereSweeper.boot({ canvasId: "gameCanvas" });
+initDevChrome(SphereSweeper.boot({ canvasId: "gameCanvas" }));
 (function () {
   const lb = document.getElementById("history-lightbox");
   const openBtn = document.getElementById("help-history-btn");
