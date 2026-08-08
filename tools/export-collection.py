@@ -16,6 +16,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 COLLECTION = ROOT / "collection"
+# Native-app staging (gitignored build artifact, not part of the published
+# collection desk and never deployed to the live site). Vendored into the
+# hexsweeper-app Capacitor shell as its www/ payload.
+APP_BUILD = ROOT / "build" / "app"
 PUBLIC_BASE = "https://dr.eamer.dev/games/hexsweeper/collection"
 OG = "https://dr.eamer.dev/games/hexsweeper/assets/social"
 
@@ -662,6 +666,100 @@ def export_sphere(exp: dict) -> str:
     return markup
 
 
+def export_sphere_app(exp: dict) -> str:
+    """Adapt the collection one-pager into the offline native-app payload.
+
+    Builds on export_sphere so the inlining (fonts, chrome CSS, hexasphere,
+    sphere, dev-chrome) stays in exactly one place. The app differs from a
+    CodePen pen in four ways, all of them about being a sealed offline shell:
+
+    1. `HEXSWEEPER_SPHERE_APP` drops the globe-map themes (see the THEMES
+       filter in sphere.js) — the only themes needing a network fetch.
+    2. The history screenshot is served from the app bundle, not dr.eamer.dev.
+    3. Internal cross-game links have nowhere to go inside a single-game app,
+       so they are removed rather than left to strand the WebView.
+    4. Outbound credits open in the system browser instead of navigating the
+       WebView away from the game with no way back.
+    """
+    markup = export_sphere(exp)
+
+    markup = markup.replace(
+        "window.HEXSWEEPER_SPHERE_COLLECTION = true;",
+        "window.HEXSWEEPER_SPHERE_APP = true;",
+        1,
+    )
+
+    markup = markup.replace(
+        'src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"',
+        'src="assets/classic-minesweeper.png"',
+    )
+
+    # Drop the "Also flat Hexsweeper · Fire · Plague" row: those modes are not
+    # in this binary, and tapping them would navigate the WebView off the game.
+    markup = re.sub(r'\s*<p class="help-more">.*?</p>', "", markup, count=1, flags=re.S)
+
+    # Credits must escape to Safari; a bare href replaces the game with a web
+    # page and Capacitor gives the player no way back.
+    markup = markup.replace(
+        '<a href="https://lukesteuber.com" rel="noopener noreferrer">',
+        '<a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">',
+    )
+    markup = markup.replace(
+        '<a href="https://datapoems.io" rel="noopener noreferrer">',
+        '<a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">',
+    )
+    # Native launch screen stays up until the first frame is on screen; without
+    # this the storyboard drops the moment the WebView mounts and the player
+    # sees a blank canvas while hexasphere builds the board.
+    splash_hide = (
+        "<script>\n"
+        "/* app: dismiss the native launch screen after first paint */\n"
+        "(function () {\n"
+        "  function hide() {\n"
+        "    var p = window.Capacitor && window.Capacitor.Plugins;\n"
+        "    if (p && p.SplashScreen) p.SplashScreen.hide({ fadeOutDuration: 200 });\n"
+        "  }\n"
+        "  requestAnimationFrame(function () { requestAnimationFrame(hide); });\n"
+        "})();\n"
+        "</script>\n"
+    )
+    markup = markup.replace("</body>", f"{splash_hide}</body>", 1)
+
+    if "HEXSWEEPER_SPHERE_APP" not in markup:
+        raise SystemExit("export_sphere_app: app flag not injected")
+
+    # Nothing the renderer loads may live off-device. Checked on src/href
+    # attributes rather than raw text: GLOBE_TEX_BASE still appears as a string
+    # constant in the inlined sphere.js, but it is unreachable here — globeUrl
+    # is only called for themes carrying `globeMap`, and the THEMES filter drops
+    # every one of those under HEXSWEEPER_SPHERE_APP.
+    remote_assets = re.findall(
+        r'(?:src|href)="(https?://[^"]+\.(?:png|jpe?g|gif|webp|svg|css|js))"', markup
+    )
+    if remote_assets:
+        raise SystemExit(
+            "export_sphere_app: remote asset reference(s) survived: "
+            + ", ".join(sorted(set(remote_assets)))
+        )
+
+    return markup
+
+
+def write_app_build() -> list[Path]:
+    """Stage the offline app payload under build/app/ and report what it wrote."""
+    exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
+    (APP_BUILD / "assets").mkdir(parents=True, exist_ok=True)
+
+    index = APP_BUILD / "index.html"
+    index.write_text(export_sphere_app(exp), encoding="utf-8")
+
+    history_src = ROOT / "sphere" / "assets" / "classic-minesweeper.png"
+    history_dst = APP_BUILD / "assets" / "classic-minesweeper.png"
+    history_dst.write_bytes(history_src.read_bytes())
+
+    return [index, history_dst]
+
+
 def write_index(themes: list[dict], skins: list[dict], experiments: list[dict] | None = None) -> str:
     theme_tiles = "\n".join(tile_html(t) for t in themes)
     skin_tiles = "\n".join(skin_tile_html(s) for s in skins)
@@ -807,7 +905,18 @@ def main() -> int:
         action="store_true",
         help="Exit 1 if generated files differ from disk (no writes).",
     )
+    parser.add_argument(
+        "--app",
+        action="store_true",
+        help="Stage the offline native-app payload under build/app/ and exit.",
+    )
     args = parser.parse_args()
+
+    if args.app:
+        for path in write_app_build():
+            print(f"wrote {path.relative_to(ROOT)} ({path.stat().st_size:,} bytes)")
+        return 0
+
     source = (ROOT / "index.html").read_text(encoding="utf-8")
     if "allowModes" not in source or "ONEPAGER_MODES" not in source:
         print("error: index.html missing HEXSWEEPER_ONEPAGER allowModes support", file=sys.stderr)

@@ -32,6 +32,22 @@ Do not hand-edit `collection/theme-*.html`, `collection/skin-*.html`, or `collec
 
 After changing OG card keys in `tools/og-card.html`, regenerate PNGs: `bash tools/shoot-og-cards.sh` (Chromium + Pillow on Drummer).
 
+## Native app payload
+
+`python3 tools/export-collection.py --app` stages `build/app/` (gitignored, never
+deployed) for the **hexsweeper-app** Capacitor shell — `lukeslp/hexsweeper-app`,
+bundle `app.hexodus.ios`. It reuses `export_sphere` and then seals the page for
+offline use: sets `HEXSWEEPER_SPHERE_APP`, serves the history tile from the
+bundle, drops the cross-game links, sends credits to the system browser, and
+hides the native launch screen after first paint.
+
+`HEXSWEEPER_SPHERE_APP` also drops the **Earth / Moon** globe themes (the THEMES
+filter in `sphere.js`): they are the only themes that fetch over the network, and
+their daymap provenance/attribution is unresolved. The web build keeps all nine.
+
+After any sphere change, re-run `--app` and re-vendor into hexsweeper-app's
+`www/`; that repo's smoke gate regenerates this payload and fails on drift.
+
 ## Choices lab redirects
 
 After changing `skins.json` or collection lab pens, regenerate redirect stubs:

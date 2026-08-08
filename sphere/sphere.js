@@ -341,7 +341,16 @@
     THEME_EARTH,
     THEME_MOON,
     THEME_GLOW,
-  ];
+  ].filter((t) => {
+    // Native app builds ship without the globe-map themes. Their daymaps are
+    // the only assets fetched over the network (globeUrl falls back to an
+    // absolute dr.eamer.dev URL off the /sphere/ path), so they would fail in
+    // an offline shell — and their provenance/attribution is unresolved.
+    // Filtered by the globeMap property, not by id, so future globe themes
+    // are covered automatically. Theme choice persists by id (see
+    // readStoredThemeId), so a stored "earth" simply falls back to default.
+    return !(window.HEXSWEEPER_SPHERE_APP && t.globeMap);
+  });
   const DEFAULT_THEME = THEME_LIGHT;
 
   /**
