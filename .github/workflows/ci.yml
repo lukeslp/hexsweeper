@@ -12,6 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The game itself lives in lukeslp/hexsweeper (public, no token needed).
+      # Checking it out lets the smoke script regenerate the payload and prove
+      # www/ is still exactly what that source produces.
+      - uses: actions/checkout@v4
+        with:
+          repository: lukeslp/hexsweeper
+          path: .hexsweeper-source
+
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
@@ -19,6 +27,10 @@ jobs:
           node-version: "22"
           cache: "pnpm"
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - run: pnpm install --frozen-lockfile
 
-      - run: bash scripts/smoke.sh
+      - run: bash scripts/smoke.sh --with-source "$GITHUB_WORKSPACE/.hexsweeper-source"

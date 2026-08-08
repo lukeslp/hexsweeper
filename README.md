@@ -1,108 +1,76 @@
-# Hexodus
+# Hexsweeper (iOS)
 
-Hexodus is an iOS-first hex-grid puzzle roguelike. Floors are generated from a
-seed, checked for solvability, and played as an infinite run by default. A
-12-floor finite mode is also available from the boot screen.
+Native iOS shell for **Hexsweeper 3D** — hex minesweeper on a closed Goldberg
+sphere. The game is a Canvas/vanilla-JS build from
+[lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps it
+in Capacitor and ships it to the App Store.
 
-Puzzle truth stays deterministic. Procedural code supplies tile names and
-flavor, while Apple's on-device Foundation Models framework may add iris.exe
-taunts and terminal takeovers. Web builds and unsupported devices use static
-fallback text without changing gameplay.
+Web version: <https://dr.eamer.dev/games/hexsweeper/sphere/>
 
-## Gameplay
+## The names do not match, on purpose
 
-- Reveal safe cells and mark blocked cells from the visible clues.
-- Correct moves can trigger solver-backed cascade reveals.
-- Mistakes reduce the floor's error budget and increase iris control.
-- Clearing a floor opens Safe, Loot, and Risk routes. The selected route salts
-  the next floor seed and changes run pressure.
-- Infinite runs continue through sublinear difficulty growth. Finite runs
-  escape after floor 12.
+| Thing | Value |
+|---|---|
+| Product / display name | **Hexsweeper** |
+| This repo | `lukeslp/hexsweeper-app` |
+| Game source | `lukeslp/hexsweeper` (`sphere/`) |
+| Bundle id | `app.hexodus.ios` |
+| App Store Connect record | app id `6768871973` |
 
-## Architecture
+The bundle id is inherited. It was minted for "Hexodus", an unrelated hex
+roguelike with an on-device LLM antagonist that was built here and abandoned;
+its App Store Connect record was separately named "Hivescape" and holds builds
+1–6, none ever submitted. Reusing the id keeps that record rather than opening a
+fresh one, since its metadata had to be rewritten either way. **`CURRENT_PROJECT_VERSION`
+therefore starts at 7** — anything ≤6 is rejected as a duplicate build number.
 
-- `client/src/main.tsx` boots the app, probes Foundation Models availability,
-  selects the run mode, owns the terminal feed, and hides the native splash.
-- `client/src/game/GameApp.tsx` renders the procedural board, HUD, route picker,
-  diagnostics, dressing flow, and terminal takeover scheduling.
-- `client/src/game/lib/gameState.ts` owns floor actions and win/loss rules.
-- `client/src/game/lib/runState.ts` owns progression, routes, checkpoints, and
-  deterministic floor seeds.
-- `client/src/game/lib/generator.ts` and `solver.ts` generate solvable floors
-  and derive safe cascade moves.
-- `client/src/game/lib/proceduralTileDressing.ts` creates deterministic tile
-  labels and flavor.
-- `client/src/game/lib/director.ts` requests optional iris lines and protects
-  the native generation path with a per-run circuit breaker.
-- `client/src/game/lib/terminalLog.ts` and
-  `terminalTakeoverScheduler.ts` produce presentation-only terminal events.
-- `client/src/lib/foundationModelsPlugin.ts` wraps the Capacitor bridge. Native
-  methods live in `ios/App/App/FoundationModelsPlugin.swift`.
+Do not "fix" the bundle id to match the product name. Changing it means a new
+App Store Connect app and abandoning this one.
 
-Build output is written to `dist/public`. Do not edit that directory.
+## Layout
 
-## Requirements
+| Path | Role |
+|---|---|
+| `www/` | The game. Vendored payload — **do not hand-edit** |
+| `WWW_SOURCE.txt` | Which hexsweeper commit `www/` came from, plus checksums |
+| `capacitor.config.js` | Capacitor config (`.js`, not `.ts` — see below) |
+| `ios/` | Xcode project, team `596T7J7FB6`, automatic signing |
+| `scripts/smoke.sh` | Payload integrity + cap sync gates |
 
-- Node.js with pnpm 10
-- macOS and Xcode for the iOS target and asset generation
-- iOS 26+ on supported hardware for Foundation Models output
+There is no bundler, no TypeScript, and no test suite here. `www/index.html` is
+a single self-contained file with fonts, CSS, and all JS already inlined; the
+only sibling asset is the help screen's history image. `capacitor.config` is
+`.js` because `@capacitor/cli` requires a full `typescript` install purely to
+read a `.ts` config, which is not worth a toolchain in a repo with no TS source.
 
-The web build remains fully playable. It uses deterministic and static text
-instead of on-device generation.
+## Updating the game
 
-## Commands
+The payload is a pinned snapshot, not a live dependency. To pull in sphere
+changes, from a `hexsweeper` checkout:
+
+```bash
+python3 tools/export-collection.py --app     # writes build/app/
+cp -R build/app/. ../hexsweeper-app/www/
+```
+
+Then refresh `WWW_SOURCE.txt` (source commit + `shasum -a 256` of each file
+under `www/`) and re-run the smoke script. CI checks out `hexsweeper` and
+regenerates the payload, so a stale `www/` fails the build.
+
+## Verify
 
 ```bash
 pnpm install
-pnpm dev
-pnpm check
-pnpm test
-pnpm build
+pnpm smoke                                          # integrity + cap sync
+scripts/smoke.sh --with-source ../hexsweeper        # + matches source
+pnpm cap:open                                       # Xcode
 ```
 
-Additional checks and iOS tasks:
+## Not in this build
 
-```bash
-pnpm test:soak          # optional long generator sweep
-pnpm smoke --no-build  # typecheck, tests, registration, source invariants
-pnpm smoke --fast      # the above plus a web build and React dedupe check
-pnpm smoke             # full gate, including Capacitor iOS sync
-pnpm cap:sync:ios
-pnpm cap:open
-pnpm icons:generate
-```
-
-## Diagnostics
-
-Append `?diag=1` to show session counters and controls for burst reveals,
-forced director fallbacks, rim fallback simulation, and diagnostic export.
-Starting a new run stores the prior counters in
-`hexodus_session_diag_snapshots`, capped at 80 rows.
-
-Summarize an exported file locally:
-
-```bash
-pnpm beta:diag-summary path/to/hexodus-session-diag-*.json
-```
-
-Set `VITE_VALUE_CAPTURE_STUB=1`, or use `?commerce=1` on web, to expose the
-local-only supporter experiment. It does not use StoreKit.
-
-## Project Docs
-
-- [Project plan](PROJECT_PLAN.md)
-- [Gameplay cycle](docs/GAMEPLAY_CYCLE_SPEC.md)
-- [Infinite generation](docs/INFINITE_GENERATION_SPEC.md)
-- [Director guardrails](docs/DIRECTOR_GUARDRAILS.md)
-- [Verification gates](docs/VERIFICATION_GATES.md)
-- [iOS device verification](docs/DEVICE_VERIFY.md)
-- [Launch checkpoint](docs/LAUNCH_CHECKPOINT.md)
-
-Files under `docs/superpowers/specs/` are historical design records. The docs
-listed above describe the current runtime.
-
-## iOS Assets
-
-`scripts/generate-icon.swift` generates review variants in the ignored
-`icon-variants/` directory and installs the App Icon and splash images in
-`ios/App/App/Assets.xcassets/`.
+**Earth and Moon globe themes are excluded.** They are the only themes that
+fetch anything at runtime — `globeUrl()` in `sphere.js` only resolves textures
+relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
+back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
+network. Their daymap provenance is also unrecorded. The seven offline themes
+(Light, Shell, Dark, Ink, Float, Card, Glow) ship; the web build keeps all nine.

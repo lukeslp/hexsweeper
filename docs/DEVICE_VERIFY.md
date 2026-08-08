@@ -1,59 +1,48 @@
-# Device verification (iOS)
+# Device verification
 
-Use this checklist after changing splash assets, the Capacitor splash plugin, `GameApp` dressing flow, or native bridge code.
+Run on real hardware before any TestFlight or App Store build. The simulator
+does not reproduce touch precision, thermal behaviour, or true safe-area geometry.
 
-## Prerequisites
+Record one row per device. Attach to the build notes.
 
-- macOS with Xcode, device on iOS 26+ with Apple Intelligence if testing on-device LLM.
-- From repo root: `pnpm cap:build` then `pnpm cap:open` (or open `ios/App/App.xcworkspace`).
+| Field | Value |
+|---|---|
+| Device / iOS | |
+| Build number | |
+| Tester / date | |
 
-## Cold launch
+## Gates
 
-1. Force-quit the app. Relaunch.
-2. Confirm **no blank frame** between native splash and the React boot screen (`SplashScreen.hide()` double-rAF in `client/src/main.tsx`).
-3. Splash **background** should match near-black `#0a0a0a` (`capacitor.config.ts` + `LaunchScreen.storyboard`).
+Everything below must pass **in airplane mode** — the payload is fully offline
+and any network dependency is a defect.
 
-## Home screen
+| # | Check | Pass criteria | Result |
+|---|---|---|---|
+| 1 | Cold launch | Launch screen hands off to the sphere with no blank frame between | |
+| 2 | First render | Sphere is centred and fully visible; no clipping at any edge | |
+| 3 | Dig | Single tap reveals the intended tile — not a neighbour | |
+| 4 | Flag | Long-press flags; flag stands proud of the shell | |
+| 5 | Chord | Tapping a satisfied number opens its neighbours | |
+| 6 | Camera | One-finger drag tumbles freely; pinch zooms; no accidental digs while dragging | |
+| 7 | Flood | Clearing an empty region animates outward and settles correctly | |
+| 8 | Board sizes | XS through XL all render; **note the smallest size you can still tap reliably** | |
+| 9 | Themes | All seven cycle; no theme shows a missing texture or flat grey | |
+| 10 | Customize panel | Opens, changes apply live, undo reverts one step | |
+| 11 | Share card | Produces an image; content matches the current board | |
+| 12 | Safe areas | Chrome pills clear the notch/Dynamic Island and home indicator in both orientations | |
+| 13 | Autosave | Force-quit mid-run, relaunch, run resumes | |
+| 14 | Backgrounding | Background 30s and return; no blank WebView, no reset | |
+| 15 | Reduced Motion | With the OS setting on, endgame effects become instant states | |
+| 16 | Outbound links | Credits open in Safari and return cleanly; game is never replaced in-place | |
+| 17 | Rotation | Portrait ↔ landscape reflows without losing the run | |
 
-- App icon shows (1024 universal slot: `AppIcon-512@2x.png`).
+## Known open question
 
-## Gameplay (WKWebView)
-
-- **Reveal**: tap a frontier unknown cell — clue / dressing updates.
-- **Mark blocked**: **long-press** (~380 ms) on unknown (touch); **right-click** still works on desktop.
-- **Pan/zoom**: drag on empty area; dragging from a hex should not steal the gesture after the hex-node canvas fix.
-
-## Diagnostics (`?diag=1`)
-
-Append `?diag=1` to the dev server URL or WebView entry URL (e.g. `capacitor://localhost?diag=1` if your shell supports query on the loaded URL).
-
-- **Burst reveal** — hammers async dressing; session `dress` may exceed applied tiles (expected).
-- **Force null ×3** — next three director calls return null; watch `circuit` / `fb` after the third failure + cooldown.
-- **Sim rim banner** — amber rim line without generator fallback.
-
-## Repo smoke (before device)
-
-From repo root, `pnpm smoke` (or `pnpm smoke --fast` / `pnpm smoke --no-build`) runs typecheck, tests, native plugin registration, and source invariant checks. See [VERIFICATION_GATES.md](VERIFICATION_GATES.md).
-
-## Dual-device beta log
-
-Run the same short session on **two** physical devices after a clean install or force-quit cold start. For each device, copy the HUD **session** line after ~5 minutes of play (or use `?diag=1` → **Export diag log** and note the `current` block).
-
-| Field                                        | Device A | Device B |
-| -------------------------------------------- | -------- | -------- |
-| Date                                         |          |          |
-| Model + iOS build                            |          |          |
-| Cold launch OK (no blank frame)              | ☐        | ☐        |
-| Long-press mark reliable                     | ☐        | ☐        |
-| `dress` (session)                            |          |          |
-| `fb` / `dress` (approx %)                    |          |          |
-| `circuit` / `dress` (approx %)               |          |          |
-| `rim` (count; target 0)                      |          |          |
-| `?diag=1` burst / null×3 / rim sim exercised | ☐        | ☐        |
-| Anomalies / notes                            |          |          |
-
-Attach this table (or the exported JSON + `pnpm beta:diag-summary` output) to the TestFlight build notes or PR.
+Gate 8 is the one most likely to fail. `pickTile` uses exact polygon hit-testing
+with no touch padding, and XL is 2252 faces. If small boards are comfortable but
+XL is not, the fix is a per-device board cap in hexsweeper, not here.
 
 ## Sign-off
 
-Record date, device model, iOS build, and any anomalies in TestFlight notes or the PR.
+- [ ] All gates pass, or failures are recorded with issue links
+- [ ] Build number exceeds every build already in App Store Connect (currently ≥7)

@@ -1,37 +1,58 @@
-# Project Plan
+# Hexsweeper (iOS) — project plan
 
-## Current Objectives
+## Objective
 
-- Ship an **infinite roguelike run loop** (default) with optional **finite** escape (`finiteProgression(n)`).
-- Preserve **deterministic puzzle truth** while layering route choice, pressure meters, procedural tile dressing, and guarded on-device iris output.
+Ship hexsweeper's 3D sphere minesweeper as a native iOS app: a thin Capacitor
+shell around a sealed, offline Canvas game, reusing the App Store Connect record
+already held under `app.hexodus.ios`.
 
-## Architecture Snapshot
+## Architecture
 
-- `client/src/game/lib/generator.ts` — seeded floors, epochs, post-12 difficulty curves, solver gate.
-- `client/src/game/lib/gameState.ts` — reveal/mark/break reducer + win/loss.
-- `client/src/game/lib/runState.ts` — run progression, route salt, pressure clocks, checkpoints.
-- `client/src/game/lib/cycleOrchestrator.ts` — post-win advance + next floor factory.
-- `client/src/game/lib/director.ts` — JSON-validated dressing + **per-runId circuit breaker** + optional `pacingBand`.
-- `client/src/game/lib/dressingOrchestrator.ts` — pure `tryDressFloor` pipeline (unit-tested races + invalidation).
-- `client/src/game/lib/terminalLog.ts` + `terminalTakeoverScheduler.ts` — deterministic event feed and presentation-only iris takeovers.
-- `client/src/game/hooks/useSessionDiagnostics.ts` — session HUD counters (dress/fb/circuit) + reset; consumed by `GameApp`.
-- `client/src/game/GameApp.tsx` — HUD, inter-floor route UI, dressing requests, **async dressing commit gate**, **session diagnostics** + **localStorage append on New Run**, **rim-fallback** HUD hint, **`?diag=1` dev panel** (incl. export), long-press mark on touch.
+Prebuilt payload, not a build. `www/index.html` arrives fully inlined from
+hexsweeper's `export-collection.py --app`; this repo adds only the native shell.
+That keeps the game single-source in hexsweeper and this repo dependency-light
+(4 runtime packages).
 
-## Design Docs
+## Status (2026-08-08)
 
-- [docs/GAMEPLAY_CYCLE_SPEC.md](docs/GAMEPLAY_CYCLE_SPEC.md)
-- [docs/INFINITE_GENERATION_SPEC.md](docs/INFINITE_GENERATION_SPEC.md)
-- [docs/DIRECTOR_GUARDRAILS.md](docs/DIRECTOR_GUARDRAILS.md)
-- [docs/VERIFICATION_GATES.md](docs/VERIFICATION_GATES.md)
-- [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md)
-- [docs/LAUNCH_CHECKPOINT.md](docs/LAUNCH_CHECKPOINT.md)
+- [x] Retired the previous product here: React client, Foundation Models bridge,
+      `iris` antagonist, and the React/Radix/Tailwind toolchain all removed
+- [x] `FoundationModelsPlugin.swift` + `AppViewController.swift` deleted;
+      `Main.storyboard` back to stock `CAPBridgeViewController`
+- [x] `www/` vendored from hexsweeper `6704bca`, provenance in `WWW_SOURCE.txt`
+- [x] Display name / `PRODUCT_NAME` → Hexsweeper; bundle id retained
+- [x] `CURRENT_PROJECT_VERSION` 1 → 7 (ASC holds builds 1–6)
+- [x] `capacitor.config` → `.js`; `CapacitorHttp` dropped; payload proven to make
+      no network calls
+- [x] Smoke gates rewritten: payload checksum integrity + `cap sync`, plus an
+      optional cross-repo gate that regenerates from hexsweeper and diffs
+- [x] CI checks out public `lukeslp/hexsweeper` and runs the cross-repo gate
+- [ ] App icon + splash from a live sphere render
+- [ ] Simulator verification: render, touch input, safe-area insets
+- [ ] Device verification (`docs/DEVICE_VERIFY.md`)
+- [ ] Rename the ASC record Hivescape → Hexsweeper, **pending name availability**
+- [ ] Rewrite ASC metadata: privacy labels, age rating, description, screenshots
+      (all currently describe an on-device-LLM roguelike)
 
-## Delivery Status
+## Outstanding decisions
 
-- [x] Async dressing guards, procedural tile dressing, and per-run director circuit breaker.
-- [x] Terminal event feed and scheduled on-device/static iris takeovers.
-- [x] `?diag=1` controls, session persistence/export, and `pnpm beta:diag-summary`.
-- [x] Touch long-press marking, HUD safe-area padding, app icon, and splash assets.
-- [x] Foundation Models bridge contract tests and foreground availability cache invalidation.
-- [x] Local-only value-capture experiment behind a build or query flag.
-- [ ] Device playtest: complete the **dual-device beta log** in [docs/DEVICE_VERIFY.md](docs/DEVICE_VERIFY.md) on hardware and attach evidence to the build.
+- **"Hexsweeper" may not be available on the App Store.** It is a generic
+  compound and unverified. Check before building further identity around it; a
+  fallback (e.g. "Hexsweeper 3D") may be needed.
+- **Tap-target size is unmeasured.** `pickTile` does exact polygon hit-testing
+  with no hit-radius padding. The XL board is 2252 faces; on a phone those cells
+  may be too small to tap reliably. Consider capping board size on small screens.
+
+## Risks
+
+- The payload is a pinned copy. Sphere fixes do not reach players until someone
+  re-vendors; CI catches divergence but only once hexsweeper's change is pushed.
+- Bundle id and product name will never match. Documented in README and AGENTS;
+  do not let a future cleanup "fix" it.
+
+## Acceptance
+
+Game renders and is playable in the native shell with no network; dig, flag,
+chord, and camera drag all work by touch; safe-area insets respected on a
+notched device; launch screen hands off to the first painted frame without a
+blank gap; smoke gates green; build number exceeds 6.

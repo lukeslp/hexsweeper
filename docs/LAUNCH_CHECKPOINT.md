@@ -1,38 +1,50 @@
-# Launch go / no-go
+# Launch checkpoint
 
-Use this checklist before widening TestFlight or App Store submission beyond the inner beta.
+Gate before widening TestFlight or submitting for review.
 
-## Automated gates (must be green)
+## Automated
 
-- `pnpm check`
-- `pnpm test`
-- `pnpm smoke` (or `pnpm smoke --fast` when skipping Cap sync; use full `pnpm smoke` before a build you ship to testers)
+- [ ] `scripts/smoke.sh --with-source ../hexsweeper` green
+- [ ] CI green on `main`
+- [ ] `www/` matches the hexsweeper commit recorded in `WWW_SOURCE.txt`
 
-## Device evidence (must be green)
+## Build identity
 
-- Complete [DEVICE_VERIFY.md](DEVICE_VERIFY.md) on **at least two** physical iOS devices (different models if possible).
-- Paste or attach the **dual-device beta log** section from that doc (dress / fb / circuit / rim + cold launch notes).
+- [ ] `CURRENT_PROJECT_VERSION` exceeds every build in App Store Connect (≥7)
+- [ ] `MARKETING_VERSION` set for the intended release
+- [ ] Display name reads **Hexsweeper** on the home screen
+- [ ] Archive signs cleanly under team `596T7J7FB6`
 
-## Session diagnostics (beta bar)
+## Hardware
 
-- Confirm testers can **restart runs** so prior session rows append to the local log (`hexodus_session_diag_snapshots`).
-- Confirm `?diag=1` **Export diag log** produces JSON you can summarize with:
+- [ ] `docs/DEVICE_VERIFY.md` completed and signed on at least two devices,
+      one of them small-screen (tap-target risk)
+- [ ] All gates verified **in airplane mode**
 
-  ```bash
-  pnpm beta:diag-summary path/to/export.json
-  ```
+## App Store Connect — inherited record, needs a full rewrite
 
-- Compare HUD / export rates to [VERIFICATION_GATES.md](VERIFICATION_GATES.md) rollout stop triggers (`fb`/`dress`, `circuit`/`dress`, `rim`).
+This record was created for a different app. Nothing on it can be assumed
+correct.
 
-## Value capture (economics stub)
+- [ ] App name changed from "Hivescape" to the final name
+- [ ] **Name availability confirmed** — "Hexsweeper" is unverified and generic
+- [ ] Privacy nutrition labels rewritten (previous entries described on-device
+      LLM use; this build collects nothing and makes no network calls)
+- [ ] Age rating re-answered
+- [ ] Description, keywords, subtitle rewritten
+- [ ] Screenshots replaced — any existing ones show the old game
+- [ ] Support and marketing URLs point at Hexsweeper
+- [ ] Export compliance: `ITSAppUsesNonExemptEncryption` is already `false`
 
-- With `VITE_VALUE_CAPTURE_STUB=1` (or `?commerce=1` on web), confirm the boot **commerce stub** appears and **Grant stub unlock** persists.
-- In-game HUD should show **supporter stub** after unlock (local only; no StoreKit yet).
+## Licensing
 
-## Apple Intelligence cache
+- [ ] Confirm no third-party assets ship without attribution. The Earth/Moon
+      daymaps are **excluded from this build** for exactly this reason; if they
+      are ever reinstated, their provenance and CC-BY attribution must be
+      resolved first.
 
-- Background the app, toggle Apple Intelligence in Settings, return foreground — next dressing attempt should re-probe availability (`invalidateFoundationModelsCache` on `appStateChange` in `client/src/main.tsx`).
+## Proceed only if
 
-## Ship decision
-
-Proceed only if automated gates pass, device checklist is signed on hardware, diagnostic rates are within the documented bands, and the minimal value-capture path is present for economics experiments (even if off by default in production builds).
+Automated gates pass, hardware verification is signed, the App Store Connect
+record has been fully rewritten rather than inherited, and no unattributed
+third-party asset is in the binary.
