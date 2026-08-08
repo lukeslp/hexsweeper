@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sphere neighbor + flood closure smoke
+        run: node sphere/test-neighbors.js
+
+      - name: Collection export drift guard
+        run: python3 tools/export-collection.py --check
+
+      - name: Choices lab redirect drift guard
+        run: python3 tools/export-choices-lab.py --check

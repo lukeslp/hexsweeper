@@ -112,9 +112,9 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Light/Dark collection cut is one file (`theme-plate.html`) with in-file toggle
 - [x] Production chrome: BR Appearance · Reset · Menu (scores/modes/links inside Menu)
 - [x] Lab skins + classic: same BR Reset · Menu; scores + outbound links in Menu (no BL rail / gear)
+- [x] CI (`.github/workflows/ci.yml`): sphere neighbor smoke + `export-collection.py --check` + `export-choices-lab.py --check` on every push/PR to `main` — catches export drift before it ships (this is what would have caught the dev-chrome inlining gap)
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
-- [ ] Optional: automated smoke (desktop/mobile) in CI — sphere neighbor test exists (`sphere/test-neighbors.js`); browser probes still manual
-- [ ] Optional: `export-collection.py --check` in CI; CodePen push via codepen-prefill when published
+- [ ] Optional: browser probes (desktop/mobile) in CI — sphere neighbor test is covered; visual/interaction smoke still manual
 - [ ] Phase next: full / comprehensive / impressive cut beyond the collection scaffold
 
 ## Risks
