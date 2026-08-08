@@ -1,0 +1,12 @@
+# Vendored payload provenance — do not hand-edit www/.
+#
+# Regenerate from a hexsweeper checkout at the commit below:
+#   python3 tools/export-collection.py --app
+#   cp -R build/app/. <this-repo>/www/
+# then refresh this file. scripts/smoke.sh verifies these checksums.
+
+source_repo   https://github.com/lukeslp/hexsweeper
+source_commit 6704bca717831976314f5a7fee38424231542bb6
+
+b42114581fded77b4aa8e003634ee68682a7013f3ce7d43f2ac119b4fc0360fa  assets/classic-minesweeper.png
+d82eb4d6e6fdef0b30d979631f658b2663745f174bbeef9a429e5e02ebdb9cee  index.html

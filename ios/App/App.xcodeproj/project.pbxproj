@@ -16,8 +16,6 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9F1AAA0001AAAAAAAAAAAA01 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9F1AAA0001AAAAAAAAAAAA02 /* PrivacyInfo.xcprivacy */; };
-		9F1AAA0001AAAAAAAAAAAA04 /* FoundationModelsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F1AAA0001AAAAAAAAAAAA05 /* FoundationModelsPlugin.swift */; };
-		9F1AAA0001AAAAAAAAAAAA10 /* AppViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F1AAA0001AAAAAAAAAAAA11 /* AppViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,8 +31,6 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		9F1AAA0001AAAAAAAAAAAA02 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9F1AAA0001AAAAAAAAAAAA03 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
-		9F1AAA0001AAAAAAAAAAAA05 /* FoundationModelsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelsPlugin.swift; sourceTree = "<group>"; };
-		9F1AAA0001AAAAAAAAAAAA11 /* AppViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,8 +75,6 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 				9F1AAA0001AAAAAAAAAAAA02 /* PrivacyInfo.xcprivacy */,
 				9F1AAA0001AAAAAAAAAAAA03 /* App.entitlements */,
-				9F1AAA0001AAAAAAAAAAAA05 /* FoundationModelsPlugin.swift */,
-				9F1AAA0001AAAAAAAAAAAA11 /* AppViewController.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -191,8 +185,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
-				9F1AAA0001AAAAAAAAAAAA04 /* FoundationModelsPlugin.swift in Sources */,
-				9F1AAA0001AAAAAAAAAAAA10 /* AppViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -334,7 +326,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 596T7J7FB6;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -345,7 +337,7 @@
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = app.hexodus.ios;
-				PRODUCT_NAME = hexodus;
+				PRODUCT_NAME = Hexsweeper;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
@@ -359,7 +351,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 596T7J7FB6;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -369,7 +361,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.hexodus.ios;
-				PRODUCT_NAME = hexodus;
+				PRODUCT_NAME = Hexsweeper;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
