@@ -27,8 +27,14 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 - [x] Smoke gates rewritten: payload checksum integrity + `cap sync`, plus an
       optional cross-repo gate that regenerates from hexsweeper and diffs
 - [x] CI checks out public `lukeslp/hexsweeper` and runs the cross-repo gate
-- [ ] App icon + splash from a live sphere render
-- [ ] Simulator verification: render, touch input, safe-area insets
+- [x] App icon + splash from a live sphere render
+- [x] Simulator verification (iPhone 17, iOS 26.5): builds clean with zero
+      warnings, launches, sphere renders, tap digs and flood-reveals, drag
+      tumbles the camera without stray digs and without losing the run, the
+      Customize panel opens and steps themes live
+- [x] Fixed via simulator: HUD drew on top of the status bar because the
+      viewport meta lacked `viewport-fit=cover`, so every
+      `env(safe-area-inset-*)` resolved to 0 (hexsweeper `5a363f5`)
 - [ ] Device verification (`docs/DEVICE_VERIFY.md`)
 - [ ] Rename the ASC record Hivescape → Hexsweeper, **pending name availability**
 - [ ] Rewrite ASC metadata: privacy labels, age rating, description, screenshots
