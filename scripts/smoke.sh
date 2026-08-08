@@ -50,8 +50,8 @@ if ! grep -q "registerPluginInstance.*FoundationModelsPlugin" \
 fi
 green "  ✓ FoundationModelsPlugin registered"
 
-# 4. Phase 7.1 dressing / director invariants (grep — fast regression catch)
-gold "[4/5] Phase 7 async dressing + director wiring…"
+# 4. Async dressing / director invariants (grep — fast regression catch)
+gold "[4/5] async dressing + director wiring…"
 INV_GATE="$(grep -c "dressingGateRef.current.invalidate()" \
     "$REPO_ROOT/client/src/game/GameApp.tsx" 2>/dev/null || echo 0)"
 if [ "${INV_GATE:-0}" -lt 2 ]; then
@@ -70,7 +70,7 @@ if ! grep -q "generateIrisLine" "$REPO_ROOT/ios/App/App/FoundationModelsPlugin.s
     red "  ✘ FoundationModelsPlugin.swift missing generateIrisLine (@Generable iris path)"
     exit 1
 fi
-green "  ✓ Phase 7 invariants present"
+green "  ✓ dressing/director invariants present"
 
 # 5. Build + the dual-React-Internals bundle invariant
 # (Universal Links / AASA gate dropped — Hexodus v1 ships without them;
