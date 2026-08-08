@@ -601,8 +601,17 @@ def export_sphere(exp: dict) -> str:
     # History screenshot: absolute URL (not inlined — keeps the pen under ~250KB).
     markup = markup.replace('src="assets/classic-minesweeper.png"', f'src="{history_img}"')
 
+    dev_chrome_css = (ROOT / "sphere" / "dev-chrome.css").read_text(encoding="utf-8")
+    markup = re.sub(
+        r'<link rel="stylesheet" href="dev-chrome\.css[^"]*">\s*',
+        f"<style>\n/* dev-chrome.css */\n{dev_chrome_css}\n</style>\n",
+        markup,
+        count=1,
+    )
+
     hexasphere = safe_script((ROOT / "sphere" / "hexasphere.js").read_text(encoding="utf-8"))
     sphere_js = safe_script((ROOT / "sphere" / "sphere.js").read_text(encoding="utf-8"))
+    dev_chrome_js = safe_script((ROOT / "sphere" / "dev-chrome.js").read_text(encoding="utf-8"))
     # Skip welcome + prefer a clean first paint; CodePen origin has its own storage.
     take_id = exp.get("take")
     take_line = (
@@ -623,15 +632,19 @@ def export_sphere(exp: dict) -> str:
     # Do not use re.sub with JS source as the replacement — backslashes break the template.
     m = re.search(
         r'<script src="hexasphere\.js[^"]*"></script>\s*'
-        r'<script src="sphere\.js[^"]*"></script>\s*',
+        r'<script src="sphere\.js[^"]*"></script>\s*'
+        r'<script src="dev-chrome\.js[^"]*"></script>\s*',
         markup,
     )
     if not m:
-        raise SystemExit("export_sphere: could not find hexasphere.js / sphere.js script tags")
+        raise SystemExit(
+            "export_sphere: could not find hexasphere.js / sphere.js / dev-chrome.js script tags"
+        )
     scripts = (
         f"{boot}"
         f"<script>\n/* hexasphere.js */\n{hexasphere}\n</script>\n"
         f"<script>\n/* sphere.js */\n{sphere_js}\n</script>\n"
+        f"<script>\n/* dev-chrome.js */\n{dev_chrome_js}\n</script>\n"
     )
     markup = markup[: m.start()] + scripts + markup[m.end() :]
 

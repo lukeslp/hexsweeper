@@ -438,6 +438,187 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
 
 </style>
 <style>
+/* dev-chrome.css */
+/*
+ * File Purpose: Dev chrome for the sphere — one Customize panel replaces the
+ *   size / theme / count-style icon cycles.
+ * Inputs: skin-chrome.css tokens (--nav-bg, --text-main). Outputs: panel + steppers.
+ * Author: Luke Steuber <luke@lukesteuber.com>
+ */
+
+/* Shipped controls stay in the DOM for sphere.js, but out of sight and out of
+   the a11y tree. Not `display:none` — keeps layout reads cheap and predictable. */
+.legacy-hud {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  pointer-events: none;
+}
+
+.dev-cluster {
+  position: relative;
+}
+
+/* A system stack, deliberately: it renders SF Pro on Apple and Segoe UI
+   Variable on Windows, which sits quieter than the page's IBM Plex Sans and
+   suits a panel meant to recede. Plex Sans does load (fonts.css resolves),
+   so putting it first here is a one-line change if consistency wins. */
+.customize-panel {
+  --cz-font: ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    "Segoe UI Variable Text", "Segoe UI", Inter, Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --cz-ink: var(--text-main, #4a5568);
+}
+
+/* ---- panel ---- */
+/*
+ * Anchored to the cluster's right edge, not its centre. .hud-cluster is
+ * `position: fixed; right: max(12px, safe-area)`, so the old
+ * `left:50% / translateX(-50%)` centred the panel on a control sitting at the
+ * viewport edge and pushed roughly half of it — including every stepper —
+ * off-screen. Right-anchoring keeps the panel and the button it belongs to
+ * aligned, and the width clamp leaves a matching gutter on the left.
+ */
+.customize-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  left: auto;
+  transform: translateY(4px);
+  width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 140px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--nav-bg, #e0e5ec) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cz-ink) 10%, transparent);
+  box-shadow: 0 16px 40px -24px rgba(0, 0, 0, 0.45);
+  /*
+   * No backdrop-filter. Over the full-screen game canvas it did not blur — it breaks the panel's own background
+   * compositing instead, leaving the panel near-transparent with the sphere's
+   * digits reading straight through the top rows. The 6% of translucency left
+   * in the background above is doing the softening honestly.
+   */
+  pointer-events: auto;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+}
+/* `display:flex` above outranks the UA rule for [hidden] — restore it, or the
+   closed panel stays laid out and its steppers keep intercepting clicks. */
+.customize-panel[hidden] { display: none; }
+.customize-panel[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .customize-panel { transition: none; }
+}
+
+.cz-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 8px 9px 12px;
+  border-radius: 10px;
+}
+/* A hairline, and only between rows — no divider under the last one. */
+.cz-row + .cz-row {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--cz-ink) 7%, transparent);
+}
+.cz-row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--cz-ink) 45%, transparent);
+  outline-offset: -2px;
+}
+
+.cz-label {
+  font: 500 9.5px/1.3 var(--cz-font);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.42;
+  color: var(--cz-ink);
+}
+/*
+ * The stepper sits in the grid's `auto` column, so it holds its place no
+ * matter how wide the value gets — the old mono face was guarding against a
+ * reflow the layout already prevents. Tabular figures keep "1002 faces" from
+ * jittering as the count steps.
+ */
+.cz-value {
+  font: 450 14px/1.4 var(--cz-font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+  color: var(--cz-ink);
+  margin-top: 1px;
+}
+.cz-meta { opacity: 0.45; font-weight: 400; }
+
+.cz-dots {
+  display: flex;
+  gap: 3px;
+  padding: 5px 0 0 1px;
+}
+.cz-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--cz-ink);
+  opacity: 0.18;
+  transition: opacity 0.12s ease;
+}
+.cz-dot[data-on="true"] { opacity: 0.6; }
+
+/* Ghost steppers: no chrome at rest, a faint wash on interaction. */
+.cz-stepper { display: flex; gap: 1px; }
+.cz-step {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--cz-ink);
+  opacity: 0.5;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 16px/1 var(--cz-font);
+  padding: 0;
+  transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+@media (hover: hover) {
+  .cz-step:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--cz-ink) 8%, transparent);
+  }
+}
+.cz-step:active { opacity: 1; transform: scale(0.92); }
+.cz-step:focus-visible {
+  opacity: 1;
+  outline: 2px solid color-mix(in srgb, var(--cz-ink) 45%, transparent);
+  outline-offset: 1px;
+}
+
+/* Flag is the game's one semantic colour — only earned when the row is on Flag. */
+.cz-row[data-flag="true"] .cz-value { color: #e02424; }
+
+.cz-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+</style>
+<style>
 /* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
 :root,
 body[data-sphere-chrome="light"],
@@ -576,9 +757,34 @@ body.help-open { overflow: hidden; }
   background: color-mix(in srgb, var(--text-main) 8%, transparent);
   color: var(--text-main);
   border-radius: 999px;
-  padding: 8px 14px;
-  font: 600 0.8rem/1 "IBM Plex Sans", system-ui, sans-serif;
+  /* Icon-only, at the same 44/20 scale as .hud-btn so the banner and the
+     corner cluster read as one control language. 44px also clears the
+     minimum touch target. */
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+}
+.sphere-banner .banner-btn svg { width: 20px; height: 20px; stroke-width: 2; }
+/* The label still exists for screen readers and carries share progress —
+   sphere.js updates this span, never the button, so the icon survives. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Share progress, shown without touching the button's children. */
+.sphere-banner .banner-btn[data-state="busy"] { opacity: 0.6; cursor: wait; }
+.sphere-banner .banner-btn[data-state="error"] {
+  border-color: #e02424;
+  color: #e02424;
+  background: transparent;
 }
 .sphere-banner .banner-btn.primary {
   background: var(--text-main);
@@ -914,12 +1120,34 @@ body.help-open { overflow: hidden; }
   <div class="banner-msg" id="banner-msg"></div>
   <div class="banner-meta" id="banner-meta" hidden></div>
   <div class="banner-actions" id="banner-actions" hidden>
-    <button type="button" class="banner-btn primary" id="share-win-btn">Share image</button>
-    <button type="button" class="banner-btn" id="banner-again-btn">Play again</button>
+    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image" title="Share image">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 15V3"></path>
+        <path d="M8 7l4-4 4 4"></path>
+        <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path>
+      </svg>
+      <span class="sr-only">Share image</span>
+    </button>
+    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="3 7 3 13 9 13"></polyline>
+        <path d="M3.51 13a9 9 0 1 0 2.13-5.36L3 11"></path>
+      </svg>
+      <span class="sr-only">Undo last move</span>
+    </button>
+    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+      <span class="sr-only">Play again</span>
+    </button>
   </div>
 </div>
 
-<div class="hud-cluster" role="toolbar" aria-label="Game controls">
+<div class="hud-cluster dev-cluster" role="toolbar" aria-label="Game controls">
+  <div class="customize-panel" id="customize-panel" data-open="false" role="dialog" aria-label="Customize board" hidden></div>
   <div class="hud-actions" aria-label="Board controls">
     <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -928,26 +1156,21 @@ body.help-open { overflow: hidden; }
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <button type="button" id="size-btn" class="hud-btn" aria-label="Board size M, Medium, 1002 faces. Activate to cycle XS, S, M, L, XL." title="Board size M — Medium (1002 faces). Click to cycle XS → S → M → L → XL.">
-      <span class="size-mark" data-size="M" aria-hidden="true">M</span>
-    </button>
-    <button type="button" id="theme-btn" class="hud-btn" aria-label="Theme: Light" title="Theme — Light">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="5"></circle>
-        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board" title="Customize board (C)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3.2"></circle>
+        <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.72 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.72a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"></path>
       </svg>
-    </button>
-    <button type="button" id="nest-btn" class="hud-btn" aria-label="Count style: Numerals. Activate to cycle." title="Count style — Numerals (N)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><text x="12" y="16" text-anchor="middle" font-family="IBM Plex Sans,system-ui,sans-serif" font-size="13" font-weight="700" fill="currentColor" stroke="none">1</text></svg>
     </button>
   </div>
-  <div class="hud-actions" aria-label="Flag mode">
-    <button type="button" id="flag-toggle" class="hud-btn" aria-label="Flag mode" aria-pressed="false" title="Flag mode (F)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
-        <line x1="4" y1="22" x2="4" y2="15"></line>
-      </svg>
+  <!-- Shipped controls, kept in the DOM so sphere.js wiring and label sync are untouched. -->
+  <div class="legacy-hud" aria-hidden="true">
+    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Board size M, Medium, 1002 faces. Activate to cycle XS, S, M, L, XL." title="Board size">
+      <span class="size-mark" data-size="M" aria-hidden="true">M</span>
     </button>
+    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light" title="Theme"></button>
+    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle." title="Count style"></button>
+    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false" title="Flag mode"></button>
   </div>
   <div class="hud-actions" aria-label="Help">
     <button type="button" id="help-btn" class="hud-btn" aria-label="Help" title="Help (?)">
@@ -1270,8 +1493,9 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
  * Globe maps: Earth/Moon equirectangular daymaps sampled per face (lat/lon).
  * Mono: four shell·field pairings + two light-field float themes (contact shadow under sphere).
  * Zoom: wheel + pinch (clamped); starts pulled back (~0.72×).
- * Heights (highest→lowest): covered → flagged → numbered clear → empty clear.
- * Hover: temporary lift on activatable covered only (cleared stay put).
+ * Heights (highest→lowest): flagged → covered → numbered clear → empty clear.
+ * Tiers apply in numerals·rings·borderless only; flush/yellow stay flat.
+ * Hover: temporary lift over the tile's own tier (cleared stay put).
  * Counts: cycle numerals · rings · yellow · flush · borderless (btn / N).
  * Borderless: stroke-off + recess on cleared only; covered keep borders.
  * Endgame: 2D-style detonation finale (charge · shock · scatter · shards); win bloom (RM-safe).
@@ -1282,7 +1506,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
  * Persist: autosave mid-run (localStorage + sessionStorage `hexsweeper-sphere-run-v2`).
  * Soft/hard browser reload restores; only UX Reset (or size change) clears the run.
  * No window.confirm dialogs — Reset/size are deliberate. Welcome help only once, not over a restored run.
- * Flags: pure red fill only (no glyph); sit at the flagged height tier.
+ * Flags: pure red fill only (no glyph); stand proud of the shell as pins.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
@@ -1847,12 +2071,16 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
   const PRESS_LIFT = 0.011;
   /**
    * Four permanent height tiers (radial, sphere-radius units).
-   * Covered highest → empty deepest. Hover adds HOVER_LIFT on covered only.
+   * Flagged proudest → empty deepest. Hover adds HOVER_LIFT over the tier.
+   * Flags only stand proud in styles that extrude; flush/yellow keep them
+   * at shell height so those styles stay a flat mono field.
    */
+  const TIER_FLAGGED = 0.01;
   const TIER_COVERED = 0;
-  const TIER_FLAGGED = -0.009;
   const TIER_NUMBERED = -0.018;
   const TIER_EMPTY = -0.034;
+  /** Count styles that recess clears — the only ones that pin flags high. */
+  const EXTRUDED_STYLES = new Set(["numerals", "rings", "borderless"]);
   /** @deprecated kept as alias of TIER_NUMBERED for any external callers */
   const REVEAL_INSET = TIER_NUMBERED;
   /** Static letter marks — readable size at a glance. */
@@ -2046,6 +2274,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
     const bannerMeta = document.getElementById("banner-meta");
     const bannerActions = document.getElementById("banner-actions");
     const shareWinBtn = document.getElementById("share-win-btn");
+    const bannerUndoBtn = document.getElementById("banner-undo-btn");
     const bannerAgainBtn = document.getElementById("banner-again-btn");
     const restartBtn = document.getElementById("reset-btn") || document.getElementById("restart-btn");
     const flagToggle = document.getElementById("flag-toggle");
@@ -2060,6 +2289,66 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
     const helpDoneBtn = document.getElementById("help-done-btn");
     let helpFocusReturn = null;
     let shareBusy = false;
+    /*
+     * The share File is built when the win banner appears, not when the button
+     * is tapped. iOS Safari only honours navigator.share() while the user
+     * gesture is still active, and canvas.toBlob() is async — awaiting it
+     * spent the activation, so share() rejected with NotAllowedError and the
+     * download fallback (which iOS also ignores for blob URLs) did nothing
+     * visible. Preparing ahead lets the click call share() synchronously.
+     */
+    let pendingShareFile = null;
+    /*
+     * One-level undo. Only `revealed` and `flagged` are mutable per cell, so a
+     * snapshot is two byte arrays plus a few scalars — cheap enough to take
+     * before every dig. It exists for the game-over banner: a detonation is
+     * the one move players want back.
+     */
+    let undoSnapshot = null;
+
+    function captureUndo() {
+      const n = state.cells.length;
+      const revealed = new Uint8Array(n);
+      const flagged = new Uint8Array(n);
+      for (let i = 0; i < n; i++) {
+        revealed[i] = state.cells[i].revealed ? 1 : 0;
+        flagged[i] = state.cells[i].flagged ? 1 : 0;
+      }
+      undoSnapshot = {
+        revealed,
+        flagged,
+        flagsPlaced: state.flagsPlaced,
+        isFirstClick: state.isFirstClick,
+        timeElapsed: state.timeElapsed,
+      };
+    }
+
+    function restoreUndo() {
+      if (!undoSnapshot) return false;
+      const snap = undoSnapshot;
+      undoSnapshot = null;
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        c.revealed = !!snap.revealed[i];
+        c.flagged = !!snap.flagged[i];
+        // Revealed cells keep their finished animation; undone ones reset so
+        // a re-dig animates again instead of popping in.
+        c.animReveal = c.revealed ? 1 : 0;
+        c.visualDue = 0;
+      }
+      state.flagsPlaced = snap.flagsPlaced;
+      state.isFirstClick = snap.isFirstClick;
+      state.timeElapsed = snap.timeElapsed;
+      state.isGameOver = false;
+      state.won = false;
+      state.detonatorIdx = -1;
+      hideBanner();
+      if (!state.isFirstClick) startTimer();
+      updateUI();
+      draw();
+      persistNow();
+      return true;
+    }
 
     function hudClick(fn) {
       return (e) => {
@@ -3337,6 +3626,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
         state.isFirstClick = false;
         startTimer();
       }
+      captureUndo();
       cell.revealed = true;
       scheduleRevealVisual(idx, 0);
       if (cell.isMine) {
@@ -3433,12 +3723,16 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
         }
       }
       if (bannerActions) {
-        bannerActions.hidden = !opts.share;
+        bannerActions.hidden = false;
       }
       if (shareWinBtn) {
+        shareWinBtn.hidden = false;
         shareWinBtn.disabled = false;
-        shareWinBtn.textContent = "Share image";
+        setShareState("idle");
       }
+      if (bannerUndoBtn) bannerUndoBtn.hidden = !undoSnapshot;
+      pendingShareFile = null;
+      prepareShareFile();
       el.hidden = false;
       el.classList.add("visible");
     }
@@ -3466,40 +3760,66 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
       const T = state.theme;
       const dark = T.id === "dark" || T.pureCovered;
       const bg = T.bg || (dark ? "#000000" : "#ffffff");
-      const ink = dark ? "#ffffff" : "#000000";
-      const muted = dark ? "#999999" : "#666666";
+      /*
+       * Contrast against the colour actually painted, not the theme's notion
+       * of "dark". `dark` is true for any pureCovered theme, several of which
+       * paint a white bg — that rendered the headline white on white and made
+       * it vanish, while the grey meta lines survived and hid the problem.
+       */
+      const [br, bgc, bb] = parseCssColor(bg);
+      const bgLight = (0.2126 * br + 0.7152 * bgc + 0.0722 * bb) / 255 > 0.55;
+      const ink = bgLight ? "#000000" : "#ffffff";
+      const muted = bgLight ? "#666666" : "#999999";
 
       octx.fillStyle = bg;
       octx.fillRect(0, 0, side, side);
 
-      // Snapshot live board (device pixels) into the card with margin.
-      const margin = 72;
+      /*
+       * Crop to the sphere, not the viewport. Fitting the whole canvas into a
+       * square meant a tall phone screen contributed mostly empty space and
+       * the sphere landed tiny in the middle of the card.
+       *
+       * state.centerX/centerY/scale are CSS pixels; canvas.width/height are
+       * device pixels, so everything is converted through dpr before it can
+       * index into the bitmap. centerX is w/2, which recovers dpr without
+       * reading devicePixelRatio again — the canvas may have been sized under
+       * a different one.
+       */
+      // Leaves ~190px under the sphere for the caption block.
+      const margin = 110;
       const box = side - margin * 2;
       const sw = canvas.width;
       const sh = canvas.height;
       if (sw > 0 && sh > 0) {
-        const scale = Math.min(box / sw, box / sh);
-        const dw = sw * scale;
-        const dh = sh * scale;
-        const dx = (side - dw) / 2;
-        const dy = (side - dh) / 2 - 28;
-        octx.drawImage(canvas, 0, 0, sw, sh, dx, dy, dw, dh);
+        const dpr = state.centerX > 0 ? sw / (state.centerX * 2) : 1;
+        const half = Math.max(1, state.scale * dpr * 1.16);
+        let cropW = Math.min(sw, half * 2);
+        let cropH = Math.min(sh, half * 2);
+        const span = Math.min(cropW, cropH);
+        cropW = cropH = span;
+        let sx = state.centerX * dpr - span / 2;
+        let sy = state.centerY * dpr - span / 2;
+        sx = Math.max(0, Math.min(sw - span, sx));
+        sy = Math.max(0, Math.min(sh - span, sy));
+        octx.drawImage(canvas, sx, sy, span, span, (side - box) / 2, 26, box, box);
       }
 
       octx.textAlign = "center";
       octx.textBaseline = "middle";
       octx.fillStyle = ink;
-      octx.font = '700 42px "IBM Plex Sans", system-ui, sans-serif';
-      octx.fillText("Hex Sphere", side / 2, side - 118);
+      // Sized for a 1080 card seen as a thumbnail in a feed, where the old
+      // 42/28/22 stack was unreadable.
+      octx.font = '700 66px "IBM Plex Sans", system-ui, sans-serif';
+      octx.fillText(shareLabels().headline, side / 2, side - 142);
 
       octx.fillStyle = muted;
-      octx.font = '500 28px "IBM Plex Sans", system-ui, sans-serif';
+      octx.font = '500 44px "IBM Plex Sans", system-ui, sans-serif';
       const line = `${formatTime(state.timeElapsed)}  ·  ${state.mineCount} mines  ·  ${SIZE_LABEL[state.difficulty] || "M"}`;
-      octx.fillText(line, side / 2, side - 72);
+      octx.fillText(line, side / 2, side - 80);
 
-      octx.font = '400 22px "IBM Plex Sans", system-ui, sans-serif';
+      octx.font = '400 32px "IBM Plex Sans", system-ui, sans-serif';
       octx.fillStyle = colorMix(muted, bg, 0.15);
-      octx.fillText("lukesteuber.com/games/hexsweeper/sphere/", side / 2, side - 36);
+      octx.fillText("dr.eamer.dev/games/hexsweeper/sphere/", side / 2, side - 32);
 
       return out;
     }
@@ -3513,23 +3833,78 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
       });
     }
 
+    /*
+     * The banner buttons are icon-only, so assigning textContent would delete
+     * the SVG inside them. Share progress therefore lives on the accessible
+     * label and a data-state attribute, which also keeps the state announced
+     * to screen readers rather than conveyed by colour alone.
+     */
+    const SHARE_LABEL = {
+      idle: "Share image",
+      busy: "Preparing image…",
+      error: "Share failed",
+    };
+    function setShareState(kind) {
+      if (!shareWinBtn) return;
+      const label = SHARE_LABEL[kind] || SHARE_LABEL.idle;
+      shareWinBtn.dataset.state = kind;
+      shareWinBtn.title = label;
+      shareWinBtn.setAttribute("aria-label", label);
+      const sr = shareWinBtn.querySelector(".sr-only");
+      if (sr) sr.textContent = label;
+    }
+
+    /** Card headline, share text and filename, all from one outcome check. */
+    function shareLabels() {
+      const time = formatTime(state.timeElapsed);
+      const mines = `${state.mineCount} mines`;
+      const size = SIZE_LABEL[state.difficulty] || "M";
+      return state.won
+        ? {
+            headline: "Hex Sphere · Cleared",
+            text: `Cleared Hex Sphere in ${time} · ${mines} · ${size}`,
+            file: "hex-sphere-cleared.png",
+          }
+        : {
+            headline: "Hex Sphere",
+            text: `Hex Sphere · ${time} · ${mines} · ${size}`,
+            file: "hex-sphere-run.png",
+          };
+    }
+
+    /** Build the share File while the banner animates in, before any tap. */
+    async function prepareShareFile() {
+      try {
+        draw();
+        const blob = await shareCardBlob(buildShareCard());
+        pendingShareFile = new File([blob], shareLabels().file, {
+          type: "image/png",
+        });
+      } catch (_) {
+        pendingShareFile = null;
+      }
+    }
+
     async function shareWinImage() {
-      if (shareBusy || !state.won) return;
+      if (shareBusy) return;
       shareBusy = true;
       if (shareWinBtn) {
         shareWinBtn.disabled = true;
-        shareWinBtn.textContent = "Making…";
+        setShareState("busy");
       }
       try {
-        // Fresh paint so the card matches the current view.
-        draw();
-        const card = buildShareCard();
-        const blob = await shareCardBlob(card);
-        const file = new File([blob], "hex-sphere-clear.png", {
-          type: "image/png",
-        });
-        const text = `Cleared Hex Sphere in ${formatTime(state.timeElapsed)} · ${state.mineCount} mines`;
-        const url = "https://lukesteuber.com/games/hexsweeper/sphere/";
+        // Prepared at banner time so no await sits between the tap and
+        // navigator.share(). Only rebuild if preparation failed.
+        let file = pendingShareFile;
+        if (!file) {
+          draw();
+          file = new File([await shareCardBlob(buildShareCard())], shareLabels().file, {
+            type: "image/png",
+          });
+        }
+        const blob = file;
+        const text = shareLabels().text;
+        const url = "https://dr.eamer.dev/games/hexsweeper/sphere/";
         let canFileShare = false;
         try {
           canFileShare =
@@ -3541,11 +3916,14 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
         }
         if (canFileShare) {
           try {
-            await navigator.share({
-              files: [file],
-              title: "Hex Sphere",
-              text: `${text}\n${url}`,
-            });
+            /*
+             * File only, no title or text. Bluesky's share target takes one or
+             * the other: given both it posted the text and dropped the image,
+             * producing an empty post. The card already carries the time, mine
+             * count, board size and the URL, so nothing is lost by letting the
+             * image be the whole payload.
+             */
+            await navigator.share({ files: [file] });
           } catch (err) {
             if (err && err.name === "AbortError") return;
             downloadBlob(blob, file.name);
@@ -3554,17 +3932,13 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
           downloadBlob(blob, file.name);
         }
       } catch (_) {
-        if (shareWinBtn) shareWinBtn.textContent = "Share failed";
-        setTimeout(() => {
-          if (shareWinBtn) shareWinBtn.textContent = "Share image";
-        }, 1600);
+        setShareState("error");
+        setTimeout(() => setShareState("idle"), 1600);
       } finally {
         shareBusy = false;
         if (shareWinBtn) {
           shareWinBtn.disabled = false;
-          if (shareWinBtn.textContent === "Making…") {
-            shareWinBtn.textContent = "Share image";
-          }
+          if (shareWinBtn.dataset.state === "busy") setShareState("idle");
         }
       }
     }
@@ -3744,36 +4118,31 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
 
     /**
      * Permanent radial height for a cell (before hover/press).
-     * Covered → flagged → numbered clear → empty clear.
-     * Flush/yellow keep clears flush with the covered shell.
+     * Flagged → covered → numbered clear → empty clear.
+     * Only extruded styles tier at all; flush/yellow stay at shell height.
      */
     function tileHeight(cell, styleId) {
       if (!cell) return TIER_COVERED;
-      if (cell.flagged && !cell.revealed) return TIER_FLAGGED;
-      if (!cell.revealed) return TIER_COVERED;
-      if (styleId === "flush" || styleId === "yellow") return TIER_COVERED;
-      if (cell.isMine) return TIER_NUMBERED;
-      if (
-        styleId !== "numerals" &&
-        styleId !== "rings" &&
-        styleId !== "borderless"
-      ) {
-        return TIER_COVERED;
+      const extruded = EXTRUDED_STYLES.has(styleId);
+      if (cell.flagged && !cell.revealed) {
+        return extruded ? TIER_FLAGGED : TIER_COVERED;
       }
+      if (!cell.revealed) return TIER_COVERED;
+      if (!extruded) return TIER_COVERED;
+      if (cell.isMine) return TIER_NUMBERED;
       if (cell.neighborMines === 0) return TIER_EMPTY;
       return TIER_NUMBERED;
     }
 
     /** True when a clear sits below the shell (numbered or empty recess). */
     function tileShouldInset(cell, styleId) {
-      const h = tileHeight(cell, styleId);
-      return h < TIER_COVERED - 1e-6 && !(cell.flagged && !cell.revealed);
+      return tileHeight(cell, styleId) < TIER_COVERED - 1e-6;
     }
 
     /** Quantize height for skirt comparisons (float noise guard). */
     function heightBucket(h) {
-      if (h >= TIER_COVERED - 0.002) return 0;
-      if (h >= TIER_FLAGGED - 0.002) return 1;
+      if (h >= TIER_FLAGGED - 0.002) return 0;
+      if (h >= TIER_COVERED - 0.002) return 1;
       if (h >= TIER_NUMBERED - 0.002) return 2;
       return 3;
     }
@@ -4311,17 +4680,9 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
         else heights[i] = tileHeight(c, styleId);
       }
 
-      for (const proj of projected) {
+      function drawTile(proj) {
         const idx = proj.index;
         const cell = state.cells[idx];
-        // Hover/press on activatable covered faces draw in the raised pass.
-        const hoverRaise =
-          highlightIdx >= 0 &&
-          idx === highlightIdx &&
-          tileCanActivate(cell);
-        if (proj.z > 0.02 && hoverRaise) {
-          continue;
-        }
         const tile = state.tiles[idx];
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
@@ -4335,15 +4696,20 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
             tile.boundary.map((b) =>
               projectPoint(b, state.rotY, state.rotX)
             );
-          // Cliff only toward a strictly higher neighbor (same-depth edges stay open).
-          const myBucket = heightBucket(h);
-          drawSelectiveSkirt(
-            idx,
-            baseBoundary,
-            lifted.boundary,
-            darkMono,
-            (ni) => heightBucket(heights[ni]) >= myBucket
-          );
+          if (h > 1e-6) {
+            // Proud flag pin: wall on every edge, it sits above the whole shell.
+            drawExtrusionSkirt(baseBoundary, lifted.boundary);
+          } else {
+            // Cliff only toward a strictly higher neighbor (same-depth edges stay open).
+            const myBucket = heightBucket(h);
+            drawSelectiveSkirt(
+              idx,
+              baseBoundary,
+              lifted.boundary,
+              darkMono,
+              (ni) => heightBucket(heights[ni]) >= myBucket
+            );
+          }
           drawProj = lifted;
           markLift = h;
           if (h < -1e-6) {
@@ -4354,7 +4720,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
                 stroke: colors.fill,
                 lineWidth: 0,
               };
-            } else if (!(cell.flagged && !cell.revealed)) {
+            } else {
               // Recessed clears: groove rides the inset face.
               const groove =
                 state.theme.valleyGroove ||
@@ -4384,7 +4750,29 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
-      // Raised pass: hover/press on covered only (flags sit at TIER_FLAGGED).
+      // Flags stand above the shell, so they paint after their neighbors
+      // (still back-to-front among themselves) or the shell clips their skirts.
+      const proudFlags = [];
+      for (const proj of projected) {
+        const idx = proj.index;
+        const cell = state.cells[idx];
+        // Hover/press on activatable covered faces draw in the raised pass.
+        const hoverRaise =
+          highlightIdx >= 0 &&
+          idx === highlightIdx &&
+          tileCanActivate(cell);
+        if (proj.z > 0.02 && hoverRaise) {
+          continue;
+        }
+        if (proj.z > 0.02 && heights[idx] > 1e-6) {
+          proudFlags.push(proj);
+          continue;
+        }
+        drawTile(proj);
+      }
+      for (const proj of proudFlags) drawTile(proj);
+
+      // Raised pass: hover/press on covered or flagged, lifted over its tier.
       if (
         highlightIdx >= 0 &&
         tileCanActivate(state.cells[highlightIdx])
@@ -4399,8 +4787,10 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
             styleId,
             cell
           );
+          // Additive over the tile's tier, so a proud flag still lifts on hover.
           const lift =
-            state.pressed === idx ? PRESS_LIFT : HOVER_LIFT;
+            tileHeight(cell, styleId) +
+            (state.pressed === idx ? PRESS_LIFT : HOVER_LIFT);
           const raised = projectTile(tile, state.rotY, state.rotX, lift);
           const baseBoundary =
             raised.baseBoundary ||
@@ -4499,7 +4889,16 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
           if (state.hovered >= 0 && !touchMoved) {
-            toggleFlag(state.hovered);
+            /*
+             * A long press does the opposite of the tap, which is what the
+             * Tap action row advertises: "Dig · hold to flag" and
+             * "Flag · hold to dig". This used to flag unconditionally, so in
+             * flag mode holding just repeated the tap and there was no way to
+             * dig by touch at all. reveal() and toggleFlag() both guard
+             * isGameOver themselves.
+             */
+            if (state.flagMode) reveal(state.hovered);
+            else toggleFlag(state.hovered);
             touchMoved = true;
             state.pressed = -1;
           }
@@ -4613,6 +5012,11 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
         e.stopPropagation();
         shareWinImage();
       });
+    }
+    if (bannerUndoBtn) {
+      bannerUndoBtn.addEventListener("click", hudClick(() => {
+        restoreUndo();
+      }));
     }
     if (bannerAgainBtn) {
       bannerAgainBtn.addEventListener("click", hudClick(() => {
@@ -4817,6 +5221,19 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
       mineTargetForDifficulty,
       exportRunState,
       applyRunState,
+      // Direct setters for alternate chrome (see sphere/dev/). The shipped HUD
+      // still drives the cycle* wrappers; these change no in-game behaviour.
+      setSize: (id) => setDifficulty(id, true),
+      setThemeIndex: (i) => applyTheme(i),
+      getThemeIndex: () => themeIndex,
+      setCountStyle: (id) => setCountStyle(id),
+      setFlagMode: (on) => {
+        state.flagMode = !!on;
+        if (flagToggle) {
+          flagToggle.setAttribute("aria-pressed", state.flagMode ? "true" : "false");
+          flagToggle.classList.toggle("active", state.flagMode);
+        }
+      },
     };
   }
 
@@ -4830,7 +5247,237 @@ window.HEXSWEEPER_SPHERE_TAKE = "muse-constellation-void";
 
 </script>
 <script>
-SphereSweeper.boot({ canvasId: "gameCanvas" });
+/* dev-chrome.js */
+/*
+ * File Purpose: Drive the sphere's Customize panel — Board · Theme · Counts · Tap action.
+ * Primary Functions/Classes: initDevChrome(game).
+ * Inputs: the handle returned by SphereSweeper.boot. Outputs: live state changes.
+ * Notes: uses the exported setters, never synthetic clicks on the hidden HUD, so a
+ *   step is one state change rather than N cycles.
+ * A11y: rows are groups with Left/Right stepping; one polite live region for the
+ *   whole panel announces the new value with its meaning.
+ * Author: Luke Steuber <luke@lukesteuber.com>
+ */
+(function (global) {
+  "use strict";
+
+  const SIZES = [
+    ["xsmall", "Extra small", "162 faces"],
+    ["easy", "Small", "362 faces"],
+    ["medium", "Medium", "1002 faces"],
+    ["hard", "Large", "1442 faces"],
+    ["xlarge", "Extra large", "2252 faces"],
+  ];
+
+  const COUNTS = [
+    ["numerals", "Numerals", "1 2 3"],
+    ["rings", "Rings", "concentric"],
+    ["yellow", "Yellow", "flat"],
+    ["flush", "Flush", "flat"],
+    ["borderless", "Borderless", "seamless"],
+  ];
+
+  const TAP = [
+    [false, "Dig", "hold to flag"],
+    [true, "Flag", "hold to dig"],
+  ];
+
+  function themeMeta(def) {
+    if (!def) return "";
+    if (def.id === "earth" || def.id === "moon") return "globe map";
+    if (def.id === "float" || def.id === "card") return "contact shadow";
+    if (def.id === "glow") return "luminous digs";
+    return "mono";
+  }
+
+  function initDevChrome(game) {
+    const panel = document.getElementById("customize-panel");
+    const btn = document.getElementById("customize-btn");
+    if (!panel || !btn || !game) return;
+
+    const THEMES = (global.SphereSweeper && global.SphereSweeper.THEMES) || [];
+
+    const live = document.createElement("p");
+    live.className = "cz-live";
+    live.setAttribute("role", "status");
+    live.setAttribute("aria-live", "polite");
+    panel.parentNode.appendChild(live);
+
+    /** Rows read their index from live game state, so the panel never drifts. */
+    const ROWS = [
+      {
+        label: "Board",
+        len: SIZES.length,
+        get: () => Math.max(0, SIZES.findIndex((s) => s[0] === game.getState().difficulty)),
+        at: (i) => [SIZES[i][1], SIZES[i][2]],
+        set: (i) => game.setSize(SIZES[i][0]),
+      },
+      {
+        label: "Theme",
+        len: THEMES.length,
+        get: () => game.getThemeIndex(),
+        at: (i) => [THEMES[i] ? THEMES[i].name : "—", themeMeta(THEMES[i])],
+        set: (i) => game.setThemeIndex(i),
+      },
+      {
+        label: "Counts",
+        len: COUNTS.length,
+        get: () => Math.max(0, COUNTS.findIndex((c) => c[0] === game.getState().countStyle)),
+        at: (i) => [COUNTS[i][1], COUNTS[i][2]],
+        set: (i) => game.setCountStyle(COUNTS[i][0]),
+      },
+      {
+        label: "Tap action",
+        len: TAP.length,
+        flag: true,
+        get: () => (game.getState().flagMode ? 1 : 0),
+        at: (i) => [TAP[i][1], TAP[i][2]],
+        set: (i) => game.setFlagMode(TAP[i][0]),
+      },
+    ];
+
+    function render(focusRow) {
+      panel.textContent = "";
+      ROWS.forEach((row, ri) => {
+        if (!row.len) return;
+        const idx = row.get();
+        const [name, meta] = row.at(idx);
+
+        const el = document.createElement("div");
+        el.className = "cz-row";
+        el.tabIndex = 0;
+        el.setAttribute("role", "group");
+        el.setAttribute("aria-label", row.label + ": " + name + ", " + meta);
+        if (row.flag) el.dataset.flag = String(idx === 1);
+
+        const left = document.createElement("div");
+        const lab = document.createElement("div");
+        lab.className = "cz-label";
+        lab.textContent = row.label;
+        const val = document.createElement("div");
+        val.className = "cz-value";
+        val.textContent = name + " ";
+        const metaEl = document.createElement("span");
+        metaEl.className = "cz-meta";
+        metaEl.textContent = "· " + meta;
+        val.appendChild(metaEl);
+        const dots = document.createElement("div");
+        dots.className = "cz-dots";
+        for (let i = 0; i < row.len; i++) {
+          const d = document.createElement("span");
+          d.className = "cz-dot";
+          d.dataset.on = String(i === idx);
+          dots.appendChild(d);
+        }
+        left.appendChild(lab);
+        left.appendChild(val);
+        left.appendChild(dots);
+
+        const step = document.createElement("div");
+        step.className = "cz-stepper";
+        [-1, 1].forEach((dir) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "cz-step";
+          b.textContent = dir < 0 ? "‹" : "›";
+          const nx = row.at((idx + dir + row.len) % row.len)[0];
+          b.setAttribute(
+            "aria-label",
+            (dir < 0 ? "Previous " : "Next ") + row.label.toLowerCase() + ", " + nx
+          );
+          b.addEventListener("click", (e) => {
+            e.stopPropagation();
+            move(ri, dir);
+          });
+          step.appendChild(b);
+        });
+
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowLeft") { e.preventDefault(); move(ri, -1); }
+          else if (e.key === "ArrowRight") { e.preventDefault(); move(ri, 1); }
+        });
+
+        el.appendChild(left);
+        el.appendChild(step);
+        panel.appendChild(el);
+      });
+
+      if (typeof focusRow === "number") {
+        const rows = panel.querySelectorAll(".cz-row");
+        if (rows[focusRow]) rows[focusRow].focus();
+      }
+    }
+
+    function move(ri, dir) {
+      const row = ROWS[ri];
+      const next = (row.get() + dir + row.len) % row.len;
+      row.set(next);
+      // Board size restarts the game; re-read rather than assume the set landed.
+      render(ri);
+      const [name, meta] = row.at(row.get());
+      live.textContent = row.label + ": " + name + ", " + meta;
+    }
+
+    let open = false;
+    function setOpen(next, restoreFocus) {
+      open = next;
+      btn.setAttribute("aria-expanded", String(open));
+      if (open) {
+        panel.hidden = false;
+        render(0);
+        // Unhide and fade in separate frames, or the transition never runs.
+        requestAnimationFrame(() => {
+          panel.dataset.open = "true";
+        });
+      } else {
+        panel.dataset.open = "false";
+        panel.hidden = true;
+        live.textContent = "";
+        if (restoreFocus !== false) btn.focus();
+      }
+    }
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setOpen(!open);
+    });
+    panel.addEventListener("click", (e) => e.stopPropagation());
+    document.addEventListener("click", () => {
+      if (open) setOpen(false, false);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && open) {
+        e.stopPropagation();
+        setOpen(false);
+      } else if (
+        (e.key === "c" || e.key === "C") &&
+        !e.metaKey && !e.ctrlKey && !e.altKey &&
+        !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "")
+      ) {
+        setOpen(!open);
+      }
+    });
+
+    // The game's own shortcuts still mutate state behind an open panel, so
+    // re-read after one. Scoped to those keys and focus-preserving — a blanket
+    // re-render would rip focus out from under anyone tabbing the rows.
+    const GAME_KEYS = /^[stnfrSTNFR]$/;
+    document.addEventListener("keyup", (e) => {
+      if (!open || !GAME_KEYS.test(e.key)) return;
+      const rows = Array.prototype.slice.call(panel.querySelectorAll(".cz-row"));
+      const focused = rows.indexOf(document.activeElement);
+      render(focused >= 0 ? focused : undefined);
+    });
+
+    setOpen(false, false);
+  }
+
+  global.initDevChrome = initDevChrome;
+})(window);
+
+</script>
+<script>
+initDevChrome(SphereSweeper.boot({ canvasId: "gameCanvas" }));
 (function () {
   const lb = document.getElementById("history-lightbox");
   const openBtn = document.getElementById("help-history-btn");

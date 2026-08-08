@@ -11,6 +11,17 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - **`index.html`**: production chrome + five-theme model + custom Canvas rendering (Soft UI Light/Dark, Escape neumorph, Fire magma pit, mycelium Plague).
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Current status (2026-08-08)
+
+- [x] Sphere Customize panel + undo (in-run theme/board tweaks, one-step undo)
+- [x] Sphere share card that works — real capture, wired from Customize panel
+- [x] Sphere Glow theme — luminous dig centers
+- [x] Sphere Earth / Moon globe-map themes (`?theme=earth|moon`); daymap textures tracked in `sphere/assets/textures/`
+- [x] Three AI model-take variants on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
+- [x] Free 360° drag tumble (was constrained camera)
+- [x] Autosave discard confirms; red-only flags
+- [x] `sphere/dev/` dev-chrome overlay (grid/debug HUD) alongside prod `sphere/index.html`
+
 ## Current status (2026-08-05)
 
 - [x] **Plate perf** — Light/Dark: seam-only Soft UI LOD when zoomed out (0.87 enter / 0.91 exit hysteresis; landing zoom 0.72); full extrusion when zoomed in; Escape keeps its own seam LOD; frustum cull @ 80 cells in LOD / 220 full; IntersectionObserver + iframe blur + idle RAF throttle in `core.js`
