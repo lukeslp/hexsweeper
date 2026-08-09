@@ -8,8 +8,9 @@ writes the Xcode asset slots.
 Usage:
     python3 scripts/generate-icon.py [--source path/to/render.png]
 
-With no --source it renders www/index.html itself, so the icon always matches
-the payload actually shipping. Requires Chrome and Pillow.
+With no --source it renders the sphere game from the shipped payload, so the
+icon is the real board — partly played — rather than an illustration of it.
+Requires Chrome and Pillow.
 """
 
 from __future__ import annotations
@@ -38,7 +39,8 @@ SPLASH_SLOTS = [("splash-2732x2732-2.png", 2732), ("splash-2732x2732-1.png", 546
 RENDER_HARNESS = """
 <style>
   .hud-stats,.hud-actions,.hud-cluster,.legacy-hud,.customize-panel,
-  .help-overlay,.help-panel,.sphere-banner,.count-style-toast,.lightbox
+  .help-overlay,.help-panel,.sphere-banner,.count-style-toast,.lightbox,
+  .app-back
   { display:none !important; visibility:hidden !important; }
   html,body { background:#07080c !important; }
 </style>
@@ -67,11 +69,11 @@ setTimeout(function () {
 
 
 def render_game(out: Path, size: int = 1200) -> Path:
-    """Screenshot www/index.html with chrome hidden and the Glow theme applied."""
-    src = (REPO / "www/index.html").read_text(encoding="utf-8")
+    """Screenshot the shipped sphere with chrome hidden and Glow applied."""
+    src = (REPO / "www/games/sphere.html").read_text(encoding="utf-8")
     boot = 'initDevChrome(SphereSweeper.boot({ canvasId: "gameCanvas" }));'
     if boot not in src:
-        sys.exit("generate-icon: boot call not found in www/index.html")
+        sys.exit("generate-icon: boot call not found in www/games/sphere.html")
     src = src.replace(
         boot,
         'window.__iconShot = SphereSweeper.boot({ canvasId: "gameCanvas" }); initDevChrome(window.__iconShot);',
