@@ -5376,7 +5376,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
    *
    * Screen-space post-pass over the finished frame: only pixels below the
    * waterline are recomposited, so geometry, camera and hit-testing are
-   * untouched. Adapted from Wakana Y.K.'s SVG feTurbulence water reflection
+   * untouched.
+   *
+   * The globe carries a parallel implementation in sphere-ux/sphere.js,
+   * anchored to the sphere instead of the board — a change to the wave, the
+   * meniscus or the depth haze here usually wants mirroring there.
+   *
+   * Adapted from Wakana Y.K.'s SVG feTurbulence water reflection
    * (codepen oNOwpqM). The displacement runs as canvas row slices rather than
    * a real `filter: url(#…)` on the canvas, because an SVG filter warps what
    * you see but not where the pointer lands — every dig below the line would
@@ -5393,9 +5399,16 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
      * water instead of in it.
      */
     level: 0.62,
-    /** Per-frame cache so backdrop and post-pass agree on the exact row. */
+    /**
+     * Resolved once per frame by drawWaterField (beforeFrame) and read back by
+     * drawWaterPass (afterFrame). Ticked on a counter rather than a timestamp:
+     * performance.now() is sub-millisecond, so the two hooks never landed on
+     * the same key and the line could drift between the sea and the reflection
+     * drawn into it.
+     */
     _y: 0,
-    _stamp: -1,
+    _bottom: 0,
+    _ready: false,
   };
 
   /** Three octaves standing in for feTurbulence fractalNoise. Returns ~[-1,1]. */
@@ -5409,14 +5422,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
 
   /**
-   * Waterline in canvas px, breathing on a slow tide. Resolved once per frame:
-   * the sea underlay and the post-pass must land on the same row or the
-   * meniscus separates from the reflection it belongs to.
+   * Waterline in canvas px, breathing on a slow tide. Called once per frame
+   * from drawWaterField; the post-pass reuses the stored value so the sea and
+   * the reflection drawn into it cannot land on different rows.
    */
-  function waterLineY(s) {
+  function computeWaterLine(s) {
     const h = s.canvas.height;
     const now = performance.now();
-    if (WATER._stamp === now) return WATER._y;
 
     let top = h * 0.3;
     let bottom = h * 0.78;
@@ -5440,7 +5452,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     WATER._y = Math.round(
       Math.max(h * 0.18, Math.min(h * 0.92, top + (bottom - top) * (WATER.level + tide)))
     );
-    WATER._stamp = now;
+    // Last row that can hold board pixels. Past it the frame is flat sea, and
+    // refracting sea onto identical sea is hundreds of copies for no pixel.
+    WATER._bottom = Math.min(h, Math.ceil(bottom));
+    WATER._ready = true;
     return WATER._y;
   }
 
@@ -5452,7 +5467,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     const w = s.canvas.width;
     const h = s.canvas.height;
     const t = performance.now();
-    const surf = waterLineY(s);
+    const surf = computeWaterLine(s);
 
     ctx.save();
     ctx.globalCompositeOperation = "source-over";
@@ -5506,8 +5521,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   function drawWaterPass(ctx, s) {
     const w = s.canvas.width;
     const h = s.canvas.height;
-    if (!w || !h) return;
-    const surf = waterLineY(s);
+    if (!w || !h || !WATER._ready) return;
+    const surf = WATER._y;
     const depth = h - surf;
     if (depth < 4) return;
     const t = performance.now() * 0.001;
@@ -5546,7 +5561,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.fillRect(0, surf, w, depth);
 
     // 1 · Refraction — the submerged part of the raft, wobbling where it sits.
-    for (let y = surf; y < h; y += slice) {
+    const stop = Math.min(h, WATER._bottom);
+    for (let y = surf; y < stop; y += slice) {
       const d = (y - surf) / depth;
       const dx = waterWave(y, t) * amp * (0.35 + d * 1.15);
       ctx.drawImage(buf, 0, y, w, slice, dx, y, w, slice);
@@ -8847,6 +8863,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       modes: [
         { mode: "fire", label: "Fire" },
         { mode: "plague", label: "Plague" },
+        { mode: "water", label: "Water" },
       ],
     },
     fire: {
@@ -8879,6 +8896,23 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       modes: [
         { mode: "light", label: "Light / Dark plate" },
         { mode: "fire", label: "Fire" },
+      ],
+    },
+    water: {
+      title: "Hexsweeper · Water",
+      lede:
+        "A finite raft, half under the tide.<br>Six neighbors per cell · first dig is always safe.",
+      body: [
+        "Clear every safe cell without detonating a mine.<br>Numbers count mines among the six touching neighbors.",
+        "Flag suspected mines, then dig elsewhere.<br>When a revealed cell’s flags match its count, tap it again to chord-open the rest.",
+        "The waterline cuts across the board. Rows below it ripple and reflect, but they dig exactly where you tap.<br>Clear all safe cells to win.",
+      ],
+      keys:
+        "<kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>Esc</kbd> close",
+      modes: [
+        { mode: "light", label: "Light / Dark plate" },
+        { mode: "fire", label: "Fire" },
+        { mode: "plague", label: "Plague" },
       ],
     },
     escape: {
