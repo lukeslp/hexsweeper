@@ -1,0 +1,28 @@
+{
+  "id": "claude-amber-codex",
+  "title": "Hexsweeper 3D: Amber Codex",
+  "tagline": "A hex-tile minesweeper on a Goldberg sphere, illuminated like a scholar's annotated globe.",
+  "aesthetic": "The board reads like a cabinet-of-curiosities artifact: warm amber resin tiles float over deep slate, each face catching light as though hand-lacquered. Cleared cells reveal aged parchment tones with letterpress-weight numerals in a serif cut. The sphere rotates with the unhurried confidence of an orrery, not a game widget.",
+  "palette": {
+    "field": "#1c1f2b",
+    "shell": "#4a3f2f",
+    "well": "#e8dcc8",
+    "numberedWell": "#f5e6c8",
+    "edge": "#8c7a5e",
+    "flag": "#c0392b",
+    "text": "#2c1a0e",
+    "chrome": "dark",
+    "accent": "#d4a240"
+  },
+  "visualTweaks": {
+    "floatShadow": true,
+    "countStyleDefault": "numerals",
+    "defaultZoom": 0.88,
+    "ambientSpin": true,
+    "boardSizeDefault": "medium"
+  },
+  "mechanicTwist": "When a flood-fill clears a region, each newly revealed cell lights up in a brief amber pulse radiating outward from the origin dig \u2014 purely cosmetic.",
+  "helpLede": "Dig to reveal a hex face; flag to mark a suspected mine. Flood-fill clears contiguous safe regions automatically.",
+  "hudNote": "Every safe cell is a folio turned.",
+  "provider": "claude via dreamer (anthropic) \u2014 local claude OAuth expired"
+}

@@ -18,6 +18,12 @@
 !sphere/assets/**/*.png
 !sphere/assets/**/*.jpg
 
+# UX sandbox (hex-bloom experiments) — same media needs as live sphere
+!sphere-ux/assets/
+!sphere-ux/assets/**
+!sphere-ux/assets/**/*.png
+!sphere-ux/assets/**/*.jpg
+
 # Staging frames for tools/shoot-og-cards.sh
 og-frames/
 

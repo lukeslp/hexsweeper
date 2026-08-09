@@ -1,0 +1,413 @@
+/*
+ * Hex bloom chrome for sphere-ux.
+ * Closed: small dock hex at bottom. Open: rises to center, honeycomb blooms,
+ * scrim blurs the board, dock becomes Close and folds everything home.
+ * Geometry + fold language from /uxperiments/clex.
+ */
+
+.hex-bloom {
+  --tile-w: 76px;
+  --tile-h: 88px;
+  --tile-w-dock: 52px;
+  --tile-h-dock: 60px;
+  --border-w: 1.5px;
+  --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  --hb-ink: var(--text-main, #000);
+  --hb-paper: var(--bg-color, #fff);
+  --hb-fill: color-mix(in srgb, var(--hb-paper) 94%, var(--hb-ink));
+  --hb-fill-hover: color-mix(in srgb, var(--hb-paper) 82%, var(--hb-ink));
+  --hb-stroke: color-mix(in srgb, var(--hb-ink) 70%, transparent);
+  --hb-center-fill: var(--hb-ink);
+  --hb-center-ink: var(--hb-paper);
+  --hb-active-fill: var(--hb-ink);
+  --hb-active-ink: var(--hb-paper);
+  --hb-accent: var(--hb-ink);
+  --hb-scrim: color-mix(in srgb, var(--hb-paper) 42%, transparent);
+  --rise-y: 0px;
+  --rise-ms: 420ms;
+
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Full-screen blur plate — only intercepts when open */
+.hex-bloom-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--hb-scrim);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+  backdrop-filter: blur(14px) saturate(1.05);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.32s ease, visibility 0.32s;
+}
+.hex-bloom[data-open="true"] .hex-bloom-scrim {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Centered blossom stage — full viewport, math origin at center */
+.hex-bloom-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  perspective: 1100px;
+  perspective-origin: 50% 50%;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s;
+}
+.hex-bloom[data-open="true"] .hex-bloom-stage,
+.hex-bloom[data-phase="rising"] .hex-bloom-stage,
+.hex-bloom[data-phase="falling"] .hex-bloom-stage {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Bottom seat: activate (closed) / close (open) */
+.hex-bloom-dock {
+  position: absolute;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 3;
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
+  pointer-events: none;
+}
+
+/* ---- Hex tile (clex language) ---- */
+.hb-hex {
+  position: absolute;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  margin-left: calc(var(--tile-w) / -2);
+  margin-top: calc(var(--tile-h) / -2);
+  display: grid;
+  place-items: center;
+  clip-path: var(--hex-clip);
+  background: var(--hb-stroke);
+  color: var(--hb-ink);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.48s cubic-bezier(0.22, 1, 0.3, 1),
+    opacity 0.34s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    width 0.35s cubic-bezier(0.22, 1, 0.3, 1),
+    height 0.35s cubic-bezier(0.22, 1, 0.3, 1),
+    margin 0.35s cubic-bezier(0.22, 1, 0.3, 1);
+  will-change: transform, opacity;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  filter:
+    drop-shadow(0 0 3px var(--hb-paper))
+    drop-shadow(0 1px 0 var(--hb-paper));
+}
+.hb-hex::before {
+  content: "";
+  position: absolute;
+  inset: var(--border-w);
+  clip-path: var(--hex-clip);
+  background: var(--hb-fill);
+  transition: inset 0.15s ease, background 0.2s ease;
+  z-index: 0;
+}
+.hb-hex .hb-label {
+  position: relative;
+  z-index: 1;
+  max-width: 88%;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  pointer-events: none;
+}
+.hb-hex .hb-label[data-size="sm"] { font-size: 10px; }
+.hb-hex .hb-label[data-size="xs"] { font-size: 9px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .hb-hex:hover::before,
+  .hb-hex:focus-visible::before {
+    background: var(--hb-fill-hover);
+    inset: calc(var(--border-w) + 1px);
+  }
+}
+.hb-hex:focus-visible {
+  background: var(--hb-accent);
+}
+
+/* Dock hex — compact seed at bottom */
+.hb-hex.is-dock {
+  left: 50%;
+  top: 50%;
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
+  margin-left: calc(var(--tile-w-dock) / -2);
+  margin-top: calc(var(--tile-h-dock) / -2);
+  z-index: 40;
+  color: var(--hb-center-ink);
+  pointer-events: auto;
+}
+.hb-hex.is-dock::before {
+  background: var(--hb-center-fill);
+  inset: 0;
+}
+.hb-hex.is-dock .hb-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hb-center-ink);
+}
+.hex-bloom[data-open="true"] .hb-hex.is-dock .hb-label,
+.hex-bloom[data-phase="rising"] .hb-hex.is-dock .hb-label,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock .hb-label {
+  /* Close sits in the dock seat while the blossom is up */
+}
+
+/* Traveler / stage center — rises from dock to viewport center */
+.hb-hex.is-center {
+  z-index: 35;
+  color: var(--hb-center-ink);
+  left: 50%;
+  top: 50%;
+}
+.hb-hex.is-center::before {
+  background: var(--hb-center-fill);
+  inset: 0;
+}
+.hb-hex.is-center .hb-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hb-center-ink);
+}
+
+/* Rising: still parked over the dock seat (translate down from center) */
+.hex-bloom[data-phase="rising"] .hb-hex.is-center,
+.hex-bloom[data-phase="falling"] .hb-hex.is-center {
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
+  margin-left: calc(var(--tile-w-dock) / -2);
+  margin-top: calc(var(--tile-h-dock) / -2);
+  transform: translateY(var(--rise-y)) scale(0.92);
+  transition:
+    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    width var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    height var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    margin var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    opacity 0.25s ease;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-center {
+  width: var(--tile-w);
+  height: var(--tile-h);
+  margin-left: calc(var(--tile-w) / -2);
+  margin-top: calc(var(--tile-h) / -2);
+  transform: translateY(0) scale(1);
+  transition:
+    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    width var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    height var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    margin var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    opacity 0.25s ease;
+}
+
+/* While rising, hide the dock seed so only one hex travels */
+.hex-bloom[data-phase="rising"] .hb-hex.is-dock,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock {
+  opacity: 0;
+  pointer-events: none;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock {
+  opacity: 1;
+  pointer-events: auto;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Primary ring */
+.hb-hex.is-primary {
+  z-index: 20;
+  color: var(--hb-ink);
+}
+.hb-hex.is-primary.is-active {
+  background: var(--hb-accent);
+  color: var(--hb-active-ink);
+  z-index: 28;
+}
+.hb-hex.is-primary.is-active::before {
+  background: var(--hb-active-fill);
+  inset: 2px;
+}
+.hb-hex.is-primary.is-active .hb-label {
+  color: var(--hb-active-ink);
+}
+
+.hex-bloom[data-branch] .hb-hex.is-primary:not(.is-active) {
+  opacity: 0.38;
+}
+
+/* Sub / leaf ring */
+.hb-hex.is-sub {
+  z-index: 24;
+  color: var(--hb-ink);
+}
+.hb-hex.is-sub .hb-label {
+  color: var(--hb-ink);
+  font-size: 10px;
+}
+.hb-hex.is-sub.is-chosen {
+  background: var(--hb-accent);
+  color: var(--hb-active-ink);
+  z-index: 26;
+}
+.hb-hex.is-sub.is-chosen::before {
+  background: var(--hb-active-fill);
+  inset: 2px;
+}
+.hb-hex.is-sub.is-chosen .hb-label {
+  color: var(--hb-active-ink);
+}
+
+/* Fold / unfold (clex) */
+.hb-hex.folded {
+  opacity: 0;
+  pointer-events: none;
+  transform:
+    translate(var(--tx, 0), var(--ty, 0))
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--fold, 82deg))
+    scale(0.86);
+}
+.hb-hex.shown {
+  opacity: 1;
+  transform:
+    translate(var(--tx, 0), var(--ty, 0))
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, 0deg)
+    scale(1);
+}
+
+/* Delay petal appearance until the seed has risen */
+.hex-bloom[data-phase="rising"] .hb-hex.is-primary,
+.hex-bloom[data-phase="rising"] .hb-hex.is-sub {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Stats hub */
+.hex-bloom-hub {
+  --hub-ink: var(--text-main, #000);
+  --hub-halo: var(--bg-color, #fff);
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  z-index: 56;
+  display: flex;
+  gap: 1.35rem;
+  pointer-events: none;
+  color: var(--hub-ink);
+  font: 600 22px/1 "IBM Plex Sans", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+  text-shadow:
+    0 0 12px var(--hub-halo),
+    0 0 5px var(--hub-halo),
+    0 1px 0 var(--hub-halo),
+    0 -1px 0 var(--hub-halo),
+    1px 0 0 var(--hub-halo),
+    -1px 0 0 var(--hub-halo);
+}
+body[data-sphere-chrome="dark"] .hex-bloom-hub {
+  --hub-ink: #fff;
+  --hub-halo: #000;
+}
+.hex-bloom-hub[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.hex-bloom-live {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  margin: -1px !important;
+  padding: 0 !important;
+}
+
+/* Hide legacy gear/help chrome */
+body.hex-bloom-ui .hud-help-fixed,
+body.hex-bloom-ui .hud-cluster {
+  display: none !important;
+  pointer-events: none !important;
+}
+body.hex-bloom-ui .legacy-hud {
+  display: block !important;
+  position: fixed !important;
+  left: -10000px !important;
+  top: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* While menu is the active surface, keep the board inert-looking */
+body.hex-bloom-open .canvas-container {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-hex,
+  .hex-bloom-scrim,
+  .hex-bloom-stage,
+  .hex-bloom-hub {
+    transition: none !important;
+    transition-delay: 0ms !important;
+  }
+  .hex-bloom {
+    --rise-ms: 0ms;
+  }
+  .hb-hex.folded {
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.92);
+  }
+}
+
+@media (max-width: 400px) {
+  .hex-bloom {
+    --tile-w: 66px;
+    --tile-h: 76px;
+    --tile-w-dock: 48px;
+    --tile-h-dock: 56px;
+  }
+  .hb-hex .hb-label { font-size: 10px; }
+}
