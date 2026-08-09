@@ -19,21 +19,9 @@
     ["xlarge", "XL"],
   ];
 
-  // Count *paint* only — flush/seams are independent surface axes now.
-  const COUNTS = [
-    ["numerals", "123"],
-    ["rings", "Rings"],
-    ["yellow", "Mark"],
-  ];
-
-  // Themes offered as Look leaves. Kept in sync with sphere.js THEMES by hand
-  // — the dock shows a curated set, not every id in the array.
-  const CLASSIC_PACKS = [
-    { id: "earth", name: "Earth" },
-    { id: "moon", name: "Moon" },
-    { id: "glow", name: "Glow" },
-    { id: "water", name: "Water" },
-  ];
+  // Surface packs live in the ? modal now, not the dock. This map only exists
+  // so the Look tile can still name the active one.
+  const PACK_NAMES = { earth: "Earth", moon: "Moon", water: "Water" };
 
   // Full 6-neighbour ring (pointy-top axial) — used for leaf fans around a parent.
   const DIRECTIONS = [
@@ -634,12 +622,11 @@
           label: () => {
             const p = getPack();
             if (p === "classic") return "Look";
-            const hit = CLASSIC_PACKS.find((x) => x.id === p);
-            return hit ? hit.name : "Look";
+            return PACK_NAMES[p] || "Look";
           },
           icon: "theme",
           iconOnly: false,
-          aria: () => "Look and theme packs",
+          aria: () => "Look — background, shell, dug and indicators",
           sub: () => {
             const axes = getAxes();
             const pack = getPack();
@@ -669,53 +656,22 @@
                 run: () => flipAxis("well"),
               },
             ];
-            CLASSIC_PACKS.forEach((pk) => {
-              const t = THEMES.find((x) => x.id === pk.id);
-              leaves.push({
-                id: "pack-" + pk.id,
-                label: pk.name,
-                themeSwatch:
-                  t || {
-                    id: pk.id,
-                    name: pk.name,
-                    covered: "#666",
-                    bg: "#000",
-                    coveredEdge: "#fff",
-                    flagFill: "#ff0000",
-                    label: "#fff",
-                    chrome: "dark",
-                  },
-                iconOnly: true,
-                chosen: () => pack === pk.id,
-                run: () => {
-                  if (typeof game.setAppearancePack === "function") {
-                    game.setAppearancePack(pk.id);
-                  } else {
-                    const i = THEMES.findIndex((x) => x.id === pk.id);
-                    if (i >= 0) game.setThemeIndex(i);
-                  }
-                  announce("Pack · " + pk.name);
-                },
-              });
-            });
-            // Count paint under Look (not Reset/Help — those are dock tiles)
-            COUNTS.forEach(([id, lab]) => {
-              leaves.push({
-                id: "st-" + id,
-                label: lab,
-                icon:
-                  id === "rings"
-                    ? "rings"
-                    : id === "numerals"
-                      ? "numerals"
-                      : "style",
-                labelSize: "sm",
-                chosen: () => game.getState().countStyle === id,
-                run: () => {
-                  game.setCountStyle(id, { syncSurface: false });
-                  announce("Counts · " + lab);
-                },
-              });
+            // Indicators: one toggle, numerals <-> yellow. `rings` is still a
+            // valid style (the Kimi and Muse takes land on it), so treat
+            // anything that is not yellow as numerals — a player who arrives on
+            // rings toggles into yellow and then into numerals, never stuck.
+            const yellowOn = game.getState().countStyle === "yellow";
+            leaves.push({
+              id: "st-indicators",
+              label: yellowOn ? "Mark" : "123",
+              icon: yellowOn ? "style" : "numerals",
+              labelSize: "sm",
+              chosen: () => true,
+              run: () => {
+                const next = yellowOn ? "numerals" : "yellow";
+                game.setCountStyle(next, { syncSurface: false });
+                announce("Indicators · " + (next === "yellow" ? "Mark" : "Numerals"));
+              },
             });
             return leaves;
           },

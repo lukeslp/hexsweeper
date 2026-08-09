@@ -73,15 +73,9 @@ body[data-sphere-theme="moon"] {
   --nav-ink: #ffffff;
 }
 body[data-sphere-theme="earth"],
-body[data-sphere-theme="moon"],
-body[data-sphere-theme="glow"] {
+body[data-sphere-theme="moon"] {
   --bg-color: #05070c;
   --nav-bg: #0c1018;
-}
-body[data-sphere-theme="glow"] {
-  --bg-color: #03050a;
-  --nav-bg: #071018;
-  --text-sub: #7a9ab0;
 }
 html, body {
   height: 100%;
@@ -576,6 +570,51 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
 .water-level::-moz-range-track { background: rgba(200, 245, 255, 0.28); border: 0; }
 .water-level:focus-visible { outline: 2px solid #7fe0e8; outline-offset: 4px; }
 @media (max-width: 560px) { .water-level { height: min(34vh, 220px); } }
+/* Surface curiosities in the ? modal — quiet by design; these are asides,
+   not a feature block. Swatch colour rides on --sw per button. */
+.help-packs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 0.6rem;
+}
+.help-packs-cap {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-right: 2px;
+}
+.help-pack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  color: inherit;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--help-ink) 22%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.help-pack::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sw, currentColor);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--help-ink) 28%, transparent);
+}
+.help-pack:hover { opacity: 1; }
+.help-pack[aria-pressed="true"] {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--help-ink) 55%, transparent);
+}
+.help-pack:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
@@ -682,7 +721,7 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Bottom bar: reset, board size (XS–XL), theme (Earth &amp; Moon daymaps, Glow with luminous dig centers, Water for a half-submerged globe with a draggable waterline), count style. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+      <p>Bottom bar: reset, board size (XS–XL), and Look — background, shell and dug colours, plus indicators. Surface packs are just below. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
     </div>
     <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -692,6 +731,13 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
       <p class="help-history-cap">
         Riding on the original — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
       </p>
+    </div>
+    <div class="help-packs" id="help-packs" role="group" aria-label="Surface">
+      <span class="help-packs-cap">Surface</span>
+      <button type="button" class="help-pack" data-pack="classic" style="--sw:linear-gradient(90deg,#fff 50%,#111 50%)" aria-pressed="true">Classic</button>
+      <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
+      <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
+      <button type="button" class="help-pack" data-pack="water" style="--sw:#12617d" aria-pressed="false">Water</button>
     </div>
     <p class="help-more">Also <a href="../../">flat Hexsweeper</a> · <a href="../../?mode=fire">Fire</a> · <a href="../../?mode=plague">Plague</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>

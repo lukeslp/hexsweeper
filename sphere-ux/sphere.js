@@ -280,66 +280,6 @@
     accent: "#d0d4dc",
   });
 
-  /**
-   * Glow — dark shell; revealed faces keep a luminous center (radial, clipped to hex).
-   * Empty clears glow hotter; numbered wells glow softer under the digit.
-   */
-  const THEME_GLOW = {
-    id: "glow",
-    name: "Glow",
-    chrome: "dark",
-    float: true,
-    wellGlow: true,
-    wellGlowHot: "#f4fbff",
-    wellGlowColor: "#5ec8ff",
-    wellGlowEmptyBoost: 1.15,
-    pureCovered: false,
-    pureRevealed: true,
-    accent: "#5ec8ff",
-    bg: "#03050a",
-    bgGlow: "#071018",
-    covered: "#141a24",
-    coveredHi: "#1e2836",
-    coveredEdge: "rgba(120,180,220,0.22)",
-    coveredShadow: "#000000",
-    tierCovered: "#141a24",
-    tierFlagged: "#ff2a2a",
-    tierNumbered: "#060a12",
-    tierEmpty: "#02060c",
-    revealed: "#060a12",
-    revealedEmpty: "#02060c",
-    revealedEdge: "rgba(100,170,220,0.2)",
-    valleyGroove: "rgba(90,160,210,0.18)",
-    valleyGrooveDeep: "rgba(0,0,0,0.55)",
-    flagFill: "#ff2a2a",
-    flagIcon: "#ffffff",
-    flagEdge: "#ff2a2a",
-    mine: "#1a0a0a",
-    mineCore: "#ff6644",
-    mineEdge: "#000000",
-    mineBurst: "#ffaa66",
-    pentagon: "#181f2a",
-    pentagonEdge: "rgba(120,180,220,0.28)",
-    hoverRing: "#8ad4ff",
-    activeRing: "#c8ecff",
-    backface: "#05080f",
-    backfaceEdge: "#121820",
-    core: "#02060c",
-    coreGlow: "#3aa0e8",
-    floatShadow: "rgba(0,0,0,0.4)",
-    text: {
-      1: "#b8e8ff",
-      2: "#7ec8ff",
-      3: "#5ad4a8",
-      4: "#f0c060",
-      5: "#f09060",
-      6: "#f07090",
-    },
-    label: "#e8f6ff",
-    labelStroke: "rgba(0,0,0,0.7)",
-    revealFlash: "#ffffff",
-    revealGlow: "#5ec8ff",
-  };
 
   /**
    * Water — the globe half-submerged.
@@ -416,7 +356,6 @@
     THEME_CARD,
     THEME_EARTH,
     THEME_MOON,
-    THEME_GLOW,
     THEME_WATER,
   ];
   const DEFAULT_THEME = THEME_LIGHT;
@@ -700,8 +639,6 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"></path></svg>',
     moon:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
-    glow:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.35"></circle><circle cx="12" cy="12" r="7"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path></svg>',
   };
 
   /** Loaded equirectangular maps (ImageData cache). */
@@ -1136,7 +1073,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Water.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Water.`
         );
         // Keep stub empty — visible theme UI lives in settings; injecting SVG here
         // used to leak paint over the BR gear when the legacy tray failed to clip.
@@ -1257,6 +1194,32 @@
     let releaseFocusTrap = null;
     let markWelcomeSeen = false;
 
+    /**
+     * Surface row in the ? modal — Earth / Moon / Water as quiet curiosities
+     * rather than dock tiles. Classic returns to the three-axis mono look, so
+     * the row is a way in *and* a way back.
+     */
+    let syncHelpPacks = null;
+
+    function bindHelpPacks() {
+      const row = document.getElementById("help-packs");
+      if (!row) return;
+      const buttons = Array.from(row.querySelectorAll("[data-pack]"));
+      syncHelpPacks = () => {
+        const cur = state.appearancePack || "classic";
+        for (const b of buttons) {
+          b.setAttribute("aria-pressed", b.dataset.pack === cur ? "true" : "false");
+        }
+      };
+      row.addEventListener("click", (ev) => {
+        const btn = ev.target.closest("[data-pack]");
+        if (!btn) return;
+        setAppearancePack(btn.dataset.pack);
+        syncHelpPacks();
+      });
+      syncHelpPacks();
+    }
+
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
       if (fromWelcome) markWelcomeSeen = true;
@@ -1265,6 +1228,8 @@
           ? document.activeElement
           : helpBtn;
       helpOverlay.hidden = false;
+      // The dock can change the pack too; re-read on every open.
+      if (syncHelpPacks) syncHelpPacks();
       document.body.classList.add("help-open");
       requestAnimationFrame(() => helpOverlay.classList.add("open"));
       if (releaseFocusTrap) releaseFocusTrap();
@@ -4308,6 +4273,7 @@
 
     state.waterLevel = readWaterLevel();
     bindWaterLevel();
+    bindHelpPacks();
 
     // Deep-link theme: ?theme=earth|moon|light|…
     try {
