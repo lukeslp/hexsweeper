@@ -8,8 +8,8 @@
 .hex-bloom {
   --tile-w: 76px;
   --tile-h: 88px;
-  --tile-w-dock: 52px;
-  --tile-h-dock: 60px;
+  --tile-w-dock: 38px;
+  --tile-h-dock: 44px;
   --border-w: 1.5px;
   --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   --hb-ink: var(--text-main, #000);
@@ -170,11 +170,17 @@
   inset: 0;
 }
 .hb-hex.is-dock .hb-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--hb-center-ink);
+}
+/* Inactive dock is a mute solid chip — no wordmark */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock .hb-label {
+  font-size: 0;
+  opacity: 0;
 }
 .hex-bloom[data-open="true"] .hb-hex.is-dock .hb-label,
 .hex-bloom[data-phase="rising"] .hb-hex.is-dock .hb-label,
@@ -182,22 +188,24 @@
   /* Close sits in the dock seat while the blossom is up */
 }
 
-/* Traveler / stage center — rises from dock to viewport center */
+/* Traveler / stage center — rises from dock; open = × close control */
 .hb-hex.is-center {
   z-index: 35;
   color: var(--hb-center-ink);
   left: 50%;
   top: 50%;
+  cursor: pointer;
 }
 .hb-hex.is-center::before {
   background: var(--hb-center-fill);
   inset: 0;
 }
 .hb-hex.is-center .hb-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--hb-center-ink);
 }
 
@@ -412,8 +420,8 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom {
     --tile-w: 66px;
     --tile-h: 76px;
-    --tile-w-dock: 48px;
-    --tile-h-dock: 56px;
+    --tile-w-dock: 34px;
+    --tile-h-dock: 40px;
   }
   .hb-hex .hb-label { font-size: 10px; }
 }

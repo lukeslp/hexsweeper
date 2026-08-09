@@ -456,14 +456,15 @@
       const open = state.phase === "open";
       const rising = state.phase === "rising" || state.phase === "falling";
       if (open) {
-        dockBtn._labelEl.textContent = "Close";
+        // Bottom seat mirrors center close (glyph only)
+        dockBtn._labelEl.textContent = "×";
         dockBtn.setAttribute("aria-label", "Close menu");
         dockBtn.setAttribute("aria-expanded", "true");
       } else if (rising) {
-        dockBtn._labelEl.textContent = "×";
+        dockBtn._labelEl.textContent = "";
         dockBtn.setAttribute("aria-expanded", "true");
       } else {
-        dockBtn._labelEl.textContent = "Menu";
+        dockBtn._labelEl.textContent = "";
         dockBtn.setAttribute("aria-label", "Open game menu");
         dockBtn.setAttribute("aria-expanded", "false");
       }
@@ -577,11 +578,11 @@
           typeof cat.aria === "function" ? cat.aria() : lab
         );
       });
-      // center glyph can echo mode while open
+      // Center is always the close control while open (×), never last-selection text
       const core = stage.querySelector(".hb-hex.is-center");
       if (core && core._labelEl && state.phase === "open") {
-        core._labelEl.textContent = currentMode();
-        core.setAttribute("aria-label", "Mode: " + currentMode());
+        core._labelEl.textContent = "×";
+        core.setAttribute("aria-label", "Close menu");
       }
     }
 
@@ -617,7 +618,7 @@
       dock.textContent = "";
       dockBtn = makeHex({
         cls: "is-dock",
-        label: "Menu",
+        label: "",
         ariaLabel: "Open game menu",
       });
       dockBtn.id = "hex-bloom-seed";
@@ -643,19 +644,27 @@
       const { cx, cy } = centerXY();
       const cats = categories();
 
-      // Center core at viewport middle
+      // Center core at viewport middle — × closes while open
       const center = makeHex({
         cls: "is-center",
-        label: state.phase === "open" ? currentMode() : "Menu",
-        ariaLabel:
-          state.phase === "open"
-            ? "Mode: " + currentMode()
-            : "Game menu",
+        label: state.phase === "open" ? "×" : "",
+        ariaLabel: state.phase === "open" ? "Close menu" : "Game menu",
       });
       center.id = "hex-bloom-core";
-      // Decorative while dock owns open/close; still focusable for SR
-      center.tabIndex = -1;
-      center.setAttribute("aria-hidden", state.phase === "open" ? "false" : "true");
+      center.setAttribute(
+        "aria-hidden",
+        state.phase === "open" ? "false" : "true"
+      );
+      if (state.phase === "open") {
+        center.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          ignoreOutsideUntil = Date.now() + 250;
+          collapse();
+        });
+      } else {
+        center.tabIndex = -1;
+      }
       stage.appendChild(center);
 
       if (!withPetals) return;
