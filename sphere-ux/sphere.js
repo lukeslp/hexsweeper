@@ -1136,7 +1136,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Water.`
         );
         // Keep stub empty — visible theme UI lives in settings; injecting SVG here
         // used to leak paint over the BR gear when the legacy tray failed to clip.
@@ -3527,6 +3527,10 @@
 
     // —— Water · half-submerged globe ——————————————————————————————
     //
+    // The flat board carries a parallel implementation in index.html, anchored
+    // to the board instead of the globe — a change to the wave, the meniscus or
+    // the depth haze here usually wants mirroring there.
+    //
     // Adapted from Wakana Y.K.'s SVG feTurbulence water reflection (codepen
     // oNOwpqM). The displacement is canvas row slices rather than a real
     // `filter: url(#…)` on the canvas: an SVG filter warps what you see but
@@ -3560,8 +3564,7 @@
     }
 
     /** Sky above, sea below — painted over the flat backdrop before the globe. */
-    function drawWaterField(w, h) {
-      const surf = waterLineY(h);
+    function drawWaterField(w, h, surf) {
       const t = performance.now();
       ctx.save();
 
@@ -3609,8 +3612,7 @@
     }
 
     /** Refraction, reflection and meniscus over the finished frame. */
-    function drawWaterPass(w, h) {
-      const surf = waterLineY(h);
+    function drawWaterPass(w, h, surf) {
       const depth = h - surf;
       if (depth < 4 || surf < -h) return;
       const t = performance.now() * 0.001;
@@ -3651,8 +3653,11 @@
       ctx.fillStyle = fill;
       ctx.fillRect(0, top, w, h - top);
 
-      // 1 · Refraction — the submerged cap, wobbling where it sits.
-      for (let y = top; y < h; y += slice) {
+      // 1 · Refraction — the submerged cap, wobbling where it sits. Stops at the
+      // bottom of the globe: past it the frame is flat sea, and refracting sea
+      // onto identical sea is hundreds of copies for no visible pixel.
+      const stop = Math.min(h, state.centerY + state.scale * 1.15);
+      for (let y = top; y < stop; y += slice) {
         const d = (y - surf) / depth;
         const dx = waterWave(y, t) * amp * (0.35 + d * 1.15);
         ctx.drawImage(buf, 0, y * dpr, bw, slice * dpr, dx, y, w, slice);
@@ -3744,8 +3749,10 @@
       ctx.fillRect(0, 0, w, h);
 
       // Water replaces the radial backdrop with a horizon, so the submerged
-      // cap of the globe is painted into sea rather than onto it.
-      if (state.theme.waterScene) drawWaterField(w, h);
+      // cap of the globe is painted into sea rather than onto it. One waterline
+      // per frame, handed to both passes — nothing to fall out of sync.
+      const waterY = state.theme.waterScene ? waterLineY(h) : 0;
+      if (state.theme.waterScene) drawWaterField(w, h, waterY);
 
       // Float themes: soft contact shadow under the sphere (light-field lift).
       if (state.theme.float) {
@@ -3997,7 +4004,7 @@
 
       // Screen space, after the shake transform is released — otherwise
       // the waterline shudders loose from the horizon on a detonation.
-      if (state.theme.waterScene) drawWaterPass(w, h);
+      if (state.theme.waterScene) drawWaterPass(w, h, waterY);
     }
 
     function frameNeedsPaint(now) {

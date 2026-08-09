@@ -26,10 +26,13 @@
     ["yellow", "Mark"],
   ];
 
+  // Themes offered as Look leaves. Kept in sync with sphere.js THEMES by hand
+  // — the dock shows a curated set, not every id in the array.
   const CLASSIC_PACKS = [
     { id: "earth", name: "Earth" },
     { id: "moon", name: "Moon" },
     { id: "glow", name: "Glow" },
+    { id: "water", name: "Water" },
   ];
 
   // Full 6-neighbour ring (pointy-top axial) — used for leaf fans around a parent.
