@@ -6,10 +6,11 @@
  */
 
 .hex-bloom {
+  /* One tile size for bloom primaries and dock chrome (edge-aligned honeycomb). */
   --tile-w: 76px;
   --tile-h: 88px;
-  --tile-w-dock: 38px;
-  --tile-h-dock: 44px;
+  --tile-w-dock: var(--tile-w);
+  --tile-h-dock: var(--tile-h);
   --border-w: 1.5px;
   --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   --hb-ink: var(--text-main, #000);
@@ -75,20 +76,20 @@
   visibility: visible;
 }
 
-/* Bottom chrome: three outlined hexes — Restart · Menu · Help */
+/* Bottom chrome: three bloom-sized hexes — Restart · Menu · Help
+   Centers sit tile-w apart so edges kiss like the primary ring. */
 .hex-bloom-dock {
-  --tile-w-side: 34px;
-  --tile-h-side: 39px;
   position: absolute;
   left: 50%;
-  bottom: max(12px, env(safe-area-inset-bottom));
+  bottom: max(10px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 3;
   display: flex;
   flex-direction: row;
   align-items: flex-end;
   justify-content: center;
-  gap: 12px;
+  /* Bounding boxes abut → pointy-top hexes share vertical edges */
+  gap: 0;
   width: auto;
   height: auto;
   pointer-events: none;
@@ -101,20 +102,15 @@
   top: auto;
   margin: 0;
   flex: 0 0 auto;
+  width: var(--tile-w);
+  height: var(--tile-h);
   pointer-events: auto;
 }
-/* Menu (center) slightly stronger; Restart/Help quieter */
-.hex-bloom-dock .is-dock-menu {
-  width: var(--tile-w-dock);
-  height: var(--tile-h-dock);
-}
+/* Menu is the same size as sides — equal weight in the trio */
+.hex-bloom-dock .is-dock-menu,
 .hex-bloom-dock .is-dock-side {
-  width: var(--tile-w-side);
-  height: var(--tile-h-side);
-  opacity: 0.78;
-}
-.hex-bloom-dock .is-dock-side:hover,
-.hex-bloom-dock .is-dock-side:focus-visible {
+  width: var(--tile-w);
+  height: var(--tile-h);
   opacity: 1;
 }
 /* While board has attention, whole dock recedes */
@@ -130,10 +126,9 @@
   }
 }
 @media (max-width: 400px) {
-  .hex-bloom-dock {
-    --tile-w-side: 30px;
-    --tile-h-side: 35px;
-    gap: 10px;
+  .hex-bloom {
+    --tile-w: 66px;
+    --tile-h: 76px;
   }
 }
 
@@ -395,24 +390,21 @@
   background: var(--hb-paper);
   inset: 2px;
 }
+/* Icons match bloom primary scale */
 .hb-hex.is-dock .hb-glyph {
-  width: 18px;
-  height: 18px;
+  width: 28px;
+  height: 28px;
   color: var(--hb-ink);
 }
 .hb-hex.is-dock .hb-icon {
-  width: 16px;
-  height: 16px;
-}
-.hb-hex.is-dock-menu .hb-glyph {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
 }
 .hb-hex.is-dock .hb-label {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: var(--hb-ink);
 }
 /* Menu seed closed: no wordmark; sides show icons only */
@@ -460,19 +452,16 @@
   color: var(--hb-center-ink);
 }
 
-/* Rising: still parked over the dock seat (translate down from center) */
+/* Rising: same tile size as dock/bloom; only vertical travel */
 .hex-bloom[data-phase="rising"] .hb-hex.is-center,
 .hex-bloom[data-phase="falling"] .hb-hex.is-center {
-  width: var(--tile-w-dock);
-  height: var(--tile-h-dock);
-  margin-left: calc(var(--tile-w-dock) / -2);
-  margin-top: calc(var(--tile-h-dock) / -2);
-  transform: translateY(var(--rise-y)) scale(0.92);
+  width: var(--tile-w);
+  height: var(--tile-h);
+  margin-left: calc(var(--tile-w) / -2);
+  margin-top: calc(var(--tile-h) / -2);
+  transform: translateY(var(--rise-y)) scale(1);
   transition:
     transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
-    width var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
-    height var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
-    margin var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
     opacity 0.25s ease;
 }
 .hex-bloom[data-phase="open"] .hb-hex.is-center {
@@ -483,9 +472,6 @@
   transform: translateY(0) scale(1);
   transition:
     transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
-    width var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
-    height var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
-    margin var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
     opacity 0.25s ease;
 }
 
@@ -507,9 +493,9 @@
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock {
   pointer-events: auto;
 }
-/* Side dock tiles keep outline + icon while menu is open */
+/* Side dock tiles stay full-size while menu is open */
 .hex-bloom[data-phase="open"] .hb-hex.is-dock-side {
-  opacity: 0.85;
+  opacity: 1;
 }
 
 /* Primary ring */
@@ -673,8 +659,6 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom {
     --tile-w: 66px;
     --tile-h: 76px;
-    --tile-w-dock: 34px;
-    --tile-h-dock: 40px;
   }
   .hb-hex .hb-label { font-size: 10px; }
 }

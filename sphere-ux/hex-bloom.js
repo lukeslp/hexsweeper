@@ -1335,7 +1335,8 @@
       let startY = 0;
       const MOVE_PX = 10;
       // Bottom strip reserved for chrome — pointer here reveals the seed
-      const CHROME_BAND = 96;
+      // Tall enough for full-size dock trio + safe air
+      const CHROME_BAND = 120;
 
       function pointFrom(e) {
         if (e.touches && e.touches.length) return e.touches[0];
