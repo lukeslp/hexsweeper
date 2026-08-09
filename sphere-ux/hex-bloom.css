@@ -568,13 +568,10 @@
 }
 .hb-hex.shown {
   opacity: 1;
-  /* --dome / --dz are the bloom's outward curve (see applyDome). They default
-     to flat, so the dock and any non-domed hex are unaffected. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
-    translateZ(var(--dz, 0))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--dome, 0deg))
-    scale(var(--dscale, 1));
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, 0deg)
+    scale(1);
 }
 
 

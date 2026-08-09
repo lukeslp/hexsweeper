@@ -1304,13 +1304,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 .hb-hex.shown {
   opacity: 1;
-  /* --dome / --dz are the bloom's outward curve (see applyDome). They default
-     to flat, so the dock and any non-domed hex are unaffected. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
-    translateZ(var(--dz, 0))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--dome, 0deg))
-    scale(var(--dscale, 1));
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, 0deg)
+    scale(1);
 }
 
 
@@ -7103,34 +7100,6 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M4 12h16"/><path d="M12 4v6"/><path d="M12 14v6"/><path d="m9 8 3-3 3 3"/><path d="m9 16 3 3 3-3"/>',
   };
 
-  /**
-   * Dome tilt — deliberately the inverse of the sphere.
-   *
-   * On the globe, rim faces lean *away* from you and foreshorten. Here every
-   * tile hinges on the inner edge it already pivots around when folding
-   * (place() sets that transform-origin) and leans *toward* you instead, with
-   * a little translateZ so the outer ring also comes bodily forward. The
-   * cluster reads as a bloom opening out at the viewer rather than a ball
-   * curving away from one.
-   *
-   * Presentation only — hit areas are the untransformed boxes, so a tilted
-   * tile still clicks where it looks like it is.
-   */
-  const DOME_TILT = 34; // degrees at the outermost ring
-  const DOME_LIFT = 90; // px of translateZ at the outermost ring
-  const DOME_SPAN = 2.6; // ring distance, in hex widths, that reaches full tilt
-
-  function applyDome(el, dx, dy, hex) {
-    const t = Math.min(1, Math.hypot(dx, dy) / (hex * DOME_SPAN || 1));
-    const tilt = DOME_TILT * t;
-    el.style.setProperty("--dome", (-tilt).toFixed(2) + "deg");
-    el.style.setProperty("--dz", (DOME_LIFT * t).toFixed(1) + "px");
-    // Hinging on the inner edge foreshortens the tile radially, which opens a
-    // gap against its neighbour. Scale back by 1/cos so the comb stays closed.
-    const k = 1 / Math.cos((tilt * Math.PI) / 180);
-    el.style.setProperty("--dscale", k.toFixed(4));
-  }
-
   function iconMarkup(name) {
     const paths = ICONS[name] || ICONS.more;
     return (
@@ -8170,7 +8139,6 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           el.setAttribute("aria-expanded", "false");
         }
         place(el, cx + p.x, cy + p.y, cx, cy);
-        applyDome(el, p.x, p.y, HEX);
         el.classList.add("folded");
         el.dataset.delay = String(i * 26);
         el.addEventListener("click", (e) => {
