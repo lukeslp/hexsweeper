@@ -2138,6 +2138,10 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
   border-color: color-mix(in srgb, var(--help-ink) 55%, transparent);
 }
 .help-pack:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* ?dock=split (variant A): appearance toggles in the modal. Same pill
+   grammar as the Surface row; text pills drop the swatch dot. */
+body:not(.dock-split) .help-look { display: none; }
+.help-pack.is-text::before { display: none; }
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
@@ -2261,6 +2265,15 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
       <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
       <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
       <button type="button" class="help-pack" data-pack="water" style="--sw:#12617d" aria-pressed="false">Water</button>
+    </div>
+    <div class="help-packs help-look" id="help-look" role="group" aria-label="Look">
+      <span class="help-packs-cap">Look</span>
+      <button type="button" class="help-pack" data-look="field" style="--sw:#ffffff">Bg</button>
+      <button type="button" class="help-pack" data-look="shell" style="--sw:#ffffff">Shell</button>
+      <button type="button" class="help-pack" data-look="well" style="--sw:#111111">Dug</button>
+      <button type="button" class="help-pack is-text" data-look="indicators">123</button>
+      <button type="button" class="help-pack is-text" data-look="relief">3D</button>
+      <button type="button" class="help-pack is-text" data-look="seams">Seams on</button>
     </div>
     <p class="help-more">Also <a href="https://dr.eamer.dev/games/hexsweeper/">flat Hexsweeper</a> · <a href="https://dr.eamer.dev/games/hexsweeper/?mode=fire">Fire</a> · <a href="https://dr.eamer.dev/games/hexsweeper/?mode=plague">Plague</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
@@ -3758,6 +3771,86 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       syncHelpPacks();
     }
 
+    /**
+     * ?dock=split — variant A: the bloom keeps play controls only, so the
+     * appearance toggles land here, beside the Surface row. The row stays
+     * hidden (CSS gates on body.dock-split) unless the flag is on, because
+     * the default dock still carries these as tiles.
+     */
+    const DOCK_SPLIT = (() => {
+      try {
+        return new URLSearchParams(location.search).get("dock") === "split";
+      } catch (_) {
+        return false;
+      }
+    })();
+
+    let syncHelpLook = null;
+
+    function bindHelpLook() {
+      if (!DOCK_SPLIT) return;
+      document.body.classList.add("dock-split");
+      const row = document.getElementById("help-look");
+      if (!row) return;
+      const IND_LABELS = { numerals: "123", yellow: "Mark", rings: "Rings" };
+      const IND_CYCLE = ["numerals", "yellow", "rings"];
+      const btn = (k) => row.querySelector('[data-look="' + k + '"]');
+      const axisBtns = { field: btn("field"), shell: btn("shell"), well: btn("well") };
+      const indBtn = btn("indicators");
+      const reliefBtn = btn("relief");
+      const seamsBtn = btn("seams");
+
+      syncHelpLook = () => {
+        const axes = state.appearanceAxes || {};
+        for (const [axis, b] of Object.entries(axisBtns)) {
+          if (!b) continue;
+          const dark = axes[axis] === "dark";
+          b.style.setProperty("--sw", dark ? "#111111" : "#ffffff");
+          b.setAttribute(
+            "aria-label",
+            (axis === "field" ? "Background" : axis === "shell" ? "Covered faces" : "Dug faces") +
+              ": " + (dark ? "dark" : "light") + ". Activate to flip."
+          );
+        }
+        if (indBtn) indBtn.textContent = IND_LABELS[state.countStyle] || "123";
+        if (reliefBtn) reliefBtn.textContent = state.relief === "flush" ? "Flush" : "3D";
+        if (seamsBtn) seamsBtn.textContent = state.seams === false ? "Seams off" : "Seams on";
+      };
+
+      for (const [axis, b] of Object.entries(axisBtns)) {
+        if (!b) continue;
+        b.addEventListener("click", () => {
+          const axes = Object.assign({}, state.appearanceAxes);
+          axes[axis] = axes[axis] === "dark" ? "light" : "dark";
+          // Returns to the classic mono look, so this is also the way back
+          // from Earth / Moon / Water — refresh the Surface row to match.
+          setAppearanceAxes(axes);
+          if (syncHelpPacks) syncHelpPacks();
+          syncHelpLook();
+        });
+      }
+      if (indBtn) {
+        indBtn.addEventListener("click", () => {
+          const cur = IND_CYCLE.indexOf(state.countStyle);
+          setCountStyle(IND_CYCLE[(cur + 1) % IND_CYCLE.length], { syncSurface: false });
+          syncHelpLook();
+        });
+      }
+      if (reliefBtn) {
+        reliefBtn.addEventListener("click", () => {
+          setRelief(state.relief === "flush" ? "extruded" : "flush");
+          syncHelpLook();
+        });
+      }
+      if (seamsBtn) {
+        seamsBtn.addEventListener("click", () => {
+          setSeams(state.seams === false);
+          syncHelpLook();
+        });
+      }
+      syncHelpLook();
+    }
+
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
       if (fromWelcome) markWelcomeSeen = true;
@@ -3768,6 +3861,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       helpOverlay.hidden = false;
       // The dock can change the pack too; re-read on every open.
       if (syncHelpPacks) syncHelpPacks();
+      if (syncHelpLook) syncHelpLook();
       document.body.classList.add("help-open");
       requestAnimationFrame(() => helpOverlay.classList.add("open"));
       if (releaseFocusTrap) releaseFocusTrap();
@@ -6812,6 +6906,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     state.waterLevel = readWaterLevel();
     bindWaterLevel();
     bindHelpPacks();
+    bindHelpLook();
 
     // Deep-link theme: ?theme=earth|moon|light|…
     try {
@@ -7057,6 +7152,26 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     { q: 1, r: -3 }, // 3D / Flush
     { q: 2, r: -3 }, // Indicators
   ];
+
+  /**
+   * ?dock=split — variant A from CHROME_HISTORY (2026-08-09): the bloom keeps
+   * play controls only (Dig · Size · Invert, one row); every appearance
+   * toggle moves into the ? modal beside the Surface row. The default dock is
+   * untouched — this flag exists so the two can be compared live.
+   */
+  const DOCK_SPLIT = (() => {
+    try {
+      return new URLSearchParams(location.search).get("dock") === "split";
+    } catch (_) {
+      return false;
+    }
+  })();
+  const SPLIT_SLOTS = [
+    { q: 1, r: -1 }, // Dig / Flag — same seat as the full dock
+    { q: 0, r: -1 }, // Size — same seat
+    { q: -1, r: -1 }, // Invert — takes Seams' old seat
+  ];
+  const ACTIVE_SLOTS = DOCK_SPLIT ? SPLIT_SLOTS : PRIMARY_SLOTS;
 
   // Stroke icons (24×24) — board language, not tool metaphors
   const ICONS = {
@@ -7621,10 +7736,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     }
 
     function categories() {
-      // Six primaries. Cycle items flip state on click (no submenu).
-      // Look blooms: Classic axes + World packs + count paint only.
+      // Cycle primaries — every tile flips state on click (no submenus).
       // Restart / Help live on the always-visible three-tile dock.
-      return [
+      const all = [
         {
           id: "mode",
           label: () => currentMode(),
@@ -7728,6 +7842,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           cycle: cycleIndicators,
         },
       ];
+      if (!DOCK_SPLIT) return all;
+      // Split dock: play controls only, in SPLIT_SLOTS order. The appearance
+      // tiles' jobs move to the ? modal (see bindHelpLook in sphere.js).
+      const keep = ["mode", "size", "invert"];
+      return keep
+        .map((id) => all.find((c) => c.id === id))
+        .filter(Boolean);
     }
 
     // ---- State ----
@@ -7849,7 +7970,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     function addSubmenu(dirIndex, cat) {
       const { HEX } = tileMetrics();
       const { cx, cy } = centerXY();
-      const dir = PRIMARY_SLOTS[dirIndex] || DIRECTIONS[dirIndex];
+      const dir = ACTIVE_SLOTS[dirIndex] || DIRECTIONS[dirIndex];
       const p = hexToPixel(dir.q, dir.r, HEX);
       const px = cx + p.x;
       const py = cy + p.y;
@@ -8102,7 +8223,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       if (!withPetals) return;
 
       cats.forEach((cat, i) => {
-        const d = PRIMARY_SLOTS[i] || DIRECTIONS[i];
+        const d = ACTIVE_SLOTS[i] || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const iconName =

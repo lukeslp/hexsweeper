@@ -1220,6 +1220,86 @@
       syncHelpPacks();
     }
 
+    /**
+     * ?dock=split — variant A: the bloom keeps play controls only, so the
+     * appearance toggles land here, beside the Surface row. The row stays
+     * hidden (CSS gates on body.dock-split) unless the flag is on, because
+     * the default dock still carries these as tiles.
+     */
+    const DOCK_SPLIT = (() => {
+      try {
+        return new URLSearchParams(location.search).get("dock") === "split";
+      } catch (_) {
+        return false;
+      }
+    })();
+
+    let syncHelpLook = null;
+
+    function bindHelpLook() {
+      if (!DOCK_SPLIT) return;
+      document.body.classList.add("dock-split");
+      const row = document.getElementById("help-look");
+      if (!row) return;
+      const IND_LABELS = { numerals: "123", yellow: "Mark", rings: "Rings" };
+      const IND_CYCLE = ["numerals", "yellow", "rings"];
+      const btn = (k) => row.querySelector('[data-look="' + k + '"]');
+      const axisBtns = { field: btn("field"), shell: btn("shell"), well: btn("well") };
+      const indBtn = btn("indicators");
+      const reliefBtn = btn("relief");
+      const seamsBtn = btn("seams");
+
+      syncHelpLook = () => {
+        const axes = state.appearanceAxes || {};
+        for (const [axis, b] of Object.entries(axisBtns)) {
+          if (!b) continue;
+          const dark = axes[axis] === "dark";
+          b.style.setProperty("--sw", dark ? "#111111" : "#ffffff");
+          b.setAttribute(
+            "aria-label",
+            (axis === "field" ? "Background" : axis === "shell" ? "Covered faces" : "Dug faces") +
+              ": " + (dark ? "dark" : "light") + ". Activate to flip."
+          );
+        }
+        if (indBtn) indBtn.textContent = IND_LABELS[state.countStyle] || "123";
+        if (reliefBtn) reliefBtn.textContent = state.relief === "flush" ? "Flush" : "3D";
+        if (seamsBtn) seamsBtn.textContent = state.seams === false ? "Seams off" : "Seams on";
+      };
+
+      for (const [axis, b] of Object.entries(axisBtns)) {
+        if (!b) continue;
+        b.addEventListener("click", () => {
+          const axes = Object.assign({}, state.appearanceAxes);
+          axes[axis] = axes[axis] === "dark" ? "light" : "dark";
+          // Returns to the classic mono look, so this is also the way back
+          // from Earth / Moon / Water — refresh the Surface row to match.
+          setAppearanceAxes(axes);
+          if (syncHelpPacks) syncHelpPacks();
+          syncHelpLook();
+        });
+      }
+      if (indBtn) {
+        indBtn.addEventListener("click", () => {
+          const cur = IND_CYCLE.indexOf(state.countStyle);
+          setCountStyle(IND_CYCLE[(cur + 1) % IND_CYCLE.length], { syncSurface: false });
+          syncHelpLook();
+        });
+      }
+      if (reliefBtn) {
+        reliefBtn.addEventListener("click", () => {
+          setRelief(state.relief === "flush" ? "extruded" : "flush");
+          syncHelpLook();
+        });
+      }
+      if (seamsBtn) {
+        seamsBtn.addEventListener("click", () => {
+          setSeams(state.seams === false);
+          syncHelpLook();
+        });
+      }
+      syncHelpLook();
+    }
+
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
       if (fromWelcome) markWelcomeSeen = true;
@@ -1230,6 +1310,7 @@
       helpOverlay.hidden = false;
       // The dock can change the pack too; re-read on every open.
       if (syncHelpPacks) syncHelpPacks();
+      if (syncHelpLook) syncHelpLook();
       document.body.classList.add("help-open");
       requestAnimationFrame(() => helpOverlay.classList.add("open"));
       if (releaseFocusTrap) releaseFocusTrap();
@@ -4274,6 +4355,7 @@
     state.waterLevel = readWaterLevel();
     bindWaterLevel();
     bindHelpPacks();
+    bindHelpLook();
 
     // Deep-link theme: ?theme=earth|moon|light|…
     try {

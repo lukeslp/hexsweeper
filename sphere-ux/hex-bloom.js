@@ -68,6 +68,26 @@
     { q: 2, r: -3 }, // Indicators
   ];
 
+  /**
+   * ?dock=split — variant A from CHROME_HISTORY (2026-08-09): the bloom keeps
+   * play controls only (Dig · Size · Invert, one row); every appearance
+   * toggle moves into the ? modal beside the Surface row. The default dock is
+   * untouched — this flag exists so the two can be compared live.
+   */
+  const DOCK_SPLIT = (() => {
+    try {
+      return new URLSearchParams(location.search).get("dock") === "split";
+    } catch (_) {
+      return false;
+    }
+  })();
+  const SPLIT_SLOTS = [
+    { q: 1, r: -1 }, // Dig / Flag — same seat as the full dock
+    { q: 0, r: -1 }, // Size — same seat
+    { q: -1, r: -1 }, // Invert — takes Seams' old seat
+  ];
+  const ACTIVE_SLOTS = DOCK_SPLIT ? SPLIT_SLOTS : PRIMARY_SLOTS;
+
   // Stroke icons (24×24) — board language, not tool metaphors
   const ICONS = {
     // Dig = open / cleared hex face (hollow honeycomb cell)
@@ -631,10 +651,9 @@
     }
 
     function categories() {
-      // Six primaries. Cycle items flip state on click (no submenu).
-      // Look blooms: Classic axes + World packs + count paint only.
+      // Cycle primaries — every tile flips state on click (no submenus).
       // Restart / Help live on the always-visible three-tile dock.
-      return [
+      const all = [
         {
           id: "mode",
           label: () => currentMode(),
@@ -738,6 +757,13 @@
           cycle: cycleIndicators,
         },
       ];
+      if (!DOCK_SPLIT) return all;
+      // Split dock: play controls only, in SPLIT_SLOTS order. The appearance
+      // tiles' jobs move to the ? modal (see bindHelpLook in sphere.js).
+      const keep = ["mode", "size", "invert"];
+      return keep
+        .map((id) => all.find((c) => c.id === id))
+        .filter(Boolean);
     }
 
     // ---- State ----
@@ -859,7 +885,7 @@
     function addSubmenu(dirIndex, cat) {
       const { HEX } = tileMetrics();
       const { cx, cy } = centerXY();
-      const dir = PRIMARY_SLOTS[dirIndex] || DIRECTIONS[dirIndex];
+      const dir = ACTIVE_SLOTS[dirIndex] || DIRECTIONS[dirIndex];
       const p = hexToPixel(dir.q, dir.r, HEX);
       const px = cx + p.x;
       const py = cy + p.y;
@@ -1112,7 +1138,7 @@
       if (!withPetals) return;
 
       cats.forEach((cat, i) => {
-        const d = PRIMARY_SLOTS[i] || DIRECTIONS[i];
+        const d = ACTIVE_SLOTS[i] || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const iconName =

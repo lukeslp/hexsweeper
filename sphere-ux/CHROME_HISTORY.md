@@ -52,6 +52,7 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | `128f04f` | Indicators = one rotation (123 → Mark → Rings); dedicated glyph (the `numerals` icon read as "1s") | **Keep** |
 | `17a1dd6` | Seat swap: Invert to the notch right of Dig, Indicators up by 3D | **Keep** |
 | `16c9bf5` | Dome: per-tile hinge tilt toward viewer + translateZ + 1/cos gap compensation | **No** — reverted in `edcd9c5`. Revive with `git revert edcd9c5` |
+| variant A | `?dock=split` — bloom = Dig · Size · Invert only; Bg/Shell/Dug/Indicators/3D/Seams move to a Look pill row in the ? modal | **Trial** — compare live against default before promoting |
 
 ### What Luke is asking for (intent thread, in his words + readings)
 
@@ -74,7 +75,7 @@ Current 9-tile bloom, suspected reasons it doesn't sit well:
 
 ### Variant menu (next things to try)
 
-- **A. Split play/settings** — dock = Dig/Flag · Restart · Help (maybe Size); *all* appearance moves into the ? modal next to the Surface row (that pattern already landed and was liked). Bloom shrinks to 3–4 tiles or disappears.
+- **A. Split play/settings** — dock = Dig/Flag · Restart · Help (maybe Size); *all* appearance moves into the ? modal next to the Surface row (that pattern already landed and was liked). Bloom shrinks to 3–4 tiles or disappears. **Built 2026-08-09 behind `?dock=split`** — flip the flag to compare; promoting it to default would also let the dead sub-bloom machinery (addSubmenu / leafOffsets / LEAF_RING, unused since the flatten) be deleted.
 - **B. True flower** — exactly 6 primaries on the ring-1 hexagon around the seed; symmetric bloom. Needs merges: Bg/Shell/Dug → one "Ink" rotation (or tap = shell, long-press = bg), Seams+3D → one "Surface" rotation.
 - **C. 3-3 symmetric rows** — halfway house if 6 is too aggressive.
 - **D. Depth, other techniques** (dome retry list):

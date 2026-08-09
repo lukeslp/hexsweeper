@@ -615,6 +615,10 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
   border-color: color-mix(in srgb, var(--help-ink) 55%, transparent);
 }
 .help-pack:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* ?dock=split (variant A): appearance toggles in the modal. Same pill
+   grammar as the Surface row; text pills drop the swatch dot. */
+body:not(.dock-split) .help-look { display: none; }
+.help-pack.is-text::before { display: none; }
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
@@ -738,6 +742,15 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
       <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
       <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
       <button type="button" class="help-pack" data-pack="water" style="--sw:#12617d" aria-pressed="false">Water</button>
+    </div>
+    <div class="help-packs help-look" id="help-look" role="group" aria-label="Look">
+      <span class="help-packs-cap">Look</span>
+      <button type="button" class="help-pack" data-look="field" style="--sw:#ffffff">Bg</button>
+      <button type="button" class="help-pack" data-look="shell" style="--sw:#ffffff">Shell</button>
+      <button type="button" class="help-pack" data-look="well" style="--sw:#111111">Dug</button>
+      <button type="button" class="help-pack is-text" data-look="indicators">123</button>
+      <button type="button" class="help-pack is-text" data-look="relief">3D</button>
+      <button type="button" class="help-pack is-text" data-look="seams">Seams on</button>
     </div>
     <p class="help-more">Also <a href="../../">flat Hexsweeper</a> · <a href="../../?mode=fire">Fire</a> · <a href="../../?mode=plague">Plague</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
