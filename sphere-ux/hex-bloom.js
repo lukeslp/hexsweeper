@@ -443,6 +443,7 @@
       root.dataset.open = phase === "open" || phase === "rising" ? "true" : "false";
       if (phase === "open" && state.active) root.dataset.branch = state.active;
       else if (phase !== "open") delete root.dataset.branch;
+      if (phase !== "open") delete root.dataset.dock;
       document.body.classList.toggle(
         "hex-bloom-open",
         phase === "open" || phase === "rising" || phase === "falling"
@@ -737,6 +738,8 @@
         // 3) After rise, unfold petals
         phaseTimer = setTimeout(() => {
           if (state.phase !== "open") return;
+          root.dataset.dock = "ready"; // Close reappears in the bottom seat
+          paintDock();
           bloomPetals();
           announce("Menu open");
         }, riseMs());

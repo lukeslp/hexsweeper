@@ -236,9 +236,15 @@
   opacity: 0;
   pointer-events: none;
 }
+/* Close only reappears in the dock after the seed has finished rising */
 .hex-bloom[data-phase="open"] .hb-hex.is-dock {
+  opacity: 0;
+  pointer-events: none;
+}
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock {
   opacity: 1;
   pointer-events: auto;
+  transition: opacity 0.2s ease;
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock {
   opacity: 1;
