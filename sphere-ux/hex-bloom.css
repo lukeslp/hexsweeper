@@ -574,12 +574,7 @@
     scale(1);
 }
 
-/* Delay petal appearance until the seed has risen */
-.hex-bloom[data-phase="rising"] .hb-hex.is-primary,
-.hex-bloom[data-phase="rising"] .hb-hex.is-sub {
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
+
 
 /* Stats hub */
 .hex-bloom-hub {
