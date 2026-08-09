@@ -37,6 +37,52 @@
     { q: 0, r: 1 },
   ];
 
+  // Stroke icons (24×24) — mono, match sphere chrome
+  const ICONS = {
+    dig:
+      '<path d="M14.5 4.5 19 9"/><path d="m16.8 6.8-8.3 8.3-2.2.7.7-2.2 8.3-8.3Z"/>' +
+      '<path d="M5 19.5h6"/>',
+    flag:
+      '<path d="M6 21V4"/><path d="M6 5h10l-2.2 3.2L16 11.5H6"/>',
+    size:
+      '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
+      '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
+    theme:
+      '<path d="M12 2.5 20 7.2v9.6L12 21.5 4 16.8V7.2L12 2.5Z"/>' +
+      '<circle cx="12" cy="12" r="3.2"/>',
+    style:
+      '<path d="M7 7h.01M12 7h.01M17 7h.01"/><path d="M7 12h.01M12 12h.01M17 12h.01"/>' +
+      '<path d="M7 17h.01M12 17h.01M17 17h.01"/>',
+    numerals:
+      '<path d="M8 17V7l-2 2"/><path d="M11.5 17h4.2c1.2 0 2-.8 2-2s-.8-2-2-2h-2.2c-1.2 0-2-.8-2-2s.8-2 2-2H18"/>',
+    rings:
+      '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="10"/>',
+    drag:
+      '<path d="M12 4v16"/><path d="m8 8 4-4 4 4"/><path d="m8 16 4 4 4-4"/>' +
+      '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
+    more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
+    reset:
+      '<path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"/><path d="M20 3.5V8h-4.5"/>' +
+      '<path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"/><path d="M4 20.5V16h4.5"/>',
+    help:
+      '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 1 1 3.9 2.6c-.9.5-1.6 1.1-1.6 2.2"/>' +
+      '<path d="M12 17.2h.01"/>',
+    flipX:
+      '<path d="M12 4v16"/><path d="M4 12h6"/><path d="M14 12h6"/><path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/>',
+    flipY:
+      '<path d="M4 12h16"/><path d="M12 4v6"/><path d="M12 14v6"/><path d="m9 8 3-3 3 3"/><path d="m9 16 3 3 3-3"/>',
+  };
+
+  function iconMarkup(name) {
+    const paths = ICONS[name] || ICONS.more;
+    return (
+      '<svg class="hb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      paths +
+      "</svg>"
+    );
+  }
+
   function prefersReducedMotion() {
     return (
       global.matchMedia &&
@@ -212,18 +258,46 @@
         (50 - ux * 50).toFixed(1) + "% " + (50 - uy * 50).toFixed(1) + "%";
     }
 
-    function makeHex({ cls, label, ariaLabel, labelSize }) {
+    function makeHex({ cls, label, ariaLabel, labelSize, icon, iconOnly }) {
       const el = document.createElement("button");
       el.type = "button";
       el.className = "hb-hex " + (cls || "");
       el.setAttribute("aria-label", ariaLabel || label || "Option");
+
+      if (icon) {
+        const glyph = document.createElement("span");
+        glyph.className = "hb-glyph";
+        glyph.innerHTML = iconMarkup(
+          typeof icon === "function" ? icon() : icon
+        );
+        el.appendChild(glyph);
+        el._glyphEl = glyph;
+        el._iconName =
+          typeof icon === "function" ? icon() : icon;
+      }
+
       const span = document.createElement("span");
-      span.className = "hb-label";
+      span.className = "hb-label" + (iconOnly ? " hb-label-sr" : "");
       span.textContent = label || "";
       if (labelSize) span.dataset.size = labelSize;
+      if (iconOnly) span.classList.add("sr-visual-hide");
       el.appendChild(span);
       el._labelEl = span;
+      el._iconOnly = !!iconOnly;
       return el;
+    }
+
+    function setHexIcon(el, name) {
+      if (!el) return;
+      if (!el._glyphEl) {
+        const glyph = document.createElement("span");
+        glyph.className = "hb-glyph";
+        el.insertBefore(glyph, el.firstChild);
+        el._glyphEl = glyph;
+      }
+      if (el._iconName === name) return;
+      el._iconName = name;
+      el._glyphEl.innerHTML = iconMarkup(name);
     }
 
     function unfold(nodes) {
@@ -281,16 +355,26 @@
       return s.length > n ? s.slice(0, n - 1) + "…" : s;
     }
 
+    function styleIconName() {
+      const c = game.getState().countStyle;
+      if (c === "rings") return "rings";
+      if (c === "numerals") return "numerals";
+      return "style";
+    }
+
     function categories() {
       return [
         {
           id: "mode",
           label: () => currentMode(),
+          icon: () => (game.getState().flagMode ? "flag" : "dig"),
+          iconOnly: true,
           aria: () => "Mode: " + currentMode(),
           sub: () => [
             {
               id: "dig",
               label: "Dig",
+              icon: "dig",
               chosen: () => !game.getState().flagMode,
               run: () => {
                 game.setFlagMode(false);
@@ -300,6 +384,7 @@
             {
               id: "flag",
               label: "Flag",
+              icon: "flag",
               chosen: () => !!game.getState().flagMode,
               run: () => {
                 game.setFlagMode(true);
@@ -310,7 +395,11 @@
         },
         {
           id: "size",
+          // Letter stays as a value badge; nested-hex icon under it
           label: () => currentSize(),
+          icon: "size",
+          iconOnly: false,
+          badge: true,
           aria: () => "Size: " + currentSize(),
           sub: () =>
             SIZES.map(([id, lab]) => ({
@@ -326,7 +415,8 @@
         {
           id: "theme",
           label: () => shortLabel(currentTheme(), 7),
-          labelSize: "sm",
+          icon: "theme",
+          iconOnly: true,
           aria: () => "Theme: " + currentTheme(),
           sub: () =>
             THEMES.map((t, i) => ({
@@ -343,12 +433,19 @@
         {
           id: "style",
           label: () => shortLabel(currentStyle(), 7),
-          labelSize: "sm",
+          icon: () => styleIconName(),
+          iconOnly: true,
           aria: () => "Warning style: " + currentStyle(),
           sub: () =>
             COUNTS.map(([id, lab]) => ({
               id: "st-" + id,
               label: lab,
+              icon:
+                id === "rings"
+                  ? "rings"
+                  : id === "numerals"
+                    ? "numerals"
+                    : "style",
               labelSize: lab.length > 5 ? "xs" : "sm",
               chosen: () => game.getState().countStyle === id,
               run: () => {
@@ -360,11 +457,14 @@
         {
           id: "drag",
           label: "Drag",
+          icon: "drag",
+          iconOnly: true,
           aria: () => "Drag invert",
           sub: () => [
             {
               id: "inv-x",
               label: "Flip X",
+              icon: "flipX",
               chosen: () => invertGet("x"),
               run: () => {
                 const next = !invertGet("x");
@@ -376,6 +476,7 @@
             {
               id: "inv-y",
               label: "Flip Y",
+              icon: "flipY",
               chosen: () => invertGet("y"),
               run: () => {
                 const next = !invertGet("y");
@@ -389,11 +490,14 @@
         {
           id: "system",
           label: "More",
+          icon: "more",
+          iconOnly: true,
           aria: () => "Reset and help",
           sub: () => [
             {
               id: "reset",
               label: "Reset",
+              icon: "reset",
               chosen: () => false,
               run: () => {
                 if (typeof game.reset === "function") game.reset();
@@ -408,6 +512,7 @@
             {
               id: "help",
               label: "Help",
+              icon: "help",
               chosen: () => false,
               run: () => {
                 const b = document.getElementById("help-btn");
@@ -532,11 +637,21 @@
         const off = offsets[j] || DIRECTIONS[dirIndex];
         const o = hexToPixel(off.q, off.r, HEX);
         const el = makeHex({
-          cls: "is-sub" + (item.chosen && item.chosen() ? " is-chosen" : ""),
+          cls:
+            "is-sub" +
+            (item.chosen && item.chosen() ? " is-chosen" : "") +
+            (item.icon ? " has-icon" : ""),
           label: item.label,
           labelSize: item.labelSize,
           ariaLabel: cat.id + ": " + item.label,
+          icon: item.icon,
+          iconOnly: !!item.icon && item.iconOnly !== false && !item.labelKeep,
         });
+        // Subs with icons still keep short labels when useful (Dig/Flag etc.)
+        if (item.icon && item.label && !item.iconOnly) {
+          el.classList.add("is-sub-icon-label");
+          if (el._labelEl) el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
+        }
         el.dataset.cat = cat.id;
         el.dataset.sub = item.id;
         place(el, px + o.x, py + o.y, px, py);
@@ -575,11 +690,26 @@
         const cat = cats.find((c) => c.id === el.dataset.cat);
         if (!cat) return;
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
-        if (el._labelEl) el._labelEl.textContent = lab;
-        el.setAttribute(
-          "aria-label",
-          typeof cat.aria === "function" ? cat.aria() : lab
-        );
+        const aria = typeof cat.aria === "function" ? cat.aria() : lab;
+        el.setAttribute("aria-label", aria);
+        if (cat.icon) {
+          const name =
+            typeof cat.icon === "function" ? cat.icon() : cat.icon;
+          setHexIcon(el, name);
+        }
+        // Size keeps a visible letter badge; other primaries are icon-only
+        if (el._labelEl) {
+          if (cat.badge) {
+            el._labelEl.textContent = lab;
+            el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
+            el.classList.add("has-badge");
+          } else if (cat.iconOnly) {
+            el._labelEl.textContent = lab;
+            el._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
+          } else {
+            el._labelEl.textContent = lab;
+          }
+        }
       });
       // Center is always the close control while open (×), never last-selection text
       const core = stage.querySelector(".hb-hex.is-center");
@@ -678,15 +808,23 @@
         const d = DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
+        const iconName =
+          typeof cat.icon === "function" ? cat.icon() : cat.icon;
         const el = makeHex({
           cls:
             "is-primary cat-" +
             cat.id +
-            (state.active === cat.id ? " is-active" : ""),
+            (state.active === cat.id ? " is-active" : "") +
+            (cat.badge ? " has-badge" : ""),
           label: lab,
           labelSize: cat.labelSize,
           ariaLabel: typeof cat.aria === "function" ? cat.aria() : lab,
+          icon: iconName,
+          iconOnly: !!cat.iconOnly && !cat.badge,
         });
+        if (cat.badge && el._labelEl) {
+          el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
+        }
         el.dataset.cat = cat.id;
         el.dataset.index = String(i);
         el.setAttribute("aria-haspopup", "true");
