@@ -7009,9 +7009,14 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     ["xlarge", "XL"],
   ];
 
-  // Surface packs live in the ? modal now, not the dock. This map only exists
-  // so the Look tile can still name the active one.
-  const PACK_NAMES = { earth: "Earth", moon: "Moon", water: "Water" };
+  // Indicators rotate rather than fan out. `rings` is back in the cycle now
+  // that it costs no extra tile — and the Kimi and Muse takes land on it, so
+  // it had to stay reachable regardless.
+  const INDICATORS = [
+    ["numerals", "123"],
+    ["yellow", "Mark"],
+    ["rings", "Rings"],
+  ];
 
   // Full 6-neighbour ring (pointy-top axial) — used for leaf fans around a parent.
   const DIRECTIONS = [
@@ -7022,16 +7027,35 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     { q: -1, r: 1 },
     { q: 0, r: 1 },
   ];
-  // Primary bloom from the dock Menu tile: only cells with r < 0 (screen-up).
-  // E/W would sit under Restart/Help; SE/SW would clip off the bottom.
-  // Ring-1 NE/NW + ring-2 above → a clean fan that opens upward from the seed.
-  const BLOOM_DIRS = [
+  // Ring used to fan leaves around a parent. Only cells with r < 0 (screen-up):
+  // E/W would sit under Restart/Help, SE/SW would clip off the bottom.
+  const LEAF_RING = [
     { q: 1, r: -1 }, // NE
     { q: 0, r: -1 }, // NW
     { q: 2, r: -2 }, // ring-2 up-right
     { q: 1, r: -2 }, // ring-2 NNE
     { q: 0, r: -2 }, // ring-2 N
     { q: -1, r: -1 }, // ring-2 up-left
+  ];
+
+  // Fixed seats for the primaries, in categories() order. Three rows stacked
+  // above the dock, widest row four tiles — a single five-wide row overflows a
+  // phone. x = q + r/2, so each row below is centred on the seed:
+  //
+  //       [3D] [Off]                 r = -3
+  //     [Bg] [Shell] [Dug]           r = -2
+  //   [Seams][Size][Dig][Indicators] r = -1
+  //     [reset] [x] [help]           r =  0  (fixed dock)
+  const PRIMARY_SLOTS = [
+    { q: 1, r: -1 }, // Dig / Flag
+    { q: 0, r: -1 }, // Size
+    { q: -1, r: -1 }, // Seams
+    { q: 2, r: -1 }, // Indicators — the notch right of Dig
+    { q: 0, r: -2 }, // Bg
+    { q: 1, r: -2 }, // Shell
+    { q: 2, r: -2 }, // Dug
+    { q: 1, r: -3 }, // 3D / Flush
+    { q: 2, r: -3 }, // Invert
   ];
 
   // Stroke icons (24×24) — board language, not tool metaphors
@@ -7050,6 +7074,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     style:
       '<path d="M7 7h.01M12 7h.01M17 7h.01"/><path d="M7 12h.01M12 12h.01M17 12h.01"/>' +
       '<path d="M7 17h.01M12 17h.01M17 17h.01"/>',
+    indicators:
+      '<path d="M12 3.4 19.3 7.7v8.6L12 20.6 4.7 16.3V7.7L12 3.4Z"/>' +
+      '<circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>',
     numerals:
       '<path d="M8 17V7l-2 2"/><path d="M11.5 17h4.2c1.2 0 2-.8 2-2s-.8-2-2-2h-2.2c-1.2 0-2-.8-2-2s.8-2 2-2H18"/>',
     rings:
@@ -7261,7 +7288,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     function leafOffsets(dirIndex, count) {
       if (count <= 0) return [];
       // Prefer bloom-up directions so nested fans also stay on-screen.
-      const ring = BLOOM_DIRS;
+      const ring = LEAF_RING;
       if (count <= 3) {
         const trio = [
           ring[(dirIndex + ring.length - 1) % ring.length],
@@ -7439,13 +7466,6 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       return { field: "light", shell: "light", well: "dark" };
     }
 
-    function getPack() {
-      if (typeof game.getAppearance === "function") {
-        const a = game.getAppearance();
-        return (a && a.pack) || "classic";
-      }
-      return "classic";
-    }
 
     function axisSwatch(axis, value) {
       // Mini palette for Bg / Shell / Well flip tiles
@@ -7485,6 +7505,23 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         flagFill: "#ff0000",
         label: light ? "#000000" : "#ffffff",
       };
+    }
+
+    function indicatorId() {
+      const cs = game.getState().countStyle;
+      return INDICATORS.some(([id]) => id === cs) ? cs : "numerals";
+    }
+
+    function indicatorLabel() {
+      const hit = INDICATORS.find(([id]) => id === indicatorId());
+      return hit ? hit[1] : "123";
+    }
+
+    function cycleIndicators() {
+      const i = INDICATORS.findIndex(([id]) => id === indicatorId());
+      const [id, lab] = INDICATORS[(i + 1) % INDICATORS.length];
+      game.setCountStyle(id, { syncSurface: false });
+      announce("Indicators · " + lab);
     }
 
     function flipAxis(axis) {
@@ -7608,74 +7645,60 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           cycle: cycleSize,
         },
         {
-          id: "theme",
-          label: () => {
-            const p = getPack();
-            if (p === "classic") return "Look";
-            return PACK_NAMES[p] || "Look";
-          },
-          icon: "theme",
+          id: "seams",
+          label: () =>
+            game.getState().seams === false ? "Seam" : "Seams",
+          icon: "style",
           iconOnly: false,
-          aria: () => "Look — background, shell, dug and indicators",
-          sub: () => {
-            const axes = getAxes();
-            const pack = getPack();
-            const leaves = [
-              {
-                id: "ax-field",
-                label: "Bg",
-                themeSwatch: axisSwatch("field", axes.field),
-                iconOnly: true,
-                chosen: () => pack === "classic",
-                run: () => flipAxis("field"),
-              },
-              {
-                id: "ax-shell",
-                label: "Shell",
-                themeSwatch: axisSwatch("shell", axes.shell),
-                iconOnly: true,
-                chosen: () => pack === "classic",
-                run: () => flipAxis("shell"),
-              },
-              {
-                id: "ax-well",
-                label: "Dug",
-                themeSwatch: axisSwatch("well", axes.well),
-                iconOnly: true,
-                chosen: () => pack === "classic",
-                run: () => flipAxis("well"),
-              },
-            ];
-            // Indicators: one toggle, numerals <-> yellow. `rings` is still a
-            // valid style (the Kimi and Muse takes land on it), so treat
-            // anything that is not yellow as numerals — a player who arrives on
-            // rings toggles into yellow and then into numerals, never stuck.
-            const yellowOn = game.getState().countStyle === "yellow";
-            leaves.push({
-              id: "st-indicators",
-              label: yellowOn ? "Mark" : "123",
-              icon: yellowOn ? "style" : "numerals",
-              labelSize: "sm",
-              chosen: () => true,
-              run: () => {
-                const next = yellowOn ? "numerals" : "yellow";
-                game.setCountStyle(next, { syncSurface: false });
-                announce("Indicators · " + (next === "yellow" ? "Mark" : "Numerals"));
-              },
-            });
-            return leaves;
+          aria: () => {
+            const on = game.getState().seams !== false;
+            return (
+              "Seams: " +
+              (on ? "on" : "off") +
+              ". Activate to toggle honeycomb edges."
+            );
           },
+          cycle: cycleSeams,
         },
         {
-          id: "invert",
-          label: () => invertModeLabel(),
-          icon: "drag",
+          id: "indicators",
+          label: () => indicatorLabel(),
+          // Stable glyph; the label carries which style is live.
+          icon: "indicators",
           iconOnly: false,
+          labelSize: "sm",
           aria: () =>
-            "Invert drag: " +
-            invertModeLabel() +
-            ". Activate to cycle Off, X, Y, X+Y.",
-          cycle: cycleInvert,
+            "Indicators: " +
+            indicatorLabel() +
+            ". Activate to cycle numerals, mark, rings.",
+          cycle: cycleIndicators,
+        },
+        {
+          id: "ax-field",
+          label: "Bg",
+          swatch: () => axisSwatch("field", getAxes().field),
+          iconOnly: true,
+          aria: () => "Background: " + getAxes().field + ". Activate to flip.",
+          // Flipping an axis returns to the classic mono look — setAppearanceAxes
+          // clears the surface pack, so these double as the way back from
+          // Earth / Moon / Water.
+          cycle: () => flipAxis("field"),
+        },
+        {
+          id: "ax-shell",
+          label: "Shell",
+          swatch: () => axisSwatch("shell", getAxes().shell),
+          iconOnly: true,
+          aria: () => "Covered faces: " + getAxes().shell + ". Activate to flip.",
+          cycle: () => flipAxis("shell"),
+        },
+        {
+          id: "ax-well",
+          label: "Dug",
+          swatch: () => axisSwatch("well", getAxes().well),
+          iconOnly: true,
+          aria: () => "Dug faces: " + getAxes().well + ". Activate to flip.",
+          cycle: () => flipAxis("well"),
         },
         {
           id: "flush",
@@ -7694,20 +7717,15 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           cycle: cycleFlush,
         },
         {
-          id: "seams",
-          label: () =>
-            game.getState().seams === false ? "Seam" : "Seams",
-          icon: "style",
+          id: "invert",
+          label: () => invertModeLabel(),
+          icon: "drag",
           iconOnly: false,
-          aria: () => {
-            const on = game.getState().seams !== false;
-            return (
-              "Seams: " +
-              (on ? "on" : "off") +
-              ". Activate to toggle honeycomb edges."
-            );
-          },
-          cycle: cycleSeams,
+          aria: () =>
+            "Invert drag: " +
+            invertModeLabel() +
+            ". Activate to cycle Off, X, Y, X+Y.",
+          cycle: cycleInvert,
         },
       ];
     }
@@ -7831,7 +7849,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     function addSubmenu(dirIndex, cat) {
       const { HEX } = tileMetrics();
       const { cx, cy } = centerXY();
-      const dir = BLOOM_DIRS[dirIndex] || DIRECTIONS[dirIndex];
+      const dir = PRIMARY_SLOTS[dirIndex] || DIRECTIONS[dirIndex];
       const p = hexToPixel(dir.q, dir.r, HEX);
       const px = cx + p.x;
       const py = cy + p.y;
@@ -7910,6 +7928,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         });
     }
 
+    function applyPrimarySwatch(el, spec) {
+      const sw = themeSwatchVars(spec);
+      el.style.setProperty("--theme-fill", sw.fill);
+      el.style.setProperty("--theme-edge", sw.edge);
+      el.style.setProperty("--theme-field", sw.field);
+      el.style.setProperty("--theme-ink", sw.ink);
+      el.style.setProperty("--theme-accent", sw.accent);
+      if (!el.querySelector(".hb-theme-dot")) {
+        const dot = document.createElement("span");
+        dot.className = "hb-theme-dot";
+        dot.setAttribute("aria-hidden", "true");
+        el.appendChild(dot);
+      }
+    }
+
     function refreshPrimaryLabels() {
       const cats = categories();
       stage.querySelectorAll(".hb-hex.is-primary").forEach((el) => {
@@ -7926,13 +7959,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           el.classList.toggle("is-dig-icon", name === "dig");
           el.classList.toggle("is-theme-icon", name === "theme");
         }
-        // Theme primary circle can pick up current theme accent
-        if (cat.id === "theme") {
-          const t = THEMES[game.getThemeIndex()] || THEMES[0];
-          const sw = themeSwatchVars(t);
-          el.style.setProperty("--theme-fill", sw.fill);
-          el.style.setProperty("--theme-edge", sw.edge);
-          el.style.setProperty("--theme-field", sw.field);
+        // Axis tiles repaint their swatch as the look changes under them.
+        if (cat.swatch) {
+          applyPrimarySwatch(
+            el,
+            typeof cat.swatch === "function" ? cat.swatch() : cat.swatch
+          );
         }
         // Size keeps a visible letter badge; other primaries are icon-only
         if (el._labelEl) {
@@ -8070,11 +8102,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       if (!withPetals) return;
 
       cats.forEach((cat, i) => {
-        const d = BLOOM_DIRS[i] || DIRECTIONS[i];
+        const d = PRIMARY_SLOTS[i] || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const iconName =
           typeof cat.icon === "function" ? cat.icon() : cat.icon;
+        const swatch =
+          typeof cat.swatch === "function" ? cat.swatch() : cat.swatch;
         const el = makeHex({
           cls:
             "is-primary cat-" +
@@ -8083,22 +8117,17 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
             (cat.badge ? " has-badge" : "") +
             (iconName === "flag" ? " is-flag-icon" : "") +
             (iconName === "dig" ? " is-dig-icon" : "") +
-            (iconName === "theme" ? " is-theme-icon" : ""),
+            (iconName === "theme" ? " is-theme-icon" : "") +
+            (swatch ? " is-theme-swatch" : ""),
           label: lab,
           labelSize: cat.labelSize,
           ariaLabel: typeof cat.aria === "function" ? cat.aria() : lab,
-          icon: iconName,
-          iconOnly: !!cat.iconOnly && !cat.badge,
+          icon: swatch ? null : iconName,
+          iconOnly: swatch ? true : !!cat.iconOnly && !cat.badge,
         });
+        if (swatch) applyPrimarySwatch(el, swatch);
         if (cat.badge && el._labelEl) {
           el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
-        }
-        if (cat.id === "theme") {
-          const t = THEMES[game.getThemeIndex()] || THEMES[0];
-          const sw = themeSwatchVars(t);
-          el.style.setProperty("--theme-fill", sw.fill);
-          el.style.setProperty("--theme-edge", sw.edge);
-          el.style.setProperty("--theme-field", sw.field);
         }
         el.dataset.cat = cat.id;
         el.dataset.index = String(i);
