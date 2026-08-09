@@ -666,6 +666,87 @@ def export_sphere(exp: dict) -> str:
     return markup
 
 
+# Back affordance shared by every game page. Top-left on purpose: all four
+# surfaces already own the bottom-right corner for their own chrome, and the
+# WebView has no browser back. White-on-dark glass is the one treatment that
+# stays legible over both the porcelain plate and the night-iron one.
+APP_BACK_PILL = """<style>
+.app-back{position:fixed;z-index:9999;
+ top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));
+ display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 15px 0 12px;
+ border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(18,22,30,.62);
+ -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+ color:#fff;font:600 .78rem/1 "IBM Plex Sans",system-ui,sans-serif;letter-spacing:.01em;
+ text-decoration:none;-webkit-tap-highlight-color:transparent}
+.app-back:focus-visible{outline:3px solid #7fc4f2;outline-offset:2px}
+.app-back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;
+ stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion: no-preference){.app-back{transition:transform .18s ease}
+ .app-back:active{transform:scale(.96)}}
+</style>
+<a class="app-back" href="../index.html">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
+"""
+
+# Keeps the native launch screen up until the first painted frame; without it
+# the storyboard drops the moment the WebView mounts and the player watches a
+# blank canvas while the board builds.
+APP_SPLASH_HIDE = """<script>
+/* app: dismiss the native launch screen after first paint */
+(function () {
+  function hide() {
+    var p = window.Capacitor && window.Capacitor.Plugins;
+    if (p && p.SplashScreen) p.SplashScreen.hide({ fadeOutDuration: 200 });
+  }
+  requestAnimationFrame(function () { requestAnimationFrame(hide); });
+})();
+</script>
+"""
+
+
+def appify(markup: str, *, back: bool = True, label: str = "app page") -> str:
+    """Apply the transforms every page in the native bundle needs.
+
+    Outbound links must escape to Safari — a bare href replaces the game with a
+    web page and Capacitor offers no way back. Then assert the page is sealed:
+    nothing it loads may live off-device.
+    """
+    for host in ("https://lukesteuber.com", "https://datapoems.io"):
+        markup = markup.replace(
+            f'<a href="{host}" rel="noopener noreferrer">',
+            f'<a href="{host}" target="_blank" rel="noopener noreferrer">',
+        )
+    # Any remaining outbound anchor still needs to open out-of-app.
+    markup = re.sub(
+        r'<a href="(https?://[^"]+)"(?! [^>]*target=)',
+        r'<a href="\1" target="_blank"',
+        markup,
+    )
+    if back:
+        markup = markup.replace("</body>", f"{APP_BACK_PILL}</body>", 1)
+    markup = markup.replace("</body>", f"{APP_SPLASH_HIDE}</body>", 1)
+
+    remote = re.findall(
+        r'(?:src|href)="(https?://[^"]+\.(?:png|jpe?g|gif|webp|svg|css|js|woff2?))"', markup
+    )
+    if remote:
+        raise SystemExit(
+            f"appify({label}): remote asset reference(s) survived: " + ", ".join(sorted(set(remote)))
+        )
+    return markup
+
+
+def export_flat_app(collection_file: str, label: str) -> str:
+    """Adapt an already-generated flat one-pager into a native-app game page."""
+    src = COLLECTION / collection_file
+    if not src.is_file():
+        raise SystemExit(f"export_flat_app: {collection_file} not built yet — run without --app first")
+    markup = src.read_text(encoding="utf-8")
+    # The desk pens link back to the collection index, which the app has no copy of.
+    markup = re.sub(r'\s*<a class="back"[^>]*>.*?</a>', "", markup, flags=re.S)
+    return appify(markup, label=label)
+
+
 def export_sphere_app(exp: dict) -> str:
     """Adapt the collection one-pager into the offline native-app payload.
 
@@ -689,75 +770,80 @@ def export_sphere_app(exp: dict) -> str:
         1,
     )
 
+    # Sphere lives at games/sphere.html, so bundle assets are one level up.
     markup = markup.replace(
         'src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"',
-        'src="assets/classic-minesweeper.png"',
+        'src="../assets/classic-minesweeper.png"',
     )
 
     # Drop the "Also flat Hexsweeper · Fire · Plague" row: those modes are not
     # in this binary, and tapping them would navigate the WebView off the game.
     markup = re.sub(r'\s*<p class="help-more">.*?</p>', "", markup, count=1, flags=re.S)
 
-    # Credits must escape to Safari; a bare href replaces the game with a web
-    # page and Capacitor gives the player no way back.
-    markup = markup.replace(
-        '<a href="https://lukesteuber.com" rel="noopener noreferrer">',
-        '<a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">',
-    )
-    markup = markup.replace(
-        '<a href="https://datapoems.io" rel="noopener noreferrer">',
-        '<a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">',
-    )
-    # Native launch screen stays up until the first frame is on screen; without
-    # this the storyboard drops the moment the WebView mounts and the player
-    # sees a blank canvas while hexasphere builds the board.
-    splash_hide = (
-        "<script>\n"
-        "/* app: dismiss the native launch screen after first paint */\n"
-        "(function () {\n"
-        "  function hide() {\n"
-        "    var p = window.Capacitor && window.Capacitor.Plugins;\n"
-        "    if (p && p.SplashScreen) p.SplashScreen.hide({ fadeOutDuration: 200 });\n"
-        "  }\n"
-        "  requestAnimationFrame(function () { requestAnimationFrame(hide); });\n"
-        "})();\n"
-        "</script>\n"
-    )
-    markup = markup.replace("</body>", f"{splash_hide}</body>", 1)
-
     if "HEXSWEEPER_SPHERE_APP" not in markup:
         raise SystemExit("export_sphere_app: app flag not injected")
 
-    # Nothing the renderer loads may live off-device. Checked on src/href
-    # attributes rather than raw text: GLOBE_TEX_BASE still appears as a string
-    # constant in the inlined sphere.js, but it is unreachable here — globeUrl
-    # is only called for themes carrying `globeMap`, and the THEMES filter drops
-    # every one of those under HEXSWEEPER_SPHERE_APP.
-    remote_assets = re.findall(
-        r'(?:src|href)="(https?://[^"]+\.(?:png|jpe?g|gif|webp|svg|css|js))"', markup
-    )
-    if remote_assets:
-        raise SystemExit(
-            "export_sphere_app: remote asset reference(s) survived: "
-            + ", ".join(sorted(set(remote_assets)))
-        )
+    # appify's guard checks src/href only. GLOBE_TEX_BASE still appears as a
+    # string constant in the inlined sphere.js, but it is unreachable here:
+    # globeUrl is only called for themes carrying `globeMap`, and the THEMES
+    # filter drops every one of those under HEXSWEEPER_SPHERE_APP.
+    return appify(markup, label="sphere")
 
-    return markup
+
+def export_app_launcher() -> str:
+    """The picker: three structural choices — infinite, bounded, sphere.
+
+    Theme, board size and count style are settings inside each game, not peers
+    of it, so they deliberately do not appear here.
+    """
+    template = (ROOT / "tools" / "app-launcher.html").read_text(encoding="utf-8")
+    fonts_css = inline_css_urls(
+        (ROOT / "fonts" / "fonts.css").read_text(encoding="utf-8"), ROOT / "fonts"
+    )
+    markup = template.replace(
+        "{{FONTS}}",
+        f"<style>\n/* fonts/fonts.css (woff2 inlined) */\n{fonts_css}\n</style>",
+        1,
+    )
+    if "{{FONTS}}" in markup:
+        raise SystemExit("export_app_launcher: font placeholder not replaced")
+    # The launcher is the top of the stack; it has nowhere to go back to.
+    return appify(markup, back=False, label="launcher")
+
+
+# webDir layout: index.html is the picker, each mode lives under games/.
+APP_GAMES = [
+    ("games/infinite.html", "theme-plate.html", "infinite"),
+    ("games/bounded.html", "skin-classic.html", "bounded"),
+]
 
 
 def write_app_build() -> list[Path]:
     """Stage the offline app payload under build/app/ and report what it wrote."""
-    exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
+    (APP_BUILD / "games").mkdir(parents=True, exist_ok=True)
     (APP_BUILD / "assets").mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
 
-    index = APP_BUILD / "index.html"
-    index.write_text(export_sphere_app(exp), encoding="utf-8")
+    launcher = APP_BUILD / "index.html"
+    launcher.write_text(export_app_launcher(), encoding="utf-8")
+    written.append(launcher)
 
-    history_src = ROOT / "sphere" / "assets" / "classic-minesweeper.png"
-    history_dst = APP_BUILD / "assets" / "classic-minesweeper.png"
-    history_dst.write_bytes(history_src.read_bytes())
+    sphere_exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
+    sphere = APP_BUILD / "games" / "sphere.html"
+    sphere.write_text(export_sphere_app(sphere_exp), encoding="utf-8")
+    written.append(sphere)
 
-    return [index, history_dst]
+    for out_name, collection_file, label in APP_GAMES:
+        path = APP_BUILD / out_name
+        path.write_text(export_flat_app(collection_file, label), encoding="utf-8")
+        written.append(path)
+
+    # The sphere's help lightbox reads this from the bundle, one level up.
+    history = APP_BUILD / "assets" / "classic-minesweeper.png"
+    history.write_bytes((ROOT / "sphere" / "assets" / "classic-minesweeper.png").read_bytes())
+    written.append(history)
+
+    return written
 
 
 def write_index(themes: list[dict], skins: list[dict], experiments: list[dict] | None = None) -> str:
