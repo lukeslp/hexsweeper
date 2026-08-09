@@ -122,7 +122,12 @@
 
   function riseMs() {
     if (prefersReducedMotion()) return 0;
-    return 420;
+    return 220; // keep in sync with --rise-ms in hex-bloom.css
+  }
+
+  function foldMs() {
+    if (prefersReducedMotion()) return 0;
+    return 180; // petal fold / close settle — snappier than the rise
   }
 
   function initHexBloom(game) {
@@ -652,7 +657,7 @@
         el.classList.add("folded");
         const drop = () => el.remove();
         el.addEventListener("transitionend", drop, { once: true });
-        setTimeout(drop, prefersReducedMotion() ? 0 : 420);
+        setTimeout(drop, foldMs());
       });
     }
 
@@ -709,7 +714,7 @@
         el.dataset.sub = item.id;
         place(el, px + o.x, py + o.y, px, py);
         el.classList.add("folded");
-        el.dataset.delay = String(j * 55);
+        el.dataset.delay = String(j * 28);
         el.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -905,7 +910,7 @@
         el.setAttribute("aria-expanded", String(state.active === cat.id));
         place(el, cx + p.x, cy + p.y, cx, cy);
         el.classList.add("folded");
-        el.dataset.delay = String(i * 48);
+        el.dataset.delay = String(i * 26);
         el.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
