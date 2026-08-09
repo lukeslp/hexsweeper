@@ -90,13 +90,35 @@ EXPERIMENTS = [
         "title": "Hexsweeper 3D",
         "ogTitle": "Hexsweeper 3D",
         "ogDescription": "The hex-tile take on classic Minesweeper — on a sphere. Themes, controls, and sharing.",
-        "tag": "Experiment · CodePen",
+        "tag": "Experiment · live",
         "blurb": "Hexsweeper on a closed Goldberg sphere — six neighbors, dig/flag, rotate, themes. Riding on classic Minesweeper.",
         "filter": "sphere experiment goldberg geodesic rotate 3d closed hexsweeper codepen",
         "swatch": ("#ffffff", "#111111", "#888888", "#ff0000"),
         "file": "sphere.html",
         "href": "sphere.html",
         "liveHref": "../sphere/",
+        "source": "sphere",
+        "css": ["dev-chrome.css"],
+        "scripts": ["hexasphere.js", "sphere.js", "dev-chrome.js"],
+        "boot": "initDevChrome",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-ux",
+        "title": "Hexsweeper 3D · Bloom UX",
+        "ogTitle": "Hexsweeper 3D — Bloom UX",
+        "ogDescription": "Sphere Hexsweeper with the experimental hex-bloom chrome: three-tile dock, cycle controls, Classic axes and World packs.",
+        "tag": "Experiment · UX lab",
+        "blurb": "Sandbox chrome for the sphere — Restart · Menu · Help dock, hex bloom (Dig/Size/Look/Invert/Flush/Seams), Classic Bg/Shell/Dug axes plus Earth/Moon/Glow packs.",
+        "filter": "sphere ux bloom dock menu chrome experiment goldberg hex-bloom lab",
+        "swatch": ("#f3f1ea", "#16150f", "#e2341d", "#5ec8ff"),
+        "file": "sphere-ux.html",
+        "href": "sphere-ux.html",
+        "liveHref": "../sphere-ux/",
+        "source": "sphere-ux",
+        "css": ["dev-chrome.css", "hex-bloom.css"],
+        "scripts": ["hexasphere.js", "sphere.js", "hex-bloom.js"],
+        "boot": "initHexBloom",
         "ogImage": f"{OG}/sphere-og.png",
     },
     # Model-authored unique takes (specs from Kimi / Claude / Muse; wired via ?take=)
@@ -112,6 +134,10 @@ EXPERIMENTS = [
         "file": "sphere-kimi.html",
         "href": "sphere-kimi.html",
         "take": "kimi-moon-ink-orrery",
+        "source": "sphere",
+        "css": ["dev-chrome.css"],
+        "scripts": ["hexasphere.js", "sphere.js", "dev-chrome.js"],
+        "boot": "initDevChrome",
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
@@ -126,6 +152,10 @@ EXPERIMENTS = [
         "file": "sphere-claude.html",
         "href": "sphere-claude.html",
         "take": "claude-amber-codex",
+        "source": "sphere",
+        "css": ["dev-chrome.css"],
+        "scripts": ["hexasphere.js", "sphere.js", "dev-chrome.js"],
+        "boot": "initDevChrome",
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
@@ -140,6 +170,10 @@ EXPERIMENTS = [
         "file": "sphere-muse.html",
         "href": "sphere-muse.html",
         "take": "muse-constellation-void",
+        "source": "sphere",
+        "css": ["dev-chrome.css"],
+        "scripts": ["hexasphere.js", "sphere.js", "dev-chrome.js"],
+        "boot": "initDevChrome",
         "ogImage": f"{OG}/sphere-og.png",
     },
 ]
@@ -485,9 +519,15 @@ def experiment_tile_html(exp: dict) -> str:
     a, b, c, d = exp["swatch"]
     href = exp.get("href") or exp.get("file") or exp.get("liveHref", "#")
     file = exp.get("file")
+    live = exp.get("liveHref")
     copy_btn = (
         f'\n          <button type="button" data-copy="{file}">Copy HTML</button>'
         if file
+        else ""
+    )
+    live_btn = (
+        f'\n          <a href="{live}" target="_blank" rel="noopener">Live</a>'
+        if live
         else ""
     )
     return f"""      <article class="study" data-filter="{exp['filter']}" style="--swatch-bg:{a};--swatch-a:{b};--swatch-b:{c};--swatch-c:{d}">
@@ -498,19 +538,26 @@ def experiment_tile_html(exp: dict) -> str:
           <p>{exp['blurb']}</p>
         </a>
         <div class="actions">
-          <a href="{href}" target="_blank" rel="noopener">Open</a>{copy_btn}
+          <a href="{href}" target="_blank" rel="noopener">Open</a>{live_btn}{copy_btn}
         </div>
       </article>"""
 
 
 def sphere_banner(exp: dict) -> str:
+    live = exp.get("liveHref") or "../sphere/"
+    if live.startswith("../"):
+        live_url = "https://dr.eamer.dev/games/hexsweeper/" + live.replace("../", "")
+    elif live.startswith("http"):
+        live_url = live
+    else:
+        live_url = f"https://dr.eamer.dev/games/hexsweeper/{live.lstrip('/')}"
     return "\n".join(
         (
             "<!--",
             f"  Quick Take: {exp['ogTitle']} — {exp['blurb']}",
             "  Stack: Vanilla HTML, CSS, and JavaScript; Canvas 2D; no frameworks.",
             f"  Source: {PUBLIC_BASE}/{exp['file']}",
-            "  Live: https://dr.eamer.dev/games/hexsweeper/sphere/",
+            f"  Live: {live_url}",
             "  License: MIT · Author: Luke Steuber",
             "  Note: Self-contained collection export for CodePen. Regenerate:",
             "        python3 tools/export-collection.py",
@@ -520,13 +567,31 @@ def sphere_banner(exp: dict) -> str:
 
 
 def export_sphere(exp: dict) -> str:
-    """Inline sphere/ into a single CodePen-ready HTML file."""
-    markup = (ROOT / "sphere" / "index.html").read_text(encoding="utf-8")
+    """Inline a sphere source tree into a single CodePen-ready HTML file.
+
+    Defaults match live sphere/ (dev-chrome). sphere-ux sets source/css/scripts/boot.
+    """
+    source_name = exp.get("source") or "sphere"
+    source_dir = ROOT / source_name
+    if not (source_dir / "index.html").is_file():
+        raise SystemExit(f"export_sphere: missing {source_dir / 'index.html'}")
+
+    css_names = exp.get("css") or ["dev-chrome.css"]
+    script_names = exp.get("scripts") or [
+        "hexasphere.js",
+        "sphere.js",
+        "dev-chrome.js",
+    ]
+    boot_fn = exp.get("boot") or "initDevChrome"
+
+    markup = (source_dir / "index.html").read_text(encoding="utf-8")
     title = exp.get("ogTitle", exp["title"])
     description = exp.get("ogDescription", exp["blurb"])
     file_name = exp["file"]
     public_url = f"{PUBLIC_BASE}/{file_name}"
-    history_img = "https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"
+    history_img = (
+        "https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"
+    )
 
     # Strip existing file banner; attach collection banner.
     markup = re.sub(
@@ -603,25 +668,37 @@ def export_sphere(exp: dict) -> str:
     )
 
     # History screenshot: absolute URL (not inlined — keeps the pen under ~250KB).
-    markup = markup.replace('src="assets/classic-minesweeper.png"', f'src="{history_img}"')
-
-    dev_chrome_css = (ROOT / "sphere" / "dev-chrome.css").read_text(encoding="utf-8")
-    markup = re.sub(
-        r'<link rel="stylesheet" href="dev-chrome\.css[^"]*">\s*',
-        f"<style>\n/* dev-chrome.css */\n{dev_chrome_css}\n</style>\n",
-        markup,
-        count=1,
+    markup = markup.replace(
+        'src="assets/classic-minesweeper.png"', f'src="{history_img}"'
     )
 
-    hexasphere = safe_script((ROOT / "sphere" / "hexasphere.js").read_text(encoding="utf-8"))
-    sphere_js = safe_script((ROOT / "sphere" / "sphere.js").read_text(encoding="utf-8"))
-    dev_chrome_js = safe_script((ROOT / "sphere" / "dev-chrome.js").read_text(encoding="utf-8"))
-    # Skip welcome + prefer a clean first paint; CodePen origin has its own storage.
+    for css_name in css_names:
+        css_path = source_dir / css_name
+        if not css_path.is_file():
+            raise SystemExit(f"export_sphere: missing {css_path}")
+        css_body = css_path.read_text(encoding="utf-8")
+        markup = re.sub(
+            rf'<link rel="stylesheet" href="{re.escape(css_name)}[^"]*">\s*',
+            f"<style>\n/* {css_name} */\n{css_body}\n</style>\n",
+            markup,
+            count=1,
+        )
+
+    # Inline script tags in declared order; preserve trailing boot script.
+    script_pattern = r"".join(
+        rf'<script src="{re.escape(name)}[^"]*"></script>\s*' for name in script_names
+    )
+    m = re.search(script_pattern, markup)
+    if not m:
+        raise SystemExit(
+            "export_sphere: could not find script tags for "
+            + ", ".join(script_names)
+            + f" under {source_name}/"
+        )
+
     take_id = exp.get("take")
     take_line = (
-        f"window.HEXSWEEPER_SPHERE_TAKE = {json.dumps(take_id)};\n"
-        if take_id
-        else ""
+        f"window.HEXSWEEPER_SPHERE_TAKE = {json.dumps(take_id)};\n" if take_id else ""
     )
     boot = (
         "<script>\n"
@@ -634,26 +711,27 @@ def export_sphere(exp: dict) -> str:
         "</script>\n"
     )
     # Do not use re.sub with JS source as the replacement — backslashes break the template.
-    m = re.search(
-        r'<script src="hexasphere\.js[^"]*"></script>\s*'
-        r'<script src="sphere\.js[^"]*"></script>\s*'
-        r'<script src="dev-chrome\.js[^"]*"></script>\s*',
-        markup,
-    )
-    if not m:
-        raise SystemExit(
-            "export_sphere: could not find hexasphere.js / sphere.js / dev-chrome.js script tags"
-        )
-    scripts = (
-        f"{boot}"
-        f"<script>\n/* hexasphere.js */\n{hexasphere}\n</script>\n"
-        f"<script>\n/* sphere.js */\n{sphere_js}\n</script>\n"
-        f"<script>\n/* dev-chrome.js */\n{dev_chrome_js}\n</script>\n"
-    )
+    parts = [boot]
+    for name in script_names:
+        body = safe_script((source_dir / name).read_text(encoding="utf-8"))
+        parts.append(f"<script>\n/* {name} */\n{body}\n</script>\n")
+    scripts = "".join(parts)
     markup = markup[: m.start()] + scripts + markup[m.end() :]
 
+    # Ensure boot helper matches chrome (dev-chrome vs hex-bloom).
+    markup = markup.replace(
+        "initDevChrome(SphereSweeper.boot({ canvasId: \"gameCanvas\" }));",
+        f"{boot_fn}(SphereSweeper.boot({{ canvasId: \"gameCanvas\" }}));",
+    )
+    markup = markup.replace(
+        "initHexBloom(SphereSweeper.boot({ canvasId: \"gameCanvas\" }));",
+        f"{boot_fn}(SphereSweeper.boot({{ canvasId: \"gameCanvas\" }}));",
+    )
+
     # Point flat-mode links at the live site (relative ../ breaks in CodePen).
-    markup = markup.replace('href="../"', 'href="https://dr.eamer.dev/games/hexsweeper/"')
+    markup = markup.replace(
+        'href="../"', 'href="https://dr.eamer.dev/games/hexsweeper/"'
+    )
     markup = markup.replace(
         'href="../?mode=fire"',
         'href="https://dr.eamer.dev/games/hexsweeper/?mode=fire"',
