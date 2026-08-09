@@ -345,7 +345,9 @@
   background: var(--hb-accent);
 }
 
-/* Dock hex — compact seed at bottom */
+/* Dock hex — compact seed at bottom.
+   Closed: outlined only (bordered, not filled) so it doesn't fight the board.
+   Open/close seat can fill solid for a clear ×. */
 .hb-hex.is-dock {
   left: 50%;
   top: 50%;
@@ -354,12 +356,31 @@
   margin-left: calc(var(--tile-w-dock) / -2);
   margin-top: calc(var(--tile-h-dock) / -2);
   z-index: 40;
-  color: var(--hb-center-ink);
+  color: var(--hb-ink);
+  background: var(--hb-ink);
   pointer-events: auto;
 }
 .hb-hex.is-dock::before {
-  background: var(--hb-center-fill);
-  inset: 0;
+  background: transparent;
+  inset: var(--border-w);
+  /* ring via outer ink + transparent fill */
+  box-shadow: none;
+}
+/* Closed menu seed: hollow hex — paper shows through, ink edge only */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock {
+  background: var(--hb-ink);
+  color: var(--hb-ink);
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock::before {
+  background: var(--hb-paper);
+  inset: 2px;
+  opacity: 1;
+}
+body[data-sphere-chrome="dark"] .hex-bloom[data-phase="closed"] .hb-hex.is-dock::before {
+  background: var(--hb-paper);
 }
 .hb-hex.is-dock .hb-label {
   font-size: 16px;
@@ -369,10 +390,22 @@
   text-transform: none;
   color: var(--hb-center-ink);
 }
-/* Inactive dock is a mute solid chip — no wordmark */
+/* Inactive dock: no wordmark */
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock .hb-label {
   font-size: 0;
   opacity: 0;
+}
+/* Close seat (open): solid fill so × reads clearly */
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock {
+  background: var(--hb-ink);
+  color: var(--hb-paper);
+}
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock::before {
+  background: var(--hb-ink);
+  inset: 0;
+}
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock .hb-label {
+  color: var(--hb-paper);
 }
 .hex-bloom[data-open="true"] .hb-hex.is-dock .hb-label,
 .hex-bloom[data-phase="rising"] .hb-hex.is-dock .hb-label,

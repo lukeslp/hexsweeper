@@ -1276,54 +1276,24 @@
       });
     });
 
-    // ---- Dock fades while the sphere is spun / pinched ----
-    // Dig/flag taps stay put; only real orbit (past threshold) or multi-touch hides it.
-    // Menu open always keeps the dock. Restores shortly after the pointer ends.
+    // ---- Dock attention fade ----
+    // Hide while the player is on the board (spinning or aiming over tiles).
+    // Show only when attention leaves the playfield into the bottom chrome band
+    // (or off the canvas). Dig taps alone do not hide; orbit / sustained board
+    // attention does. Menu open always forces visible.
     function wireSphereBusyFade() {
       const canvas = document.getElementById("gameCanvas");
       if (!canvas) return;
 
       let down = false;
-      let busy = false;
+      let dragging = false;
+      let boardAttention = false;
+      let engaged = false; // once true, board hover keeps dock hidden
       let startX = 0;
       let startY = 0;
-      let showTimer = null;
       const MOVE_PX = 10;
-      const SHOW_DELAY = 240;
-
-      function applyBusyAttr() {
-        if (state.phase !== "closed") {
-          root.dataset.sphereBusy = "false";
-          return;
-        }
-        root.dataset.sphereBusy = busy ? "true" : "false";
-      }
-
-      function setBusy(next) {
-        next = !!next;
-        if (busy === next) {
-          applyBusyAttr();
-          return;
-        }
-        busy = next;
-        applyBusyAttr();
-      }
-
-      function clearShowTimer() {
-        if (showTimer) {
-          clearTimeout(showTimer);
-          showTimer = null;
-        }
-      }
-
-      function scheduleShow() {
-        clearShowTimer();
-        showTimer = setTimeout(() => {
-          showTimer = null;
-          down = false;
-          setBusy(false);
-        }, prefersReducedMotion() ? 0 : SHOW_DELAY);
-      }
+      // Bottom strip reserved for chrome — pointer here reveals the seed
+      const CHROME_BAND = 96;
 
       function pointFrom(e) {
         if (e.touches && e.touches.length) return e.touches[0];
@@ -1332,46 +1302,130 @@
         return e;
       }
 
+      function inChromeBand(x, y) {
+        const h = window.innerHeight || document.documentElement.clientHeight;
+        const band = CHROME_BAND + (parseInt(getComputedStyle(document.documentElement).getPropertyValue("env(safe-area-inset-bottom)"), 10) || 0);
+        // safe-area via CSS env isn't readable as number easily — pad generously
+        return y >= h - (CHROME_BAND + 24);
+      }
+
+      function applyBusyAttr() {
+        if (state.phase !== "closed") {
+          root.dataset.sphereBusy = "false";
+          return;
+        }
+        const hide = dragging || (engaged && boardAttention);
+        root.dataset.sphereBusy = hide ? "true" : "false";
+      }
+
+      function setDragging(v) {
+        dragging = !!v;
+        if (dragging) engaged = true;
+        applyBusyAttr();
+      }
+
+      function setBoardAttention(v) {
+        boardAttention = !!v;
+        applyBusyAttr();
+      }
+
+      function updateFromPoint(x, y, target) {
+        if (state.phase !== "closed") {
+          root.dataset.sphereBusy = "false";
+          return;
+        }
+        if (inChromeBand(x, y)) {
+          setBoardAttention(false);
+          return;
+        }
+        // Pointer over playfield (canvas / board)
+        const onCanvas =
+          target === canvas ||
+          (target && canvas.contains && canvas.contains(target)) ||
+          target === document.body ||
+          target === document.documentElement;
+        if (onCanvas || (x >= 0 && y >= 0 && y < window.innerHeight - CHROME_BAND)) {
+          if (engaged || dragging) setBoardAttention(true);
+          else setBoardAttention(false); // first visit: keep seed visible until engage
+        } else {
+          setBoardAttention(false);
+        }
+      }
+
       function onDown(e) {
         if (state.phase !== "closed") return;
-        clearShowTimer();
         down = true;
+        dragging = false;
         if (e.touches && e.touches.length >= 2) {
-          setBusy(true);
+          setDragging(true);
           return;
         }
         const t = pointFrom(e);
         if (!t) return;
         startX = t.clientX;
         startY = t.clientY;
+        if (inChromeBand(t.clientX, t.clientY)) {
+          setBoardAttention(false);
+          return;
+        }
       }
 
       function onMove(e) {
-        if (!down || state.phase !== "closed") return;
-        if (e.touches && e.touches.length >= 2) {
-          setBusy(true);
-          return;
-        }
-        if (busy) return;
         const t = pointFrom(e);
         if (!t) return;
-        const dx = t.clientX - startX;
-        const dy = t.clientY - startY;
-        if (dx * dx + dy * dy >= MOVE_PX * MOVE_PX) setBusy(true);
+
+        if (state.phase !== "closed") {
+          root.dataset.sphereBusy = "false";
+          return;
+        }
+
+        // Not dragging: mouse move can reveal chrome only in the bottom band
+        if (!down) {
+          updateFromPoint(t.clientX, t.clientY, e.target);
+          return;
+        }
+
+        if (e.touches && e.touches.length >= 2) {
+          setDragging(true);
+          return;
+        }
+        if (!dragging) {
+          const dx = t.clientX - startX;
+          const dy = t.clientY - startY;
+          if (dx * dx + dy * dy >= MOVE_PX * MOVE_PX) setDragging(true);
+        }
+        if (dragging) {
+          if (inChromeBand(t.clientX, t.clientY)) setBoardAttention(false);
+          else setBoardAttention(true);
+        }
       }
 
-      function onUp() {
-        if (!down && !busy) return;
+      function onUp(e) {
+        const t = pointFrom(e);
         down = false;
-        if (busy) scheduleShow();
+        const wasDragging = dragging;
+        setDragging(false);
+        if (t) updateFromPoint(t.clientX, t.clientY, e && e.target);
+        else if (wasDragging) {
+          // stay hidden if we don't know where the pointer is — engaged board
+          if (engaged) setBoardAttention(true);
+        }
       }
 
-      canvas.addEventListener("pointerdown", onDown, { passive: true });
-      canvas.addEventListener("pointermove", onMove, { passive: true });
+      function onLeave() {
+        // Pointer left the window → allow chrome back
+        if (!down) setBoardAttention(false);
+      }
+
+      window.addEventListener("pointerdown", onDown, { passive: true });
+      window.addEventListener("pointermove", onMove, { passive: true });
       window.addEventListener("pointerup", onUp, { passive: true });
       window.addEventListener("pointercancel", onUp, { passive: true });
-      canvas.addEventListener("touchstart", onDown, { passive: true });
-      canvas.addEventListener("touchmove", onMove, { passive: true });
+      window.addEventListener("blur", onLeave);
+      document.addEventListener("mouseleave", onLeave);
+      // Touch
+      window.addEventListener("touchstart", onDown, { passive: true });
+      window.addEventListener("touchmove", onMove, { passive: true });
       window.addEventListener("touchend", onUp, { passive: true });
     }
 
