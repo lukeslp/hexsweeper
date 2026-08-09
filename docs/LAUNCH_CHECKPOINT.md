@@ -21,20 +21,23 @@ Gate before widening TestFlight or submitting for review.
       one of them small-screen (tap-target risk)
 - [ ] All gates verified **in airplane mode**
 
-## App Store Connect — inherited record, needs a full rewrite
+## App Store Connect
 
-This record was created for a different app. Nothing on it can be assumed
-correct.
+The record was inherited from a different app, but it was found **empty**
+rather than contaminated — every field was null, so this was fill-in.
 
-- [ ] App name changed from "Hivescape" to the final name
-- [ ] **Name availability confirmed** — "Hexsweeper" is unverified and generic
-- [ ] Privacy nutrition labels rewritten (previous entries described on-device
-      LLM use; this build collects nothing and makes no network calls)
-- [ ] Age rating re-answered
-- [ ] Description, keywords, subtitle rewritten
-- [ ] Screenshots replaced — any existing ones show the old game
-- [ ] Support and marketing URLs point at Hexsweeper
-- [ ] Export compliance: `ITSAppUsesNonExemptEncryption` is already `false`
+- [x] App name set — **Hexsweeper 3D** (`Hexsweeper` itself is taken)
+- [x] Description, keywords, subtitle written
+- [x] Screenshots — five 6.9" captures from the real build
+- [x] Support, marketing and privacy policy URLs set
+- [x] Age rating answered — every category NONE/false
+- [x] Export compliance: `ITSAppUsesNonExemptEncryption` is `false`
+- [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
+      "Data Not Collected" for every category: the app makes no network
+      requests at all and the export guard enforces that at build time.
+
+The record was found **empty**, not filled with the retired app's content —
+worth knowing if you ever inherit another bundle id this way.
 
 ## Licensing
 

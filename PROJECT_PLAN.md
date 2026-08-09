@@ -13,7 +13,7 @@ hexsweeper's `export-collection.py --app`; this repo adds only the native shell.
 That keeps the game single-source in hexsweeper and this repo dependency-light
 (4 runtime packages).
 
-## Status (2026-08-08)
+## Status (2026-08-09)
 
 - [x] Retired the previous product here: React client, Foundation Models bridge,
       `iris` antagonist, and the React/Radix/Tailwind toolchain all removed
@@ -35,16 +35,25 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 - [x] Fixed via simulator: HUD drew on top of the status bar because the
       viewport meta lacked `viewport-fit=cover`, so every
       `env(safe-area-inset-*)` resolved to 0 (hexsweeper `5a363f5`)
-- [ ] Device verification (`docs/DEVICE_VERIFY.md`)
-- [ ] Rename the ASC record Hivescape → Hexsweeper, **pending name availability**
-- [ ] Rewrite ASC metadata: privacy labels, age rating, description, screenshots
-      (all currently describe an on-device-LLM roguelike)
+- [x] ASC record renamed — `Hexsweeper` was taken, so the listing is
+      **Hexsweeper 3D**; the home screen still reads Hexsweeper
+- [x] Listing filled in: subtitle, description, keywords, support/marketing
+      URLs, privacy policy, age rating, five 6.9" screenshots. The record was
+      **empty**, not contaminated — every field was null
+- [x] **First TestFlight build up: 1.0 (7), VALID, IN_BETA_TESTING**
+- [ ] App Privacy nutrition labels — no API endpoint, must be clicked through
+      in the ASC web UI. Answer is "Data Not Collected" throughout
+- [ ] Device verification (`docs/DEVICE_VERIFY.md`) — tap-target size at XL is
+      the gate most likely to fail
+- [ ] Better screenshots before any real launch push; the current five are
+      correctly sized but sparse
 
 ## Outstanding decisions
 
-- **"Hexsweeper" may not be available on the App Store.** It is a generic
-  compound and unverified. Check before building further identity around it; a
-  fallback (e.g. "Hexsweeper 3D") may be needed.
+- **Name is settled: the listing is "Hexsweeper 3D".** Every bare form is
+  taken — `Hexsweeper`, `Hexsweep`, `Hex Sweeper`, `Hex Sweep`, `Hexasweeper`,
+  `Hivesweeper`, `Hexhive` — but `Hexsweeper` plus any qualifier was free.
+  `CFBundleDisplayName` stays `Hexsweeper`, so the home screen is unaffected.
 - **Tap-target size is unmeasured.** `pickTile` does exact polygon hit-testing
   with no hit-radius padding. The XL board is 2252 faces; on a phone those cells
   may be too small to tap reliably. Consider capping board size on small screens.
