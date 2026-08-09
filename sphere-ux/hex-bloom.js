@@ -468,74 +468,106 @@
       );
     }
 
-    function styleIconName() {
+    function invertModeIndex() {
+      const x = invertGet("x");
+      const y = invertGet("y");
+      if (!x && !y) return 0;
+      if (x && !y) return 1;
+      if (!x && y) return 2;
+      return 3;
+    }
+
+    function invertModeLabel() {
+      return ["Off", "X", "Y", "X+Y"][invertModeIndex()];
+    }
+
+    function cycleInvert() {
+      const next = (invertModeIndex() + 1) % 4;
+      const map = [
+        [false, false],
+        [true, false],
+        [false, true],
+        [true, true],
+      ];
+      if (typeof game.setInvertDragX === "function")
+        game.setInvertDragX(map[next][0]);
+      if (typeof game.setInvertDragY === "function")
+        game.setInvertDragY(map[next][1]);
+      announce("Invert · " + ["Off", "X", "Y", "X+Y"][next]);
+    }
+
+    function cycleMode() {
+      const on = !!game.getState().flagMode;
+      game.setFlagMode(!on);
+      announce("Mode · " + (!on ? "Flag" : "Dig"));
+    }
+
+    function cycleSize() {
+      const d = game.getState().difficulty;
+      let i = SIZES.findIndex((s) => s[0] === d);
+      if (i < 0) i = 1;
+      const next = (i + 1) % SIZES.length;
+      game.setSize(SIZES[next][0]);
+      announce("Size · " + SIZES[next][1]);
+    }
+
+    function cycleFlush() {
+      const flush = game.getState().relief === "flush";
+      if (typeof game.setRelief === "function") {
+        game.setRelief(flush ? "extruded" : "flush");
+      }
+      announce("Relief · " + (flush ? "3D" : "Flush"));
+    }
+
+    function cycleSeams() {
+      const on = game.getState().seams !== false;
+      if (typeof game.setSeams === "function") game.setSeams(!on);
+      announce("Seams · " + (on ? "off" : "on"));
+    }
+
+    function cycleCount() {
       const c = game.getState().countStyle;
-      if (c === "rings") return "rings";
-      if (c === "numerals") return "numerals";
-      return "style";
+      let i = COUNTS.findIndex((x) => x[0] === c);
+      if (i < 0) i = 0;
+      const next = (i + 1) % COUNTS.length;
+      game.setCountStyle(COUNTS[next][0], { syncSurface: false });
+      announce("Counts · " + COUNTS[next][1]);
     }
 
     function categories() {
+      // Six primaries. Cycle items flip state on click (no submenu).
+      // Theme still blooms (axes + packs + reset/help).
       return [
         {
           id: "mode",
           label: () => currentMode(),
           icon: () => (game.getState().flagMode ? "flag" : "dig"),
-          iconOnly: false, // text + glyph (leaning text-readable)
-          aria: () => "Mode: " + currentMode(),
-          sub: () => [
-            {
-              id: "dig",
-              label: "Dig",
-              icon: "dig",
-              chosen: () => !game.getState().flagMode,
-              run: () => {
-                game.setFlagMode(false);
-                announce("Mode · Dig");
-              },
-            },
-            {
-              id: "flag",
-              label: "Flag",
-              icon: "flag",
-              chosen: () => !!game.getState().flagMode,
-              run: () => {
-                game.setFlagMode(true);
-                announce("Mode · Flag");
-              },
-            },
-          ],
+          iconOnly: false,
+          aria: () =>
+            "Mode: " + currentMode() + ". Activate to switch Dig or Flag.",
+          cycle: cycleMode,
         },
         {
           id: "size",
-          // Letter stays as a value badge; nested-hex icon under it
           label: () => currentSize(),
           icon: "size",
           iconOnly: false,
           badge: true,
-          aria: () => "Size: " + currentSize(),
-          sub: () =>
-            SIZES.map(([id, lab]) => ({
-              id: "sz-" + id,
-              label: lab,
-              chosen: () => game.getState().difficulty === id,
-              run: () => {
-                game.setSize(id);
-                announce("Size · " + lab);
-              },
-            })),
+          aria: () =>
+            "Size: " + currentSize() + ". Activate to cycle board size.",
+          cycle: cycleSize,
         },
         {
           id: "theme",
           label: () => {
             const p = getPack();
-            if (p === "classic") return "Classic";
+            if (p === "classic") return "Look";
             const hit = CLASSIC_PACKS.find((x) => x.id === p);
-            return hit ? hit.name : shortLabel(currentTheme(), 7);
+            return hit ? hit.name : "Look";
           },
           icon: "theme",
           iconOnly: false,
-          aria: () => "Look: " + (getPack() === "classic" ? "Classic" : getPack()),
+          aria: () => "Look and theme packs",
           sub: () => {
             const axes = getAxes();
             const pack = getPack();
@@ -570,7 +602,17 @@
               leaves.push({
                 id: "pack-" + pk.id,
                 label: pk.name,
-                themeSwatch: t || { id: pk.id, name: pk.name, covered: "#666", bg: "#000", coveredEdge: "#fff", flagFill: "#ff0000", label: "#fff", chrome: "dark" },
+                themeSwatch:
+                  t || {
+                    id: pk.id,
+                    name: pk.name,
+                    covered: "#666",
+                    bg: "#000",
+                    coveredEdge: "#fff",
+                    flagFill: "#ff0000",
+                    label: "#fff",
+                    chrome: "dark",
+                  },
                 iconOnly: true,
                 chosen: () => pack === pk.id,
                 run: () => {
@@ -584,87 +626,50 @@
                 },
               });
             });
-            return leaves;
-          },
-        },
-        {
-          id: "style",
-          label: () => "Style",
-          icon: () => styleIconName(),
-          iconOnly: false,
-          aria: () => {
-            const st = game.getState() || {};
-            return (
-              "Style: " +
-              (st.countStyle || "numerals") +
-              ", " +
-              (st.relief === "flush" ? "flush" : "extruded") +
-              ", " +
-              (st.seams === false ? "seamless" : "seams")
-            );
-          },
-          sub: () => {
-            const st = game.getState() || {};
-            const leaves = COUNTS.map(([id, lab]) => ({
-              id: "st-" + id,
-              label: lab,
-              icon:
-                id === "rings"
-                  ? "rings"
-                  : id === "numerals"
-                    ? "numerals"
-                    : "style",
-              labelSize: "sm",
-              chosen: () => {
-                const c = game.getState().countStyle;
-                // yellow/flush legacy may still be stored
-                if (id === "yellow") return c === "yellow";
-                return c === id;
-              },
-              run: () => {
-                game.setCountStyle(id, { syncSurface: false });
-                announce("Counts · " + lab);
-              },
-            }));
+            // Count paint + system actions live under Look
+            COUNTS.forEach(([id, lab]) => {
+              leaves.push({
+                id: "st-" + id,
+                label: lab,
+                icon:
+                  id === "rings"
+                    ? "rings"
+                    : id === "numerals"
+                      ? "numerals"
+                      : "style",
+                labelSize: "sm",
+                chosen: () => game.getState().countStyle === id,
+                run: () => {
+                  game.setCountStyle(id, { syncSurface: false });
+                  announce("Counts · " + lab);
+                },
+              });
+            });
             leaves.push(
               {
-                id: "relief-ex",
-                label: "3D",
-                labelSize: "sm",
-                chosen: () => (game.getState().relief || "extruded") !== "flush",
+                id: "reset",
+                label: "Reset",
+                icon: "reset",
+                chosen: () => false,
                 run: () => {
-                  if (typeof game.setRelief === "function") game.setRelief("extruded");
-                  announce("Relief · extruded");
+                  if (typeof game.reset === "function") game.reset();
+                  else {
+                    const b = document.getElementById("reset-btn");
+                    if (b) b.click();
+                  }
+                  announce("Board reset");
+                  collapse();
                 },
               },
               {
-                id: "relief-flush",
-                label: "Flush",
-                labelSize: "sm",
-                chosen: () => game.getState().relief === "flush",
+                id: "help",
+                label: "Help",
+                icon: "help",
+                chosen: () => false,
                 run: () => {
-                  if (typeof game.setRelief === "function") game.setRelief("flush");
-                  announce("Relief · flush");
-                },
-              },
-              {
-                id: "seams-on",
-                label: "Seams",
-                labelSize: "sm",
-                chosen: () => game.getState().seams !== false,
-                run: () => {
-                  if (typeof game.setSeams === "function") game.setSeams(true);
-                  announce("Seams · on");
-                },
-              },
-              {
-                id: "seams-off",
-                label: "Seamless",
-                labelSize: "xs",
-                chosen: () => game.getState().seams === false,
-                run: () => {
-                  if (typeof game.setSeams === "function") game.setSeams(false);
-                  announce("Seams · off");
+                  const b = document.getElementById("help-btn");
+                  if (b) b.click();
+                  collapse();
                 },
               }
             );
@@ -672,72 +677,47 @@
           },
         },
         {
-          id: "drag",
-          label: () => "Drag",
+          id: "invert",
+          label: () => invertModeLabel(),
           icon: "drag",
           iconOnly: false,
-          aria: () => "Drag invert",
-          sub: () => [
-            {
-              id: "inv-x",
-              label: "Flip X",
-              icon: "flipX",
-              chosen: () => invertGet("x"),
-              run: () => {
-                const next = !invertGet("x");
-                if (typeof game.setInvertDragX === "function")
-                  game.setInvertDragX(next);
-                announce("Invert X · " + (next ? "on" : "off"));
-              },
-            },
-            {
-              id: "inv-y",
-              label: "Flip Y",
-              icon: "flipY",
-              chosen: () => invertGet("y"),
-              run: () => {
-                const next = !invertGet("y");
-                if (typeof game.setInvertDragY === "function")
-                  game.setInvertDragY(next);
-                announce("Invert Y · " + (next ? "on" : "off"));
-              },
-            },
-          ],
+          aria: () =>
+            "Invert drag: " +
+            invertModeLabel() +
+            ". Activate to cycle Off, X, Y, X+Y.",
+          cycle: cycleInvert,
         },
         {
-          id: "system",
-          label: "More",
-          icon: "more",
-          iconOnly: true,
-          aria: () => "Reset and help",
-          sub: () => [
-            {
-              id: "reset",
-              label: "Reset",
-              icon: "reset",
-              chosen: () => false,
-              run: () => {
-                if (typeof game.reset === "function") game.reset();
-                else {
-                  const b = document.getElementById("reset-btn");
-                  if (b) b.click();
-                }
-                announce("Board reset");
-                collapse();
-              },
-            },
-            {
-              id: "help",
-              label: "Help",
-              icon: "help",
-              chosen: () => false,
-              run: () => {
-                const b = document.getElementById("help-btn");
-                if (b) b.click();
-                collapse();
-              },
-            },
-          ],
+          id: "flush",
+          label: () =>
+            game.getState().relief === "flush" ? "Flush" : "3D",
+          icon: "size",
+          iconOnly: false,
+          aria: () => {
+            const flush = game.getState().relief === "flush";
+            return (
+              "Relief: " +
+              (flush ? "flush" : "extruded") +
+              ". Activate to toggle."
+            );
+          },
+          cycle: cycleFlush,
+        },
+        {
+          id: "seams",
+          label: () =>
+            game.getState().seams === false ? "Seam" : "Seams",
+          icon: "style",
+          iconOnly: false,
+          aria: () => {
+            const on = game.getState().seams !== false;
+            return (
+              "Seams: " +
+              (on ? "on" : "off") +
+              ". Activate to toggle honeycomb edges."
+            );
+          },
+          cycle: cycleSeams,
         },
       ];
     }
@@ -983,6 +963,15 @@
         '.hb-hex.is-primary[data-cat="' + id + '"]'
       );
       if (!cat || !el) return;
+
+      // Cycle primaries: one click flips state, no nested bloom.
+      if (typeof cat.cycle === "function") {
+        clearActive();
+        cat.cycle();
+        refreshPrimaryLabels();
+        return;
+      }
+
       if (state.active === id) {
         clearActive();
         announce("Menu open");
@@ -1086,8 +1075,13 @@
         }
         el.dataset.cat = cat.id;
         el.dataset.index = String(i);
-        el.setAttribute("aria-haspopup", "true");
-        el.setAttribute("aria-expanded", String(state.active === cat.id));
+        if (cat.sub) {
+          el.setAttribute("aria-haspopup", "true");
+          el.setAttribute("aria-expanded", String(state.active === cat.id));
+        } else {
+          el.removeAttribute("aria-haspopup");
+          el.setAttribute("aria-expanded", "false");
+        }
         place(el, cx + p.x, cy + p.y, cx, cy);
         el.classList.add("folded");
         el.dataset.delay = String(i * 26);
