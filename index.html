@@ -831,6 +831,10 @@ body[data-mode="escape"] .menu-links {
 @media (max-width: 660px) {
   .hud-btn { width: 44px; height: 44px; }
 }
+/* Two selectors, one rule set: the media query covers OS Reduce Motion, the
+   attribute covers the in-app Effects setting (set by Hexsweeper.applyEffectsAttribute).
+   They are separate because the setting must be able to reduce with the OS
+   switch off, and to keep effects with it on. */
 @media (prefers-reduced-motion: reduce) {
   .hud-btn,
   .welcome-overlay,
@@ -840,6 +844,17 @@ body[data-mode="escape"] .menu-links {
   .theme-toast { transition: none; }
   .modal-overlay.open .modal-content { transform: none; }
 }
+:root[data-effects="reduced"] .hud-btn,
+:root[data-effects="reduced"] .welcome-overlay,
+:root[data-effects="reduced"] .modal-overlay,
+:root[data-effects="reduced"] .modal-content,
+:root[data-effects="reduced"] .help-overlay,
+:root[data-effects="reduced"] .theme-toast { transition: none; }
+:root[data-effects="reduced"] .modal-overlay.open .modal-content { transform: none; }
+/* …and the inverse: an explicit "full" must win over the OS switch. */
+:root[data-effects="full"] .hud-btn,
+:root[data-effects="full"] .modal-overlay,
+:root[data-effects="full"] .modal-content { transition: revert; }
 </style>
 <link rel="stylesheet" href="fonts/fonts.css">
 </head>
@@ -946,6 +961,7 @@ body[data-mode="escape"] .menu-links {
     <div class="modal-actions">
       <button type="button" id="flag-btn" aria-pressed="false">Flag</button>
       <button type="button" id="help-btn">Help</button>
+      <button type="button" id="fx-btn" title="Particles and motion">Effects: Auto</button>
       <span id="persist-actions" class="persist-inline">
         <button type="button" id="export-run-btn" title="Download run as JSON">Export</button>
         <button type="button" id="import-run-btn" title="Load a saved run">Import</button>
@@ -3524,9 +3540,7 @@ body[data-mode="escape"] .menu-links {
 
   function drawEscapeFinishMarker(ctx, cell, size, now) {
     if (!cell || !cell.isFinish) return;
-    const calm =
-      typeof matchMedia === "function" &&
-      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const calm = Hexsweeper.effectsReduced();
     const pulse = calm ? 0.55 : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(now * 0.003));
     const ds = size * (cell._depthScale || 1);
     ctx.save();
@@ -3613,9 +3627,7 @@ body[data-mode="escape"] .menu-links {
       iy = Math.min(iy, h - 78);
     }
 
-    const calm =
-      typeof matchMedia === "function" &&
-      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const calm = Hexsweeper.effectsReduced();
     const pulse = calm ? 0.7 : 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(now * 0.0028));
     const ang = Math.atan2(dy, dx);
     const arm = 11;
@@ -4793,8 +4805,9 @@ body[data-mode="escape"] .menu-links {
   }
 
   // —— Motion / accessibility ——
-  const reduceMotion =
-    typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // `let`, not `const`: the Menu's Effects button reassigns this so a change
+  // takes hold without a reload.
+  let reduceMotion = Hexsweeper.effectsReduced();
   function mt(t) {
     return reduceMotion ? 0 : t;
   }
@@ -5820,6 +5833,38 @@ body[data-mode="escape"] .menu-links {
   const helpClose = document.getElementById("help-close");
   const helpDone = document.getElementById("help-done");
   let helpFocusReturn = null;
+
+  // —— Effects preference (shared with every other Hexsweeper page) ——
+  // Cycles Auto → Full → Reduced. Auto follows the OS Reduce Motion switch, so
+  // the accessible default holds until someone deliberately overrides it.
+  const fxBtn = document.getElementById("fx-btn");
+  if (fxBtn) {
+    const FX_ORDER = ["auto", "full", "reduced"];
+    const FX_LABEL = { auto: "Auto", full: "Full", reduced: "Reduced" };
+    const readFx = () => {
+      try {
+        return localStorage.getItem(Hexsweeper.EFFECTS_KEY) || "auto";
+      } catch (_) {
+        return "auto";
+      }
+    };
+    const paintFx = () => {
+      fxBtn.textContent = "Effects: " + FX_LABEL[readFx()];
+      Hexsweeper.applyEffectsAttribute();
+    };
+    fxBtn.addEventListener("click", () => {
+      const next =
+        FX_ORDER[(FX_ORDER.indexOf(readFx()) + 1) % FX_ORDER.length];
+      try {
+        localStorage.setItem(Hexsweeper.EFFECTS_KEY, next);
+      } catch (_) {}
+      paintFx();
+      // The renderer samples this each frame, so the change is visible without
+      // a reload; only the boot-time seeds below need nudging.
+      reduceMotion = Hexsweeper.effectsReduced();
+    });
+    paintFx();
+  }
 
   function gameModeHref(mode) {
     const inCollection =

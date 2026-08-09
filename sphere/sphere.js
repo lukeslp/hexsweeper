@@ -554,6 +554,33 @@
     hard: 1442,
     xlarge: 2252,
   };
+  /**
+   * Global effects preference — "auto" (follow OS Reduce Motion) | "full" | "reduced".
+   * MIRROR of the same helper in core.js and tools/app-launcher.html; the sphere
+   * does not load core.js. Change all three together.
+   */
+  const EFFECTS_KEY = "hexsweeper-effects-v1";
+
+  function effectsReduced() {
+    let pref = null;
+    try {
+      pref = localStorage.getItem(EFFECTS_KEY);
+    } catch (_) {}
+    if (pref === "reduced") return true;
+    if (pref === "full") return false;
+    return (
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  function applyEffectsAttribute() {
+    document.documentElement.setAttribute(
+      "data-effects",
+      effectsReduced() ? "reduced" : "full"
+    );
+  }
+
   const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v6";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
@@ -640,6 +667,9 @@
 
   function boot(opts) {
     opts = opts || {};
+    // Publish the resolved effects preference before first paint so CSS gates
+    // apply to the opening frame rather than snapping in after it.
+    applyEffectsAttribute();
     const canvas = document.getElementById(opts.canvasId || "gameCanvas");
     if (!canvas) throw new Error("SphereSweeper: canvas not found");
     const ctx = canvas.getContext("2d");
@@ -702,9 +732,7 @@
       pressed: -1,
       timeElapsed: 0,
       timerInterval: null,
-      reduceMotion:
-        typeof matchMedia === "function" &&
-        matchMedia("(prefers-reduced-motion: reduce)").matches,
+      reduceMotion: effectsReduced(),
       radius: 1,
       baseScale: 200,
       zoomFactor: INITIAL_ZOOM,
@@ -717,11 +745,7 @@
       detonatorIdx: -1,
       endFx: null,
       camShake: 0,
-      ambientSpin:
-        !(
-          typeof matchMedia === "function" &&
-          matchMedia("(prefers-reduced-motion: reduce)").matches
-        ),
+      ambientSpin: !effectsReduced(),
       lastFrameAt: 0,
       countStyle: readStoredCountStyle(),
     };
@@ -3764,5 +3788,8 @@
     CONFIG,
     THEMES,
     DEFAULT_THEME: THEME_LIGHT,
+    EFFECTS_KEY,
+    effectsReduced,
+    applyEffectsAttribute,
   };
 })(typeof window !== "undefined" ? window : global);

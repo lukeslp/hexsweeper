@@ -345,12 +345,22 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   color: color-mix(in srgb, var(--text-sub, #a0aec0) 70%, transparent);
   user-select: none;
 }
+/* Media query = OS Reduce Motion; attribute = the in-app Effects setting
+   (see Hexsweeper.applyEffectsAttribute). Kept separate so the setting can
+   reduce with the OS switch off, and keep effects with it on. */
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay,
   .modal-content,
   .hud-btn { transition: none; }
   .modal-overlay.open .modal-content { transform: none; }
 }
+:root[data-effects="reduced"] .modal-overlay,
+:root[data-effects="reduced"] .modal-content,
+:root[data-effects="reduced"] .hud-btn { transition: none; }
+:root[data-effects="reduced"] .modal-overlay.open .modal-content { transform: none; }
+:root[data-effects="full"] .modal-overlay,
+:root[data-effects="full"] .modal-content,
+:root[data-effects="full"] .hud-btn { transition: revert; }
 
 .fx-layer {
   position: fixed;

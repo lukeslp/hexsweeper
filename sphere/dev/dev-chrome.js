@@ -27,6 +27,21 @@
     ["borderless", "Borderless", "seamless"],
   ];
 
+  /** Global effects preference — shared with every other Hexsweeper page. */
+  const FX = [
+    ["auto", "Auto", "follow system"],
+    ["full", "Full", "all motion"],
+    ["reduced", "Reduced", "motion off"],
+  ];
+
+  function readFx() {
+    try {
+      return localStorage.getItem(SphereSweeper.EFFECTS_KEY) || "auto";
+    } catch (_) {
+      return "auto";
+    }
+  }
+
   const TAP = [
     [false, "Dig", "hold to flag"],
     [true, "Flag", "hold to dig"],
@@ -83,6 +98,25 @@
         get: () => (game.getState().flagMode ? 1 : 0),
         at: (i) => [TAP[i][1], TAP[i][2]],
         set: (i) => game.setFlagMode(TAP[i][0]),
+      },
+      {
+        label: "Effects",
+        len: FX.length,
+        get: () => Math.max(0, FX.findIndex((f) => f[0] === readFx())),
+        at: (i) => [FX[i][1], FX[i][2]],
+        set: (i) => {
+          try {
+            localStorage.setItem(SphereSweeper.EFFECTS_KEY, FX[i][0]);
+          } catch (_) {}
+          // Apply to the running game rather than waiting for a reload: the
+          // state object is live, and ambient spin should stop the moment you
+          // ask for it, not the next time the page boots.
+          const reduced = SphereSweeper.effectsReduced();
+          const s = game.getState();
+          s.reduceMotion = reduced;
+          s.ambientSpin = !reduced;
+          SphereSweeper.applyEffectsAttribute();
+        },
       },
     ];
 

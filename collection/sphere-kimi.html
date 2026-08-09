@@ -426,12 +426,22 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   color: color-mix(in srgb, var(--text-sub, #a0aec0) 70%, transparent);
   user-select: none;
 }
+/* Media query = OS Reduce Motion; attribute = the in-app Effects setting
+   (see Hexsweeper.applyEffectsAttribute). Kept separate so the setting can
+   reduce with the OS switch off, and keep effects with it on. */
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay,
   .modal-content,
   .hud-btn { transition: none; }
   .modal-overlay.open .modal-content { transform: none; }
 }
+:root[data-effects="reduced"] .modal-overlay,
+:root[data-effects="reduced"] .modal-content,
+:root[data-effects="reduced"] .hud-btn { transition: none; }
+:root[data-effects="reduced"] .modal-overlay.open .modal-content { transform: none; }
+:root[data-effects="full"] .modal-overlay,
+:root[data-effects="full"] .modal-content,
+:root[data-effects="full"] .hud-btn { transition: revert; }
 
 .fx-layer {
   position: fixed;
@@ -2045,6 +2055,33 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
     hard: 1442,
     xlarge: 2252,
   };
+  /**
+   * Global effects preference — "auto" (follow OS Reduce Motion) | "full" | "reduced".
+   * MIRROR of the same helper in core.js and tools/app-launcher.html; the sphere
+   * does not load core.js. Change all three together.
+   */
+  const EFFECTS_KEY = "hexsweeper-effects-v1";
+
+  function effectsReduced() {
+    let pref = null;
+    try {
+      pref = localStorage.getItem(EFFECTS_KEY);
+    } catch (_) {}
+    if (pref === "reduced") return true;
+    if (pref === "full") return false;
+    return (
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  function applyEffectsAttribute() {
+    document.documentElement.setAttribute(
+      "data-effects",
+      effectsReduced() ? "reduced" : "full"
+    );
+  }
+
   const THEME_STORAGE_KEY = "hexsweeper-sphere-theme-v6";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
@@ -2131,6 +2168,9 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
 
   function boot(opts) {
     opts = opts || {};
+    // Publish the resolved effects preference before first paint so CSS gates
+    // apply to the opening frame rather than snapping in after it.
+    applyEffectsAttribute();
     const canvas = document.getElementById(opts.canvasId || "gameCanvas");
     if (!canvas) throw new Error("SphereSweeper: canvas not found");
     const ctx = canvas.getContext("2d");
@@ -2193,9 +2233,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       pressed: -1,
       timeElapsed: 0,
       timerInterval: null,
-      reduceMotion:
-        typeof matchMedia === "function" &&
-        matchMedia("(prefers-reduced-motion: reduce)").matches,
+      reduceMotion: effectsReduced(),
       radius: 1,
       baseScale: 200,
       zoomFactor: INITIAL_ZOOM,
@@ -2208,11 +2246,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       detonatorIdx: -1,
       endFx: null,
       camShake: 0,
-      ambientSpin:
-        !(
-          typeof matchMedia === "function" &&
-          matchMedia("(prefers-reduced-motion: reduce)").matches
-        ),
+      ambientSpin: !effectsReduced(),
       lastFrameAt: 0,
       countStyle: readStoredCountStyle(),
     };
@@ -5255,6 +5289,9 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
     CONFIG,
     THEMES,
     DEFAULT_THEME: THEME_LIGHT,
+    EFFECTS_KEY,
+    effectsReduced,
+    applyEffectsAttribute,
   };
 })(typeof window !== "undefined" ? window : global);
 
@@ -5289,6 +5326,21 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
     ["flush", "Flush", "flat"],
     ["borderless", "Borderless", "seamless"],
   ];
+
+  /** Global effects preference — shared with every other Hexsweeper page. */
+  const FX = [
+    ["auto", "Auto", "follow system"],
+    ["full", "Full", "all motion"],
+    ["reduced", "Reduced", "motion off"],
+  ];
+
+  function readFx() {
+    try {
+      return localStorage.getItem(SphereSweeper.EFFECTS_KEY) || "auto";
+    } catch (_) {
+      return "auto";
+    }
+  }
 
   const TAP = [
     [false, "Dig", "hold to flag"],
@@ -5346,6 +5398,25 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
         get: () => (game.getState().flagMode ? 1 : 0),
         at: (i) => [TAP[i][1], TAP[i][2]],
         set: (i) => game.setFlagMode(TAP[i][0]),
+      },
+      {
+        label: "Effects",
+        len: FX.length,
+        get: () => Math.max(0, FX.findIndex((f) => f[0] === readFx())),
+        at: (i) => [FX[i][1], FX[i][2]],
+        set: (i) => {
+          try {
+            localStorage.setItem(SphereSweeper.EFFECTS_KEY, FX[i][0]);
+          } catch (_) {}
+          // Apply to the running game rather than waiting for a reload: the
+          // state object is live, and ambient spin should stop the moment you
+          // ask for it, not the next time the page boots.
+          const reduced = SphereSweeper.effectsReduced();
+          const s = game.getState();
+          s.reduceMotion = reduced;
+          s.ambientSpin = !reduced;
+          SphereSweeper.applyEffectsAttribute();
+        },
       },
     ];
 

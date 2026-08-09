@@ -170,8 +170,57 @@
     text-align: center;
   }
 
-  /* Appearance toggle — same glass pill the games wear, same corner. */
-  footer { flex: none; display: flex; justify-content: flex-end; padding: 2px 4px 0; }
+  /* Chrome row — same glass pills the games wear, same corner. */
+  footer {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 4px 0;
+  }
+
+  /* Effects stepper: one row, the Customize panel's vocabulary in miniature. */
+  .effects {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--pill-edge);
+    border-radius: 999px;
+    background: var(--pill);
+    -webkit-backdrop-filter: blur(9px);
+    backdrop-filter: blur(9px);
+    padding: 0 4px;
+  }
+  .effects button {
+    min-width: 44px; height: 44px;
+    display: grid; place-items: center;
+    border: 0; background: none; color: var(--ink);
+    font: 600 .74rem var(--font-mono); letter-spacing: .05em;
+    cursor: pointer; border-radius: 999px; padding: 0 6px;
+  }
+  .effects button:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+  .effects .value {
+    min-width: 74px;
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--ink);
+  }
+  .effects .label {
+    font-family: var(--font-mono);
+    font-size: .55rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-left: 8px;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px;
+    padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
   #appearance {
     width: 46px; height: 46px;
     display: grid; place-items: center;
@@ -280,6 +329,14 @@
 </nav>
 
 <footer>
+  <div class="effects" role="group" aria-label="Effects">
+    <span class="label" aria-hidden="true">FX</span>
+    <button id="fx-prev" type="button" aria-label="Previous effects setting">&lsaquo;</button>
+    <span class="value" id="fx-value">Auto</span>
+    <button id="fx-next" type="button" aria-label="Next effects setting">&rsaquo;</button>
+  </div>
+  <p class="sr-only" id="fx-live" role="status" aria-live="polite"></p>
+
   <button id="appearance" type="button" aria-label="Switch appearance">
     <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="4.2"/>
@@ -309,6 +366,39 @@
     apply(next);
     try { localStorage.setItem(KEY, next); } catch (e) {}
   });
+
+  /* Effects preference. MIRROR of the helper in core.js and sphere/sphere.js —
+     the launcher loads neither. Change all three together. Every game reads
+     this key at boot, and entering one is a fresh page load, so a change here
+     is always in force by the time you are playing. */
+  var FX_KEY = "hexsweeper-effects-v1";
+  var FX = [
+    ["auto", "Auto", "following the system setting"],
+    ["full", "Full", "all particles and motion"],
+    ["reduced", "Reduced", "particles and motion off"]
+  ];
+  var value = document.getElementById("fx-value");
+  var live = document.getElementById("fx-live");
+
+  function read() {
+    var v = null;
+    try { v = localStorage.getItem(FX_KEY); } catch (e) {}
+    for (var i = 0; i < FX.length; i++) if (FX[i][0] === v) return i;
+    return 0;
+  }
+  function paint(i, announce) {
+    value.textContent = FX[i][1];
+    root.setAttribute("data-effects-pref", FX[i][0]);
+    if (announce) live.textContent = "Effects " + FX[i][1] + ", " + FX[i][2];
+  }
+  function step(delta) {
+    var i = (read() + delta + FX.length) % FX.length;
+    try { localStorage.setItem(FX_KEY, FX[i][0]); } catch (e) {}
+    paint(i, true);
+  }
+  paint(read(), false);
+  document.getElementById("fx-prev").addEventListener("click", function () { step(-1); });
+  document.getElementById("fx-next").addEventListener("click", function () { step(1); });
 })();
 </script>
 

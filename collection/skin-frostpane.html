@@ -371,12 +371,22 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   color: color-mix(in srgb, var(--text-sub, #a0aec0) 70%, transparent);
   user-select: none;
 }
+/* Media query = OS Reduce Motion; attribute = the in-app Effects setting
+   (see Hexsweeper.applyEffectsAttribute). Kept separate so the setting can
+   reduce with the OS switch off, and keep effects with it on. */
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay,
   .modal-content,
   .hud-btn { transition: none; }
   .modal-overlay.open .modal-content { transform: none; }
 }
+:root[data-effects="reduced"] .modal-overlay,
+:root[data-effects="reduced"] .modal-content,
+:root[data-effects="reduced"] .hud-btn { transition: none; }
+:root[data-effects="reduced"] .modal-overlay.open .modal-content { transform: none; }
+:root[data-effects="full"] .modal-overlay,
+:root[data-effects="full"] .modal-content,
+:root[data-effects="full"] .hud-btn { transition: revert; }
 
 .fx-layer {
   position: fixed;
@@ -494,6 +504,44 @@ body {
 
   const SQRT3 = Math.sqrt(3);
 
+  /**
+   * Global effects preference, shared by every Hexsweeper page on the origin.
+   *
+   *   "auto"    follow the OS Reduce Motion setting (default)
+   *   "full"    force effects on, even if the OS asks to reduce
+   *   "reduced" force effects off
+   *
+   * "auto" is the default so the accessibility behaviour still works untouched;
+   * "full" exists because a player who turned Reduce Motion on system-wide may
+   * still want the particles here, and that is their call to make.
+   *
+   * MIRROR: sphere/sphere.js and tools/app-launcher.html carry the same seven
+   * lines — they do not load core.js. Change all three together.
+   */
+  const EFFECTS_KEY = "hexsweeper-effects-v1";
+
+  function effectsReduced() {
+    let pref = null;
+    try {
+      pref = localStorage.getItem(EFFECTS_KEY);
+    } catch (_) {}
+    if (pref === "reduced") return true;
+    if (pref === "full") return false;
+    return (
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  /** Mirror the resolved preference onto <html> so CSS can gate too. */
+  function applyEffectsAttribute() {
+    if (typeof document === "undefined") return;
+    document.documentElement.setAttribute(
+      "data-effects",
+      effectsReduced() ? "reduced" : "full"
+    );
+  }
+
   const DEFAULT_CONFIG = {
     easy: { radius: 4, mines: 10, cellSize: 35 },
     medium: { radius: 7, mines: 35, cellSize: 28 },
@@ -575,6 +623,9 @@ body {
   }
 
   function boot(userOpts = {}) {
+    // Publish the resolved effects preference before first paint so CSS gates
+    // apply to the opening frame rather than snapping in after it.
+    applyEffectsAttribute();
     const opts = {
       canvasId: "gameCanvas",
       difficulty: "medium",
@@ -1930,9 +1981,7 @@ body {
       }
       if (!wave.length) return;
 
-      const reduceMotion =
-        typeof matchMedia === "function" &&
-        matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduceMotion = effectsReduced();
       const now = performance.now();
       // Pace by ring distance; cap so huge clears still finish in about a second.
       const stepMs = reduceMotion ? 0 : 32;
@@ -2585,7 +2634,15 @@ body {
     return api;
   }
 
-  global.Hexsweeper = { boot, DEFAULT_THEME, DEFAULT_CONFIG, SQRT3 };
+  global.Hexsweeper = {
+    boot,
+    DEFAULT_THEME,
+    DEFAULT_CONFIG,
+    SQRT3,
+    EFFECTS_KEY,
+    effectsReduced,
+    applyEffectsAttribute,
+  };
 })(typeof window !== "undefined" ? window : globalThis);
 
 </script>

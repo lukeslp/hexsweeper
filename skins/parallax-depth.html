@@ -138,8 +138,11 @@ Hexsweeper.boot({
     sortCells(a,b) { return a.ring - b.ring || a.y - b.y; },
     beforeFrame(ctx, api) {
       const s = api.state;
-      tx = (s.pointer.nx || 0) * 18;
-      ty = (s.pointer.ny || 0) * 14;
+      // Ring depth stays; the pointer tilt is motion, so the effects setting
+      // (and OS Reduce Motion, which it follows by default) parks it at centre.
+      const tilt = Hexsweeper.effectsReduced() ? 0 : 1;
+      tx = (s.pointer.nx || 0) * 18 * tilt;
+      ty = (s.pointer.ny || 0) * 14 * tilt;
       ox += (tx - ox) * 0.08;
       oy += (ty - oy) * 0.08;
       // reproject cell centers with depth parallax
