@@ -742,11 +742,14 @@ body[data-sphere-chrome="dark"] .cz-dot {
  */
 
 .hex-bloom {
-  /* One tile size for bloom primaries and dock chrome (edge-aligned honeycomb). */
+  /* Bloom primaries (full size). Dock idle is smaller; grows to match when open. */
   --tile-w: 76px;
   --tile-h: 88px;
-  --tile-w-dock: var(--tile-w);
-  --tile-h-dock: var(--tile-h);
+  --tile-w-dock-idle: 40px;
+  --tile-h-dock-idle: 46px;
+  --tile-w-dock: var(--tile-w-dock-idle);
+  --tile-h-dock: var(--tile-h-dock-idle);
+  --dock-rise: 0px;
   --border-w: 1.5px;
   --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   --hb-ink: var(--text-main, #000);
@@ -814,26 +817,33 @@ body[data-sphere-chrome="dark"] .cz-dot {
   visibility: visible;
 }
 
-/* Bottom chrome: three bloom-sized hexes — Restart · Menu · Help
-   Centers sit tile-w apart so edges kiss like the primary ring. */
+/* Bottom chrome: Restart · Menu · Help
+   Idle: small + low; open: grow to bloom size and lift with the fan. */
 .hex-bloom-dock {
   position: absolute;
   left: 50%;
-  /* Sit low — bloom fans up from here */
-  bottom: max(4px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  bottom: max(2px, env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(var(--dock-rise, 0px));
   z-index: 3;
   display: flex;
   flex-direction: row;
   align-items: flex-end;
   justify-content: center;
-  /* Bounding boxes abut → pointy-top hexes share vertical edges */
   gap: 0;
   width: auto;
   height: auto;
   pointer-events: none;
   opacity: 1;
-  transition: opacity 0.28s ease;
+  transition:
+    opacity 0.28s ease,
+    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
+}
+.hex-bloom[data-phase="open"] .hex-bloom-dock,
+.hex-bloom[data-phase="falling"] .hex-bloom-dock {
+  /* Lift so the rooted fan has air and matches bloom height language */
+  --dock-rise: -36px;
+  --tile-w-dock: var(--tile-w);
+  --tile-h-dock: var(--tile-h);
 }
 .hex-bloom-dock .hb-hex.is-dock {
   position: relative;
@@ -841,15 +851,21 @@ body[data-sphere-chrome="dark"] .cz-dot {
   top: auto;
   margin: 0;
   flex: 0 0 auto;
-  width: var(--tile-w);
-  height: var(--tile-h);
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
   pointer-events: auto;
+  transition:
+    width var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    height var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    background 0.2s ease,
+    color 0.2s ease,
+    filter 0.2s ease,
+    opacity 0.2s ease;
 }
-/* Menu is the same size as sides — equal weight in the trio */
 .hex-bloom-dock .is-dock-menu,
 .hex-bloom-dock .is-dock-side {
-  width: var(--tile-w);
-  height: var(--tile-h);
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
   opacity: 1;
 }
 /* While board has attention, whole dock recedes */
@@ -863,11 +879,20 @@ body[data-sphere-chrome="dark"] .cz-dot {
   .hex-bloom-dock {
     transition: opacity 0.12s ease;
   }
+  .hex-bloom-dock .hb-hex.is-dock {
+    transition: none;
+  }
 }
 @media (max-width: 400px) {
   .hex-bloom {
     --tile-w: 66px;
     --tile-h: 76px;
+    --tile-w-dock-idle: 36px;
+    --tile-h-dock-idle: 42px;
+  }
+  .hex-bloom[data-phase="open"] .hex-bloom-dock,
+  .hex-bloom[data-phase="falling"] .hex-bloom-dock {
+    --dock-rise: -28px;
   }
 }
 
@@ -1115,7 +1140,7 @@ body[data-sphere-chrome="dark"] .cz-dot {
   background: var(--hb-accent);
 }
 
-/* Dock hexes — same edge language as bloom primaries (stroke ring + fill) */
+/* Dock hexes */
 .hb-hex.is-dock {
   z-index: 40;
   color: var(--hb-ink);
@@ -1128,16 +1153,19 @@ body[data-sphere-chrome="dark"] .cz-dot {
 .hb-hex.is-dock::before {
   background: var(--hb-fill);
   inset: var(--border-w);
+  transition: inset 0.2s ease, background 0.2s ease, opacity 0.2s ease;
 }
-/* Icons match bloom primary scale */
 .hb-hex.is-dock .hb-glyph {
-  width: 28px;
-  height: 28px;
+  width: 55%;
+  height: 55%;
+  max-width: 28px;
+  max-height: 28px;
   color: var(--hb-ink);
+  transition: width 0.2s ease, height 0.2s ease;
 }
 .hb-hex.is-dock .hb-icon {
-  width: 26px;
-  height: 26px;
+  width: 100%;
+  height: 100%;
 }
 .hb-hex.is-dock .hb-label {
   font-size: 11px;
@@ -1146,12 +1174,58 @@ body[data-sphere-chrome="dark"] .cz-dot {
   letter-spacing: -0.02em;
   color: var(--hb-ink);
 }
-/* Menu seed closed: no wordmark; sides show icons only */
-.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-label {
-  font-size: 0;
-  opacity: 0;
+
+/* ---- Idle (closed): sides are borderless icons; menu is a quiet ring + hex icon ---- */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side {
+  background: transparent;
+  filter: none;
 }
-/* Menu tile becomes the close control when open (same node, solid ×) */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.72;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:hover .hb-glyph,
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:focus-visible .hb-glyph {
+  opacity: 1;
+}
+/* Menu: light outline + hollow-hex icon (reads as “open”) */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu {
+  background: var(--hb-stroke);
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu::before {
+  background: var(--hb-fill);
+  inset: var(--border-w);
+  opacity: 1;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  opacity: 1;
+}
+
+/* ---- Open: full bloom borders on all three; menu = solid × ---- */
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-side,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock-side {
+  background: var(--hb-stroke);
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+  z-index: 41;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-side::before,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock-side::before {
+  opacity: 1;
+  background: var(--hb-fill);
+  inset: var(--border-w);
+}
 .hex-bloom[data-phase="open"] .hb-hex.is-dock-menu,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu {
   background: var(--hb-ink);
@@ -1162,20 +1236,17 @@ body[data-sphere-chrome="dark"] .cz-dot {
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu::before {
   background: var(--hb-ink);
   inset: 0;
+  opacity: 1;
 }
 .hex-bloom[data-phase="open"] .hb-hex.is-dock-menu .hb-label,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu .hb-label {
   color: var(--hb-paper);
-  font-size: 22px;
+  font-size: clamp(16px, 4vw, 22px);
   font-weight: 500;
   opacity: 1;
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock {
   pointer-events: auto;
-}
-.hex-bloom[data-phase="open"] .hb-hex.is-dock-side {
-  opacity: 1;
-  z-index: 41;
 }
 
 /* Primary ring */
@@ -1239,12 +1310,7 @@ body[data-sphere-chrome="dark"] .cz-dot {
     scale(1);
 }
 
-/* Delay petal appearance until the seed has risen */
-.hex-bloom[data-phase="rising"] .hb-hex.is-primary,
-.hex-bloom[data-phase="rising"] .hb-hex.is-sub {
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
+
 
 /* Stats hub */
 .hex-bloom-hub {
@@ -6641,6 +6707,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M12 4v16"/><path d="m8 8 4-4 4 4"/><path d="m8 16 4 4 4-4"/>' +
       '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
     more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
+    // Menu affordance — hollow hex (board language)
+    menu:
+      '<path d="M12 2.8 20.2 7.6v8.8L12 21.2 3.8 16.4V7.6L12 2.8Z"/>',
     reset:
       '<path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"/><path d="M20 3.5V8h-4.5"/>' +
       '<path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"/><path d="M4 20.5V16h4.5"/>',
@@ -7328,21 +7397,28 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 
     function paintDock() {
       if (!dockBtn) return;
-      const open = state.phase === "open";
-      const rising = state.phase === "rising" || state.phase === "falling";
+      const open =
+        state.phase === "open" ||
+        state.phase === "rising" ||
+        state.phase === "falling";
       if (open) {
+        // Close affordance on the activation node
+        if (dockBtn._glyphEl) {
+          dockBtn._glyphEl.innerHTML = "";
+          dockBtn._glyphEl.hidden = true;
+        }
         dockBtn._labelEl.textContent = "×";
+        dockBtn._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
         dockBtn.setAttribute("aria-label", "Close menu");
         dockBtn.setAttribute("aria-expanded", "true");
-      } else if (rising) {
-        dockBtn._labelEl.textContent = "";
-        dockBtn.setAttribute("aria-expanded", "true");
       } else {
-        dockBtn._labelEl.textContent = "";
+        setHexIcon(dockBtn, "menu");
+        if (dockBtn._glyphEl) dockBtn._glyphEl.hidden = false;
+        dockBtn._labelEl.textContent = "Menu";
+        dockBtn._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
         dockBtn.setAttribute("aria-label", "Open game menu");
         dockBtn.setAttribute("aria-expanded", "false");
       }
-      // Side tiles stay available while open (restart / help without hunting)
       if (dockResetBtn) {
         dockResetBtn.hidden = false;
         dockResetBtn.setAttribute("aria-hidden", "false");
@@ -7588,7 +7664,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       // Menu — center, primary (opens bloom / closes when open)
       dockBtn = makeHex({
         cls: "is-dock is-dock-menu",
-        label: "",
+        label: "Menu",
+        icon: "menu",
+        iconOnly: true,
         ariaLabel: "Open game menu",
       });
       dockBtn.id = "hex-bloom-seed";
@@ -7727,18 +7805,32 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       paintStats();
       setCanvasInert(true);
 
-      // Rooted at dock menu — no rise travel; unfold petals upward in place.
+      // Dock grows + lifts (CSS); then measure and unfold petals from the menu node.
       setRiseVar();
       setPhase("open");
       root.dataset.dock = "ready";
       paintDock();
-      renderBloom({ petals: true });
-      refreshPrimaryLabels();
-      requestAnimationFrame(() => {
+      const placeAndBloom = () => {
         if (state.phase !== "open") return;
-        bloomPetals();
-        announce("Menu open");
-      });
+        setRiseVar();
+        renderBloom({ petals: true });
+        refreshPrimaryLabels();
+        requestAnimationFrame(() => {
+          if (state.phase !== "open") return;
+          bloomPetals();
+          announce("Menu open");
+        });
+      };
+      // Wait one frame for dock size/lift transitions to apply layout
+      if (prefersReducedMotion()) placeAndBloom();
+      else {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            // mid-grow: place petals; they unfold while dock finishes growing
+            placeAndBloom();
+          })
+        );
+      }
     }
 
     function collapse() {
