@@ -3,11 +3,10 @@
   File Purpose: Experimental Hexsweeper on a closed hex sphere (Canvas projection).
   Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
   Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
-  Chrome (sphere-ux): dock hex opens → rise/bloom; Close in dock seat.
-  Theme: Classic axes (Bg/Shell/Dug) + Earth/Moon/Glow packs.
-  Style: count paint + Relief (3D/Flush) + Seams independent.
-  Flags match hover extrusion when relief is extruded.
-  Legacy gear/help IDs stay in DOM for sphere.js wiring (visually hidden).
+  Chrome (sphere-ux): three-tile dock — Restart · Menu · Help (outlined).
+  Menu opens bloom; cycle Dig/Size/Invert/Flush/Seams; Look nests axes+World+counts.
+  Dock fades while board has attention; returns in bottom chrome band.
+  Flags match hover height when extruded. Legacy IDs kept for sphere.js.
   Notes: Starts zoomed out. Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
@@ -30,7 +29,7 @@
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
 <link rel="stylesheet" href="dev-chrome.css?v=20260808f">
-<link rel="stylesheet" href="hex-bloom.css?v=20260809o">
+<link rel="stylesheet" href="hex-bloom.css?v=20260809p">
 <style>
 /* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
 :root,
@@ -808,7 +807,7 @@ body[data-sphere-chrome="dark"] .help-overlay {
 
 <script src="hexasphere.js?v=20260808f"></script>
 <script src="sphere.js?v=20260809k"></script>
-<script src="hex-bloom.js?v=20260809o"></script>
+<script src="hex-bloom.js?v=20260809p"></script>
 <script>
 initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));
 (function () {

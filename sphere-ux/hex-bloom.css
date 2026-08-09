@@ -75,20 +75,49 @@
   visibility: visible;
 }
 
-/* Bottom seat: activate (closed) / close (open) */
+/* Bottom chrome: three outlined hexes — Restart · Menu · Help */
 .hex-bloom-dock {
+  --tile-w-side: 34px;
+  --tile-h-side: 39px;
   position: absolute;
   left: 50%;
   bottom: max(12px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 3;
-  width: var(--tile-w-dock);
-  height: var(--tile-h-dock);
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  width: auto;
+  height: auto;
   pointer-events: none;
   opacity: 1;
   transition: opacity 0.28s ease;
 }
-/* While the player is spinning / pinching the sphere, the dock gets out of the way */
+.hex-bloom-dock .hb-hex.is-dock {
+  position: relative;
+  left: auto;
+  top: auto;
+  margin: 0;
+  flex: 0 0 auto;
+  pointer-events: auto;
+}
+/* Menu (center) slightly stronger; Restart/Help quieter */
+.hex-bloom-dock .is-dock-menu {
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
+}
+.hex-bloom-dock .is-dock-side {
+  width: var(--tile-w-side);
+  height: var(--tile-h-side);
+  opacity: 0.78;
+}
+.hex-bloom-dock .is-dock-side:hover,
+.hex-bloom-dock .is-dock-side:focus-visible {
+  opacity: 1;
+}
+/* While board has attention, whole dock recedes */
 .hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-dock {
   opacity: 0;
 }
@@ -98,6 +127,13 @@
 @media (prefers-reduced-motion: reduce) {
   .hex-bloom-dock {
     transition: opacity 0.12s ease;
+  }
+}
+@media (max-width: 400px) {
+  .hex-bloom-dock {
+    --tile-w-side: 30px;
+    --tile-h-side: 35px;
+    gap: 10px;
   }
 }
 
@@ -345,67 +381,58 @@
   background: var(--hb-accent);
 }
 
-/* Dock hex — compact seed at bottom.
-   Closed: outlined only (bordered, not filled) so it doesn't fight the board.
-   Open/close seat can fill solid for a clear ×. */
+/* Dock hexes — outlined chips (not solid fills) so chrome stays quiet */
 .hb-hex.is-dock {
-  left: 50%;
-  top: 50%;
-  width: var(--tile-w-dock);
-  height: var(--tile-h-dock);
-  margin-left: calc(var(--tile-w-dock) / -2);
-  margin-top: calc(var(--tile-h-dock) / -2);
   z-index: 40;
   color: var(--hb-ink);
   background: var(--hb-ink);
   pointer-events: auto;
-}
-.hb-hex.is-dock::before {
-  background: transparent;
-  inset: var(--border-w);
-  /* ring via outer ink + transparent fill */
-  box-shadow: none;
-}
-/* Closed menu seed: hollow hex — paper shows through, ink edge only */
-.hex-bloom[data-phase="closed"] .hb-hex.is-dock {
-  background: var(--hb-ink);
-  color: var(--hb-ink);
   filter:
     drop-shadow(0 0 2px var(--hb-paper))
     drop-shadow(0 0 1px var(--hb-paper));
 }
-.hex-bloom[data-phase="closed"] .hb-hex.is-dock::before {
+.hb-hex.is-dock::before {
   background: var(--hb-paper);
   inset: 2px;
-  opacity: 1;
 }
-body[data-sphere-chrome="dark"] .hex-bloom[data-phase="closed"] .hb-hex.is-dock::before {
-  background: var(--hb-paper);
+.hb-hex.is-dock .hb-glyph {
+  width: 18px;
+  height: 18px;
+  color: var(--hb-ink);
+}
+.hb-hex.is-dock .hb-icon {
+  width: 16px;
+  height: 16px;
+}
+.hb-hex.is-dock-menu .hb-glyph {
+  width: 20px;
+  height: 20px;
 }
 .hb-hex.is-dock .hb-label {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0;
-  text-transform: none;
-  color: var(--hb-center-ink);
+  color: var(--hb-ink);
 }
-/* Inactive dock: no wordmark */
-.hex-bloom[data-phase="closed"] .hb-hex.is-dock .hb-label {
+/* Menu seed closed: no wordmark; sides show icons only */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-label {
   font-size: 0;
   opacity: 0;
 }
-/* Close seat (open): solid fill so × reads clearly */
-.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock {
+/* Close on center when bloom open — solid so × reads */
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu {
   background: var(--hb-ink);
   color: var(--hb-paper);
 }
-.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock::before {
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu::before {
   background: var(--hb-ink);
   inset: 0;
 }
-.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock .hb-label {
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu .hb-label {
   color: var(--hb-paper);
+  font-size: 16px;
+  opacity: 1;
 }
 .hex-bloom[data-open="true"] .hb-hex.is-dock .hb-label,
 .hex-bloom[data-phase="rising"] .hb-hex.is-dock .hb-label,
@@ -462,25 +489,27 @@ body[data-sphere-chrome="dark"] .hex-bloom[data-phase="closed"] .hb-hex.is-dock:
     opacity 0.25s ease;
 }
 
-/* While rising, hide the dock seed so only one hex travels */
-.hex-bloom[data-phase="rising"] .hb-hex.is-dock,
-.hex-bloom[data-phase="falling"] .hb-hex.is-dock {
+/* While rising, hide center menu traveler twin; sides stay usable if desired */
+.hex-bloom[data-phase="rising"] .hb-hex.is-dock-menu,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock-menu {
   opacity: 0;
   pointer-events: none;
 }
-/* Close only reappears in the dock after the seed has finished rising */
-.hex-bloom[data-phase="open"] .hb-hex.is-dock {
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu {
   opacity: 0;
   pointer-events: none;
 }
-.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock {
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu {
   opacity: 1;
   pointer-events: auto;
   transition: opacity 0.2s ease;
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock {
-  opacity: 1;
   pointer-events: auto;
+}
+/* Side dock tiles keep outline + icon while menu is open */
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-side {
+  opacity: 0.85;
 }
 
 /* Primary ring */

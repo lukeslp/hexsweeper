@@ -534,9 +534,26 @@
       announce("Counts · " + COUNTS[next][1]);
     }
 
+    function doReset() {
+      if (typeof game.reset === "function") game.reset();
+      else {
+        const b = document.getElementById("reset-btn");
+        if (b) b.click();
+      }
+      announce("Board reset");
+      if (state.phase === "open" || state.phase === "rising") collapse();
+    }
+
+    function doHelp() {
+      const b = document.getElementById("help-btn");
+      if (b) b.click();
+      if (state.phase === "open" || state.phase === "rising") collapse();
+    }
+
     function categories() {
       // Six primaries. Cycle items flip state on click (no submenu).
-      // Theme still blooms (axes + packs + reset/help).
+      // Look blooms: Classic axes + World packs + count paint only.
+      // Restart / Help live on the always-visible three-tile dock.
       return [
         {
           id: "mode",
@@ -626,7 +643,7 @@
                 },
               });
             });
-            // Count paint + system actions live under Look
+            // Count paint under Look (not Reset/Help — those are dock tiles)
             COUNTS.forEach(([id, lab]) => {
               leaves.push({
                 id: "st-" + id,
@@ -645,34 +662,6 @@
                 },
               });
             });
-            leaves.push(
-              {
-                id: "reset",
-                label: "Reset",
-                icon: "reset",
-                chosen: () => false,
-                run: () => {
-                  if (typeof game.reset === "function") game.reset();
-                  else {
-                    const b = document.getElementById("reset-btn");
-                    if (b) b.click();
-                  }
-                  announce("Board reset");
-                  collapse();
-                },
-              },
-              {
-                id: "help",
-                label: "Help",
-                icon: "help",
-                chosen: () => false,
-                run: () => {
-                  const b = document.getElementById("help-btn");
-                  if (b) b.click();
-                  collapse();
-                },
-              }
-            );
             return leaves;
           },
         },
@@ -731,7 +720,9 @@
     let statsTimer = null;
     let ignoreOutsideUntil = 0;
     let phaseTimer = null;
-    let dockBtn = null;
+    let dockBtn = null; // center menu / close
+    let dockResetBtn = null;
+    let dockHelpBtn = null;
     let lastFocus = null;
 
     function announce(msg) {
@@ -761,7 +752,6 @@
       const open = state.phase === "open";
       const rising = state.phase === "rising" || state.phase === "falling";
       if (open) {
-        // Bottom seat mirrors center close (glyph only)
         dockBtn._labelEl.textContent = "×";
         dockBtn.setAttribute("aria-label", "Close menu");
         dockBtn.setAttribute("aria-expanded", "true");
@@ -772,6 +762,15 @@
         dockBtn._labelEl.textContent = "";
         dockBtn.setAttribute("aria-label", "Open game menu");
         dockBtn.setAttribute("aria-expanded", "false");
+      }
+      // Side tiles stay available while open (restart / help without hunting)
+      if (dockResetBtn) {
+        dockResetBtn.hidden = false;
+        dockResetBtn.setAttribute("aria-hidden", "false");
+      }
+      if (dockHelpBtn) {
+        dockHelpBtn.hidden = false;
+        dockHelpBtn.setAttribute("aria-hidden", "false");
       }
     }
 
@@ -987,8 +986,29 @@
 
     function renderDockOnly() {
       dock.textContent = "";
+      dock.className = "hex-bloom-dock";
+      dock.setAttribute("role", "toolbar");
+      dock.setAttribute("aria-label", "Game chrome");
+
+      // Restart — left, quieter
+      dockResetBtn = makeHex({
+        cls: "is-dock is-dock-side is-dock-reset",
+        label: "",
+        icon: "reset",
+        iconOnly: true,
+        ariaLabel: "Restart game",
+      });
+      dockResetBtn.title = "Restart";
+      dockResetBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ignoreOutsideUntil = Date.now() + 250;
+        doReset();
+      });
+
+      // Menu — center, primary (opens bloom / closes when open)
       dockBtn = makeHex({
-        cls: "is-dock",
+        cls: "is-dock is-dock-menu",
         label: "",
         ariaLabel: "Open game menu",
       });
@@ -996,6 +1016,7 @@
       dockBtn.setAttribute("aria-haspopup", "dialog");
       dockBtn.setAttribute("aria-controls", "hex-bloom-stage");
       dockBtn.setAttribute("aria-expanded", "false");
+      dockBtn.title = "Menu";
       dockBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1003,7 +1024,26 @@
         if (state.phase === "open" || state.phase === "rising") collapse();
         else if (state.phase === "closed") expand();
       });
+
+      // Help — right, quieter
+      dockHelpBtn = makeHex({
+        cls: "is-dock is-dock-side is-dock-help",
+        label: "",
+        icon: "help",
+        iconOnly: true,
+        ariaLabel: "Help",
+      });
+      dockHelpBtn.title = "Help";
+      dockHelpBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ignoreOutsideUntil = Date.now() + 250;
+        doHelp();
+      });
+
+      dock.appendChild(dockResetBtn);
       dock.appendChild(dockBtn);
+      dock.appendChild(dockHelpBtn);
       paintDock();
     }
 
@@ -1221,7 +1261,9 @@
 
         if (e.key === "Tab") {
           const focusables = [
+            dockResetBtn,
             dockBtn,
+            dockHelpBtn,
             ...stage.querySelectorAll(
               ".hb-hex.is-primary.shown, .hb-hex.is-sub.shown"
             ),
