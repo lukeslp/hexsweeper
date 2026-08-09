@@ -7042,20 +7042,20 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   // above the dock, widest row four tiles — a single five-wide row overflows a
   // phone. x = q + r/2, so each row below is centred on the seed:
   //
-  //       [3D] [Off]                 r = -3
+  //       [3D] [Indicators]          r = -3
   //     [Bg] [Shell] [Dug]           r = -2
-  //   [Seams][Size][Dig][Indicators] r = -1
+  //   [Seams][Size][Dig][Invert]     r = -1
   //     [reset] [x] [help]           r =  0  (fixed dock)
   const PRIMARY_SLOTS = [
     { q: 1, r: -1 }, // Dig / Flag
     { q: 0, r: -1 }, // Size
     { q: -1, r: -1 }, // Seams
-    { q: 2, r: -1 }, // Indicators — the notch right of Dig
+    { q: 2, r: -1 }, // Invert — the notch right of Dig
     { q: 0, r: -2 }, // Bg
     { q: 1, r: -2 }, // Shell
     { q: 2, r: -2 }, // Dug
     { q: 1, r: -3 }, // 3D / Flush
-    { q: 2, r: -3 }, // Invert
+    { q: 2, r: -3 }, // Indicators
   ];
 
   // Stroke icons (24×24) — board language, not tool metaphors
@@ -7661,17 +7661,15 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           cycle: cycleSeams,
         },
         {
-          id: "indicators",
-          label: () => indicatorLabel(),
-          // Stable glyph; the label carries which style is live.
-          icon: "indicators",
+          id: "invert",
+          label: () => invertModeLabel(),
+          icon: "drag",
           iconOnly: false,
-          labelSize: "sm",
           aria: () =>
-            "Indicators: " +
-            indicatorLabel() +
-            ". Activate to cycle numerals, mark, rings.",
-          cycle: cycleIndicators,
+            "Invert drag: " +
+            invertModeLabel() +
+            ". Activate to cycle Off, X, Y, X+Y.",
+          cycle: cycleInvert,
         },
         {
           id: "ax-field",
@@ -7717,15 +7715,17 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           cycle: cycleFlush,
         },
         {
-          id: "invert",
-          label: () => invertModeLabel(),
-          icon: "drag",
+          id: "indicators",
+          label: () => indicatorLabel(),
+          // Stable glyph; the label carries which style is live.
+          icon: "indicators",
           iconOnly: false,
+          labelSize: "sm",
           aria: () =>
-            "Invert drag: " +
-            invertModeLabel() +
-            ". Activate to cycle Off, X, Y, X+Y.",
-          cycle: cycleInvert,
+            "Indicators: " +
+            indicatorLabel() +
+            ". Activate to cycle numerals, mark, rings.",
+          cycle: cycleIndicators,
         },
       ];
     }
