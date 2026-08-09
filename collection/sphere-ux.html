@@ -6848,8 +6848,48 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       };
     }
 
+    function dockOpen() {
+      return (
+        state.phase === "open" ||
+        state.phase === "rising" ||
+        state.phase === "falling"
+      );
+    }
+
+    /**
+     * Bloom origin = menu dock tile (activation node).
+     *
+     * While the dock is open/opening, never trust a live getBoundingClientRect
+     * of the menu — width/height/translateY animate over --rise-ms, and a mid-
+     * transition rect stacks Dig/Size under Restart/Menu/Help. Compute the
+     * *final* open seat from CSS tokens instead.
+     */
     function centerXY() {
-      // Bloom origin = menu dock tile (activation node). Petals open upward.
+      const h = stage.clientHeight || global.innerHeight;
+      const w = stage.clientWidth || global.innerWidth;
+      const csRoot = getComputedStyle(root);
+      const csDock = dock ? getComputedStyle(dock) : csRoot;
+      // CSS: .hex-bloom-dock { bottom: max(2px, env(safe-area-inset-bottom)) }
+      const bottomPad = 2;
+      if (dockOpen()) {
+        // Final open size = full bloom tiles (--tile-h on root; dock mirrors it)
+        const th =
+          parseFloat(csRoot.getPropertyValue("--tile-h")) ||
+          parseFloat(csDock.getPropertyValue("--tile-h-dock")) ||
+          88;
+        // --dock-rise is set on .hex-bloom-dock when open, not on root
+        let rise = parseFloat(
+          String(csDock.getPropertyValue("--dock-rise")).replace("px", "")
+        );
+        if (!Number.isFinite(rise) || rise === 0) {
+          // Fallback if computed style still idle mid-frame
+          rise = w <= 400 ? -28 : -36;
+        }
+        // bottom edge at bottomPad; translateY(rise) lifts the center
+        const cy = h - bottomPad - th / 2 + rise;
+        return { cx: w / 2, cy };
+      }
+      // Closed / idle: live measure is fine (no transition collision)
       const stageRect = stage.getBoundingClientRect();
       const menu = dockBtn || document.getElementById("hex-bloom-seed");
       if (menu) {
@@ -6859,17 +6899,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           cy: r.top + r.height / 2 - stageRect.top,
         };
       }
-      const h = stage.clientHeight || global.innerHeight;
-      const w = stage.clientWidth || global.innerWidth;
-      const th = tileMetrics().tileH;
-      return {
-        cx: w / 2,
-        cy: h - th / 2 - 6,
-      };
+      const th = parseFloat(csRoot.getPropertyValue("--tile-h-dock-idle")) || 46;
+      return { cx: w / 2, cy: h - bottomPad - th / 2 };
     }
 
     function setRiseVar() {
-      // No vertical travel — bloom is rooted at the dock menu.
       root.style.setProperty("--rise-y", "0px");
     }
 
@@ -7805,12 +7839,16 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       paintStats();
       setCanvasInert(true);
 
-      // Dock grows + lifts (CSS); then measure and unfold petals from the menu node.
+      // Dock grows + lifts (CSS). Petals use *final* open geometry from CSS
+      // tokens (centerXY), never a mid-transition getBoundingClientRect — that
+      // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
       setRiseVar();
       setPhase("open");
       root.dataset.dock = "ready";
       paintDock();
-      const placeAndBloom = () => {
+      // Place on the next frame so data-phase=open has applied open CSS vars
+      // (--dock-rise, full tile size) before we read them.
+      requestAnimationFrame(() => {
         if (state.phase !== "open") return;
         setRiseVar();
         renderBloom({ petals: true });
@@ -7820,17 +7858,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           bloomPetals();
           announce("Menu open");
         });
-      };
-      // Wait one frame for dock size/lift transitions to apply layout
-      if (prefersReducedMotion()) placeAndBloom();
-      else {
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            // mid-grow: place petals; they unfold while dock finishes growing
-            placeAndBloom();
-          })
-        );
-      }
+      });
     }
 
     function collapse() {

@@ -19,6 +19,7 @@ These iterations are kept on purpose: each is a valid chrome idea; not every one
 | Upward fan from Menu | No south petals; origin = activation node | **Keep** |
 | Idle side tiles borderless + center icon | Quiet chrome; grow/rise with bloom | **Keep** |
 | Idle dock smaller/lower → grow+lift with bloom | Restart/? borderless until open; Menu hex icon; open restores borders + full size + lift | Current |
+| Petal layout mid-grow (broken) | Live `getBoundingClientRect` during dock size/lift stacked Dig/Size under dock | Fixed: final open geometry from CSS tokens (`--tile-h`, dock `--dock-rise`) |
 
 ## Journey assumptions (2026-08)
 
