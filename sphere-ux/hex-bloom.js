@@ -37,19 +37,19 @@
     { q: 0, r: 1 },
   ];
 
-  // Stroke icons (24×24) — mono, match sphere chrome
+  // Stroke icons (24×24) — board language, not tool metaphors
   const ICONS = {
+    // Dig = open / cleared hex face (hollow honeycomb cell)
     dig:
-      '<path d="M14.5 4.5 19 9"/><path d="m16.8 6.8-8.3 8.3-2.2.7.7-2.2 8.3-8.3Z"/>' +
-      '<path d="M5 19.5h6"/>',
+      '<path d="M12 2.8 20.2 7.6v8.8L12 21.2 3.8 16.4V7.6L12 2.8Z"/>',
+    // Flag = solid red hex face (matches in-game flag fill)
     flag:
-      '<path d="M6 21V4"/><path d="M6 5h10l-2.2 3.2L16 11.5H6"/>',
+      '<path d="M12 2.8 20.2 7.6v8.8L12 21.2 3.8 16.4V7.6L12 2.8Z" fill="currentColor" stroke="none"/>',
     size:
       '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
-    theme:
-      '<path d="M12 2.5 20 7.2v9.6L12 21.5 4 16.8V7.2L12 2.5Z"/>' +
-      '<circle cx="12" cy="12" r="3.2"/>',
+    // Theme control = literally a circle (swatches carry the theme paint)
+    theme: '<circle cx="12" cy="12" r="8"/>',
     style:
       '<path d="M7 7h.01M12 7h.01M17 7h.01"/><path d="M7 12h.01M12 12h.01M17 12h.01"/>' +
       '<path d="M7 17h.01M12 17h.01M17 17h.01"/>',
@@ -76,11 +76,41 @@
   function iconMarkup(name) {
     const paths = ICONS[name] || ICONS.more;
     return (
-      '<svg class="hb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      '<svg class="hb-icon hb-icon-' +
+      name +
+      '" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
       'stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
       paths +
       "</svg>"
     );
+  }
+
+  /** Pull a compact preview palette from a SphereSweeper theme def. */
+  function themeSwatchVars(t) {
+    if (!t) {
+      return {
+        fill: "#ffffff",
+        edge: "#000000",
+        field: "#ffffff",
+        ink: "#000000",
+        accent: "#ff0000",
+      };
+    }
+    // covered ≈ shell tiles; bg ≈ page/field; flagFill for accent tick
+    let fill = t.covered || t.tierCovered || "#888888";
+    let field = t.bg || "#000000";
+    let edge = t.coveredEdge || t.accent || "#888888";
+    // coveredEdge can be rgba — fine for border color
+    if (typeof edge === "string" && edge.indexOf("rgba") === 0) {
+      edge = t.accent || (t.chrome === "dark" ? "#ffffff" : "#000000");
+    }
+    const ink =
+      t.label ||
+      t.accent ||
+      (t.chrome === "dark" ? "#ffffff" : "#000000");
+    const accent = t.flagFill || t.tierFlagged || "#ff0000";
+    // Globe themes: covered is a muted map fallback — keep it
+    return { fill, edge, field, ink, accent };
   }
 
   function prefersReducedMotion() {
@@ -421,8 +451,10 @@
           sub: () =>
             THEMES.map((t, i) => ({
               id: "th-" + (t.id || i),
-              label: shortLabel(t.name, 7),
-              labelSize: t.name.length > 5 ? "xs" : "sm",
+              label: t.name,
+              // No generic icon — the hex face *is* the theme paint
+              themeSwatch: t,
+              iconOnly: true,
               chosen: () => game.getThemeIndex() === i,
               run: () => {
                 game.setThemeIndex(i);
@@ -636,21 +668,42 @@
       items.forEach((item, j) => {
         const off = offsets[j] || DIRECTIONS[dirIndex];
         const o = hexToPixel(off.q, off.r, HEX);
+        const isSwatch = !!item.themeSwatch;
         const el = makeHex({
           cls:
             "is-sub" +
             (item.chosen && item.chosen() ? " is-chosen" : "") +
-            (item.icon ? " has-icon" : ""),
+            (item.icon ? " has-icon" : "") +
+            (isSwatch ? " is-theme-swatch" : ""),
           label: item.label,
           labelSize: item.labelSize,
           ariaLabel: cat.id + ": " + item.label,
-          icon: item.icon,
-          iconOnly: !!item.icon && item.iconOnly !== false && !item.labelKeep,
+          icon: isSwatch ? null : item.icon,
+          iconOnly: isSwatch
+            ? true
+            : !!item.icon && item.iconOnly !== false && !item.labelKeep,
         });
-        // Subs with icons still keep short labels when useful (Dig/Flag etc.)
-        if (item.icon && item.label && !item.iconOnly) {
+        if (isSwatch) {
+          const sw = themeSwatchVars(item.themeSwatch);
+          el.style.setProperty("--theme-fill", sw.fill);
+          el.style.setProperty("--theme-edge", sw.edge);
+          el.style.setProperty("--theme-field", sw.field);
+          el.style.setProperty("--theme-ink", sw.ink);
+          el.style.setProperty("--theme-accent", sw.accent);
+          // Tiny field-circle in the middle — same grammar as the Theme control
+          const dot = document.createElement("span");
+          dot.className = "hb-theme-dot";
+          dot.setAttribute("aria-hidden", "true");
+          el.appendChild(dot);
+        }
+        // Flag leaf paints red like in-game flags
+        if (item.icon === "flag") el.classList.add("is-flag-icon");
+        if (item.icon === "dig") el.classList.add("is-dig-icon");
+        // Subs with icons still keep short labels when useful
+        if (item.icon && item.label && !item.iconOnly && !isSwatch) {
           el.classList.add("is-sub-icon-label");
-          if (el._labelEl) el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
+          if (el._labelEl)
+            el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
         }
         el.dataset.cat = cat.id;
         el.dataset.sub = item.id;
@@ -696,6 +749,17 @@
           const name =
             typeof cat.icon === "function" ? cat.icon() : cat.icon;
           setHexIcon(el, name);
+          el.classList.toggle("is-flag-icon", name === "flag");
+          el.classList.toggle("is-dig-icon", name === "dig");
+          el.classList.toggle("is-theme-icon", name === "theme");
+        }
+        // Theme primary circle can pick up current theme accent
+        if (cat.id === "theme") {
+          const t = THEMES[game.getThemeIndex()] || THEMES[0];
+          const sw = themeSwatchVars(t);
+          el.style.setProperty("--theme-fill", sw.fill);
+          el.style.setProperty("--theme-edge", sw.edge);
+          el.style.setProperty("--theme-field", sw.field);
         }
         // Size keeps a visible letter badge; other primaries are icon-only
         if (el._labelEl) {
@@ -815,7 +879,10 @@
             "is-primary cat-" +
             cat.id +
             (state.active === cat.id ? " is-active" : "") +
-            (cat.badge ? " has-badge" : ""),
+            (cat.badge ? " has-badge" : "") +
+            (iconName === "flag" ? " is-flag-icon" : "") +
+            (iconName === "dig" ? " is-dig-icon" : "") +
+            (iconName === "theme" ? " is-theme-icon" : ""),
           label: lab,
           labelSize: cat.labelSize,
           ariaLabel: typeof cat.aria === "function" ? cat.aria() : lab,
@@ -824,6 +891,13 @@
         });
         if (cat.badge && el._labelEl) {
           el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
+        }
+        if (cat.id === "theme") {
+          const t = THEMES[game.getThemeIndex()] || THEMES[0];
+          const sw = themeSwatchVars(t);
+          el.style.setProperty("--theme-fill", sw.fill);
+          el.style.setProperty("--theme-edge", sw.edge);
+          el.style.setProperty("--theme-field", sw.field);
         }
         el.dataset.cat = cat.id;
         el.dataset.index = String(i);

@@ -220,6 +220,81 @@
   }
 }
 
+/* Dig = open honeycomb cell (hollow stroke hex) */
+.hb-hex.is-dig-icon .hb-icon {
+  stroke-width: 2;
+}
+
+/* Flag = solid red face — same language as in-game flags */
+.hb-hex.is-flag-icon {
+  color: #ff0000;
+}
+.hb-hex.is-flag-icon.is-active,
+.hb-hex.is-flag-icon.is-chosen {
+  background: #ff0000;
+  color: #ff0000;
+}
+.hb-hex.is-flag-icon.is-active::before,
+.hb-hex.is-flag-icon.is-chosen::before {
+  background: color-mix(in srgb, var(--hb-paper) 12%, #ff0000);
+}
+.hb-hex.is-flag-icon.is-active .hb-icon,
+.hb-hex.is-flag-icon.is-chosen .hb-icon {
+  color: #ff0000;
+}
+
+/* Theme primary = plain circle; tint from current theme when available */
+.hb-hex.is-theme-icon .hb-icon {
+  stroke-width: 2.1;
+  color: var(--theme-edge, currentColor);
+}
+.hb-hex.is-theme-icon .hb-icon circle {
+  fill: var(--theme-fill, transparent);
+  fill-opacity: 0.92;
+  stroke: var(--theme-edge, currentColor);
+}
+
+/* Theme leaves: the hex face is painted like that theme’s shell/field */
+.hb-hex.is-theme-swatch {
+  background: var(--theme-edge, var(--hb-stroke));
+  color: var(--theme-ink, var(--hb-ink));
+}
+.hb-hex.is-theme-swatch::before {
+  background: var(--theme-fill, var(--hb-fill));
+  inset: var(--border-w);
+}
+.hb-hex.is-theme-swatch .hb-theme-dot {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--theme-field, transparent);
+  box-shadow:
+    0 0 0 1.5px var(--theme-edge, currentColor),
+    inset 0 0 0 1px color-mix(in srgb, var(--theme-field) 40%, var(--theme-edge));
+  pointer-events: none;
+}
+.hb-hex.is-theme-swatch.is-chosen {
+  background: var(--theme-accent, #ff0000);
+  color: var(--theme-ink, #fff);
+}
+.hb-hex.is-theme-swatch.is-chosen::before {
+  background: var(--theme-fill, var(--hb-fill));
+  inset: 3px;
+}
+.hb-hex.is-theme-swatch.is-chosen .hb-theme-dot {
+  box-shadow:
+    0 0 0 2px var(--theme-accent, #ff0000),
+    inset 0 0 0 1px var(--theme-edge, #000);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hb-hex.is-theme-swatch:hover::before {
+    inset: calc(var(--border-w) + 1px);
+    background: var(--theme-fill, var(--hb-fill-hover));
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .hb-hex:hover::before,
   .hb-hex:focus-visible::before {
