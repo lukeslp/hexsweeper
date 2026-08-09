@@ -961,19 +961,19 @@
       setPhase("rising");
       renderBloom({ petals: true }); // primaries exist but CSS hides until open
 
-      // 2) Next frame: rise to center
+      // 2) Next frame: rise; start petal unfold partway through so it feels one motion
       const go = () => {
         if (state.phase !== "rising") return;
         setPhase("open");
         refreshPrimaryLabels();
-        // 3) After rise, unfold petals
+        const bloomAt = Math.round(riseMs() * 0.45);
         phaseTimer = setTimeout(() => {
           if (state.phase !== "open") return;
-          root.dataset.dock = "ready"; // Close reappears in the bottom seat
+          root.dataset.dock = "ready";
           paintDock();
           bloomPetals();
           announce("Menu open");
-        }, riseMs());
+        }, bloomAt);
       };
 
       if (prefersReducedMotion()) go();
@@ -986,7 +986,7 @@
       state.active = null;
       delete root.dataset.branch;
 
-      // Fold petals immediately
+      // Fold petals immediately (no stagger on the way in)
       stage.querySelectorAll(".hb-hex.is-primary, .hb-hex.is-sub").forEach((el) => {
         el.style.transitionDelay = "0ms";
         el.classList.remove("shown");
@@ -1015,7 +1015,8 @@
         }
       };
 
-      phaseTimer = setTimeout(finish, riseMs() + (prefersReducedMotion() ? 0 : 80));
+      // Fall home only — was riseMs+80 (~500ms) of dead air after fold
+      phaseTimer = setTimeout(finish, Math.max(foldMs(), riseMs() * 0.75));
     }
 
     // Scrim click closes
