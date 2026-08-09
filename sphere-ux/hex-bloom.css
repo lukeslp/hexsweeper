@@ -6,11 +6,14 @@
  */
 
 .hex-bloom {
-  /* One tile size for bloom primaries and dock chrome (edge-aligned honeycomb). */
+  /* Bloom primaries (full size). Dock idle is smaller; grows to match when open. */
   --tile-w: 76px;
   --tile-h: 88px;
-  --tile-w-dock: var(--tile-w);
-  --tile-h-dock: var(--tile-h);
+  --tile-w-dock-idle: 40px;
+  --tile-h-dock-idle: 46px;
+  --tile-w-dock: var(--tile-w-dock-idle);
+  --tile-h-dock: var(--tile-h-dock-idle);
+  --dock-rise: 0px;
   --border-w: 1.5px;
   --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   --hb-ink: var(--text-main, #000);
@@ -78,26 +81,33 @@
   visibility: visible;
 }
 
-/* Bottom chrome: three bloom-sized hexes — Restart · Menu · Help
-   Centers sit tile-w apart so edges kiss like the primary ring. */
+/* Bottom chrome: Restart · Menu · Help
+   Idle: small + low; open: grow to bloom size and lift with the fan. */
 .hex-bloom-dock {
   position: absolute;
   left: 50%;
-  /* Sit low — bloom fans up from here */
-  bottom: max(4px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  bottom: max(2px, env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(var(--dock-rise, 0px));
   z-index: 3;
   display: flex;
   flex-direction: row;
   align-items: flex-end;
   justify-content: center;
-  /* Bounding boxes abut → pointy-top hexes share vertical edges */
   gap: 0;
   width: auto;
   height: auto;
   pointer-events: none;
   opacity: 1;
-  transition: opacity 0.28s ease;
+  transition:
+    opacity 0.28s ease,
+    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
+}
+.hex-bloom[data-phase="open"] .hex-bloom-dock,
+.hex-bloom[data-phase="falling"] .hex-bloom-dock {
+  /* Lift so the rooted fan has air and matches bloom height language */
+  --dock-rise: -36px;
+  --tile-w-dock: var(--tile-w);
+  --tile-h-dock: var(--tile-h);
 }
 .hex-bloom-dock .hb-hex.is-dock {
   position: relative;
@@ -105,15 +115,21 @@
   top: auto;
   margin: 0;
   flex: 0 0 auto;
-  width: var(--tile-w);
-  height: var(--tile-h);
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
   pointer-events: auto;
+  transition:
+    width var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    height var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    background 0.2s ease,
+    color 0.2s ease,
+    filter 0.2s ease,
+    opacity 0.2s ease;
 }
-/* Menu is the same size as sides — equal weight in the trio */
 .hex-bloom-dock .is-dock-menu,
 .hex-bloom-dock .is-dock-side {
-  width: var(--tile-w);
-  height: var(--tile-h);
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
   opacity: 1;
 }
 /* While board has attention, whole dock recedes */
@@ -127,11 +143,20 @@
   .hex-bloom-dock {
     transition: opacity 0.12s ease;
   }
+  .hex-bloom-dock .hb-hex.is-dock {
+    transition: none;
+  }
 }
 @media (max-width: 400px) {
   .hex-bloom {
     --tile-w: 66px;
     --tile-h: 76px;
+    --tile-w-dock-idle: 36px;
+    --tile-h-dock-idle: 42px;
+  }
+  .hex-bloom[data-phase="open"] .hex-bloom-dock,
+  .hex-bloom[data-phase="falling"] .hex-bloom-dock {
+    --dock-rise: -28px;
   }
 }
 
@@ -379,7 +404,7 @@
   background: var(--hb-accent);
 }
 
-/* Dock hexes — same edge language as bloom primaries (stroke ring + fill) */
+/* Dock hexes */
 .hb-hex.is-dock {
   z-index: 40;
   color: var(--hb-ink);
@@ -392,16 +417,19 @@
 .hb-hex.is-dock::before {
   background: var(--hb-fill);
   inset: var(--border-w);
+  transition: inset 0.2s ease, background 0.2s ease, opacity 0.2s ease;
 }
-/* Icons match bloom primary scale */
 .hb-hex.is-dock .hb-glyph {
-  width: 28px;
-  height: 28px;
+  width: 55%;
+  height: 55%;
+  max-width: 28px;
+  max-height: 28px;
   color: var(--hb-ink);
+  transition: width 0.2s ease, height 0.2s ease;
 }
 .hb-hex.is-dock .hb-icon {
-  width: 26px;
-  height: 26px;
+  width: 100%;
+  height: 100%;
 }
 .hb-hex.is-dock .hb-label {
   font-size: 11px;
@@ -410,12 +438,58 @@
   letter-spacing: -0.02em;
   color: var(--hb-ink);
 }
-/* Menu seed closed: no wordmark; sides show icons only */
-.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-label {
-  font-size: 0;
-  opacity: 0;
+
+/* ---- Idle (closed): sides are borderless icons; menu is a quiet ring + hex icon ---- */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side {
+  background: transparent;
+  filter: none;
 }
-/* Menu tile becomes the close control when open (same node, solid ×) */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.72;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:hover .hb-glyph,
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:focus-visible .hb-glyph {
+  opacity: 1;
+}
+/* Menu: light outline + hollow-hex icon (reads as “open”) */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu {
+  background: var(--hb-stroke);
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu::before {
+  background: var(--hb-fill);
+  inset: var(--border-w);
+  opacity: 1;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  opacity: 1;
+}
+
+/* ---- Open: full bloom borders on all three; menu = solid × ---- */
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-side,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock-side {
+  background: var(--hb-stroke);
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+  z-index: 41;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-side::before,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock-side::before {
+  opacity: 1;
+  background: var(--hb-fill);
+  inset: var(--border-w);
+}
 .hex-bloom[data-phase="open"] .hb-hex.is-dock-menu,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu {
   background: var(--hb-ink);
@@ -426,20 +500,17 @@
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu::before {
   background: var(--hb-ink);
   inset: 0;
+  opacity: 1;
 }
 .hex-bloom[data-phase="open"] .hb-hex.is-dock-menu .hb-label,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu .hb-label {
   color: var(--hb-paper);
-  font-size: 22px;
+  font-size: clamp(16px, 4vw, 22px);
   font-weight: 500;
   opacity: 1;
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock {
   pointer-events: auto;
-}
-.hex-bloom[data-phase="open"] .hb-hex.is-dock-side {
-  opacity: 1;
-  z-index: 41;
 }
 
 /* Primary ring */

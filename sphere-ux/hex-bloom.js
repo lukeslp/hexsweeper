@@ -77,6 +77,9 @@
       '<path d="M12 4v16"/><path d="m8 8 4-4 4 4"/><path d="m8 16 4 4 4-4"/>' +
       '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
     more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
+    // Menu affordance — hollow hex (board language)
+    menu:
+      '<path d="M12 2.8 20.2 7.6v8.8L12 21.2 3.8 16.4V7.6L12 2.8Z"/>',
     reset:
       '<path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"/><path d="M20 3.5V8h-4.5"/>' +
       '<path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"/><path d="M4 20.5V16h4.5"/>',
@@ -764,21 +767,28 @@
 
     function paintDock() {
       if (!dockBtn) return;
-      const open = state.phase === "open";
-      const rising = state.phase === "rising" || state.phase === "falling";
+      const open =
+        state.phase === "open" ||
+        state.phase === "rising" ||
+        state.phase === "falling";
       if (open) {
+        // Close affordance on the activation node
+        if (dockBtn._glyphEl) {
+          dockBtn._glyphEl.innerHTML = "";
+          dockBtn._glyphEl.hidden = true;
+        }
         dockBtn._labelEl.textContent = "×";
+        dockBtn._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
         dockBtn.setAttribute("aria-label", "Close menu");
         dockBtn.setAttribute("aria-expanded", "true");
-      } else if (rising) {
-        dockBtn._labelEl.textContent = "";
-        dockBtn.setAttribute("aria-expanded", "true");
       } else {
-        dockBtn._labelEl.textContent = "";
+        setHexIcon(dockBtn, "menu");
+        if (dockBtn._glyphEl) dockBtn._glyphEl.hidden = false;
+        dockBtn._labelEl.textContent = "Menu";
+        dockBtn._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
         dockBtn.setAttribute("aria-label", "Open game menu");
         dockBtn.setAttribute("aria-expanded", "false");
       }
-      // Side tiles stay available while open (restart / help without hunting)
       if (dockResetBtn) {
         dockResetBtn.hidden = false;
         dockResetBtn.setAttribute("aria-hidden", "false");
@@ -1024,7 +1034,9 @@
       // Menu — center, primary (opens bloom / closes when open)
       dockBtn = makeHex({
         cls: "is-dock is-dock-menu",
-        label: "",
+        label: "Menu",
+        icon: "menu",
+        iconOnly: true,
         ariaLabel: "Open game menu",
       });
       dockBtn.id = "hex-bloom-seed";
@@ -1163,18 +1175,32 @@
       paintStats();
       setCanvasInert(true);
 
-      // Rooted at dock menu — no rise travel; unfold petals upward in place.
+      // Dock grows + lifts (CSS); then measure and unfold petals from the menu node.
       setRiseVar();
       setPhase("open");
       root.dataset.dock = "ready";
       paintDock();
-      renderBloom({ petals: true });
-      refreshPrimaryLabels();
-      requestAnimationFrame(() => {
+      const placeAndBloom = () => {
         if (state.phase !== "open") return;
-        bloomPetals();
-        announce("Menu open");
-      });
+        setRiseVar();
+        renderBloom({ petals: true });
+        refreshPrimaryLabels();
+        requestAnimationFrame(() => {
+          if (state.phase !== "open") return;
+          bloomPetals();
+          announce("Menu open");
+        });
+      };
+      // Wait one frame for dock size/lift transitions to apply layout
+      if (prefersReducedMotion()) placeAndBloom();
+      else {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            // mid-grow: place petals; they unfold while dock finishes growing
+            placeAndBloom();
+          })
+        );
+      }
     }
 
     function collapse() {
