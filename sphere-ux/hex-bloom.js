@@ -32,7 +32,7 @@
     { id: "glow", name: "Glow" },
   ];
 
-  // 6 neighbour directions, clockwise from East (pointy-top axial)
+  // Full 6-neighbour ring (pointy-top axial) — used for leaf fans around a parent.
   const DIRECTIONS = [
     { q: 1, r: 0 },
     { q: 1, r: -1 },
@@ -40,6 +40,17 @@
     { q: -1, r: 0 },
     { q: -1, r: 1 },
     { q: 0, r: 1 },
+  ];
+  // Primary bloom from the dock Menu tile: only cells with r < 0 (screen-up).
+  // E/W would sit under Restart/Help; SE/SW would clip off the bottom.
+  // Ring-1 NE/NW + ring-2 above → a clean fan that opens upward from the seed.
+  const BLOOM_DIRS = [
+    { q: 1, r: -1 }, // NE
+    { q: 0, r: -1 }, // NW
+    { q: 2, r: -2 }, // ring-2 up-right
+    { q: 1, r: -2 }, // ring-2 NNE
+    { q: 0, r: -2 }, // ring-2 N
+    { q: -1, r: -1 }, // ring-2 up-left
   ];
 
   // Stroke icons (24×24) — board language, not tool metaphors
@@ -205,45 +216,49 @@
     }
 
     function centerXY() {
-      // Bloom sits 25% up from the bottom (not screen-center / halfway).
+      // Bloom origin = menu dock tile (activation node). Petals open upward.
+      const stageRect = stage.getBoundingClientRect();
+      const menu = dockBtn || document.getElementById("hex-bloom-seed");
+      if (menu) {
+        const r = menu.getBoundingClientRect();
+        return {
+          cx: r.left + r.width / 2 - stageRect.left,
+          cy: r.top + r.height / 2 - stageRect.top,
+        };
+      }
       const h = stage.clientHeight || global.innerHeight;
       const w = stage.clientWidth || global.innerWidth;
+      const th = tileMetrics().tileH;
       return {
         cx: w / 2,
-        cy: h * 0.75,
+        cy: h - th / 2 - 6,
       };
     }
 
-    function dockCenterY() {
-      const rect = dock.getBoundingClientRect();
-      return rect.top + rect.height / 2;
-    }
-
     function setRiseVar() {
-      const { cy } = centerXY();
-      const dockY = dockCenterY();
-      // positive = below center (CSS translateY)
-      const dy = dockY - cy;
-      root.style.setProperty("--rise-y", dy.toFixed(1) + "px");
+      // No vertical travel — bloom is rooted at the dock menu.
+      root.style.setProperty("--rise-y", "0px");
     }
 
     function leafOffsets(dirIndex, count) {
       if (count <= 0) return [];
+      // Prefer bloom-up directions so nested fans also stay on-screen.
+      const ring = BLOOM_DIRS;
       if (count <= 3) {
         const trio = [
-          DIRECTIONS[(dirIndex + 5) % 6],
-          DIRECTIONS[dirIndex],
-          DIRECTIONS[(dirIndex + 1) % 6],
+          ring[(dirIndex + ring.length - 1) % ring.length],
+          ring[dirIndex % ring.length],
+          ring[(dirIndex + 1) % ring.length],
         ];
         if (count === 1) return [trio[1]];
         if (count === 2) return [trio[0], trio[2]];
         return trio;
       }
-      const out = DIRECTIONS[dirIndex];
-      const left = DIRECTIONS[(dirIndex + 5) % 6];
-      const right = DIRECTIONS[(dirIndex + 1) % 6];
-      const farLeft = DIRECTIONS[(dirIndex + 4) % 6];
-      const farRight = DIRECTIONS[(dirIndex + 2) % 6];
+      const out = ring[dirIndex % ring.length];
+      const left = ring[(dirIndex + ring.length - 1) % ring.length];
+      const right = ring[(dirIndex + 1) % ring.length];
+      const farLeft = ring[(dirIndex + ring.length - 2) % ring.length];
+      const farRight = ring[(dirIndex + 2) % ring.length];
       const candidates = [
         left,
         out,
@@ -823,7 +838,8 @@
     function addSubmenu(dirIndex, cat) {
       const { HEX } = tileMetrics();
       const { cx, cy } = centerXY();
-      const p = hexToPixel(DIRECTIONS[dirIndex].q, DIRECTIONS[dirIndex].r, HEX);
+      const dir = BLOOM_DIRS[dirIndex] || DIRECTIONS[dirIndex];
+      const p = hexToPixel(dir.q, dir.r, HEX);
       const px = cx + p.x;
       const py = cy + p.y;
       const items = cat.sub();
@@ -939,11 +955,10 @@
           }
         }
       });
-      // Center is always the close control while open (×), never last-selection text
-      const core = stage.querySelector(".hb-hex.is-center");
-      if (core && core._labelEl && state.phase === "open") {
-        core._labelEl.textContent = "×";
-        core.setAttribute("aria-label", "Close menu");
+      // Dock menu is the close control while open
+      if (dockBtn && state.phase === "open") {
+        dockBtn._labelEl.textContent = "×";
+        dockBtn.setAttribute("aria-label", "Close menu");
       }
     }
 
@@ -1055,35 +1070,12 @@
       const { cx, cy } = centerXY();
       const cats = categories();
 
-      // Center core at bloom anchor (25% up from bottom) — × closes while open
-      const center = makeHex({
-        cls: "is-center",
-        label: state.phase === "open" ? "×" : "",
-        ariaLabel: state.phase === "open" ? "Close menu" : "Game menu",
-      });
-      center.id = "hex-bloom-core";
-      center.style.left = cx + "px";
-      center.style.top = cy + "px";
-      center.setAttribute(
-        "aria-hidden",
-        state.phase === "open" ? "false" : "true"
-      );
-      if (state.phase === "open") {
-        center.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          ignoreOutsideUntil = Date.now() + 250;
-          collapse();
-        });
-      } else {
-        center.tabIndex = -1;
-      }
-      stage.appendChild(center);
-
+      // Center is the activation node (dock menu). When open, dock menu is the
+      // close control — no separate traveler hex (avoids double × and rise).
       if (!withPetals) return;
 
       cats.forEach((cat, i) => {
-        const d = DIRECTIONS[i];
+        const d = BLOOM_DIRS[i] || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const iconName =
@@ -1171,28 +1163,18 @@
       paintStats();
       setCanvasInert(true);
 
-      // 1) Show traveler at dock seat
+      // Rooted at dock menu — no rise travel; unfold petals upward in place.
       setRiseVar();
-      setPhase("rising");
-      renderBloom({ petals: true }); // primaries exist but CSS hides until open
-
-      // 2) Next frame: rise; start petal unfold partway through so it feels one motion
-      const go = () => {
-        if (state.phase !== "rising") return;
-        setPhase("open");
-        refreshPrimaryLabels();
-        const bloomAt = Math.round(riseMs() * 0.45);
-        phaseTimer = setTimeout(() => {
-          if (state.phase !== "open") return;
-          root.dataset.dock = "ready";
-          paintDock();
-          bloomPetals();
-          announce("Menu open");
-        }, bloomAt);
-      };
-
-      if (prefersReducedMotion()) go();
-      else requestAnimationFrame(() => requestAnimationFrame(go));
+      setPhase("open");
+      root.dataset.dock = "ready";
+      paintDock();
+      renderBloom({ petals: true });
+      refreshPrimaryLabels();
+      requestAnimationFrame(() => {
+        if (state.phase !== "open") return;
+        bloomPetals();
+        announce("Menu open");
+      });
     }
 
     function collapse() {
@@ -1209,7 +1191,6 @@
         el.style.pointerEvents = "none";
       });
 
-      setRiseVar();
       setPhase("falling");
 
       const finish = () => {
@@ -1230,8 +1211,7 @@
         }
       };
 
-      // Fall home only — was riseMs+80 (~500ms) of dead air after fold
-      phaseTimer = setTimeout(finish, Math.max(foldMs(), riseMs() * 0.75));
+      phaseTimer = setTimeout(finish, foldMs());
     }
 
     // Scrim click closes
@@ -1335,8 +1315,8 @@
       let startY = 0;
       const MOVE_PX = 10;
       // Bottom strip reserved for chrome — pointer here reveals the seed
-      // Tall enough for full-size dock trio + safe air
-      const CHROME_BAND = 120;
+      // Tall enough for full-size dock trio + upward bloom clearance
+      const CHROME_BAND = 140;
 
       function pointFrom(e) {
         if (e.touches && e.touches.length) return e.touches[0];

@@ -1,7 +1,7 @@
 /*
  * Hex bloom chrome for sphere-ux.
- * Closed: small dock hex at bottom. Open: rises to center, honeycomb blooms,
- * scrim blurs the board, dock becomes Close and folds everything home.
+ * Closed: three dock hexes at bottom (Restart · Menu · Help).
+ * Open: bloom roots at the Menu tile and fans upward; Menu becomes Close.
  * Geometry + fold language from /uxperiments/clex.
  */
 
@@ -57,17 +57,19 @@
   pointer-events: auto;
 }
 
-/* Centered blossom stage — full viewport, math origin at center */
+/* Stage fills viewport; origin is the dock menu (bottom). */
 .hex-bloom-stage {
   position: absolute;
   inset: 0;
   z-index: 1;
   perspective: 1100px;
-  perspective-origin: 50% 75%;
+  perspective-origin: 50% 100%;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.12s ease, visibility 0.12s;
+  /* Room for upward fan without clipping south of the dock */
+  overflow: visible;
 }
 .hex-bloom[data-open="true"] .hex-bloom-stage,
 .hex-bloom[data-phase="rising"] .hex-bloom-stage,
@@ -81,7 +83,8 @@
 .hex-bloom-dock {
   position: absolute;
   left: 50%;
-  bottom: max(10px, env(safe-area-inset-bottom));
+  /* Sit low — bloom fans up from here */
+  bottom: max(4px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 3;
   display: flex;
@@ -376,19 +379,19 @@
   background: var(--hb-accent);
 }
 
-/* Dock hexes — outlined chips (not solid fills) so chrome stays quiet */
+/* Dock hexes — same edge language as bloom primaries (stroke ring + fill) */
 .hb-hex.is-dock {
   z-index: 40;
   color: var(--hb-ink);
-  background: var(--hb-ink);
+  background: var(--hb-stroke);
   pointer-events: auto;
   filter:
     drop-shadow(0 0 2px var(--hb-paper))
     drop-shadow(0 0 1px var(--hb-paper));
 }
 .hb-hex.is-dock::before {
-  background: var(--hb-paper);
-  inset: 2px;
+  background: var(--hb-fill);
+  inset: var(--border-w);
 }
 /* Icons match bloom primary scale */
 .hb-hex.is-dock .hb-glyph {
@@ -412,90 +415,31 @@
   font-size: 0;
   opacity: 0;
 }
-/* Close on center when bloom open — solid so × reads */
+/* Menu tile becomes the close control when open (same node, solid ×) */
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu {
   background: var(--hb-ink);
   color: var(--hb-paper);
+  z-index: 42;
 }
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu::before,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu::before {
   background: var(--hb-ink);
   inset: 0;
 }
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu .hb-label,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu .hb-label {
   color: var(--hb-paper);
-  font-size: 16px;
-  opacity: 1;
-}
-.hex-bloom[data-open="true"] .hb-hex.is-dock .hb-label,
-.hex-bloom[data-phase="rising"] .hb-hex.is-dock .hb-label,
-.hex-bloom[data-phase="falling"] .hb-hex.is-dock .hb-label {
-  /* Close sits in the dock seat while the blossom is up */
-}
-
-/* Traveler / stage center — rises from dock; open = × close control.
-   left/top set in JS (25% up from bottom, not screen midline). */
-.hb-hex.is-center {
-  z-index: 35;
-  color: var(--hb-center-ink);
-  cursor: pointer;
-}
-.hb-hex.is-center::before {
-  background: var(--hb-center-fill);
-  inset: 0;
-}
-.hb-hex.is-center .hb-label {
   font-size: 22px;
   font-weight: 500;
-  line-height: 1;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--hb-center-ink);
-}
-
-/* Rising: same tile size as dock/bloom; only vertical travel */
-.hex-bloom[data-phase="rising"] .hb-hex.is-center,
-.hex-bloom[data-phase="falling"] .hb-hex.is-center {
-  width: var(--tile-w);
-  height: var(--tile-h);
-  margin-left: calc(var(--tile-w) / -2);
-  margin-top: calc(var(--tile-h) / -2);
-  transform: translateY(var(--rise-y)) scale(1);
-  transition:
-    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
-    opacity 0.25s ease;
-}
-.hex-bloom[data-phase="open"] .hb-hex.is-center {
-  width: var(--tile-w);
-  height: var(--tile-h);
-  margin-left: calc(var(--tile-w) / -2);
-  margin-top: calc(var(--tile-h) / -2);
-  transform: translateY(0) scale(1);
-  transition:
-    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
-    opacity 0.25s ease;
-}
-
-/* While rising, hide center menu traveler twin; sides stay usable if desired */
-.hex-bloom[data-phase="rising"] .hb-hex.is-dock-menu,
-.hex-bloom[data-phase="falling"] .hb-hex.is-dock-menu {
-  opacity: 0;
-  pointer-events: none;
-}
-.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu {
-  opacity: 0;
-  pointer-events: none;
-}
-.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu {
   opacity: 1;
-  pointer-events: auto;
-  transition: opacity 0.2s ease;
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock {
   pointer-events: auto;
 }
-/* Side dock tiles stay full-size while menu is open */
 .hex-bloom[data-phase="open"] .hb-hex.is-dock-side {
   opacity: 1;
+  z-index: 41;
 }
 
 /* Primary ring */
