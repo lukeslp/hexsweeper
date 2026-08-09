@@ -109,6 +109,13 @@
   html, body { height: 100%; }
   body {
     margin: 0;
+    /* Kills double-tap-to-zoom, which fires on a mis-hit between two hexes and
+       leaves the picker zoomed with no obvious way back. "manipulation" rather
+       than "none" on purpose: panning and pinch-zoom still work, so this stays
+       usable for anyone who needs to magnify. The games set their own
+       touch-action, since they implement pan and pinch themselves. */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
     font-family: var(--font-ui);
     color: var(--ink);
     background: var(--field);
