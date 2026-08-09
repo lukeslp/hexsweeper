@@ -675,12 +675,58 @@ body[data-sphere-chrome="dark"] .help-overlay {
   .lightbox,
   .count-style-toast { transition: none; }
 }
+/* Water · level — only present while the water theme is live. The globe's
+   waterline is the whole point of the theme, so it gets a real control. */
+.water-level {
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left, 0px));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  width: 3px;
+  height: min(46vh, 340px);
+  margin: 0;
+  padding: 0;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(200, 245, 255, 0.28);
+  border: 0;
+  border-radius: 4px;
+  outline: none;
+  cursor: ns-resize;
+}
+body:not([data-sphere-theme="water"]) .water-level { display: none; }
+.water-level::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #eafbff;
+  border: 2px solid rgba(10, 40, 56, 0.55);
+  box-shadow: 0 2px 10px rgba(0, 18, 28, 0.5);
+}
+.water-level::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #eafbff;
+  border: 2px solid rgba(10, 40, 56, 0.55);
+  box-shadow: 0 2px 10px rgba(0, 18, 28, 0.5);
+}
+.water-level::-moz-range-track { background: rgba(200, 245, 255, 0.28); border: 0; }
+.water-level:focus-visible { outline: 2px solid #7fe0e8; outline-offset: 4px; }
+@media (max-width: 560px) { .water-level { height: min(34vh, 220px); } }
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
 <div class="canvas-container">
   <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
 </div>
+<input type="range" class="water-level" id="water-level" min="0" max="100" step="0.5"
+       value="50" aria-label="Water level">
 
 <div id="sphere-banner" class="sphere-banner" role="status" hidden>
   <div class="banner-msg" id="banner-msg"></div>

@@ -341,6 +341,72 @@
     revealGlow: "#5ec8ff",
   };
 
+  /**
+   * Water — the globe half-submerged.
+   *
+   * Sky above the line, open sea below. The surface, the reflection and the
+   * refraction are a screen-space post-pass (drawWaterPass) run after the
+   * sphere is fully painted, so rotation carries hexes down through the
+   * waterline with no change to projection, picking or tile state: a
+   * submerged face is an ordinary face that happens to be drawn wet.
+   *
+   * Wet stone shell against a cold sea; amber flags, because every other
+   * signal in the scene is already blue.
+   */
+  const THEME_WATER = {
+    id: "water",
+    name: "Water",
+    chrome: "dark",
+    float: false,
+    waterScene: true,
+    pureCovered: false,
+    pureRevealed: false,
+    accent: "#7fe0e8",
+    bg: "#04202f",
+    bgGlow: "#12617d",
+    covered: "#c3dbe4",
+    coveredHi: "#f2fbff",
+    coveredEdge: "rgba(8,38,54,0.42)",
+    coveredShadow: "#3d6273",
+    tierCovered: "#c3dbe4",
+    tierFlagged: "#ffb454",
+    tierNumbered: "#10394d",
+    tierEmpty: "#072634",
+    revealed: "#10394d",
+    revealedEmpty: "#072634",
+    revealedEdge: "rgba(140,220,240,0.22)",
+    valleyGroove: "rgba(120,200,225,0.18)",
+    valleyGrooveDeep: "rgba(0,18,28,0.55)",
+    flagFill: "#ffb454",
+    flagIcon: "#06202c",
+    flagEdge: "#ffd08a",
+    mine: "#0b2430",
+    mineCore: "#ff8a5c",
+    mineEdge: "#02121a",
+    mineBurst: "#ffc08a",
+    pentagon: "#b6d2dd",
+    pentagonEdge: "rgba(8,38,54,0.5)",
+    hoverRing: "#eafbff",
+    activeRing: "#7fe0e8",
+    backface: "#062230",
+    backfaceEdge: "#0d3a4e",
+    core: "#04202f",
+    coreGlow: "#12617d",
+    floatShadow: null,
+    text: {
+      1: "#8fd9f0",
+      2: "#6fe3c4",
+      3: "#ffab7a",
+      4: "#a9b8f5",
+      5: "#ffd684",
+      6: "#7fe0e8",
+    },
+    label: "#eafbff",
+    labelStroke: "rgba(3,26,40,0.85)",
+    revealFlash: "#eafbff",
+    revealGlow: "#7fe0e8",
+  };
+
   const THEMES = [
     THEME_LIGHT,
     THEME_SHELL,
@@ -351,6 +417,7 @@
     THEME_EARTH,
     THEME_MOON,
     THEME_GLOW,
+    THEME_WATER,
   ];
   const DEFAULT_THEME = THEME_LIGHT;
 
@@ -706,6 +773,7 @@
       canvas,
       ctx,
       theme: themePalette(THEMES[themeIndex]),
+      waterLevel: 0.5,
       difficulty: readStoredSize(),
       tiles: [],
       cells: [],
@@ -1225,6 +1293,32 @@
         helpFocusReturn.focus();
       }
       helpFocusReturn = null;
+    }
+
+    /** 0 = globe fully above the surface, 1 = fully under. 0.5 = half. */
+    function readWaterLevel() {
+      try {
+        const raw = new URLSearchParams(location.search).get("water");
+        if (raw != null) {
+          const v = parseFloat(raw);
+          if (Number.isFinite(v)) return Math.max(0, Math.min(1, v > 1 ? v / 100 : v));
+        }
+      } catch (_) {}
+      return 0.5;
+    }
+
+    function setWaterLevel(v) {
+      state.waterLevel = Math.max(0, Math.min(1, v));
+      scheduleFrame();
+    }
+
+    function bindWaterLevel() {
+      const el = document.getElementById("water-level");
+      if (!el) return;
+      el.value = String(Math.round(state.waterLevel * 100));
+      el.addEventListener("input", () => {
+        setWaterLevel(parseFloat(el.value) / 100);
+      });
     }
 
     function resize() {
@@ -3431,6 +3525,194 @@
       ctx.restore();
     }
 
+    // —— Water · half-submerged globe ——————————————————————————————
+    //
+    // Adapted from Wakana Y.K.'s SVG feTurbulence water reflection (codepen
+    // oNOwpqM). The displacement is canvas row slices rather than a real
+    // `filter: url(#…)` on the canvas: an SVG filter warps what you see but
+    // not where the pointer lands, so every dig below the line would miss by
+    // the displacement amount. Slices keep picking exact.
+    const WATER = { buf: null, bctx: null };
+
+    /** Three octaves standing in for feTurbulence fractalNoise. ~[-1,1]. */
+    function waterWave(y, t) {
+      return (
+        (Math.sin(y * 0.021 + t * 1.9) +
+          Math.sin(y * 0.052 - t * 2.7) * 0.42 +
+          Math.sin(y * 0.009 + t * 1.1) * 0.72) /
+        2.14
+      );
+    }
+
+    /**
+     * Waterline in CSS px. Anchored to the sphere, not the viewport, so the
+     * horizon keeps the same bite out of the globe at any zoom or window size.
+     * level 0.5 puts it exactly on the equator — half under.
+     */
+    function waterLineY(h) {
+      const level = state.waterLevel != null ? state.waterLevel : 0.5;
+      const r = state.scale * 1.15;
+      const tide =
+        state.reduceMotion ? 0 : Math.sin(performance.now() * 0.00011) * r * 0.02;
+      return Math.round(
+        Math.max(-40, Math.min(h + 40, state.centerY + r - level * r * 2 + tide))
+      );
+    }
+
+    /** Sky above, sea below — painted over the flat backdrop before the globe. */
+    function drawWaterField(w, h) {
+      const surf = waterLineY(h);
+      const t = performance.now();
+      ctx.save();
+
+      if (surf > 0) {
+        const sky = ctx.createLinearGradient(0, 0, 0, surf);
+        sky.addColorStop(0, "#0b2438");
+        sky.addColorStop(0.55, "#14415c");
+        sky.addColorStop(1, "#2d7b96");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, w, surf);
+
+        const sunY = surf - h * 0.08;
+        const sun = ctx.createRadialGradient(w / 2, sunY, 0, w / 2, sunY, Math.max(w, h) * 0.45);
+        sun.addColorStop(0, "rgba(190,240,255,0.24)");
+        sun.addColorStop(0.4, "rgba(120,200,225,0.1)");
+        sun.addColorStop(1, "transparent");
+        ctx.fillStyle = sun;
+        ctx.fillRect(0, 0, w, surf);
+      }
+
+      if (surf < h) {
+        const sea = ctx.createLinearGradient(0, surf, 0, h);
+        sea.addColorStop(0, "#12617d");
+        sea.addColorStop(0.35, "#0a3f57");
+        sea.addColorStop(1, "#04202f");
+        ctx.fillStyle = sea;
+        ctx.fillRect(0, surf, w, h - surf);
+
+        // Caustics — light sheets bending through the surface.
+        const bands = state.reduceMotion ? 4 : 9;
+        ctx.globalCompositeOperation = "lighter";
+        for (let i = 0; i < bands; i++) {
+          const phase = state.reduceMotion ? i * 0.7 : t * 0.00016 + i * 0.7;
+          const cx = w * (0.5 + Math.sin(phase) * 0.42);
+          const spread = w * (0.05 + 0.035 * Math.sin(phase * 1.7 + i));
+          const g = ctx.createLinearGradient(cx - spread, 0, cx + spread, 0);
+          g.addColorStop(0, "transparent");
+          g.addColorStop(0.5, `rgba(150,230,240,${0.05 + 0.03 * Math.sin(phase * 2.3)})`);
+          g.addColorStop(1, "transparent");
+          ctx.fillStyle = g;
+          ctx.fillRect(cx - spread, surf, spread * 2, h - surf);
+        }
+      }
+      ctx.restore();
+    }
+
+    /** Refraction, reflection and meniscus over the finished frame. */
+    function drawWaterPass(w, h) {
+      const surf = waterLineY(h);
+      const depth = h - surf;
+      if (depth < 4 || surf < -h) return;
+      const t = performance.now() * 0.001;
+
+      // The context carries a dpr transform, so source rects are in device px
+      // while destination rects stay in CSS px.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const bw = canvas.width;
+      const bh = canvas.height;
+      if (!WATER.buf) {
+        WATER.buf = document.createElement("canvas");
+        WATER.bctx = WATER.buf.getContext("2d");
+      }
+      if (WATER.buf.width !== bw || WATER.buf.height !== bh) {
+        WATER.buf.width = bw;
+        WATER.buf.height = bh;
+      }
+      const buf = WATER.buf;
+      WATER.bctx.setTransform(1, 0, 0, 1, 0, 0);
+      WATER.bctx.clearRect(0, 0, bw, bh);
+      WATER.bctx.drawImage(canvas, 0, 0);
+
+      const amp = Math.max(2.5, state.scale * 0.03);
+      const slice = 2;
+      const squeeze = 0.78;
+      const top = Math.max(0, surf);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, top, w, h - top);
+      ctx.clip();
+
+      // Deep water first, so the strip a slice vacates as it shifts sideways
+      // resolves to sea rather than a smear of its own edge pixels.
+      const fill = ctx.createLinearGradient(0, top, 0, h);
+      fill.addColorStop(0, "#0d4d67");
+      fill.addColorStop(1, "#04202f");
+      ctx.fillStyle = fill;
+      ctx.fillRect(0, top, w, h - top);
+
+      // 1 · Refraction — the submerged cap, wobbling where it sits.
+      for (let y = top; y < h; y += slice) {
+        const d = (y - surf) / depth;
+        const dx = waterWave(y, t) * amp * (0.35 + d * 1.15);
+        ctx.drawImage(buf, 0, y * dpr, bw, slice * dpr, dx, y, w, slice);
+      }
+
+      // 2 · Reflection — the dry cap mirrored down, fading with distance.
+      for (let y = top; y < h; y += slice) {
+        const d = (y - surf) / depth;
+        const srcY = surf - (y - surf) * squeeze;
+        if (srcY < 0) break;
+        const dx = waterWave(y * 1.7 + 40, t * 1.25) * amp * (0.6 + d * 1.7);
+        ctx.globalAlpha = 0.34 * Math.max(0, 1 - d * 1.05);
+        ctx.drawImage(buf, 0, srcY * dpr, bw, slice * dpr, dx, y, w, slice);
+      }
+      ctx.globalAlpha = 1;
+
+      // 3 · Depth haze.
+      const haze = ctx.createLinearGradient(0, top, 0, h);
+      haze.addColorStop(0, "rgba(20,110,140,0.08)");
+      haze.addColorStop(0.45, "rgba(10,70,100,0.3)");
+      haze.addColorStop(1, "rgba(3,26,40,0.64)");
+      ctx.fillStyle = haze;
+      ctx.fillRect(0, top, w, h - top);
+      ctx.restore();
+
+      if (surf < 0 || surf > h) return;
+
+      // 4 · Meniscus — bright rim where air meets sea.
+      ctx.save();
+      const band = Math.max(2.5, state.scale * 0.012);
+      const glow = ctx.createLinearGradient(0, surf - band * 5, 0, surf + band * 5);
+      glow.addColorStop(0, "rgba(190,240,255,0)");
+      glow.addColorStop(0.5, "rgba(200,245,255,0.24)");
+      glow.addColorStop(0.62, "rgba(255,255,255,0.42)");
+      glow.addColorStop(1, "rgba(120,200,230,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, surf - band * 5, w, band * 10);
+
+      // Broken specular chop — jittered, or the highlights land on an even
+      // pitch and the horizon reads as a dashed rule.
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(226,250,255,0.9)";
+      const step = Math.max(9, Math.round(w / 74));
+      for (let x = 0; x < w; x += step) {
+        const j = (Math.sin(x * 12.9898) * 43758.5453) % 1;
+        const jj = j < 0 ? j + 1 : j;
+        const ph = x * 0.014 + t * 1.6 + jj * 6.283;
+        const a = Math.sin(ph) * Math.sin(ph * 0.37 + 1.1);
+        if (a < 0.3) continue;
+        ctx.globalAlpha = Math.min(0.6, a * 0.55);
+        ctx.fillRect(
+          x + jj * step * 0.6,
+          surf - 1 + Math.sin(ph * 1.3) * 1.6,
+          step * (0.3 + jj * 0.5),
+          1.5
+        );
+      }
+      ctx.restore();
+    }
+
     function draw() {
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
@@ -3460,6 +3742,10 @@
       grd.addColorStop(1, state.theme.bg);
       ctx.fillStyle = grd;
       ctx.fillRect(0, 0, w, h);
+
+      // Water replaces the radial backdrop with a horizon, so the submerged
+      // cap of the globe is painted into sea rather than onto it.
+      if (state.theme.waterScene) drawWaterField(w, h);
 
       // Float themes: soft contact shadow under the sphere (light-field lift).
       if (state.theme.float) {
@@ -3708,10 +3994,16 @@
 
       drawEndFxOverlay(now);
       ctx.restore();
+
+      // Screen space, after the shake transform is released — otherwise
+      // the waterline shudders loose from the horizon on a detonation.
+      if (state.theme.waterScene) drawWaterPass(w, h);
     }
 
     function frameNeedsPaint(now) {
       if (state.ambientSpin && !state.reduceMotion) return true;
+      // Ripple, tide and caustics are all time-driven; keep the loop alive.
+      if (state.theme && state.theme.waterScene && !state.reduceMotion) return true;
       // Earth/Moon magma core animates (boil + motes); keep the loop alive.
       if (state.theme && state.theme.magmaCore && !state.reduceMotion) return true;
       if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
@@ -4006,6 +4298,9 @@
       if (document.visibilityState === "hidden") persistNow();
     });
     resize();
+
+    state.waterLevel = readWaterLevel();
+    bindWaterLevel();
 
     // Deep-link theme: ?theme=earth|moon|light|…
     try {
