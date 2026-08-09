@@ -85,6 +85,20 @@
   width: var(--tile-w-dock);
   height: var(--tile-h-dock);
   pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.28s ease;
+}
+/* While the player is spinning / pinching the sphere, the dock gets out of the way */
+.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-dock {
+  opacity: 0;
+}
+.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hb-hex.is-dock {
+  pointer-events: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hex-bloom-dock {
+    transition: opacity 0.12s ease;
+  }
 }
 
 /* ---- Hex tile (clex language) ---- */

@@ -1122,6 +1122,7 @@
       if (state.phase !== "closed") return;
       clearTimeout(phaseTimer);
       lastFocus = document.activeElement;
+      root.dataset.sphereBusy = "false";
 
       hub.hidden = false;
       hub.dataset.open = "true";
@@ -1275,16 +1276,116 @@
       });
     });
 
+    // ---- Dock fades while the sphere is spun / pinched ----
+    // Dig/flag taps stay put; only real orbit (past threshold) or multi-touch hides it.
+    // Menu open always keeps the dock. Restores shortly after the pointer ends.
+    function wireSphereBusyFade() {
+      const canvas = document.getElementById("gameCanvas");
+      if (!canvas) return;
+
+      let down = false;
+      let busy = false;
+      let startX = 0;
+      let startY = 0;
+      let showTimer = null;
+      const MOVE_PX = 10;
+      const SHOW_DELAY = 240;
+
+      function applyBusyAttr() {
+        if (state.phase !== "closed") {
+          root.dataset.sphereBusy = "false";
+          return;
+        }
+        root.dataset.sphereBusy = busy ? "true" : "false";
+      }
+
+      function setBusy(next) {
+        next = !!next;
+        if (busy === next) {
+          applyBusyAttr();
+          return;
+        }
+        busy = next;
+        applyBusyAttr();
+      }
+
+      function clearShowTimer() {
+        if (showTimer) {
+          clearTimeout(showTimer);
+          showTimer = null;
+        }
+      }
+
+      function scheduleShow() {
+        clearShowTimer();
+        showTimer = setTimeout(() => {
+          showTimer = null;
+          down = false;
+          setBusy(false);
+        }, prefersReducedMotion() ? 0 : SHOW_DELAY);
+      }
+
+      function pointFrom(e) {
+        if (e.touches && e.touches.length) return e.touches[0];
+        if (e.changedTouches && e.changedTouches.length)
+          return e.changedTouches[0];
+        return e;
+      }
+
+      function onDown(e) {
+        if (state.phase !== "closed") return;
+        clearShowTimer();
+        down = true;
+        if (e.touches && e.touches.length >= 2) {
+          setBusy(true);
+          return;
+        }
+        const t = pointFrom(e);
+        if (!t) return;
+        startX = t.clientX;
+        startY = t.clientY;
+      }
+
+      function onMove(e) {
+        if (!down || state.phase !== "closed") return;
+        if (e.touches && e.touches.length >= 2) {
+          setBusy(true);
+          return;
+        }
+        if (busy) return;
+        const t = pointFrom(e);
+        if (!t) return;
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+        if (dx * dx + dy * dy >= MOVE_PX * MOVE_PX) setBusy(true);
+      }
+
+      function onUp() {
+        if (!down && !busy) return;
+        down = false;
+        if (busy) scheduleShow();
+      }
+
+      canvas.addEventListener("pointerdown", onDown, { passive: true });
+      canvas.addEventListener("pointermove", onMove, { passive: true });
+      window.addEventListener("pointerup", onUp, { passive: true });
+      window.addEventListener("pointercancel", onUp, { passive: true });
+      canvas.addEventListener("touchstart", onDown, { passive: true });
+      canvas.addEventListener("touchmove", onMove, { passive: true });
+      window.addEventListener("touchend", onUp, { passive: true });
+    }
+
     // Boot
     setPhase("closed");
+    root.dataset.sphereBusy = "false";
     renderDockOnly();
     paintStats();
+    wireSphereBusyFade();
 
     return {
       open: expand,
       close: collapse,
-      toggle: () =>
-        state.phase === "closed" ? expand() : collapse(),
+      toggle: () => (state.phase === "closed" ? expand() : collapse()),
       isOpen: () => isOpenish(),
     };
   }
