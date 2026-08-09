@@ -1,9 +1,19 @@
 # Hexsweeper (iOS)
 
-Native iOS shell for **Hexsweeper 3D** — hex minesweeper on a closed Goldberg
-sphere. The game is a Canvas/vanilla-JS build from
-[lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps it
-in Capacitor and ships it to the App Store.
+Native iOS shell for **Hexsweeper** — hex minesweeper in three shapes. The games
+are Canvas/vanilla-JS builds from
+[lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps them
+in Capacitor and ships them to the App Store.
+
+The app opens on a picker offering the three choices that are actually
+structural. Everything else — theme, board size, count style — is a setting
+inside a game, not a peer of it, so it does not appear in the picker.
+
+| Mode | Board | Source |
+|---|---|---|
+| **Infinite** | Grows as you dig; Light/Dark keeps the run | `collection/theme-plate.html` |
+| **Bounded** | Fixed hex board, neumorph | `collection/skin-classic.html` |
+| **Sphere** | Closed Goldberg sphere, 3D | `sphere/` |
 
 Web version: <https://dr.eamer.dev/games/hexsweeper/sphere/>
 
@@ -38,15 +48,19 @@ App Store Connect app and abandoning this one.
 | `scripts/smoke.sh` | Payload integrity + cap sync gates |
 
 There is no bundler, no TypeScript, and no test suite here. `www/index.html` is
-a single self-contained file with fonts, CSS, and all JS already inlined; the
-only sibling asset is the help screen's history image. `capacitor.config` is
+the picker and each `www/games/*.html` is one self-contained file with fonts,
+CSS, and all JS already inlined; the only shared asset is the sphere help
+screen's history image under `www/assets/`. Navigation between them is plain
+links, and every game carries a top-left **‹ Games** pill — the WebView has no
+browser back, and the bottom-right corner is already spoken for by each game's
+own chrome. `capacitor.config` is
 `.js` because `@capacitor/cli` requires a full `typescript` install purely to
 read a `.ts` config, which is not worth a toolchain in a repo with no TS source.
 
-## Updating the game
+## Updating the games
 
-The payload is a pinned snapshot, not a live dependency. To pull in sphere
-changes, from a `hexsweeper` checkout:
+The payload is a pinned snapshot, not a live dependency. To pull in changes to
+any of the three games, or to the picker, from a `hexsweeper` checkout:
 
 ```bash
 python3 tools/export-collection.py --app     # writes build/app/

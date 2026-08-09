@@ -1,0 +1,15 @@
+# File Purpose: Allowlist false-positive gitleaks hits for the vendored payload.
+# Notes: www/ is generated from lukeslp/hexsweeper, which allowlists the same
+#   pattern for the same reason — localStorage save-lane and preference names
+#   like "hexsweeper-endless-plate-v1" read as generic API keys but are not
+#   credentials. Scoped to www/ so real secrets elsewhere still block a commit.
+title = "hexsweeper-app"
+
+[allowlist]
+description = "Browser storage keys inside the vendored game payload"
+regexes = [
+  '''hexsweeper-[a-z0-9-]+-v[0-9]+''',
+]
+paths = [
+  '''www/.*\.html''',
+]
