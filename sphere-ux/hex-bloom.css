@@ -207,6 +207,30 @@
   letter-spacing: 0.02em;
   max-width: none;
 }
+/* Hybrid primaries: small glyph + short word */
+.hb-hex.is-primary:not(.has-badge) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 2px 6px;
+}
+.hb-hex.is-primary:not(.has-badge) .hb-glyph {
+  width: 22px;
+  height: 22px;
+}
+.hb-hex.is-primary:not(.has-badge) .hb-icon {
+  width: 20px;
+  height: 20px;
+}
+.hb-hex.is-primary:not(.has-badge) .hb-label:not(.sr-visual-hide) {
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  max-width: 90%;
+}
 .hb-hex.is-active .hb-glyph,
 .hb-hex.is-chosen .hb-glyph {
   color: inherit;

@@ -595,15 +595,15 @@
   const PRESS_LIFT = 0.011;
   /**
    * Four permanent height tiers (radial, sphere-radius units).
-   * Flagged proudest → empty deepest. Hover adds HOVER_LIFT over the tier.
-   * Flags only stand proud in styles that extrude; flush/yellow keep them
-   * at shell height so those styles stay a flat mono field.
+   * Flagged sits at the same radial height as a hovered covered tile
+   * (TIER_COVERED + HOVER_LIFT) so flags match hover extrusion.
+   * Flush relief keeps everything at shell height.
    */
-  const TIER_FLAGGED = 0.01;
+  const TIER_FLAGGED = HOVER_LIFT; // was 0.01 — match hover pop
   const TIER_COVERED = 0;
   const TIER_NUMBERED = -0.018;
   const TIER_EMPTY = -0.034;
-  /** Count styles that recess clears — the only ones that pin flags high. */
+  /** Legacy count styles that used to imply extrusion (before independent relief). */
   const EXTRUDED_STYLES = new Set(["numerals", "rings", "borderless"]);
   /** @deprecated kept as alias of TIER_NUMBERED for any external callers */
   const REVEAL_INSET = TIER_NUMBERED;
@@ -748,9 +748,25 @@
         ),
       lastFrameAt: 0,
       countStyle: readStoredCountStyle(),
+      // Surface axes (sphere-ux experiment) — independent of count paint mode.
+      // relief: extruded | flush. seams: honeycomb edges on cleared faces.
+      relief: "extruded",
+      seams: true,
+      // Classic mono axes when pack is "classic"; packs lock a full theme.
+      appearancePack: "classic",
+      appearanceAxes: { field: "light", shell: "light", well: "dark" },
       invertDragX: storedInvert.x,
       invertDragY: storedInvert.y,
     };
+
+    // Seed relief/seams from legacy count styles that used to encode them.
+    (function seedSurfaceFromCountStyle() {
+      const cs = state.countStyle;
+      if (cs === "flush" || cs === "yellow") state.relief = "flush";
+      else state.relief = "extruded";
+      if (cs === "borderless") state.seams = false;
+      else state.seams = true;
+    })();
 
     const END_FX = {
       active: false,
@@ -2696,15 +2712,31 @@
       return i >= 0 ? i : 0;
     }
 
+    /** Whether permanent height tiers are active (independent of count paint). */
+    function reliefIsExtruded() {
+      if (state.relief === "flush") return false;
+      if (state.relief === "extruded") return true;
+      // Fallback for older sessions: legacy count-style encoding
+      return EXTRUDED_STYLES.has(state.countStyle);
+    }
+
+    /** Whether cleared faces keep honeycomb strokes. */
+    function seamsEnabled() {
+      if (state.seams === false) return false;
+      if (state.seams === true) return true;
+      return state.countStyle !== "borderless";
+    }
+
     /**
      * Permanent radial height for a cell (before hover/press).
-     * Flagged → covered → numbered clear → empty clear.
-     * Only extruded styles tier at all; flush/yellow stay at shell height.
+     * Flagged matches hover height of a covered tile when extruded.
+     * Flush relief keeps the whole board at shell height.
      */
     function tileHeight(cell, styleId) {
       if (!cell) return TIER_COVERED;
-      const extruded = EXTRUDED_STYLES.has(styleId);
+      const extruded = reliefIsExtruded();
       if (cell.flagged && !cell.revealed) {
+        // Same as covered + HOVER_LIFT (TIER_FLAGGED === HOVER_LIFT).
         return extruded ? TIER_FLAGGED : TIER_COVERED;
       }
       if (!cell.revealed) return TIER_COVERED;
@@ -2815,11 +2847,13 @@
     }
 
     /**
-     * Borderless strips strokes on cleared faces only.
-     * (Valley pass must not re-apply grooves when styleId === borderless.)
+     * Seamless mode strips strokes on cleared faces only.
+     * (Valley pass must not re-apply grooves when seamless.)
+     * Count style "borderless" still forces seamless for legacy saves.
      */
     function drawColorsForStyle(colors, styleId, cell) {
-      if (styleId !== "borderless") return colors;
+      const seamless = !seamsEnabled() || styleId === "borderless";
+      if (!seamless) return colors;
       if (!cell || !cell.revealed || cell.flagged) return colors;
       return {
         ...colors,
@@ -2860,11 +2894,137 @@
       const def = COUNT_STYLES.find((s) => s.id === id);
       if (!def) return;
       state.countStyle = def.id;
+      // Legacy count styles that also meant surface: keep in sync when cycled.
+      if (optsSet.syncSurface !== false) {
+        if (def.id === "flush" || def.id === "yellow") state.relief = "flush";
+        else if (def.id === "numerals" || def.id === "rings" || def.id === "borderless") {
+          if (state.relief !== "flush" || optsSet.forceRelief)
+            state.relief = "extruded";
+        }
+        if (def.id === "borderless") state.seams = false;
+        else if (optsSet.forceSeams !== false && def.id !== "borderless") {
+          // Don't clobber explicit seamless when only changing numerals/rings.
+        }
+      }
       try {
         localStorage.setItem(COUNT_STYLE_STORAGE_KEY, def.id);
       } catch (_) {}
       syncCountStyleChrome();
       if (optsSet.toast !== false) showCountStyleToast(def.name);
+      scheduleFrame();
+    }
+
+    function setRelief(mode) {
+      state.relief = mode === "flush" ? "flush" : "extruded";
+      scheduleFrame();
+    }
+
+    function setSeams(on) {
+      state.seams = !!on;
+      scheduleFrame();
+    }
+
+    /**
+     * Classic mono appearance from three axes (sphere-ux experiment).
+     * field = page/bg, shell = covered outer, well = dug inner.
+     * Independent well (not forced opposite of shell).
+     */
+    function buildAxesTheme(axes) {
+      const fieldLight = (axes && axes.field) !== "dark";
+      const shellLight = (axes && axes.shell) !== "dark";
+      const wellLight = (axes && axes.well) !== "dark";
+      const well = wellLight ? "#ffffff" : "#000000";
+      const covered = shellLight ? "#ffffff" : "#000000";
+      const bg = fieldLight ? "#ffffff" : "#000000";
+      return {
+        id: "classic-axes",
+        name: "Classic",
+        chrome: fieldLight ? "light" : "dark",
+        float: false,
+        pureCovered: true,
+        pureRevealed: true,
+        accent: fieldLight ? "#000000" : "#ffffff",
+        bg,
+        bgGlow: bg,
+        covered,
+        coveredHi: covered,
+        coveredEdge: shellLight ? "#000000" : "#ffffff",
+        coveredShadow: shellLight ? "#cccccc" : "#000000",
+        tierCovered: covered,
+        tierFlagged: "#ff0000",
+        tierNumbered: well,
+        tierEmpty: well,
+        revealed: well,
+        revealedEmpty: well,
+        revealedEdge: wellLight ? "#999999" : "#6a6a6a",
+        valleyGroove: wellLight ? "#777777" : "#8a8a8a",
+        valleyGrooveDeep: wellLight ? "#cccccc" : "#3a3a3a",
+        flagFill: "#ff0000",
+        flagIcon: "#ffffff",
+        flagEdge: "#ff0000",
+        mine: wellLight ? "#ffffff" : "#000000",
+        mineCore: wellLight ? "#000000" : "#ffffff",
+        mineEdge: wellLight ? "#cccccc" : "#000000",
+        mineBurst: wellLight ? "#000000" : "#ffffff",
+        pentagon: covered,
+        pentagonEdge: shellLight ? "#000000" : "#ffffff",
+        hoverRing: shellLight ? "#000000" : "#ffffff",
+        activeRing: shellLight ? "#222222" : "#dddddd",
+        backface: well,
+        backfaceEdge: wellLight ? "#cccccc" : "#333333",
+        core: well,
+        floatShadow: null,
+        text: wellLight
+          ? {
+              1: "#000000",
+              2: "#222222",
+              3: "#444444",
+              4: "#666666",
+              5: "#888888",
+              6: "#aaaaaa",
+            }
+          : {
+              1: "#ffffff",
+              2: "#eeeeee",
+              3: "#dddddd",
+              4: "#cccccc",
+              5: "#bbbbbb",
+              6: "#aaaaaa",
+            },
+        // Warning emphasis: yellow-leaning when wells are dark; gold when light wells
+        warning: "#e6b800",
+        label: wellLight ? "#000000" : "#ffffff",
+        labelStroke: wellLight ? "#ffffff" : "#000000",
+        revealFlash: wellLight ? "#000000" : "#ffffff",
+        revealGlow: wellLight ? "#666666" : "#888888",
+      };
+    }
+
+    function setAppearanceAxes(axes) {
+      state.appearancePack = "classic";
+      state.appearanceAxes = {
+        field: axes.field === "dark" ? "dark" : "light",
+        shell: axes.shell === "dark" ? "dark" : "light",
+        well: axes.well === "dark" ? "dark" : "light",
+      };
+      state.theme = buildAxesTheme(state.appearanceAxes);
+      syncChromeTheme();
+      scheduleFrame();
+    }
+
+    function setAppearancePack(packId) {
+      const pack = String(packId || "classic");
+      if (pack === "classic") {
+        state.appearancePack = "classic";
+        state.theme = buildAxesTheme(state.appearanceAxes);
+        syncChromeTheme();
+        scheduleFrame();
+        return;
+      }
+      const i = THEMES.findIndex((t) => t.id === pack);
+      if (i < 0) return;
+      state.appearancePack = pack;
+      applyTheme(i);
       scheduleFrame();
     }
 
@@ -3424,7 +3584,7 @@
           drawProj = lifted;
           markLift = h;
           if (h < -1e-6) {
-            if (styleId === "borderless") {
+            if (!seamsEnabled() || styleId === "borderless") {
               // Seamless valley floor — no per-hex grid (covered tiles keep edges).
               colors = {
                 ...colors,
@@ -3522,10 +3682,13 @@
             styleId,
             cell
           );
-          // Additive over the tile's tier, so a proud flag still lifts on hover.
-          const lift =
-            tileHeight(cell, styleId) +
-            (state.pressed === idx ? PRESS_LIFT : HOVER_LIFT);
+          // Hover lift over the tile's tier. Flagged already sits at hover
+          // height when extruded, so only press can add a little more.
+          const baseH = tileHeight(cell, styleId);
+          const addLift = cell.flagged && !cell.revealed
+            ? (state.pressed === idx ? PRESS_LIFT * 0.5 : 0)
+            : (state.pressed === idx ? PRESS_LIFT : HOVER_LIFT);
+          const lift = baseH + addLift;
           const raised = projectTile(tile, state.rotY, state.rotX, lift);
           const baseBoundary =
             raised.baseBoundary ||
@@ -3975,7 +4138,17 @@
       setSize: (id) => setDifficulty(id, true),
       setThemeIndex: (i) => applyTheme(i),
       getThemeIndex: () => themeIndex,
-      setCountStyle: (id) => setCountStyle(id),
+      setCountStyle: (id, opts) => setCountStyle(id, opts),
+      setRelief: (mode) => setRelief(mode),
+      setSeams: (on) => setSeams(on),
+      setAppearanceAxes: (axes) => setAppearanceAxes(axes || {}),
+      setAppearancePack: (id) => setAppearancePack(id),
+      getAppearance: () => ({
+        pack: state.appearancePack,
+        axes: Object.assign({}, state.appearanceAxes),
+        relief: state.relief,
+        seams: !!state.seams,
+      }),
       setFlagMode: (on) => {
         state.flagMode = !!on;
         if (flagToggle) {

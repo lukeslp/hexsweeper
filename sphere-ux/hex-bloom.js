@@ -19,12 +19,17 @@
     ["xlarge", "XL"],
   ];
 
+  // Count *paint* only — flush/seams are independent surface axes now.
   const COUNTS = [
     ["numerals", "123"],
     ["rings", "Rings"],
     ["yellow", "Mark"],
-    ["flush", "Flush"],
-    ["borderless", "Seam"],
+  ];
+
+  const CLASSIC_PACKS = [
+    { id: "earth", name: "Earth" },
+    { id: "moon", name: "Moon" },
+    { id: "glow", name: "Glow" },
   ];
 
   // 6 neighbour directions, clockwise from East (pointy-top axial)
@@ -381,13 +386,86 @@
       return t ? t.name : "Theme";
     }
     function currentStyle() {
-      const c = game.getState().countStyle;
+      const st = game.getState() || {};
+      const c = st.countStyle;
       const hit = COUNTS.find((x) => x[0] === c);
-      return hit ? hit[1] : "123";
+      const paint = hit ? hit[1] : "123";
+      const relief = st.relief === "flush" ? "Flat" : "3D";
+      return paint;
     }
     function shortLabel(s, n) {
       s = String(s || "");
       return s.length > n ? s.slice(0, n - 1) + "…" : s;
+    }
+
+    function getAxes() {
+      if (typeof game.getAppearance === "function") {
+        const a = game.getAppearance();
+        return (a && a.axes) || { field: "light", shell: "light", well: "dark" };
+      }
+      return { field: "light", shell: "light", well: "dark" };
+    }
+
+    function getPack() {
+      if (typeof game.getAppearance === "function") {
+        const a = game.getAppearance();
+        return (a && a.pack) || "classic";
+      }
+      return "classic";
+    }
+
+    function axisSwatch(axis, value) {
+      // Mini palette for Bg / Shell / Well flip tiles
+      const light = value !== "dark";
+      if (axis === "field") {
+        return {
+          id: "classic-field",
+          name: light ? "Bg light" : "Bg dark",
+          covered: light ? "#ffffff" : "#000000",
+          bg: light ? "#ffffff" : "#000000",
+          coveredEdge: light ? "#000000" : "#ffffff",
+          chrome: light ? "light" : "dark",
+          flagFill: "#ff0000",
+          label: light ? "#000000" : "#ffffff",
+        };
+      }
+      if (axis === "shell") {
+        return {
+          id: "classic-shell",
+          name: light ? "Shell light" : "Shell dark",
+          covered: light ? "#ffffff" : "#000000",
+          bg: "#888888",
+          coveredEdge: light ? "#000000" : "#ffffff",
+          chrome: "dark",
+          flagFill: "#ff0000",
+          label: light ? "#000000" : "#ffffff",
+        };
+      }
+      // well
+      return {
+        id: "classic-well",
+        name: light ? "Dug light" : "Dug dark",
+        covered: light ? "#ffffff" : "#000000",
+        bg: "#666666",
+        coveredEdge: light ? "#000000" : "#ffffff",
+        chrome: "dark",
+        flagFill: "#ff0000",
+        label: light ? "#000000" : "#ffffff",
+      };
+    }
+
+    function flipAxis(axis) {
+      const axes = getAxes();
+      const next = Object.assign({}, axes);
+      next[axis] = axes[axis] === "dark" ? "light" : "dark";
+      if (typeof game.setAppearanceAxes === "function") {
+        game.setAppearanceAxes(next);
+      }
+      announce(
+        (axis === "field" ? "Background" : axis === "shell" ? "Covered" : "Dug") +
+          " · " +
+          next[axis]
+      );
     }
 
     function styleIconName() {
@@ -403,7 +481,7 @@
           id: "mode",
           label: () => currentMode(),
           icon: () => (game.getState().flagMode ? "flag" : "dig"),
-          iconOnly: true,
+          iconOnly: false, // text + glyph (leaning text-readable)
           aria: () => "Mode: " + currentMode(),
           sub: () => [
             {
@@ -449,32 +527,85 @@
         },
         {
           id: "theme",
-          label: () => shortLabel(currentTheme(), 7),
+          label: () => {
+            const p = getPack();
+            if (p === "classic") return "Classic";
+            const hit = CLASSIC_PACKS.find((x) => x.id === p);
+            return hit ? hit.name : shortLabel(currentTheme(), 7);
+          },
           icon: "theme",
-          iconOnly: true,
-          aria: () => "Theme: " + currentTheme(),
-          sub: () =>
-            THEMES.map((t, i) => ({
-              id: "th-" + (t.id || i),
-              label: t.name,
-              // No generic icon — the hex face *is* the theme paint
-              themeSwatch: t,
-              iconOnly: true,
-              chosen: () => game.getThemeIndex() === i,
-              run: () => {
-                game.setThemeIndex(i);
-                announce("Theme · " + t.name);
+          iconOnly: false,
+          aria: () => "Look: " + (getPack() === "classic" ? "Classic" : getPack()),
+          sub: () => {
+            const axes = getAxes();
+            const pack = getPack();
+            const leaves = [
+              {
+                id: "ax-field",
+                label: "Bg",
+                themeSwatch: axisSwatch("field", axes.field),
+                iconOnly: true,
+                chosen: () => pack === "classic",
+                run: () => flipAxis("field"),
               },
-            })),
+              {
+                id: "ax-shell",
+                label: "Shell",
+                themeSwatch: axisSwatch("shell", axes.shell),
+                iconOnly: true,
+                chosen: () => pack === "classic",
+                run: () => flipAxis("shell"),
+              },
+              {
+                id: "ax-well",
+                label: "Dug",
+                themeSwatch: axisSwatch("well", axes.well),
+                iconOnly: true,
+                chosen: () => pack === "classic",
+                run: () => flipAxis("well"),
+              },
+            ];
+            CLASSIC_PACKS.forEach((pk) => {
+              const t = THEMES.find((x) => x.id === pk.id);
+              leaves.push({
+                id: "pack-" + pk.id,
+                label: pk.name,
+                themeSwatch: t || { id: pk.id, name: pk.name, covered: "#666", bg: "#000", coveredEdge: "#fff", flagFill: "#ff0000", label: "#fff", chrome: "dark" },
+                iconOnly: true,
+                chosen: () => pack === pk.id,
+                run: () => {
+                  if (typeof game.setAppearancePack === "function") {
+                    game.setAppearancePack(pk.id);
+                  } else {
+                    const i = THEMES.findIndex((x) => x.id === pk.id);
+                    if (i >= 0) game.setThemeIndex(i);
+                  }
+                  announce("Pack · " + pk.name);
+                },
+              });
+            });
+            return leaves;
+          },
         },
         {
           id: "style",
-          label: () => shortLabel(currentStyle(), 7),
+          label: () => "Style",
           icon: () => styleIconName(),
-          iconOnly: true,
-          aria: () => "Warning style: " + currentStyle(),
-          sub: () =>
-            COUNTS.map(([id, lab]) => ({
+          iconOnly: false,
+          aria: () => {
+            const st = game.getState() || {};
+            return (
+              "Style: " +
+              (st.countStyle || "numerals") +
+              ", " +
+              (st.relief === "flush" ? "flush" : "extruded") +
+              ", " +
+              (st.seams === false ? "seamless" : "seams")
+            );
+          },
+          sub: () => {
+            const st = game.getState() || {};
+            const leaves = COUNTS.map(([id, lab]) => ({
               id: "st-" + id,
               label: lab,
               icon:
@@ -483,19 +614,68 @@
                   : id === "numerals"
                     ? "numerals"
                     : "style",
-              labelSize: lab.length > 5 ? "xs" : "sm",
-              chosen: () => game.getState().countStyle === id,
-              run: () => {
-                game.setCountStyle(id);
-                announce("Style · " + lab);
+              labelSize: "sm",
+              chosen: () => {
+                const c = game.getState().countStyle;
+                // yellow/flush legacy may still be stored
+                if (id === "yellow") return c === "yellow";
+                return c === id;
               },
-            })),
+              run: () => {
+                game.setCountStyle(id, { syncSurface: false });
+                announce("Counts · " + lab);
+              },
+            }));
+            leaves.push(
+              {
+                id: "relief-ex",
+                label: "3D",
+                labelSize: "sm",
+                chosen: () => (game.getState().relief || "extruded") !== "flush",
+                run: () => {
+                  if (typeof game.setRelief === "function") game.setRelief("extruded");
+                  announce("Relief · extruded");
+                },
+              },
+              {
+                id: "relief-flush",
+                label: "Flush",
+                labelSize: "sm",
+                chosen: () => game.getState().relief === "flush",
+                run: () => {
+                  if (typeof game.setRelief === "function") game.setRelief("flush");
+                  announce("Relief · flush");
+                },
+              },
+              {
+                id: "seams-on",
+                label: "Seams",
+                labelSize: "sm",
+                chosen: () => game.getState().seams !== false,
+                run: () => {
+                  if (typeof game.setSeams === "function") game.setSeams(true);
+                  announce("Seams · on");
+                },
+              },
+              {
+                id: "seams-off",
+                label: "Seamless",
+                labelSize: "xs",
+                chosen: () => game.getState().seams === false,
+                run: () => {
+                  if (typeof game.setSeams === "function") game.setSeams(false);
+                  announce("Seams · off");
+                },
+              }
+            );
+            return leaves;
+          },
         },
         {
           id: "drag",
-          label: "Drag",
+          label: () => "Drag",
           icon: "drag",
-          iconOnly: true,
+          iconOnly: false,
           aria: () => "Drag invert",
           sub: () => [
             {
