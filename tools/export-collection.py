@@ -704,13 +704,33 @@ APP_SPLASH_HIDE = """<script>
 """
 
 
-def appify(markup: str, *, back: bool = True, label: str = "app page") -> str:
+def appify(markup: str, *, back: bool = True, lock_zoom: bool = True, label: str = "app page") -> str:
     """Apply the transforms every page in the native bundle needs.
 
     Outbound links must escape to Safari — a bare href replaces the game with a
     web page and Capacitor offers no way back. Then assert the page is sealed:
     nothing it loads may live off-device.
+
+    lock_zoom disables WebView double-tap/pinch zoom on the game pages. They
+    implement their own pinch and pan, so browser zoom only fights them — a
+    mis-hit between two cells would leave the board zoomed with no way back,
+    and there is no browser chrome to undo it. Applied to the app build only:
+    on the web the browser is the user agent and must stay zoomable. The
+    picker keeps zoom (it is a normal document, see its touch-action rule).
     """
+    if lock_zoom:
+        markup = re.sub(
+            r'(<meta name="viewport" content=")([^"]*)(">)',
+            lambda m: m.group(1)
+            + (
+                m.group(2)
+                if "user-scalable" in m.group(2)
+                else m.group(2).rstrip() + ", maximum-scale=1.0, user-scalable=no"
+            )
+            + m.group(3),
+            markup,
+            count=1,
+        )
     for host in ("https://lukesteuber.com", "https://datapoems.io"):
         markup = markup.replace(
             f'<a href="{host}" rel="noopener noreferrer">',
@@ -807,8 +827,10 @@ def export_app_launcher() -> str:
     )
     if "{{FONTS}}" in markup:
         raise SystemExit("export_app_launcher: font placeholder not replaced")
-    # The launcher is the top of the stack; it has nowhere to go back to.
-    return appify(markup, back=False, label="launcher")
+    # The launcher is the top of the stack; it has nowhere to go back to, and
+    # unlike the games it stays pinch-zoomable — it is text and targets, not a
+    # canvas with its own gesture handling.
+    return appify(markup, back=False, lock_zoom=False, label="launcher")
 
 
 # webDir layout: index.html is the picker, each mode lives under games/.
