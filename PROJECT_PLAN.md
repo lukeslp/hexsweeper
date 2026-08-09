@@ -2,7 +2,7 @@
 
 ## Objective
 
-Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, with a clear five-theme product surface (Light / Dark / Fire / Plague / Escape) and a retained skin lab as dormant prior art.
+Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, with a clear six-theme product surface (Light / Dark / Fire / Plague / Water / Escape) and a retained skin lab as dormant prior art.
 
 ## Architecture
 
@@ -48,7 +48,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Fire mobile/desktop: `cameraLock` — drag tilts at zoom 1; zoom in → clamped pan (zoom slack + no dig-focus steal); hold = flag
 - [x] Infinite Light/Dark distinct materials: porcelain chalk desk vs night-iron plate (desk field + bevel language)
 
-- [x] Public themes: Light / Dark / Fire / Plague / Escape
+- [x] Public themes: Light / Dark / Fire / Plague / Water / Escape
 - [x] Theme selector + `T` shortcut
 - [x] Biolume recast as Plague (flat, hyphae, spores)
 - [x] Fire magma pit (viewport-fit board, pit tilt, boiling center, contact shadows; no streak rain)
@@ -106,7 +106,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 
 - [x] Nested git repo for production folder (commit/push history)
 - [x] Self-hosted fonts committed (`fonts/` + OFL) so GitHub clones match live typography
-- [x] Docs / `skins.json` production surface aligned to five themes
+- [x] Docs / `skins.json` production surface aligned to six themes
 - [x] Collection one-pagers: `collection/theme-*.html` + `collection/skin-*.html` + Copy HTML desk + `tools/export-collection.py`
 - [x] Production `HEXSWEEPER_ONEPAGER` (strict single theme, or scoped `allowModes` for Light/Dark plate)
 - [x] Light/Dark collection cut is one file (`theme-plate.html`) with in-file toggle

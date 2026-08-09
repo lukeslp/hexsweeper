@@ -63,6 +63,18 @@ THEMES = [
         "ogImage": f"{OG}/plague-og.png",
     },
     {
+        "id": "water",
+        "title": "Water",
+        "ogTitle": "Tidal Hexagonal Minesweeper",
+        "ogDescription": "Old school Minesweeper on a hex raft floating half under the tide, with the submerged rows rippling below a live waterline.",
+        "tag": "Finite",
+        "blurb": "A raft of wet stone floating on open sea — the waterline cuts across the board, and the rows below it ripple and reflect.",
+        "filter": "water finite tide sea ocean raft reflection refraction caustics waterline submerged wet stone horizon",
+        "swatch": ("#04202f", "#12617d", "#7fe0e8", "#ffb454"),
+        "mode": "water",
+        "ogImage": f"{OG}/water-og.png",
+    },
+    {
         "id": "escape",
         "title": "Escape",
         "ogTitle": "Rift Chase Hexagonal Minesweeper",
