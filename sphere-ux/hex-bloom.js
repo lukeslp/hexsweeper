@@ -119,9 +119,12 @@
     }
 
     function centerXY() {
+      // Bloom sits 25% up from the bottom (not screen-center / halfway).
+      const h = stage.clientHeight || global.innerHeight;
+      const w = stage.clientWidth || global.innerWidth;
       return {
-        cx: stage.clientWidth / 2 || global.innerWidth / 2,
-        cy: stage.clientHeight / 2 || global.innerHeight / 2,
+        cx: w / 2,
+        cy: h * 0.75,
       };
     }
 
@@ -644,13 +647,15 @@
       const { cx, cy } = centerXY();
       const cats = categories();
 
-      // Center core at viewport middle — × closes while open
+      // Center core at bloom anchor (25% up from bottom) — × closes while open
       const center = makeHex({
         cls: "is-center",
         label: state.phase === "open" ? "×" : "",
         ariaLabel: state.phase === "open" ? "Close menu" : "Game menu",
       });
       center.id = "hex-bloom-core";
+      center.style.left = cx + "px";
+      center.style.top = cy + "px";
       center.setAttribute(
         "aria-hidden",
         state.phase === "open" ? "false" : "true"
