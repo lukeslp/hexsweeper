@@ -3,9 +3,9 @@
   File Purpose: Experimental Hexsweeper on a closed hex sphere (Canvas projection).
   Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
   Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
-  Chrome: BR pill cluster — Reset · Customize · Help. Customize opens a panel with
-  ‹ › steppers for Board · Theme · Counts · Tap action; the shipped size/theme/nest/
-  flag buttons stay hidden in the DOM so sphere.js wiring is untouched.
+  Chrome: the center hex-bloom menu from sphere-ux. Tap off-sphere or press C to
+  open its seven-cell flower; the shipped controls stay hidden in the DOM so
+  sphere.js wiring is untouched.
   Notes: Starts zoomed out. Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
@@ -31,7 +31,8 @@
 <meta property="og:image:height" content="630">
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
-<link rel="stylesheet" href="dev-chrome.css?v=20260807q">
+<link rel="stylesheet" href="dev-chrome.css?v=20260810z11">
+<link rel="stylesheet" href="hex-bloom.css?v=20260810z11">
 <style>
 /* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
 :root,
@@ -524,8 +525,9 @@ body.help-open { overflow: hidden; }
 <div class="canvas-container">
   <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
 </div>
+<button type="button" id="open-menu-a11y" class="sr-only" aria-controls="hex-bloom-stage">Open game menu</button>
 
-<div class="hud-stats" aria-live="polite">
+<div class="sr-only" aria-live="polite">
   <span><span class="stat-item" id="stats-mines">00</span> left</span>
   <span><span class="stat-item" id="stats-time">000</span>s</span>
 </div>
@@ -613,9 +615,9 @@ body.help-open { overflow: hidden; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Bottom bar: reset, board size (XS–XL), theme (Earth &amp; Moon daymaps, Glow with luminous dig centers), count style. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+      <p>Tap outside the sphere to open the center menu: reset, undo, flag mode, board size, light or dark, warning style, and drag inversion. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
     </div>
-    <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
+    <p class="help-keys"><kbd>C</kbd> menu · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
       <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic square-grid Minesweeper screenshot">
         <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper (square grid)" width="44" height="33" loading="lazy">
@@ -623,6 +625,11 @@ body.help-open { overflow: hidden; }
       <p class="help-history-cap">
         Riding on the original — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
       </p>
+    </div>
+    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
+      <span class="help-packs-cap">Controls</span>
+      <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
+      <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>
     <p class="help-more">Also <a href="../">flat Hexsweeper</a> · <a href="../?mode=fire">Fire</a> · <a href="../?mode=plague">Plague</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
@@ -639,11 +646,12 @@ body.help-open { overflow: hidden; }
   <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
-<script src="hexasphere.js?v=20260807q"></script>
-<script src="sphere.js?v=20260807q"></script>
-<script src="dev-chrome.js?v=20260807q"></script>
+<script src="hexasphere.js?v=20260810z11"></script>
+<script src="sphere.js?v=20260810z11"></script>
+<script src="hex-bloom.js?v=20260810z11"></script>
 <script>
-initDevChrome(SphereSweeper.boot({ canvasId: "gameCanvas" }));
+const sphereMenu = initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));
+document.getElementById("open-menu-a11y")?.addEventListener("click", () => sphereMenu?.open());
 (function () {
   const lb = document.getElementById("history-lightbox");
   const openBtn = document.getElementById("help-history-btn");

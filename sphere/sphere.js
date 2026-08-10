@@ -585,6 +585,7 @@
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
+  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v2";
   const RUN_STORAGE_KEY_LEGACY = "hexsweeper-sphere-run-v1";
@@ -705,8 +706,32 @@
       return opts.difficulty || "medium";
     }
 
+    function readStoredInvert() {
+      try {
+        const raw = localStorage.getItem(INVERT_STORAGE_KEY);
+        if (!raw) return { x: false, y: false };
+        const data = JSON.parse(raw);
+        return { x: !!data.x, y: !!data.y };
+      } catch (_) {
+        return { x: false, y: false };
+      }
+    }
+
+    function persistInvert() {
+      try {
+        localStorage.setItem(
+          INVERT_STORAGE_KEY,
+          JSON.stringify({ x: !!state.invertDragX, y: !!state.invertDragY })
+        );
+      } catch (_) {}
+    }
+
     let themeIndex = THEMES.findIndex((t) => t.id === readStoredThemeId());
     if (themeIndex < 0) themeIndex = 0;
+    const storedInvert = readStoredInvert();
+    const storedCountStyle = readStoredCountStyle();
+    const storedTheme = THEMES[themeIndex];
+    const storedDark = (storedTheme && storedTheme.chrome) === "dark";
 
     const state = {
       canvas,
@@ -747,7 +772,17 @@
       camShake: 0,
       ambientSpin: !effectsReduced(),
       lastFrameAt: 0,
-      countStyle: readStoredCountStyle(),
+      countStyle: storedCountStyle,
+      relief:
+        storedCountStyle === "flush" || storedCountStyle === "yellow"
+          ? "flush"
+          : "extruded",
+      seams: storedCountStyle !== "borderless",
+      appearanceAxes: storedDark
+        ? { field: "dark", shell: "dark", well: "light" }
+        : { field: "light", shell: "light", well: "dark" },
+      invertDragX: storedInvert.x,
+      invertDragY: storedInvert.y,
     };
 
     const END_FX = {
@@ -1076,6 +1111,12 @@
       themeIndex = ((index % THEMES.length) + THEMES.length) % THEMES.length;
       const def = currentThemeDef();
       state.theme = themePalette(def);
+      if (def.id === "light" || def.id === "dark") {
+        const dark = def.id === "dark";
+        state.appearanceAxes = dark
+          ? { field: "dark", shell: "dark", well: "light" }
+          : { field: "light", shell: "light", well: "dark" };
+      }
       // Clear per-tile globe cache when leaving/entering a map theme.
       if (state.tiles) {
         for (let i = 0; i < state.tiles.length; i++) {
@@ -1167,6 +1208,68 @@
 
     let releaseFocusTrap = null;
     let markWelcomeSeen = false;
+
+    let syncHelpControls = null;
+
+    function bindHelpControls() {
+      const row = document.getElementById("help-controls");
+      if (!row) return;
+      const invBtn = row.querySelector('[data-ctl="invert"]');
+      const fxBtn = row.querySelector('[data-ctl="effects"]');
+      const inversions = [
+        [false, false, "Invert off"],
+        [true, false, "Invert X"],
+        [false, true, "Invert Y"],
+        [true, true, "Invert X+Y"],
+      ];
+      const effects = {
+        auto: "Effects auto",
+        full: "Effects full",
+        reduced: "Effects reduced",
+      };
+      const inversionIndex = () =>
+        inversions.findIndex(
+          ([x, y]) => x === !!state.invertDragX && y === !!state.invertDragY
+        );
+      const effectsMode = () => {
+        try {
+          return localStorage.getItem(EFFECTS_KEY) || "auto";
+        } catch (_) {
+          return "auto";
+        }
+      };
+      syncHelpControls = () => {
+        if (invBtn) {
+          invBtn.textContent = inversions[Math.max(0, inversionIndex())][2];
+        }
+        if (fxBtn) fxBtn.textContent = effects[effectsMode()] || effects.auto;
+      };
+      if (invBtn) {
+        invBtn.addEventListener("click", () => {
+          const [x, y] =
+            inversions[(Math.max(0, inversionIndex()) + 1) % inversions.length];
+          state.invertDragX = x;
+          state.invertDragY = y;
+          persistInvert();
+          syncHelpControls();
+        });
+      }
+      if (fxBtn) {
+        fxBtn.addEventListener("click", () => {
+          const order = ["auto", "full", "reduced"];
+          const next = order[(order.indexOf(effectsMode()) + 1) % order.length];
+          try {
+            localStorage.setItem(EFFECTS_KEY, next);
+          } catch (_) {}
+          state.reduceMotion = effectsReduced();
+          state.ambientSpin = !state.reduceMotion;
+          applyEffectsAttribute();
+          syncHelpControls();
+          scheduleFrame();
+        });
+      }
+      syncHelpControls();
+    }
 
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
@@ -2667,9 +2770,17 @@
      * Flagged → covered → numbered clear → empty clear.
      * Only extruded styles tier at all; flush/yellow stay at shell height.
      */
+    function reliefIsExtruded() {
+      return state.relief !== "flush";
+    }
+
+    function seamsEnabled() {
+      return state.seams !== false;
+    }
+
     function tileHeight(cell, styleId) {
       if (!cell) return TIER_COVERED;
-      const extruded = EXTRUDED_STYLES.has(styleId);
+      const extruded = reliefIsExtruded();
       if (cell.flagged && !cell.revealed) {
         return extruded ? TIER_FLAGGED : TIER_COVERED;
       }
@@ -2785,7 +2896,7 @@
      * (Valley pass must not re-apply grooves when styleId === borderless.)
      */
     function drawColorsForStyle(colors, styleId, cell) {
-      if (styleId !== "borderless") return colors;
+      if (seamsEnabled() && styleId !== "borderless") return colors;
       if (!cell || !cell.revealed || cell.flagged) return colors;
       return {
         ...colors,
@@ -2826,12 +2937,34 @@
       const def = COUNT_STYLES.find((s) => s.id === id);
       if (!def) return;
       state.countStyle = def.id;
+      if (optsSet.syncSurface !== false) {
+        state.relief =
+          def.id === "flush" || def.id === "yellow" ? "flush" : "extruded";
+        state.seams = def.id !== "borderless";
+      }
       try {
         localStorage.setItem(COUNT_STYLE_STORAGE_KEY, def.id);
       } catch (_) {}
       syncCountStyleChrome();
       if (optsSet.toast !== false) showCountStyleToast(def.name);
       scheduleFrame();
+    }
+
+    function setRelief(mode) {
+      state.relief = mode === "flush" ? "flush" : "extruded";
+      scheduleFrame();
+    }
+
+    function setSeams(on) {
+      state.seams = !!on;
+      scheduleFrame();
+    }
+
+    function setAppearanceAxes(axes) {
+      const dark = axes && axes.field === "dark";
+      const wanted = dark ? "dark" : "light";
+      const index = THEMES.findIndex((theme) => theme.id === wanted);
+      if (index >= 0) applyTheme(index);
     }
 
     function cycleCountStyle() {
@@ -3477,8 +3610,10 @@
           clearTimeout(longPressTimer);
           state.pressed = -1;
           // Free tumble — keep continuous angles (do not wrap mid-drag).
-          state.targetRotY = state.dragStart.rotY + dx * 0.0105;
-          state.targetRotX = state.dragStart.rotX + dy * 0.0105;
+          const sx = state.invertDragX ? -1 : 1;
+          const sy = state.invertDragY ? -1 : 1;
+          state.targetRotY = state.dragStart.rotY + dx * 0.0105 * sx;
+          state.targetRotX = state.dragStart.rotX + dy * 0.0105 * sy;
           state.rotY = state.targetRotY;
           state.rotX = state.targetRotX;
           invalidateProjection();
@@ -3630,6 +3765,7 @@
     syncChromeTheme();
     syncSizeChrome();
     syncCountStyleChrome();
+    bindHelpControls();
     if (opts.theme) state.theme = Object.assign({}, state.theme, opts.theme);
 
     window.addEventListener("resize", resize);
@@ -3760,6 +3896,8 @@
 
     return {
       reset: () => requestReset({ force: true }),
+      undo: () => restoreUndo(),
+      canUndo: () => !!undoSnapshot,
       floodFrom,
       getState: () => state,
       pickTile,
@@ -3772,13 +3910,44 @@
       setSize: (id) => setDifficulty(id, true),
       setThemeIndex: (i) => applyTheme(i),
       getThemeIndex: () => themeIndex,
-      setCountStyle: (id) => setCountStyle(id),
+      pauseTimer: () => stopTimer(),
+      resumeTimer: () => {
+        if (!state.isGameOver && !state.isFirstClick) startTimer();
+      },
+      getSphereScreen: () => ({
+        cx: state.centerX,
+        cy: state.centerY,
+        r: state.scale * 1.15,
+      }),
+      setCountStyle: (id, options) => setCountStyle(id, options),
+      setRelief: (mode) => setRelief(mode),
+      setSeams: (on) => setSeams(on),
+      setAppearanceAxes: (axes) => setAppearanceAxes(axes || {}),
+      getAppearance: () => ({
+        axes: Object.assign({}, state.appearanceAxes),
+        relief: state.relief,
+        seams: !!state.seams,
+      }),
       setFlagMode: (on) => {
         state.flagMode = !!on;
         if (flagToggle) {
           flagToggle.setAttribute("aria-pressed", state.flagMode ? "true" : "false");
           flagToggle.classList.toggle("active", state.flagMode);
         }
+      },
+      getInvertDrag: () => ({
+        x: !!state.invertDragX,
+        y: !!state.invertDragY,
+      }),
+      setInvertDragX: (on) => {
+        state.invertDragX = !!on;
+        persistInvert();
+        if (syncHelpControls) syncHelpControls();
+      },
+      setInvertDragY: (on) => {
+        state.invertDragY = !!on;
+        persistInvert();
+        if (syncHelpControls) syncHelpControls();
       },
     };
   }
