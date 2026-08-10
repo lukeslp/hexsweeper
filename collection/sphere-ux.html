@@ -899,9 +899,19 @@ body[data-sphere-chrome="dark"] .cz-dot {
   --fold-ms: 340ms;
 }
 .hex-bloom[data-context-menu="true"] {
+  --border-w: 1px;
+  --hb-fill: var(--hb-paper);
+  --hb-fill-hover: var(--hb-paper);
+  --hb-stroke: var(--hb-ink);
   --fold: 88deg;
   --fold-scale: 0.68;
   --fold-ms: 140ms;
+}
+.hex-bloom[data-context-menu="true"] .hb-hex { filter: none; }
+.hex-bloom[data-context-menu="true"] .hb-hex:hover::before,
+.hex-bloom[data-context-menu="true"] .hb-hex:focus-visible::before {
+  inset: var(--border-w);
+  background: var(--hb-paper);
 }
 /* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
    user"). A symmetric bowl viewed dead-on from its own axis shows almost no
@@ -938,6 +948,9 @@ body[data-sphere-chrome="dark"] .cz-dot {
       rgba(0, 0, 0, 0.26)
     )
     drop-shadow(0 0 2px var(--hb-paper));
+}
+.hex-bloom[data-context-menu="true"] .hb-hex.shown {
+  filter: none;
 }
 .hb-hex.is-center-close .hb-label {
   font-size: 19px;
@@ -8810,19 +8823,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const disk =
         typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
       if (!disk || !disk.r) return;
+      const stageWidth = stage.clientWidth || global.innerWidth;
+      const narrowContext = DOCK_CONTEXT && stageWidth <= 520;
       const viewportCap = DOCK_CONTEXT
         ? Math.min(
-            ((stage.clientWidth || global.innerWidth) - 28) / 5.21,
+            (stageWidth - 28) / 5.21,
             ((stage.clientHeight || global.innerHeight) - 28) / 5
           )
         : 90;
       const hex = Math.max(
-        DOCK_CONTEXT ? 25 : 30,
+        DOCK_CONTEXT ? (narrowContext ? 36 : 25) : 30,
         Math.min(
-          DOCK_CONTEXT ? 66 : 90,
+          DOCK_CONTEXT ? (narrowContext ? 52 : 66) : 90,
           viewportCap,
           ((disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX) *
-            (DOCK_CONTEXT ? 0.72 : 1)
+            (DOCK_CONTEXT ? (narrowContext ? 0.94 : 0.72) : 1)
         )
       );
       root.style.setProperty("--tile-h", (hex * 2).toFixed(1) + "px");

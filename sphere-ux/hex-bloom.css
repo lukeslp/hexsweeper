@@ -163,9 +163,19 @@
   --fold-ms: 340ms;
 }
 .hex-bloom[data-context-menu="true"] {
+  --border-w: 1px;
+  --hb-fill: var(--hb-paper);
+  --hb-fill-hover: var(--hb-paper);
+  --hb-stroke: var(--hb-ink);
   --fold: 88deg;
   --fold-scale: 0.68;
   --fold-ms: 140ms;
+}
+.hex-bloom[data-context-menu="true"] .hb-hex { filter: none; }
+.hex-bloom[data-context-menu="true"] .hb-hex:hover::before,
+.hex-bloom[data-context-menu="true"] .hb-hex:focus-visible::before {
+  inset: var(--border-w);
+  background: var(--hb-paper);
 }
 /* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
    user"). A symmetric bowl viewed dead-on from its own axis shows almost no
@@ -202,6 +212,9 @@
       rgba(0, 0, 0, 0.26)
     )
     drop-shadow(0 0 2px var(--hb-paper));
+}
+.hex-bloom[data-context-menu="true"] .hb-hex.shown {
+  filter: none;
 }
 .hb-hex.is-center-close .hb-label {
   font-size: 19px;

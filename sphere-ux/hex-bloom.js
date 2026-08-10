@@ -1511,19 +1511,21 @@
       const disk =
         typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
       if (!disk || !disk.r) return;
+      const stageWidth = stage.clientWidth || global.innerWidth;
+      const narrowContext = DOCK_CONTEXT && stageWidth <= 520;
       const viewportCap = DOCK_CONTEXT
         ? Math.min(
-            ((stage.clientWidth || global.innerWidth) - 28) / 5.21,
+            (stageWidth - 28) / 5.21,
             ((stage.clientHeight || global.innerHeight) - 28) / 5
           )
         : 90;
       const hex = Math.max(
-        DOCK_CONTEXT ? 25 : 30,
+        DOCK_CONTEXT ? (narrowContext ? 36 : 25) : 30,
         Math.min(
-          DOCK_CONTEXT ? 66 : 90,
+          DOCK_CONTEXT ? (narrowContext ? 52 : 66) : 90,
           viewportCap,
           ((disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX) *
-            (DOCK_CONTEXT ? 0.72 : 1)
+            (DOCK_CONTEXT ? (narrowContext ? 0.94 : 0.72) : 1)
         )
       );
       root.style.setProperty("--tile-h", (hex * 2).toFixed(1) + "px");
