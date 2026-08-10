@@ -75,8 +75,8 @@
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  const DOME_TILT = 24; // deg at ring-1 — leaning toward the viewer
-  const DOME_LIFT = 72; // px translateZ at the rim
+  const DOME_TILT = 28; // deg at ring-1 — leaning toward the viewer
+  const DOME_LIFT = 116; // px translateZ at the rim
 
   /**
    * Bowl, not bulge (Luke, 2026-08-10: "dome the other direction, larger").

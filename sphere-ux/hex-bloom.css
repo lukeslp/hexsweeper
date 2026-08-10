@@ -161,11 +161,21 @@
     --tile-h: 94px;
   }
 }
-/* The stage's 50% 100% perspective origin is a bottom-dock relic — it shears
-   a center flower sideways (the "fix perspective" screenshot). The flower's
-   vanishing point is its own center. */
+/* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
+   user"). A symmetric bowl viewed dead-on from its own axis shows almost no
+   parallax — the old lopsided origin was accidentally the viewing angle.
+   So: centered origin, but a SHORT perspective (stronger z-scaling), a
+   deliberate slight off-axis tilt for constant parallax, and z-graded
+   shadows so the forward-riding rim visibly floats off the page. */
 .hex-bloom[data-dock-mode="center"] .hex-bloom-stage {
-  perspective-origin: 50% 50%;
+  perspective: 700px;
+  perspective-origin: 50% 44%;
+  transform: rotateX(7deg);
+}
+.hex-bloom[data-dock-mode="center"] .hb-hex.shown {
+  filter:
+    drop-shadow(0 calc(var(--dz, 0px) * 0.16) calc(var(--dz, 0px) * 0.3) rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 3px var(--hb-paper));
 }
 .hb-hex.is-center-close .hb-label {
   font-size: 19px;
