@@ -327,7 +327,12 @@
       hub.hidden = true;
       hub.setAttribute("aria-live", "polite");
       hub.innerHTML =
+        '<svg class="hub-ico" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<circle cx="11" cy="14" r="6.5" fill="currentColor"/>' +
+        '<path d="M15.3 9.7l2.7-2.7M16.6 4.9l1.7 1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>' +
         '<span id="hex-bloom-hub-mines">00</span>' +
+        '<svg class="hub-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">' +
+        '<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 1.6M9.5 3h5"/></svg>' +
         '<span id="hex-bloom-hub-time">0</span>';
       document.body.appendChild(hub);
     }
@@ -1386,6 +1391,8 @@
       statsTimer = setInterval(paintStats, 250);
       paintStats();
       setCanvasInert(true);
+      // Menu open = time out. The hub keeps painting the frozen value.
+      if (typeof game.pauseTimer === "function") game.pauseTimer();
 
       // Dock grows + lifts (CSS). Petals use *final* open geometry from CSS
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
@@ -1446,6 +1453,7 @@
         hub.dataset.open = "false";
         hub.hidden = true;
         setCanvasInert(false);
+        if (typeof game.resumeTimer === "function") game.resumeTimer();
         announce("Menu closed");
         if (dockBtn) dockBtn.focus({ preventScroll: true });
         else if (lastFocus && lastFocus.focus) {

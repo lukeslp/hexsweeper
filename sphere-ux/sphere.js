@@ -4489,6 +4489,12 @@
       getThemeIndex: () => themeIndex,
       /** Sphere's screen-space disk in CSS px — for chrome that needs to know
        *  what counts as "the board" vs background (center-bloom tap-to-open). */
+      /** Menu-open freeze: the bloom pauses play time. Resume only if a
+       *  run is actually underway (first dig starts the clock). */
+      pauseTimer: () => stopTimer(),
+      resumeTimer: () => {
+        if (!state.isGameOver && !state.isFirstClick) startTimer();
+      },
       getSphereScreen: () => ({
         cx: state.centerX,
         cy: state.centerY,
