@@ -369,6 +369,7 @@
   height: 28px;
   pointer-events: none;
   color: inherit;
+  transition: opacity 0.18s ease;
 }
 .hb-hex .hb-icon {
   display: block;
@@ -501,20 +502,20 @@
   color: #ff2200;
 }
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-glyph {
-  width: 38px;
-  height: 38px;
+  width: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
+  height: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
 }
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-icon {
-  width: 34px;
-  height: 34px;
+  width: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
+  height: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
 }
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-glyph {
-  width: 34px;
-  height: 34px;
+  width: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
+  height: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
 }
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-icon {
-  width: 30px;
-  height: 30px;
+  width: clamp(40px, calc(var(--tile-h) * 0.32), 56px);
+  height: clamp(40px, calc(var(--tile-h) * 0.32), 56px);
 }
 
 /* Theme primary = plain circle; tint from current theme when available */
@@ -736,7 +737,10 @@
 }
 
 .hex-bloom[data-branch] .hb-hex.is-primary:not(.is-active) {
-  opacity: 0.38;
+  opacity: 1;
+}
+.hex-bloom[data-branch] .hb-hex.is-primary:not(.is-active) .hb-glyph {
+  opacity: 0.42;
 }
 
 /* Sub / leaf ring */
@@ -912,6 +916,10 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom {
     --tile-w: 66px;
     --tile-h: 76px;
+  }
+  .hex-bloom[data-icon-menu="true"]:not([data-dock-mode="center"]) {
+    --tile-w: 76px;
+    --tile-h: 88px;
   }
   .hb-hex .hb-label { font-size: 10px; }
 }

@@ -1105,6 +1105,7 @@ body[data-sphere-chrome="dark"] .cz-dot {
   height: 28px;
   pointer-events: none;
   color: inherit;
+  transition: opacity 0.18s ease;
 }
 .hb-hex .hb-icon {
   display: block;
@@ -1237,20 +1238,20 @@ body[data-sphere-chrome="dark"] .cz-dot {
   color: #ff2200;
 }
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-glyph {
-  width: 38px;
-  height: 38px;
+  width: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
+  height: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
 }
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-icon {
-  width: 34px;
-  height: 34px;
+  width: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
+  height: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
 }
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-glyph {
-  width: 34px;
-  height: 34px;
+  width: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
+  height: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
 }
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-icon {
-  width: 30px;
-  height: 30px;
+  width: clamp(40px, calc(var(--tile-h) * 0.32), 56px);
+  height: clamp(40px, calc(var(--tile-h) * 0.32), 56px);
 }
 
 /* Theme primary = plain circle; tint from current theme when available */
@@ -1472,7 +1473,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 
 .hex-bloom[data-branch] .hb-hex.is-primary:not(.is-active) {
-  opacity: 0.38;
+  opacity: 1;
+}
+.hex-bloom[data-branch] .hb-hex.is-primary:not(.is-active) .hb-glyph {
+  opacity: 0.42;
 }
 
 /* Sub / leaf ring */
@@ -1648,6 +1652,10 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom {
     --tile-w: 66px;
     --tile-h: 76px;
+  }
+  .hex-bloom[data-icon-menu="true"]:not([data-dock-mode="center"]) {
+    --tile-w: 76px;
+    --tile-h: 88px;
   }
   .hb-hex .hb-label { font-size: 10px; }
 }
@@ -7479,7 +7487,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   })();
   const DOCK_CONTEXT = DOCK_MODE === "context";
   const FIXED_CENTER = DOCK_MODE === "center";
+  const DEFAULT_BLOOM = DOCK_MODE === "default";
   const DOCK_CENTER = DOCK_MODE === "center" || DOCK_CONTEXT;
+  const SHARED_MENU = FIXED_CENTER || DEFAULT_BLOOM;
   /**
    * ?dome=1 — the flower seated on a real sphere segment, viewed from
    * inside: center tile at the bottom of the bowl, ring tiles pulled to
@@ -7523,6 +7533,16 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     { q: 1, r: 0 }, // Flag — E
     { q: -1, r: 1 }, // Home — SW
     { q: 0, r: 1 }, // Settings parent — SE
+  ];
+  // Default / ?seed=bare keep the dock as their origin, but share the
+  // center flower's content hierarchy. Five primaries form a compact 2-over-3
+  // crown above Restart · Menu · Flag instead of imitating the center ring.
+  const DEFAULT_BLOOM_SLOTS = [
+    { q: -1, r: -1 }, // Light / Dark — lower left
+    { q: 0, r: -2 }, // Indicator/display parent — upper left
+    { q: 0, r: -1 }, // Undo — lower center
+    { q: 1, r: -1 }, // Home — lower right
+    { q: 1, r: -2 }, // Settings parent — upper right
   ];
 
   /**
@@ -7595,15 +7615,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M12 4v16"/><path d="m8 8 4-4 4 4"/><path d="m8 16 4 4 4-4"/>' +
       '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
     invertOff:
-      '<circle cx="12" cy="12" r="8" fill="#fff" stroke="#000"/>',
+      '<circle cx="12" cy="12" r="8" fill="#fff" stroke="#000"/>' +
+      '<path d="M12 4v16M4 12h16" stroke="#000" stroke-width="1.25"/>',
     invertX:
       '<circle cx="12" cy="12" r="8" fill="#fff" stroke="#000"/>' +
-      '<path d="M12 4a8 8 0 0 1 0 16Z" fill="#000" stroke="none"/>',
+      '<path d="M12 4a8 8 0 0 1 0 16Z" fill="#000" stroke="none"/>' +
+      '<path d="M12 4v16M4 12h16" stroke="#fff" stroke-width="2.4"/>' +
+      '<path d="M12 4v16M4 12h16" stroke="#000" stroke-width="1.1"/>',
     invertY:
       '<circle cx="12" cy="12" r="8" fill="#fff" stroke="#000"/>' +
-      '<path d="M4 12a8 8 0 0 0 16 0Z" fill="#000" stroke="none"/>',
+      '<path d="M4 12a8 8 0 0 0 16 0Z" fill="#000" stroke="none"/>' +
+      '<path d="M12 4v16M4 12h16" stroke="#fff" stroke-width="2.4"/>' +
+      '<path d="M12 4v16M4 12h16" stroke="#000" stroke-width="1.1"/>',
     invertBoth:
-      '<circle cx="12" cy="12" r="8" fill="#000" stroke="#000"/>',
+      '<circle cx="12" cy="12" r="8" fill="#000" stroke="#000"/>' +
+      '<path d="M12 4v16M4 12h16" stroke="#fff" stroke-width="1.25"/>',
     more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
     // Menu affordance — hollow hex (board language)
     menu:
@@ -7619,30 +7645,37 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     help:
       '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 1 1 3.9 2.6c-.9.5-1.6 1.1-1.6 2.2"/>' +
       '<path d="M12 17.2h.01"/>',
-    effects:
-      '<path d="m12 2 1.3 5.1L18 8.5l-4.7 1.4L12 15l-1.3-5.1L6 8.5l4.7-1.4L12 2Z"/>' +
-      '<path d="m18.2 14 .7 2.5 2.4.7-2.4.7-.7 2.6-.7-2.6-2.4-.7 2.4-.7.7-2.5Z"/>',
+    // Effects use one visual-intensity family instead of the old sparkles:
+    // broken ripples = adaptive, three rings = full, one ring = reduced.
+    effectsAuto:
+      '<circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/>' +
+      '<path d="M8.8 8.8a4.5 4.5 0 0 0 0 6.4M15.2 8.8a4.5 4.5 0 0 1 0 6.4"/>' +
+      '<path d="M6.2 6.2a8.2 8.2 0 0 0 0 11.6M17.8 6.2a8.2 8.2 0 0 1 0 11.6"/>',
+    effectsFull:
+      '<circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/>' +
+      '<circle cx="12" cy="12" r="4.3"/><circle cx="12" cy="12" r="8"/>',
+    effectsReduced:
+      '<circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/>' +
+      '<circle cx="12" cy="12" r="4.8"/>',
     sliders:
       '<path d="M4 6h5M13 6h7M4 12h10M18 12h2M4 18h2M10 18h10"/>' +
       '<path d="M9 3v6M14 9v6M10 15v6"/>',
     bang: '<path d="M12 3.5v12"/><path d="M12 20.5h.01"/>',
     countNumbers:
-      '<text x="12" y="15.5" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="8.2" font-weight="700">123</text>',
+      '<text x="12" y="15.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="650">123</text>',
     countHex:
-      '<path d="M12 3.5 19.4 7.8v8.4L12 20.5l-7.4-4.3V7.8L12 3.5Z"/>' +
-      '<path d="M12 8 15.5 10v4L12 16l-3.5-2v-4L12 8Z"/>',
+      '<path d="M12 3.8 19.2 8v8L12 20.2 4.8 16V8L12 3.8Z"/>' +
+      '<path d="M12 8.3 15.2 10.1v3.8L12 15.7l-3.2-1.8v-3.8L12 8.3Z" fill="currentColor" stroke="none"/>',
     seamsOn:
-      '<path d="m8 3.7 4 2.3v4.6l-4 2.3-4-2.3V6l4-2.3Z"/>' +
-      '<path d="m16 11.1 4 2.3V18l-4 2.3-4-2.3v-4.6l4-2.3Z"/>' +
-      '<path d="m16 3.7 4 2.3v4.6l-4 2.3-4-2.3V6l4-2.3Z"/>',
+      '<path d="m7.2 5.5 4.8 2.75v5.5L7.2 16.5l-4.8-2.75v-5.5L7.2 5.5Z"/>' +
+      '<path d="m16.8 5.5 4.8 2.75v5.5l-4.8 2.75-4.8-2.75v-5.5l4.8-2.75Z"/>',
     seamsOff:
-      '<path d="m12 3.5 7.4 4.3v8.4L12 20.5l-7.4-4.3V7.8L12 3.5Z"/>' +
-      '<path d="M4 20 20 4"/>',
+      '<path d="M7.2 5.5h9.6l4.8 2.75v5.5l-4.8 2.75H7.2l-4.8-2.75v-5.5L7.2 5.5Z"/>',
     depth3d:
-      '<path d="m12 3.5 7 4-7 4-7-4 7-4Z"/>' +
-      '<path d="m5 11.5 7 4 7-4M5 15.5l7 4 7-4"/>',
+      '<path d="m12 3.8 7.2 4.1L12 12 4.8 7.9 12 3.8Z"/>' +
+      '<path d="M4.8 7.9v7.8l7.2 4.5 7.2-4.5V7.9M12 12v8.2"/>',
     depthFlat:
-      '<path d="m12 7 8 4.5-8 4.5-8-4.5L12 7Z"/>',
+      '<path d="m12 6.9 7.2 4.1-7.2 4.1L4.8 11 12 6.9Z"/>',
     flipX:
       '<path d="M12 4v16"/><path d="M4 12h6"/><path d="M14 12h6"/><path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/>',
     flipY:
@@ -7780,7 +7813,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     const hubTime = document.getElementById("hex-bloom-hub-time");
     let contextAnchor = null;
     const hoverBloomEnabled =
-      FIXED_CENTER &&
+      SHARED_MENU &&
       matchMedia("(hover: hover) and (pointer: fine)").matches;
     const hoverTooltipsEnabled = matchMedia(
       "(hover: hover) and (pointer: fine)"
@@ -7812,7 +7845,16 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           gutter,
           Math.min(left, global.innerWidth - tip.width - gutter)
         );
-        let top = tile.top - tip.height - 8;
+        let anchorTop = tile.top;
+        if (el.classList.contains("is-active")) {
+          const shown = Array.from(stage.querySelectorAll(".hb-hex.shown"));
+          if (shown.length) {
+            anchorTop = Math.min(
+              ...shown.map((node) => node.getBoundingClientRect().top)
+            );
+          }
+        }
+        let top = anchorTop - tip.height - 8;
         if (top < gutter) top = tile.bottom + 8;
         tooltip.style.left = Math.round(left) + "px";
         tooltip.style.top = Math.round(top) + "px";
@@ -8145,6 +8187,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       return text.replace(/^Effects\s*/i, "Effects: ");
     }
 
+    function effectsIcon() {
+      const label = effectsLabel().toLowerCase();
+      if (label.includes("reduced")) return "effectsReduced";
+      if (label.includes("full")) return "effectsFull";
+      return "effectsAuto";
+    }
+
     function currentMode() {
       return game.getState().flagMode ? "Flag" : "Dig";
     }
@@ -8418,8 +8467,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     }
 
     function categories() {
-      // Cycle primaries — every tile flips state on click (no submenus).
-      // Restart / Help live on the always-visible three-tile dock.
+      // Legacy cycle primaries remain for contextual/archive variants. The
+      // current center and bottom blooms share the grouped menu assembled
+      // below; only their geometry and permanent dock actions differ.
       const all = [
         {
           id: "lightdark",
@@ -8466,8 +8516,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           cycle: cycleIndicators,
         },
       ];
-      if (FIXED_CENTER) {
-        return [
+      if (SHARED_MENU) {
+        const menu = [
           all[0],
           {
             id: "display",
@@ -8582,7 +8632,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
                 label: "Effects",
                 aria: () => "Effects. Activate to cycle auto, full, and reduced.",
                 tooltip: effectsLabel,
-                icon: "effects",
+                icon: effectsIcon,
                 iconOnly: true,
                 run: cycleEffects,
               },
@@ -8598,6 +8648,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
             ],
           },
         ];
+        // Flag remains a permanent dock action in the bottom-bloom variants;
+        // the centered flower has no dock, so it owns a flag tile in the ring.
+        return FIXED_CENTER
+          ? menu
+          : menu.filter((category) => category.id !== "flagmode");
       }
       if (DOCK_CONTEXT) {
         // The dock is hidden in both center variants. Home and Flag occupy
@@ -8769,6 +8824,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const dir =
         (FIXED_CENTER ? FIXED_CENTER_SLOTS[dirIndex] : null) ||
         (DOCK_CONTEXT ? CENTER_SLOTS[dirIndex] : null) ||
+        (DEFAULT_BLOOM ? DEFAULT_BLOOM_SLOTS[dirIndex] : null) ||
         PRIMARY_SLOTS[dirIndex] ||
         DIRECTIONS[dirIndex];
       const p = hexToPixel(dir.q, dir.r, HEX);
@@ -8788,7 +8844,19 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
                 { q: 0, r: 1 },
                 { q: -1, r: 1 },
               ]
-            : leafOffsets(dirIndex, items.length)
+          : leafOffsets(dirIndex, items.length)
+        : DEFAULT_BLOOM && cat.id === "display"
+          ? [
+              { q: -1, r: 0 },
+              { q: 0, r: -1 },
+              { q: 1, r: -1 },
+            ]
+          : DEFAULT_BLOOM && cat.id === "settings"
+            ? [
+                { q: 1, r: 0 },
+                { q: 1, r: -1 },
+                { q: 0, r: -1 },
+              ]
           : leafOffsets(dirIndex, items.length);
 
       items.forEach((item, j) => {
@@ -8947,7 +9015,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         }
         // Size keeps a visible letter badge; other primaries are icon-only
         if (el._labelEl) {
-          if (DOCK_CENTER) {
+          if (SHARED_MENU) {
             el._labelEl.textContent = lab;
             el._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
             el.classList.remove("has-badge");
@@ -9120,6 +9188,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
             ? FIXED_CENTER_SLOTS[i]
             : DOCK_CONTEXT
               ? CENTER_SLOTS[i]
+              : DEFAULT_BLOOM
+                ? DEFAULT_BLOOM_SLOTS[i]
               : PRIMARY_SLOTS[i]) || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
@@ -9127,7 +9197,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           typeof cat.icon === "function" ? cat.icon() : cat.icon;
         const swatch =
           typeof cat.swatch === "function" ? cat.swatch() : cat.swatch;
-        const showBadge = !!cat.badge && !DOCK_CENTER;
+        const showBadge = !!cat.badge && !SHARED_MENU;
         const flagModeActive =
           DOCK_CENTER && cat.id === "flagmode" && !!game.getState().flagMode;
         const el = makeHex({
@@ -9146,7 +9216,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           labelSize: cat.labelSize,
           ariaLabel: typeof cat.aria === "function" ? cat.aria() : lab,
           icon: swatch ? null : iconName,
-          iconOnly: DOCK_CENTER || swatch ? true : !!cat.iconOnly && !showBadge,
+          iconOnly: SHARED_MENU || swatch ? true : !!cat.iconOnly && !showBadge,
         });
         if (swatch) applyPrimarySwatch(el, swatch);
         if (showBadge && el._labelEl) {
@@ -9375,6 +9445,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     }
 
     if (SEED_BARE) root.dataset.seed = "bare";
+    if (DEFAULT_BLOOM) root.dataset.iconMenu = "true";
 
     // Pointer parallax while the flower is open (fine pointers only): the
     // stage tilts a few degrees toward the cursor, so the bowl's depth reads
