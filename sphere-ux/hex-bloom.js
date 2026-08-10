@@ -88,6 +88,34 @@
   ];
   const ACTIVE_SLOTS = DOCK_SPLIT ? SPLIT_SLOTS : PRIMARY_SLOTS;
 
+  /**
+   * iOS Safari double-tap smart-zoom, layer two. touch-action: manipulation
+   * on the tiles covers taps that land ON them — but the dock grows and lifts
+   * as it opens, so the second tap of a fast open/close often lands where the
+   * seed WAS: scrim or bare stage, where iOS ignores touch-action entirely.
+   * Suppress the zoom at the document and re-dispatch the tap's click so a
+   * fast second tap still activates what it hit.
+   */
+  let lastTapEnd = 0;
+  document.addEventListener(
+    "touchend",
+    (e) => {
+      const now = Date.now();
+      const fast = now - lastTapEnd < 350;
+      lastTapEnd = now;
+      if (!fast || !e.cancelable) return;
+      // A finger still down means pinch, not tap — leave it alone.
+      if (e.touches && e.touches.length) return;
+      e.preventDefault();
+      const t =
+        e.target && e.target.closest
+          ? e.target.closest("button, a, input, .hb-hex")
+          : null;
+      if (t && typeof t.click === "function") t.click();
+    },
+    { passive: false, capture: true }
+  );
+
   // Stroke icons (24×24) — board language, not tool metaphors
   const ICONS = {
     // Dig = open / cleared hex face (hollow honeycomb cell)
