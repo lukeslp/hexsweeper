@@ -169,13 +169,23 @@
    shadows so the forward-riding rim visibly floats off the page. */
 .hex-bloom[data-dock-mode="center"] .hex-bloom-stage {
   perspective: 700px;
-  perspective-origin: 50% 44%;
-  transform: rotateX(7deg);
+  perspective-origin: 50% 46%;
+  /* No baked tilt: pointer parallax owns the stage transform (JS), so the
+     flower sits perfectly aligned at rest and gains depth through motion.
+     Transform transition off — the rAF lerp is the damper. */
+  transition: opacity 0.12s ease, visibility 0.12s;
 }
 .hex-bloom[data-dock-mode="center"] .hb-hex.shown {
+  /* Subtle z-graded shadow; max() clamps the recessed center to zero so a
+     negative blur can never invalidate the whole filter. */
   filter:
-    drop-shadow(0 calc(var(--dz, 0px) * 0.16) calc(var(--dz, 0px) * 0.3) rgba(0, 0, 0, 0.3))
-    drop-shadow(0 0 3px var(--hb-paper));
+    drop-shadow(
+      0
+      calc(max(var(--dz, 0px), 0px) * 0.07 + var(--hov, 0px) * 0.25)
+      calc(max(var(--dz, 0px), 0px) * 0.13 + 2px)
+      rgba(0, 0, 0, 0.26)
+    )
+    drop-shadow(0 0 2px var(--hb-paper));
 }
 .hb-hex.is-center-close .hb-label {
   font-size: 19px;
@@ -704,13 +714,23 @@
 }
 .hb-hex.shown {
   opacity: 1;
-  /* --dome / --dz / --dscale: the ?dome=1 center-flower bulge (applyCenterDome).
-     Default flat — the bottom dock and undomed blooms are untouched. */
+  /* --dome / --dz / --dscale: the ?dome=1 bowl (applyCenterDome). --hov /
+     --domehov: hover/select lift, additive so it works flat or domed.
+     Defaults keep everything flat. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
-    translateZ(var(--dz, 0px))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--dome, 0deg))
+    translateZ(calc(var(--dz, 0px) + var(--hov, 0px)))
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, calc(var(--dome, 0deg) + var(--domehov, 0deg)))
     scale(var(--dscale, 1));
+}
+/* Tiles flip up a touch toward the player on hover / keyboard focus. */
+.hb-hex.is-primary.shown:hover,
+.hb-hex.is-primary.shown:focus-visible {
+  --hov: 14px;
+  --domehov: -6deg;
+}
+.hb-hex.is-primary.shown:active {
+  --hov: 7px;
 }
 
 

@@ -905,13 +905,23 @@ body[data-sphere-chrome="dark"] .cz-dot {
    shadows so the forward-riding rim visibly floats off the page. */
 .hex-bloom[data-dock-mode="center"] .hex-bloom-stage {
   perspective: 700px;
-  perspective-origin: 50% 44%;
-  transform: rotateX(7deg);
+  perspective-origin: 50% 46%;
+  /* No baked tilt: pointer parallax owns the stage transform (JS), so the
+     flower sits perfectly aligned at rest and gains depth through motion.
+     Transform transition off — the rAF lerp is the damper. */
+  transition: opacity 0.12s ease, visibility 0.12s;
 }
 .hex-bloom[data-dock-mode="center"] .hb-hex.shown {
+  /* Subtle z-graded shadow; max() clamps the recessed center to zero so a
+     negative blur can never invalidate the whole filter. */
   filter:
-    drop-shadow(0 calc(var(--dz, 0px) * 0.16) calc(var(--dz, 0px) * 0.3) rgba(0, 0, 0, 0.3))
-    drop-shadow(0 0 3px var(--hb-paper));
+    drop-shadow(
+      0
+      calc(max(var(--dz, 0px), 0px) * 0.07 + var(--hov, 0px) * 0.25)
+      calc(max(var(--dz, 0px), 0px) * 0.13 + 2px)
+      rgba(0, 0, 0, 0.26)
+    )
+    drop-shadow(0 0 2px var(--hb-paper));
 }
 .hb-hex.is-center-close .hb-label {
   font-size: 19px;
@@ -1440,13 +1450,23 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 .hb-hex.shown {
   opacity: 1;
-  /* --dome / --dz / --dscale: the ?dome=1 center-flower bulge (applyCenterDome).
-     Default flat — the bottom dock and undomed blooms are untouched. */
+  /* --dome / --dz / --dscale: the ?dome=1 bowl (applyCenterDome). --hov /
+     --domehov: hover/select lift, additive so it works flat or domed.
+     Defaults keep everything flat. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
-    translateZ(var(--dz, 0px))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--dome, 0deg))
+    translateZ(calc(var(--dz, 0px) + var(--hov, 0px)))
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, calc(var(--dome, 0deg) + var(--domehov, 0deg)))
     scale(var(--dscale, 1));
+}
+/* Tiles flip up a touch toward the player on hover / keyboard focus. */
+.hb-hex.is-primary.shown:hover,
+.hb-hex.is-primary.shown:focus-visible {
+  --hov: 14px;
+  --domehov: -6deg;
+}
+.hb-hex.is-primary.shown:active {
+  --hov: 7px;
 }
 
 
@@ -7329,6 +7349,14 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   function applyCenterDome(el, dx, dy, hex) {
     if (!DOME) return;
     const d = Math.hypot(dx, dy);
+    if (d < 1) {
+      // The close tile sits at the bottom of the bowl — genuinely recessed,
+      // not just left behind at zero.
+      el.style.setProperty("--dome", "0deg");
+      el.style.setProperty("--dz", "-22px");
+      el.style.setProperty("--dscale", "1");
+      return;
+    }
     const t = Math.min(1, d / (hex * 2.2 || 1));
     el.style.setProperty("--dome", (-DOME_TILT * t).toFixed(2) + "deg");
     el.style.setProperty("--dz", (DOME_LIFT * t * t).toFixed(1) + "px");
@@ -8709,6 +8737,44 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     }
 
     if (SEED_BARE) root.dataset.seed = "bare";
+
+    // Pointer parallax while the flower is open (fine pointers only): the
+    // stage tilts a few degrees toward the cursor, so the bowl's depth reads
+    // through motion instead of a baked-in viewing angle — and sits perfectly
+    // aligned at rest. rAF-lerped; the stage's own transform transition is
+    // disabled in center mode so this does not fight it.
+    if (DOCK_CENTER && matchMedia("(pointer: fine)").matches) {
+      let px = 0;
+      let py = 0;
+      let txp = 0;
+      let typ = 0;
+      let parRaf = 0;
+      const easeParallax = () => {
+        parRaf = 0;
+        px += (txp - px) * 0.14;
+        py += (typ - py) * 0.14;
+        stage.style.transform =
+          "rotateX(" + (py * -6).toFixed(2) + "deg) rotateY(" + (px * 6).toFixed(2) + "deg)";
+        if (Math.abs(txp - px) > 0.003 || Math.abs(typ - py) > 0.003) {
+          queueParallax();
+        }
+      };
+      const queueParallax = () => {
+        if (!parRaf) parRaf = requestAnimationFrame(easeParallax);
+      };
+      document.addEventListener(
+        "pointermove",
+        (e) => {
+          if (state.phase !== "open") return;
+          const w = stage.clientWidth || 1;
+          const h = stage.clientHeight || 1;
+          txp = (e.clientX / w) * 2 - 1;
+          typ = (e.clientY / h) * 2 - 1;
+          queueParallax();
+        },
+        { passive: true }
+      );
+    }
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
       // The background is the menu activator: a quick tap that lands off the

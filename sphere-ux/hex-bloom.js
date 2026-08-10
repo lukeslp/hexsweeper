@@ -87,6 +87,14 @@
   function applyCenterDome(el, dx, dy, hex) {
     if (!DOME) return;
     const d = Math.hypot(dx, dy);
+    if (d < 1) {
+      // The close tile sits at the bottom of the bowl — genuinely recessed,
+      // not just left behind at zero.
+      el.style.setProperty("--dome", "0deg");
+      el.style.setProperty("--dz", "-22px");
+      el.style.setProperty("--dscale", "1");
+      return;
+    }
     const t = Math.min(1, d / (hex * 2.2 || 1));
     el.style.setProperty("--dome", (-DOME_TILT * t).toFixed(2) + "deg");
     el.style.setProperty("--dz", (DOME_LIFT * t * t).toFixed(1) + "px");
@@ -1467,6 +1475,44 @@
     }
 
     if (SEED_BARE) root.dataset.seed = "bare";
+
+    // Pointer parallax while the flower is open (fine pointers only): the
+    // stage tilts a few degrees toward the cursor, so the bowl's depth reads
+    // through motion instead of a baked-in viewing angle — and sits perfectly
+    // aligned at rest. rAF-lerped; the stage's own transform transition is
+    // disabled in center mode so this does not fight it.
+    if (DOCK_CENTER && matchMedia("(pointer: fine)").matches) {
+      let px = 0;
+      let py = 0;
+      let txp = 0;
+      let typ = 0;
+      let parRaf = 0;
+      const easeParallax = () => {
+        parRaf = 0;
+        px += (txp - px) * 0.14;
+        py += (typ - py) * 0.14;
+        stage.style.transform =
+          "rotateX(" + (py * -6).toFixed(2) + "deg) rotateY(" + (px * 6).toFixed(2) + "deg)";
+        if (Math.abs(txp - px) > 0.003 || Math.abs(typ - py) > 0.003) {
+          queueParallax();
+        }
+      };
+      const queueParallax = () => {
+        if (!parRaf) parRaf = requestAnimationFrame(easeParallax);
+      };
+      document.addEventListener(
+        "pointermove",
+        (e) => {
+          if (state.phase !== "open") return;
+          const w = stage.clientWidth || 1;
+          const h = stage.clientHeight || 1;
+          txp = (e.clientX / w) * 2 - 1;
+          typ = (e.clientY / h) * 2 - 1;
+          queueParallax();
+        },
+        { passive: true }
+      );
+    }
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
       // The background is the menu activator: a quick tap that lands off the
