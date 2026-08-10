@@ -2445,7 +2445,6 @@ button, a, input[type="range"] { touch-action: manipulation; }
       <button type="button" class="help-pack" data-pack="classic" style="--sw:linear-gradient(90deg,#fff 50%,#111 50%)" aria-pressed="true">Classic</button>
       <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
       <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
-      <button type="button" class="help-pack" data-pack="water" style="--sw:#12617d" aria-pressed="false">Water</button>
     </div>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
       <span class="help-packs-cap">Controls</span>
@@ -3084,7 +3083,6 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     THEME_CARD,
     THEME_EARTH,
     THEME_MOON,
-    THEME_WATER,
   ];
   const DEFAULT_THEME = THEME_LIGHT;
 
@@ -3800,7 +3798,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Water.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon.`
         );
         // Keep stub empty — visible theme UI lives in settings; injecting SVG here
         // used to leak paint over the BR gear when the legacy tray failed to clip.
@@ -3922,7 +3920,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     let markWelcomeSeen = false;
 
     /**
-     * Surface row in the ? modal — Earth / Moon / Water as quiet curiosities
+     * Surface row in the ? modal — Earth / Moon as quiet curiosities
      * rather than dock tiles. Classic returns to the three-axis mono look, so
      * the row is a way in *and* a way back.
      */

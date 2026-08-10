@@ -48,6 +48,7 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 |---------------|------|--------|
 | `720f9ed` | Water theme: half-submerged globe, waterline slider, `?water=` | **Keep** — liked |
 | `bb010de` | Earth/Moon/Water as Surface swatch row in the ? modal; Glow deleted | **Keep** — "subtle fun ones" placement is right |
+| 2026-08-10 | Water removed from the `sphere-ux` product surface and theme cycle | **Shelved** — renderer preserved in `collection/theme-water.html` and the `wheel/` prototype; do not spend product time on the mode yet |
 | `128f04f` | No sub-bloom: Look flattened to 9 cycle primaries (`PRIMARY_SLOTS` seats / `LEAF_RING` fans split) | **Keep the split**; tile count is still wrong (see below) |
 | `128f04f` | Indicators = one rotation (123 → Mark → Rings); dedicated glyph (the `numerals` icon read as "1s") | **Keep** |
 | `17a1dd6` | Seat swap: Invert to the notch right of Dig, Indicators up by 3D | **Keep** |

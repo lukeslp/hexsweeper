@@ -356,7 +356,6 @@
     THEME_CARD,
     THEME_EARTH,
     THEME_MOON,
-    THEME_WATER,
   ];
   const DEFAULT_THEME = THEME_LIGHT;
 
@@ -1072,7 +1071,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Water.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon.`
         );
         // Keep stub empty — visible theme UI lives in settings; injecting SVG here
         // used to leak paint over the BR gear when the legacy tray failed to clip.
@@ -1194,7 +1193,7 @@
     let markWelcomeSeen = false;
 
     /**
-     * Surface row in the ? modal — Earth / Moon / Water as quiet curiosities
+     * Surface row in the ? modal — Earth / Moon as quiet curiosities
      * rather than dock tiles. Classic returns to the three-axis mono look, so
      * the row is a way in *and* a way back.
      */
