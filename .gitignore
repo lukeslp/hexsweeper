@@ -12,6 +12,10 @@
 !assets/social/
 !assets/social/*.png
 
+# Native app launcher mark; exported into the offline Capacitor picker.
+!tools/assets/
+!tools/assets/hexsweeper-logo.png
+
 # Sphere help history tile + globe daymaps
 !sphere/assets/
 !sphere/assets/**
