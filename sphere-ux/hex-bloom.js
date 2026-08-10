@@ -1783,20 +1783,23 @@
       dock.setAttribute("role", "toolbar");
       dock.setAttribute("aria-label", "Game chrome");
 
-      // Restart — left, quieter
+      // The bare seed makes the left shortcut Undo: it is useful during play
+      // without duplicating Reset, which remains in the opened flower.
+      // Other dock variants retain the established Restart shortcut.
       dockResetBtn = makeHex({
         cls: "is-dock is-dock-side is-dock-reset",
         label: "",
-        icon: "reset",
+        icon: SEED_BARE ? "undo" : "reset",
         iconOnly: true,
-        ariaLabel: "Restart game",
+        ariaLabel: SEED_BARE ? "Undo move" : "Restart game",
       });
-      dockResetBtn.title = "Restart";
+      dockResetBtn.title = SEED_BARE ? "Undo" : "Restart";
       dockResetBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         ignoreOutsideUntil = Date.now() + 250;
-        doReset();
+        if (SEED_BARE) doUndo();
+        else doReset();
       });
 
       // Menu — center, primary (opens bloom / closes when open)

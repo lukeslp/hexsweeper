@@ -73,6 +73,7 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | 2026-08-10 | Toggle glyphs are now state families: reversed positive/negative rings for day/night, opposing arrows with two binary markers for the four invert modes, and into-well versus solid plate for depth. All SVG strokes are optically heavier; the dock's font `×` became a centered SVG and open Reset/Close/Flag now share the bloom's icon box | **Current trial** |
 | 2026-08-10 | The flower is reduced to seven outcome-level controls: Reset center; Theme/Warning above; Undo/Flag across; Invert/Size below. Warning cycles four curated combinations (numbers with depth, flush seamless numbers, black-and-white with depth, yellow seamless); independent Seams and Depth controls and all sub-blooms are gone. | **Current** — one tap per player intent |
 | 2026-08-10 | `?dome=1` is rebuilt as a convex cap rather than the former concave bowl: Reset rides forward, the ring recedes and tilts to spherical normals, and a static oblique camera makes the shape legible before pointer motion and under reduced motion. | **Current trial** — unmistakably domed at rest |
+| 2026-08-10 | `?seed=bare` enlarges all three idle dock glyphs and promotes Undo to the left shortcut; Reset remains available after opening the flower. | **Current** — stronger idle affordances without redundant reset actions |
 
 ### What Luke is asking for (intent thread, in his words + readings)
 
