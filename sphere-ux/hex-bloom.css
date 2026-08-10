@@ -835,6 +835,27 @@ body[data-sphere-chrome="dark"] .hex-bloom-hub {
   transform: translateX(-50%) translateY(0);
 }
 
+.hex-bloom-tooltip {
+  position: fixed;
+  z-index: 90;
+  max-width: min(220px, calc(100vw - 16px));
+  padding: 5px 8px 6px;
+  border: 1px solid var(--hb-paper);
+  border-radius: 4px;
+  background: var(--hb-ink);
+  color: var(--hb-paper);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--hb-ink) 28%, transparent);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.hex-bloom-tooltip[hidden] {
+  display: none;
+}
+
 .hex-bloom-live {
   position: absolute !important;
   width: 1px !important;

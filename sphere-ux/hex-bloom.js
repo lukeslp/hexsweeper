@@ -406,6 +406,13 @@
     live.setAttribute("aria-live", "polite");
     root.appendChild(live);
 
+    const tooltip = document.createElement("div");
+    tooltip.id = "hex-bloom-tooltip";
+    tooltip.className = "hex-bloom-tooltip";
+    tooltip.setAttribute("role", "tooltip");
+    tooltip.hidden = true;
+    root.appendChild(tooltip);
+
     let hub = document.getElementById("hex-bloom-hub");
     if (!hub) {
       hub = document.createElement("div");
@@ -429,6 +436,47 @@
     const hoverBloomEnabled =
       FIXED_CENTER &&
       matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const hoverTooltipsEnabled = matchMedia(
+      "(hover: hover) and (pointer: fine)"
+    ).matches;
+    let tooltipTimer = null;
+    let tooltipTarget = null;
+
+    function hideTooltip() {
+      clearTimeout(tooltipTimer);
+      tooltipTimer = null;
+      tooltipTarget = null;
+      tooltip.hidden = true;
+    }
+
+    function showTooltip(el) {
+      if (!el || !el.isConnected || !isOpenish()) return;
+      const text = el.dataset.tooltip || "";
+      if (!text) return;
+      tooltipTarget = el;
+      tooltip.textContent = text;
+      tooltip.hidden = false;
+      requestAnimationFrame(() => {
+        if (tooltipTarget !== el || tooltip.hidden) return;
+        const tile = el.getBoundingClientRect();
+        const tip = tooltip.getBoundingClientRect();
+        const gutter = 8;
+        let left = tile.left + tile.width / 2 - tip.width / 2;
+        left = Math.max(
+          gutter,
+          Math.min(left, global.innerWidth - tip.width - gutter)
+        );
+        let top = tile.top - tip.height - 8;
+        if (top < gutter) top = tile.bottom + 8;
+        tooltip.style.left = Math.round(left) + "px";
+        tooltip.style.top = Math.round(top) + "px";
+      });
+    }
+
+    function queueTooltip(el, immediate) {
+      clearTimeout(tooltipTimer);
+      tooltipTimer = setTimeout(() => showTooltip(el), immediate ? 0 : 280);
+    }
 
     // ---- Hex math (clex) ----
     function tileMetrics() {
@@ -632,11 +680,20 @@
         (50 - ux * 50).toFixed(1) + "% " + (50 - uy * 50).toFixed(1) + "%";
     }
 
-    function makeHex({ cls, label, ariaLabel, labelSize, icon, iconOnly }) {
+    function makeHex({
+      cls,
+      label,
+      ariaLabel,
+      labelSize,
+      icon,
+      iconOnly,
+      tooltip,
+    }) {
       const el = document.createElement("button");
       el.type = "button";
       el.className = "hb-hex " + (cls || "");
       el.setAttribute("aria-label", ariaLabel || label || "Option");
+      el.dataset.tooltip = tooltip || label || "";
 
       if (icon) {
         const glyph = document.createElement("span");
@@ -723,6 +780,23 @@
       if (x) return "invertX";
       if (y) return "invertY";
       return "invertOff";
+    }
+
+    function invertLabel() {
+      const x = invertGet("x");
+      const y = invertGet("y");
+      if (x && y) return "Invert: X + Y";
+      if (x) return "Invert: X";
+      if (y) return "Invert: Y";
+      return "Invert: off";
+    }
+
+    function effectsLabel() {
+      const button = document.querySelector(
+        '#help-controls [data-ctl="effects"]'
+      );
+      const text = button ? button.textContent.trim() : "Effects";
+      return text.replace(/^Effects\s*/i, "Effects: ");
     }
 
     function currentMode() {
@@ -1066,6 +1140,10 @@
                   "Indicators: " +
                   (indicatorsAreHexes() ? "inner hex" : "numerals") +
                   ". Activate to toggle.",
+                tooltip: () =>
+                  indicatorsAreHexes()
+                    ? "Indicators: inner hex"
+                    : "Indicators: numerals",
                 icon: indicatorFormIcon,
                 iconOnly: true,
                 run: toggleIndicatorForm,
@@ -1075,6 +1153,7 @@
                 label: () => "Seams " + (seamsOn() ? "on" : "off"),
                 aria: () =>
                   "Seams " + (seamsOn() ? "on" : "off") + ". Activate to toggle.",
+                tooltip: () => "Seams: " + (seamsOn() ? "on" : "off"),
                 icon: seamsIcon,
                 iconOnly: true,
                 run: toggleSeams,
@@ -1086,6 +1165,7 @@
                   "Depth: " +
                   (depthIs3d() ? "3D" : "flush") +
                   ". Activate to toggle.",
+                tooltip: () => "Depth: " + (depthIs3d() ? "3D" : "flush"),
                 icon: depthIcon,
                 iconOnly: true,
                 run: toggleDepth,
@@ -1146,6 +1226,7 @@
                           : "off";
                   return "Invert " + mode + ". Activate to cycle.";
                 },
+                tooltip: invertLabel,
                 icon: invertIcon,
                 iconOnly: true,
                 run: cycleInvert,
@@ -1154,6 +1235,7 @@
                 id: "effects",
                 label: "Effects",
                 aria: () => "Effects. Activate to cycle auto, full, and reduced.",
+                tooltip: effectsLabel,
                 icon: "effects",
                 iconOnly: true,
                 run: cycleEffects,
@@ -1162,6 +1244,7 @@
                 id: "help",
                 label: "Help",
                 aria: () => "Open help",
+                tooltip: "Help",
                 icon: "help",
                 iconOnly: true,
                 run: doHelp,
@@ -1318,6 +1401,7 @@
     }
 
     function clearStage() {
+      hideTooltip();
       stage.querySelectorAll(".hb-hex").forEach((n) => n.remove());
       centerActionBtn = null;
     }
@@ -1373,6 +1457,11 @@
           typeof item.aria === "function"
             ? item.aria()
             : cat.id + ": " + itemLabel;
+        const itemTooltip = item.tooltip
+          ? typeof item.tooltip === "function"
+            ? item.tooltip()
+            : item.tooltip
+          : itemLabel;
         const el = makeHex({
           cls:
             "is-sub" +
@@ -1382,6 +1471,7 @@
           label: itemLabel,
           labelSize: item.labelSize,
           ariaLabel: itemAria,
+          tooltip: itemTooltip,
           icon: isSwatch ? null : itemIcon,
           iconOnly: isSwatch
             ? true
@@ -1426,11 +1516,18 @@
               typeof fresh.aria === "function"
                 ? fresh.aria()
                 : cat.id + ": " + freshLabel;
+            const freshTooltip = fresh.tooltip
+              ? typeof fresh.tooltip === "function"
+                ? fresh.tooltip()
+                : fresh.tooltip
+              : freshLabel;
             el.setAttribute("aria-label", freshAria);
+            el.dataset.tooltip = freshTooltip;
             if (el._labelEl) el._labelEl.textContent = freshLabel;
             const freshIcon =
               typeof fresh.icon === "function" ? fresh.icon() : fresh.icon;
             if (freshIcon) setHexIcon(el, freshIcon);
+            if (tooltipTarget === el && !tooltip.hidden) showTooltip(el);
           }
           refreshChosen(cat.id);
           refreshPrimaryLabels();
@@ -1478,6 +1575,7 @@
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const aria = typeof cat.aria === "function" ? cat.aria() : lab;
         el.setAttribute("aria-label", aria);
+        el.dataset.tooltip = lab;
         if (cat.icon) {
           const name =
             typeof cat.icon === "function" ? cat.icon() : cat.icon;
@@ -1518,6 +1616,7 @@
             el._labelEl.textContent = lab;
           }
         }
+        if (tooltipTarget === el && !tooltip.hidden) showTooltip(el);
       });
       // Dock menu is the close control while open
       if (dockBtn && state.phase === "open") {
@@ -1889,6 +1988,7 @@
       if (state.phase !== "open" && state.phase !== "rising") return;
       clearTimeout(phaseTimer);
       clearTimeout(hoverCloseTimer);
+      hideTooltip();
       state.active = null;
       delete root.dataset.branch;
 
@@ -2011,6 +2111,39 @@
         );
       }
     }
+
+    stage.addEventListener("pointerover", (e) => {
+      if (!hoverTooltipsEnabled) return;
+      const el = e.target.closest && e.target.closest(".hb-hex");
+      const from =
+        e.relatedTarget && e.relatedTarget.closest
+          ? e.relatedTarget.closest(".hb-hex")
+          : null;
+      if (!el || el === from) return;
+      queueTooltip(el, false);
+    });
+    stage.addEventListener("pointerout", (e) => {
+      if (!hoverTooltipsEnabled) return;
+      const el = e.target.closest && e.target.closest(".hb-hex");
+      const to =
+        e.relatedTarget && e.relatedTarget.closest
+          ? e.relatedTarget.closest(".hb-hex")
+          : null;
+      if (!el || el === to) return;
+      hideTooltip();
+    });
+    stage.addEventListener("focusin", (e) => {
+      const el = e.target.closest && e.target.closest(".hb-hex");
+      if (el && el.matches(":focus-visible")) queueTooltip(el, true);
+    });
+    stage.addEventListener("focusout", (e) => {
+      const el = e.target.closest && e.target.closest(".hb-hex");
+      const to =
+        e.relatedTarget && e.relatedTarget.closest
+          ? e.relatedTarget.closest(".hb-hex")
+          : null;
+      if (el && el !== to) hideTooltip();
+    });
 
     if (hoverBloomEnabled) {
       const hoverBranch = (node) => {
