@@ -75,8 +75,9 @@
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  const DOME_RADIUS_HEX = 3.4; // bowl sphere radius, in HEX units
-  const DOME_SHRINK = 0.03; // hair of air on the rim so chords never overlap
+  const DOME_RADIUS_HEX = 2.5; // bowl sphere radius, in HEX units — tighter
+  // = more curvature per tile (Luke: "more parallax") without changing tile size.
+  const DOME_SHRINK = 0.022; // hair of air on the rim so chords never overlap
 
   /**
    * Real spherical seating (Luke, 2026-08-10: "how are we fitting them so
@@ -93,23 +94,36 @@
     const R = hex * DOME_RADIUS_HEX;
     const s = Math.hypot(dx, dy);
     if (s < 1 || !R) {
-      return { x: dx, y: dy, dome: 0, dz: 0 };
+      return { x: dx, y: dy, domex: 0, domey: 0, dz: 0 };
     }
     const phi = Math.min(1.1, s / R);
     const k = (R * Math.sin(phi)) / s;
+    const deg = (phi * 180) / Math.PI;
     return {
       x: dx * k,
       y: dy * k,
-      dome: -(phi * 180) / Math.PI,
+      // Global-axis decomposition, not a per-tile custom axis (Luke: "better
+      // joining of the tiles"). The old rotate3d(ax,ay,0,dome) tilted each
+      // tile around ITS OWN radial axis by one angle — two ring neighbors
+      // 60deg apart shared no axis, so their shared edge twisted out of
+      // alignment. rotateX/rotateY use the SAME two global axes for every
+      // tile; neighbors that share a dy share domex, neighbors that share a
+      // dx share domey — that shared component is what keeps a common edge
+      // from twisting relative to its neighbor. Standard technique for
+      // CSS DOM-sphere galleries.
+      domex: -((dy / s) * deg),
+      domey: (dx / s) * deg,
       dz: R * (1 - Math.cos(phi)),
     };
   }
 
   function applyCenterDome(el, seat) {
     if (!DOME || !seat) return;
-    el.style.setProperty("--dome", seat.dome.toFixed(2) + "deg");
+    el.style.setProperty("--domex", seat.domex.toFixed(2) + "deg");
+    el.style.setProperty("--domey", seat.domey.toFixed(2) + "deg");
     el.style.setProperty("--dz", seat.dz.toFixed(1) + "px");
-    el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, Math.abs(seat.dome) / 30)).toFixed(4));
+    const mag = Math.hypot(seat.domex, seat.domey);
+    el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, mag / 30)).toFixed(4));
   }
 
   const DOCK_CENTER = (() => {
@@ -1514,10 +1528,10 @@
       let parRaf = 0;
       const easeParallax = () => {
         parRaf = 0;
-        px += (txp - px) * 0.14;
-        py += (typ - py) * 0.14;
+        px += (txp - px) * 0.22;
+        py += (typ - py) * 0.22;
         stage.style.transform =
-          "rotateX(" + (py * -6).toFixed(2) + "deg) rotateY(" + (px * 6).toFixed(2) + "deg)";
+          "rotateX(" + (py * -11).toFixed(2) + "deg) rotateY(" + (px * 11).toFixed(2) + "deg)";
         if (Math.abs(txp - px) > 0.003 || Math.abs(typ - py) > 0.003) {
           queueParallax();
         }

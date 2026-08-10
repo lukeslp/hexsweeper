@@ -1453,13 +1453,15 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 .hb-hex.shown {
   opacity: 1;
-  /* --dome / --dz / --dscale: the ?dome=1 bowl (applyCenterDome). --hov /
-     --domehov: hover/select lift, additive so it works flat or domed.
-     Defaults keep everything flat. */
+  /* --domex / --domey / --dz / --dscale: the ?dome=1 bowl (applyCenterDome),
+     as two GLOBAL-axis rotations rather than one per-tile custom-axis spin —
+     see the domeSeat comment for why that is what actually joins the tiles.
+     --hov: hover/select lift. Defaults keep everything flat. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
     translateZ(calc(var(--dz, 0px) + var(--hov, 0px)))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, calc(var(--dome, 0deg) + var(--domehov, 0deg)))
+    rotateX(var(--domex, 0deg))
+    rotateY(var(--domey, 0deg))
     scale(var(--dscale, 1));
 }
 /* Tiles flip up a touch toward the player on hover / keyboard focus.
@@ -1468,7 +1470,6 @@ body[data-sphere-chrome="dark"] .cz-dot {
 .hb-hex.is-primary.shown:hover,
 .hb-hex.is-primary.shown:focus-visible {
   --hov: 14px;
-  --domehov: -6deg;
   transition-duration: 130ms;
 }
 .hb-hex.is-primary.shown:active {
@@ -7343,8 +7344,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  const DOME_RADIUS_HEX = 3.4; // bowl sphere radius, in HEX units
-  const DOME_SHRINK = 0.03; // hair of air on the rim so chords never overlap
+  const DOME_RADIUS_HEX = 2.5; // bowl sphere radius, in HEX units — tighter
+  // = more curvature per tile (Luke: "more parallax") without changing tile size.
+  const DOME_SHRINK = 0.022; // hair of air on the rim so chords never overlap
 
   /**
    * Real spherical seating (Luke, 2026-08-10: "how are we fitting them so
@@ -7361,23 +7363,36 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     const R = hex * DOME_RADIUS_HEX;
     const s = Math.hypot(dx, dy);
     if (s < 1 || !R) {
-      return { x: dx, y: dy, dome: 0, dz: 0 };
+      return { x: dx, y: dy, domex: 0, domey: 0, dz: 0 };
     }
     const phi = Math.min(1.1, s / R);
     const k = (R * Math.sin(phi)) / s;
+    const deg = (phi * 180) / Math.PI;
     return {
       x: dx * k,
       y: dy * k,
-      dome: -(phi * 180) / Math.PI,
+      // Global-axis decomposition, not a per-tile custom axis (Luke: "better
+      // joining of the tiles"). The old rotate3d(ax,ay,0,dome) tilted each
+      // tile around ITS OWN radial axis by one angle — two ring neighbors
+      // 60deg apart shared no axis, so their shared edge twisted out of
+      // alignment. rotateX/rotateY use the SAME two global axes for every
+      // tile; neighbors that share a dy share domex, neighbors that share a
+      // dx share domey — that shared component is what keeps a common edge
+      // from twisting relative to its neighbor. Standard technique for
+      // CSS DOM-sphere galleries.
+      domex: -((dy / s) * deg),
+      domey: (dx / s) * deg,
       dz: R * (1 - Math.cos(phi)),
     };
   }
 
   function applyCenterDome(el, seat) {
     if (!DOME || !seat) return;
-    el.style.setProperty("--dome", seat.dome.toFixed(2) + "deg");
+    el.style.setProperty("--domex", seat.domex.toFixed(2) + "deg");
+    el.style.setProperty("--domey", seat.domey.toFixed(2) + "deg");
     el.style.setProperty("--dz", seat.dz.toFixed(1) + "px");
-    el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, Math.abs(seat.dome) / 30)).toFixed(4));
+    const mag = Math.hypot(seat.domex, seat.domey);
+    el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, mag / 30)).toFixed(4));
   }
 
   const DOCK_CENTER = (() => {
@@ -8782,10 +8797,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       let parRaf = 0;
       const easeParallax = () => {
         parRaf = 0;
-        px += (txp - px) * 0.14;
-        py += (typ - py) * 0.14;
+        px += (txp - px) * 0.22;
+        py += (typ - py) * 0.22;
         stage.style.transform =
-          "rotateX(" + (py * -6).toFixed(2) + "deg) rotateY(" + (px * 6).toFixed(2) + "deg)";
+          "rotateX(" + (py * -11).toFixed(2) + "deg) rotateY(" + (px * 11).toFixed(2) + "deg)";
         if (Math.abs(txp - px) > 0.003 || Math.abs(typ - py) > 0.003) {
           queueParallax();
         }

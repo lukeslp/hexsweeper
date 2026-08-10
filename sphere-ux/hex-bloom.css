@@ -717,13 +717,15 @@
 }
 .hb-hex.shown {
   opacity: 1;
-  /* --dome / --dz / --dscale: the ?dome=1 bowl (applyCenterDome). --hov /
-     --domehov: hover/select lift, additive so it works flat or domed.
-     Defaults keep everything flat. */
+  /* --domex / --domey / --dz / --dscale: the ?dome=1 bowl (applyCenterDome),
+     as two GLOBAL-axis rotations rather than one per-tile custom-axis spin —
+     see the domeSeat comment for why that is what actually joins the tiles.
+     --hov: hover/select lift. Defaults keep everything flat. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
     translateZ(calc(var(--dz, 0px) + var(--hov, 0px)))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, calc(var(--dome, 0deg) + var(--domehov, 0deg)))
+    rotateX(var(--domex, 0deg))
+    rotateY(var(--domey, 0deg))
     scale(var(--dscale, 1));
 }
 /* Tiles flip up a touch toward the player on hover / keyboard focus.
@@ -732,7 +734,6 @@
 .hb-hex.is-primary.shown:hover,
 .hb-hex.is-primary.shown:focus-visible {
   --hov: 14px;
-  --domehov: -6deg;
   transition-duration: 130ms;
 }
 .hb-hex.is-primary.shown:active {
