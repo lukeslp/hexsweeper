@@ -179,6 +179,9 @@
   inset: var(--border-w);
   background: var(--hb-paper);
 }
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-active::before {
+  background: var(--hb-ink);
+}
 /* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
    user"). A symmetric bowl viewed dead-on from its own axis shows almost no
    parallax — the old lopsided origin was accidentally the viewing angle.
@@ -501,6 +504,14 @@
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-icon {
   width: 34px;
   height: 34px;
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-glyph {
+  width: 34px;
+  height: 34px;
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-icon {
+  width: 30px;
+  height: 30px;
 }
 
 /* Theme primary = plain circle; tint from current theme when available */

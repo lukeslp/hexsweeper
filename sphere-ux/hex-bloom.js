@@ -132,6 +132,7 @@
     }
   })();
   const DOCK_CONTEXT = DOCK_MODE === "context";
+  const FIXED_CENTER = DOCK_MODE === "center";
   const DOCK_CENTER = DOCK_MODE === "center" || DOCK_CONTEXT;
   /**
    * ?dome=1 — the flower seated on a real sphere segment, viewed from
@@ -168,6 +169,12 @@
     { q: 0, r: 1 }, // Indicators — SE
     { q: -1, r: 0 }, // Reset — W
     { q: 1, r: 0 }, // Dig / Flag — E
+  ];
+  const FIXED_CENTER_SLOTS = [
+    { q: 0, r: -1 }, // Light / Dark — NW
+    { q: 1, r: -1 }, // Theme-style options parent — NE
+    { q: -1, r: 0 }, // Home — W
+    { q: 1, r: 0 }, // Flag — E
   ];
 
   /**
@@ -376,6 +383,9 @@
     const hubMines = document.getElementById("hex-bloom-hub-mines");
     const hubTime = document.getElementById("hex-bloom-hub-time");
     let contextAnchor = null;
+    const hoverBloomEnabled =
+      FIXED_CENTER &&
+      matchMedia("(hover: hover) and (pointer: fine)").matches;
 
     // ---- Hex math (clex) ----
     function tileMetrics() {
@@ -787,6 +797,16 @@
       announce("Surface · " + { "3d": "3D", flat: "Flat", ink: "Ink" }[next]);
     }
 
+    function seamsOn() {
+      return game.getState().seams !== false;
+    }
+
+    function toggleSeams() {
+      const next = !seamsOn();
+      game.setSeams(next);
+      announce("Seams · " + (next ? "On" : "Off"));
+    }
+
     function cycleLightDark() {
       const toDark = getAxes().field !== "dark";
       if (typeof game.setAppearanceAxes === "function") {
@@ -912,7 +932,69 @@
           cycle: cycleIndicators,
         },
       ];
-      if (DOCK_CENTER) {
+      if (FIXED_CENTER) {
+        return [
+          all[0],
+          {
+            id: "theme",
+            label: "Options",
+            icon: "theme",
+            iconOnly: true,
+            hoverSub: true,
+            aria: () =>
+              "Board options. Hover or activate for size, seams, and indicators.",
+            sub: () => [
+              {
+                id: "size",
+                label: () => "Size " + currentSize(),
+                aria: () =>
+                  "Size: " + currentSize() + ". Activate to cycle board size.",
+                icon: "size",
+                iconOnly: true,
+                run: cycleSize,
+              },
+              {
+                id: "seams",
+                label: () => "Seams " + (seamsOn() ? "on" : "off"),
+                aria: () =>
+                  "Seams " + (seamsOn() ? "on" : "off") + ". Activate to toggle.",
+                icon: "style",
+                iconOnly: true,
+                run: toggleSeams,
+              },
+              {
+                id: "indicators",
+                label: () => "Indicators " + indicatorLabel(),
+                aria: () =>
+                  "Indicators: " + indicatorLabel() + ". Activate to cycle.",
+                icon: "indicators",
+                iconOnly: true,
+                run: cycleIndicators,
+              },
+            ],
+          },
+          {
+            id: "home",
+            label: "Home",
+            icon: "home",
+            iconOnly: true,
+            aria: () => "Return to Hexsweeper home",
+            cycle: () => doHome(),
+          },
+          {
+            id: "flagmode",
+            label: "Flag",
+            icon: "flag",
+            iconOnly: true,
+            aria: () =>
+              game.getState().flagMode
+                ? "Flag mode on. Activate for dig mode."
+                : "Flag mode off. Activate for flag mode.",
+            cycle: cycleMode,
+          },
+        ];
+      }
+      if (DOCK_CONTEXT) {
         // The dock is hidden in both center variants. Home and Flag occupy
         // the west/east seats; Reset is promoted to the middle tile.
         all.push(
@@ -949,6 +1031,7 @@
     let statsTimer = null;
     let ignoreOutsideUntil = 0;
     let phaseTimer = null;
+    let hoverCloseTimer = null;
     let dockBtn = null; // center menu / close
     let dockResetBtn = null;
     let dockFlagBtn = null;
@@ -1077,26 +1160,43 @@
     function addSubmenu(dirIndex, cat) {
       const { HEX } = tileMetrics();
       const { cx, cy } = centerXY();
-      const dir = PRIMARY_SLOTS[dirIndex] || DIRECTIONS[dirIndex];
+      const dir =
+        (FIXED_CENTER ? FIXED_CENTER_SLOTS[dirIndex] : null) ||
+        (DOCK_CONTEXT ? CENTER_SLOTS[dirIndex] : null) ||
+        PRIMARY_SLOTS[dirIndex] ||
+        DIRECTIONS[dirIndex];
       const p = hexToPixel(dir.q, dir.r, HEX);
       const px = cx + p.x;
       const py = cy + p.y;
       const items = cat.sub();
-      const offsets = leafOffsets(dirIndex, items.length);
+      const offsets =
+        FIXED_CENTER && cat.id === "theme"
+          ? [
+              { q: 0, r: -1 },
+              { q: 1, r: -1 },
+              { q: 1, r: 0 },
+            ]
+          : leafOffsets(dirIndex, items.length);
 
       items.forEach((item, j) => {
         const off = offsets[j] || DIRECTIONS[dirIndex];
         const o = hexToPixel(off.q, off.r, HEX);
         const isSwatch = !!item.themeSwatch;
+        const itemLabel =
+          typeof item.label === "function" ? item.label() : item.label;
+        const itemAria =
+          typeof item.aria === "function"
+            ? item.aria()
+            : cat.id + ": " + itemLabel;
         const el = makeHex({
           cls:
             "is-sub" +
             (item.chosen && item.chosen() ? " is-chosen" : "") +
             (item.icon ? " has-icon" : "") +
             (isSwatch ? " is-theme-swatch" : ""),
-          label: item.label,
+          label: itemLabel,
           labelSize: item.labelSize,
-          ariaLabel: cat.id + ": " + item.label,
+          ariaLabel: itemAria,
           icon: isSwatch ? null : item.icon,
           iconOnly: isSwatch
             ? true
@@ -1119,7 +1219,7 @@
         if (item.icon === "flag") el.classList.add("is-flag-icon");
         if (item.icon === "dig") el.classList.add("is-dig-icon");
         // Subs with icons still keep short labels when useful
-        if (item.icon && item.label && !item.iconOnly && !isSwatch) {
+        if (item.icon && itemLabel && !item.iconOnly && !isSwatch) {
           el.classList.add("is-sub-icon-label");
           if (el._labelEl)
             el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
@@ -1133,6 +1233,17 @@
           e.preventDefault();
           e.stopPropagation();
           if (typeof item.run === "function") item.run();
+          const fresh = cat.sub().find((candidate) => candidate.id === item.id);
+          if (fresh) {
+            const freshLabel =
+              typeof fresh.label === "function" ? fresh.label() : fresh.label;
+            const freshAria =
+              typeof fresh.aria === "function"
+                ? fresh.aria()
+                : cat.id + ": " + freshLabel;
+            el.setAttribute("aria-label", freshAria);
+            if (el._labelEl) el._labelEl.textContent = freshLabel;
+          }
           refreshChosen(cat.id);
           refreshPrimaryLabels();
         });
@@ -1367,7 +1478,12 @@
       if (!withPetals) return;
 
       cats.forEach((cat, i) => {
-        const d = (DOCK_CENTER ? CENTER_SLOTS[i] : PRIMARY_SLOTS[i]) || DIRECTIONS[i];
+        const d =
+          (FIXED_CENTER
+            ? FIXED_CENTER_SLOTS[i]
+            : DOCK_CONTEXT
+              ? CENTER_SLOTS[i]
+              : PRIMARY_SLOTS[i]) || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const iconName =
@@ -1433,6 +1549,12 @@
           ignoreOutsideUntil = Date.now() + 200;
           toggleCategory(cat.id, i);
         });
+        if (hoverBloomEnabled && cat.hoverSub) {
+          el.addEventListener("pointerenter", () => {
+            clearTimeout(hoverCloseTimer);
+            if (state.active !== cat.id) toggleCategory(cat.id, i);
+          });
+        }
         stage.appendChild(el);
       });
 
@@ -1574,6 +1696,7 @@
     function collapse() {
       if (state.phase !== "open" && state.phase !== "rising") return;
       clearTimeout(phaseTimer);
+      clearTimeout(hoverCloseTimer);
       state.active = null;
       delete root.dataset.branch;
 
@@ -1694,6 +1817,30 @@
           true
         );
       }
+    }
+
+    if (hoverBloomEnabled) {
+      const isThemeControl = (node) =>
+        !!(
+          node &&
+          node.closest &&
+          node.closest('.hb-hex[data-cat="theme"]')
+        );
+      stage.addEventListener("pointerover", (e) => {
+        if (!isThemeControl(e.target)) return;
+        clearTimeout(hoverCloseTimer);
+        if (state.active !== "theme") {
+          const i = categories().findIndex((cat) => cat.id === "theme");
+          if (i >= 0) toggleCategory("theme", i);
+        }
+      });
+      stage.addEventListener("pointerout", (e) => {
+        if (!isThemeControl(e.target) || isThemeControl(e.relatedTarget)) return;
+        clearTimeout(hoverCloseTimer);
+        hoverCloseTimer = setTimeout(() => {
+          if (state.active === "theme") clearActive();
+        }, 140);
+      });
     }
 
     // Scrim click closes
