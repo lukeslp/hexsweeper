@@ -1308,7 +1308,17 @@
         place(el, cx + p.x, cy + p.y, cx, cy);
         if (DOCK_CENTER) applyCenterDome(el, p.x, p.y, HEX);
         el.classList.add("folded");
-        el.dataset.delay = String(i * 26);
+        // Center mode blooms petal-by-petal: the delay sweeps around the ring
+        // by seat angle, so the flower visibly opens clockwise from the top
+        // instead of in DOM order.
+        el.dataset.delay = DOCK_CENTER
+          ? String(
+              110 +
+                Math.round(
+                  260 * ((Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI))
+                )
+            )
+          : String(i * 26);
         el.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();

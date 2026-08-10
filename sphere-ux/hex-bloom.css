@@ -146,6 +146,27 @@
 .hex-bloom[data-dock-mode="center"] .hex-bloom-dock {
   display: none;
 }
+/* The flower earns bigger tiles (no dock to clear) and folds like origami:
+   deeper fold angle, harder scale-down, slower open. */
+.hex-bloom[data-dock-mode="center"] {
+  --tile-w: 96px;
+  --tile-h: 110px;
+  --fold: 104deg;
+  --fold-scale: 0.5;
+  --fold-ms: 340ms;
+}
+@media (max-width: 400px) {
+  .hex-bloom[data-dock-mode="center"] {
+    --tile-w: 82px;
+    --tile-h: 94px;
+  }
+}
+/* The stage's 50% 100% perspective origin is a bottom-dock relic — it shears
+   a center flower sideways (the "fix perspective" screenshot). The flower's
+   vanishing point is its own center. */
+.hex-bloom[data-dock-mode="center"] .hex-bloom-stage {
+  perspective-origin: 50% 50%;
+}
 .hb-hex.is-center-close .hb-label {
   font-size: 19px;
   font-weight: 600;
@@ -669,7 +690,7 @@
   transform:
     translate(var(--tx, 0), var(--ty, 0))
     rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--fold, 82deg))
-    scale(0.86);
+    scale(var(--fold-scale, 0.86));
 }
 .hb-hex.shown {
   opacity: 1;
