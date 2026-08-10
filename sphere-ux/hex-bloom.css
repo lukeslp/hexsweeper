@@ -70,6 +70,11 @@
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
+  /* The petal layer rides the dock's grow+lift: --rise-y starts at the
+     idle→open seed delta (dockRiseDelta) and animates to 0, so petals stay
+     rooted to the seed instead of hovering at final seats while the dock
+     catches up underneath. */
+  transform: translateY(var(--rise-y, 0px));
   transition: opacity 0.12s ease, visibility 0.12s;
   /* Room for upward fan without clipping south of the dock */
   overflow: visible;
@@ -79,6 +84,10 @@
 .hex-bloom[data-phase="falling"] .hex-bloom-stage {
   opacity: 1;
   visibility: visible;
+  transition:
+    opacity 0.12s ease,
+    visibility 0.12s,
+    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
 }
 
 /* Bottom chrome: Restart · Menu · Help
@@ -102,9 +111,10 @@
     opacity 0.28s ease,
     transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
 }
-.hex-bloom[data-phase="open"] .hex-bloom-dock,
-.hex-bloom[data-phase="falling"] .hex-bloom-dock {
-  /* Lift so the rooted fan has air and matches bloom height language */
+.hex-bloom[data-phase="open"] .hex-bloom-dock {
+  /* Lift so the rooted fan has air and matches bloom height language.
+     Only while open: on falling the dock rides back down with the stage
+     and the folding petals — one settle, not two. */
   --dock-rise: -36px;
   --tile-w-dock: var(--tile-w);
   --tile-h-dock: var(--tile-h);
@@ -143,6 +153,9 @@
   .hex-bloom-dock {
     transition: opacity 0.12s ease;
   }
+  .hex-bloom-stage {
+    transition: opacity 0.12s ease;
+  }
   .hex-bloom-dock .hb-hex.is-dock {
     transition: none;
   }
@@ -154,8 +167,7 @@
     --tile-w-dock-idle: 36px;
     --tile-h-dock-idle: 42px;
   }
-  .hex-bloom[data-phase="open"] .hex-bloom-dock,
-  .hex-bloom[data-phase="falling"] .hex-bloom-dock {
+  .hex-bloom[data-phase="open"] .hex-bloom-dock {
     --dock-rise: -28px;
   }
 }

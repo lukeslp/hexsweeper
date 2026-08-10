@@ -349,6 +349,28 @@
       root.style.setProperty("--rise-y", "0px");
     }
 
+    /**
+     * Vertical distance from the dock's idle seed to its open seed, from the
+     * same CSS tokens centerXY trusts. The stage starts translated down by
+     * this and rides to 0 in lockstep with the dock's grow+lift.
+     */
+    function dockRiseDelta() {
+      const csRoot = getComputedStyle(root);
+      const th = parseFloat(csRoot.getPropertyValue("--tile-h")) || 88;
+      const thIdle =
+        parseFloat(csRoot.getPropertyValue("--tile-h-dock-idle")) || 46;
+      let rise = NaN;
+      if (dock) {
+        rise = parseFloat(
+          String(getComputedStyle(dock).getPropertyValue("--dock-rise")).replace("px", "")
+        );
+      }
+      if (!Number.isFinite(rise) || rise === 0) {
+        rise = (stage.clientWidth || global.innerWidth) <= 400 ? -28 : -36;
+      }
+      return (th - thIdle) / 2 - rise;
+    }
+
     function leafOffsets(dirIndex, count) {
       if (count <= 0) return [];
       // Prefer bloom-up directions so nested fans also stay on-screen.
@@ -1266,7 +1288,6 @@
       // Dock grows + lifts (CSS). Petals use *final* open geometry from CSS
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
-      setRiseVar();
       setPhase("open");
       root.dataset.dock = "ready";
       paintDock();
@@ -1274,11 +1295,19 @@
       // (--dock-rise, full tile size) before we read them.
       requestAnimationFrame(() => {
         if (state.phase !== "open") return;
-        setRiseVar();
+        // Root the petal layer at the dock's *idle* seed with no transition,
+        // place petals at final geometry, then ride the whole layer up in
+        // lockstep with the dock — petals stay glued to the seed instead of
+        // hovering at their final seats while the dock catches up.
+        stage.style.transition = "none";
+        root.style.setProperty("--rise-y", dockRiseDelta() + "px");
         renderBloom({ petals: true });
         refreshPrimaryLabels();
+        void stage.offsetHeight; // commit the pre-rise transform
+        stage.style.transition = "";
         requestAnimationFrame(() => {
           if (state.phase !== "open") return;
+          setRiseVar();
           bloomPetals();
           announce("Menu open");
         });
@@ -1300,11 +1329,15 @@
       });
 
       setPhase("falling");
+      // Ride the petal layer back down with the dock while the petals fold —
+      // one coherent settle instead of fold-then-drop.
+      root.style.setProperty("--rise-y", dockRiseDelta() + "px");
 
       const finish = () => {
         if (state.phase !== "falling") return;
         clearStage();
         setPhase("closed");
+        setRiseVar();
         clearInterval(statsTimer);
         statsTimer = null;
         hub.dataset.open = "false";
@@ -1396,7 +1429,9 @@
     window.addEventListener("resize", () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        setRiseVar();
+        // Mid-descent the stage is deliberately translated; zeroing it here
+        // would snap the folding petals upward.
+        if (state.phase !== "falling") setRiseVar();
         // Height-only changes are the mobile URL bar showing/hiding — petals
         // are bottom-anchored, so they already rode along with the dock.
         // Rebuilding on those is what made the open bloom jitter and resettle.

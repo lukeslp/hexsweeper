@@ -806,6 +806,11 @@ body[data-sphere-chrome="dark"] .cz-dot {
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
+  /* The petal layer rides the dock's grow+lift: --rise-y starts at the
+     idle→open seed delta (dockRiseDelta) and animates to 0, so petals stay
+     rooted to the seed instead of hovering at final seats while the dock
+     catches up underneath. */
+  transform: translateY(var(--rise-y, 0px));
   transition: opacity 0.12s ease, visibility 0.12s;
   /* Room for upward fan without clipping south of the dock */
   overflow: visible;
@@ -815,6 +820,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
 .hex-bloom[data-phase="falling"] .hex-bloom-stage {
   opacity: 1;
   visibility: visible;
+  transition:
+    opacity 0.12s ease,
+    visibility 0.12s,
+    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
 }
 
 /* Bottom chrome: Restart · Menu · Help
@@ -838,9 +847,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
     opacity 0.28s ease,
     transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
 }
-.hex-bloom[data-phase="open"] .hex-bloom-dock,
-.hex-bloom[data-phase="falling"] .hex-bloom-dock {
-  /* Lift so the rooted fan has air and matches bloom height language */
+.hex-bloom[data-phase="open"] .hex-bloom-dock {
+  /* Lift so the rooted fan has air and matches bloom height language.
+     Only while open: on falling the dock rides back down with the stage
+     and the folding petals — one settle, not two. */
   --dock-rise: -36px;
   --tile-w-dock: var(--tile-w);
   --tile-h-dock: var(--tile-h);
@@ -879,6 +889,9 @@ body[data-sphere-chrome="dark"] .cz-dot {
   .hex-bloom-dock {
     transition: opacity 0.12s ease;
   }
+  .hex-bloom-stage {
+    transition: opacity 0.12s ease;
+  }
   .hex-bloom-dock .hb-hex.is-dock {
     transition: none;
   }
@@ -890,8 +903,7 @@ body[data-sphere-chrome="dark"] .cz-dot {
     --tile-w-dock-idle: 36px;
     --tile-h-dock-idle: 42px;
   }
-  .hex-bloom[data-phase="open"] .hex-bloom-dock,
-  .hex-bloom[data-phase="falling"] .hex-bloom-dock {
+  .hex-bloom[data-phase="open"] .hex-bloom-dock {
     --dock-rise: -28px;
   }
 }
@@ -7445,6 +7457,28 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       root.style.setProperty("--rise-y", "0px");
     }
 
+    /**
+     * Vertical distance from the dock's idle seed to its open seed, from the
+     * same CSS tokens centerXY trusts. The stage starts translated down by
+     * this and rides to 0 in lockstep with the dock's grow+lift.
+     */
+    function dockRiseDelta() {
+      const csRoot = getComputedStyle(root);
+      const th = parseFloat(csRoot.getPropertyValue("--tile-h")) || 88;
+      const thIdle =
+        parseFloat(csRoot.getPropertyValue("--tile-h-dock-idle")) || 46;
+      let rise = NaN;
+      if (dock) {
+        rise = parseFloat(
+          String(getComputedStyle(dock).getPropertyValue("--dock-rise")).replace("px", "")
+        );
+      }
+      if (!Number.isFinite(rise) || rise === 0) {
+        rise = (stage.clientWidth || global.innerWidth) <= 400 ? -28 : -36;
+      }
+      return (th - thIdle) / 2 - rise;
+    }
+
     function leafOffsets(dirIndex, count) {
       if (count <= 0) return [];
       // Prefer bloom-up directions so nested fans also stay on-screen.
@@ -8362,7 +8396,6 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       // Dock grows + lifts (CSS). Petals use *final* open geometry from CSS
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
-      setRiseVar();
       setPhase("open");
       root.dataset.dock = "ready";
       paintDock();
@@ -8370,11 +8403,19 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       // (--dock-rise, full tile size) before we read them.
       requestAnimationFrame(() => {
         if (state.phase !== "open") return;
-        setRiseVar();
+        // Root the petal layer at the dock's *idle* seed with no transition,
+        // place petals at final geometry, then ride the whole layer up in
+        // lockstep with the dock — petals stay glued to the seed instead of
+        // hovering at their final seats while the dock catches up.
+        stage.style.transition = "none";
+        root.style.setProperty("--rise-y", dockRiseDelta() + "px");
         renderBloom({ petals: true });
         refreshPrimaryLabels();
+        void stage.offsetHeight; // commit the pre-rise transform
+        stage.style.transition = "";
         requestAnimationFrame(() => {
           if (state.phase !== "open") return;
+          setRiseVar();
           bloomPetals();
           announce("Menu open");
         });
@@ -8396,11 +8437,15 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       });
 
       setPhase("falling");
+      // Ride the petal layer back down with the dock while the petals fold —
+      // one coherent settle instead of fold-then-drop.
+      root.style.setProperty("--rise-y", dockRiseDelta() + "px");
 
       const finish = () => {
         if (state.phase !== "falling") return;
         clearStage();
         setPhase("closed");
+        setRiseVar();
         clearInterval(statsTimer);
         statsTimer = null;
         hub.dataset.open = "false";
@@ -8492,7 +8537,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     window.addEventListener("resize", () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        setRiseVar();
+        // Mid-descent the stage is deliberately translated; zeroing it here
+        // would snap the folding petals upward.
+        if (state.phase !== "falling") setRiseVar();
         // Height-only changes are the mobile URL bar showing/hiding — petals
         // are bottom-anchored, so they already rode along with the dock.
         // Rebuilding on those is what made the open bloom jitter and resettle.
