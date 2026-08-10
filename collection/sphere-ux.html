@@ -1256,6 +1256,11 @@ body[data-sphere-chrome="dark"] .cz-dot {
   width: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
   height: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
 }
+.hex-bloom[data-icon-menu="true"] .hb-icon-sizeXL {
+  overflow: visible;
+  transform: scale(1.18);
+  transform-origin: 50% 50%;
+}
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-glyph {
   width: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
   height: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
@@ -7668,6 +7673,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   );
 
   // Stroke icons (24×24) — board language, not tool metaphors
+  const SIZE_GROWTH =
+    '<path d="M11 13 6.5 17.5M6.5 17.5v-3.2M6.5 17.5h3.2M13 11l4.5-4.5M17.5 6.5v3.2M17.5 6.5h-3.2" stroke-width="1.55"/>';
+  const INVERT_AXES =
+    '<path d="M5 12h14M12 5v14" fill="none" stroke="#888" stroke-width="1.35" stroke-linecap="round" stroke-dasharray=".7 2.15"/>';
   const ICONS = {
     // Dig = open / cleared hex face (hollow honeycomb cell)
     dig:
@@ -7700,11 +7709,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
     // One outline changes physical size across the five board sizes. The
     // silhouette communicates scale before the tooltip has to explain it.
-    sizeXS: '<path d="m12 7.4 4 2.3v4.6l-4 2.3-4-2.3V9.7l4-2.3Z"/>',
-    sizeS: '<path d="m12 5.7 5.5 3.1v6.4l-5.5 3.1-5.5-3.1V8.8l5.5-3.1Z"/>',
-    sizeM: '<path d="m12 4 7 4v8l-7 4-7-4V8l7-4Z"/>',
-    sizeL: '<path d="m12 2.3 8.5 4.9v9.6L12 21.7l-8.5-4.9V7.2L12 2.3Z"/>',
-    sizeXL: '<path d="m12 .6 10 5.7v11.4l-10 5.7-10-5.7V6.3L12 .6Z"/>',
+    sizeXS: '<path d="m12 7.4 4 2.3v4.6l-4 2.3-4-2.3V9.7l4-2.3Z"/>' + SIZE_GROWTH,
+    sizeS: '<path d="m12 5.7 5.5 3.1v6.4l-5.5 3.1-5.5-3.1V8.8l5.5-3.1Z"/>' + SIZE_GROWTH,
+    sizeM: '<path d="m12 4 7 4v8l-7 4-7-4V8l7-4Z"/>' + SIZE_GROWTH,
+    sizeL: '<path d="m12 2.3 8.5 4.9v9.6L12 21.7l-8.5-4.9V7.2L12 2.3Z"/>' + SIZE_GROWTH,
+    sizeXL: '<path d="m12 .6 10 5.7v11.4l-10 5.7-10-5.7V6.3L12 .6Z"/>' + SIZE_GROWTH,
     // Theme circle remains available to archived/default variants.
     theme: '<circle cx="12" cy="12" r="8"/>',
     // Conventional board-theme affordance: handle, ferrule, and bristles.
@@ -7732,14 +7741,18 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
     // The disk is the board's two-axis inversion diagram: empty, vertical
     // half, horizontal half, full. It changes as one coherent silhouette.
-    invertOff: '<circle cx="12" cy="12" r="8.5" fill="#fff"/>',
+    invertOff:
+      '<circle cx="12" cy="12" r="8.5" fill="var(--hb-paper)"/>' + INVERT_AXES,
     invertX:
-      '<circle cx="12" cy="12" r="8.5" fill="#fff"/>' +
-      '<path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none"/>',
+      '<circle cx="12" cy="12" r="8.5" fill="var(--hb-paper)"/>' +
+      '<path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none"/>' +
+      INVERT_AXES,
     invertY:
-      '<circle cx="12" cy="12" r="8.5" fill="#fff"/>' +
-      '<path d="M3.5 12a8.5 8.5 0 0 1 17 0Z" fill="currentColor" stroke="none"/>',
-    invertBoth: '<circle cx="12" cy="12" r="8.5" fill="currentColor"/>',
+      '<circle cx="12" cy="12" r="8.5" fill="var(--hb-paper)"/>' +
+      '<path d="M3.5 12a8.5 8.5 0 0 1 17 0Z" fill="currentColor" stroke="none"/>' +
+      INVERT_AXES,
+    invertBoth:
+      '<circle cx="12" cy="12" r="8.5" fill="currentColor"/>' + INVERT_AXES,
     more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
     // Menu affordance — hollow hex (board language)
     menu:

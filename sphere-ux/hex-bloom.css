@@ -520,6 +520,11 @@
   width: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
   height: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
 }
+.hex-bloom[data-icon-menu="true"] .hb-icon-sizeXL {
+  overflow: visible;
+  transform: scale(1.18);
+  transform-origin: 50% 50%;
+}
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-glyph {
   width: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
   height: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
