@@ -1,0 +1,19 @@
+Minesweeper you already know, on a board you've never seen: a hexagonal grid bent around a 3D sphere. Spin the globe, read the numbers, and clear every safe cell — there are no edges to hide against, and no corners to save you.
+
+THREE GAMES IN ONE
+
+• Sphere — the headline act. A Goldberg-sphere board you rotate freely while you sweep. Every cell has neighbors; the topology is the difficulty.
+• Infinite — a flat hexagonal field that keeps going as far as you can survive.
+• Bounded — classic fixed boards when you want a beginning, middle, and end.
+
+MADE TO BE LOOKED AT
+
+Seven visual themes, from a bright paper board to stark black-and-white to a luminous glow, all rendered live. The app icon is a real board from the game — and the icon follows your light or dark home screen.
+
+PLAYS LIKE A GOOD UTILITY
+
+• Entirely offline. No account, no ads, no analytics, nothing to accept.
+• Flag with a long press. Undo a bad tap on the sphere; chord satisfied numbers on the flat boards.
+• Hex grids mean every number counts up to six — cleaner deduction than squares.
+
+Free, complete, and quiet. Just minesweeper, with better geometry.

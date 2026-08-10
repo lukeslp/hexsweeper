@@ -1,0 +1,1 @@
+First release: sphere, infinite, and bounded hexagonal minesweeper, seven themes, fully offline.
