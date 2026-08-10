@@ -593,11 +593,22 @@
       }
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          let maxDelay = 0;
           list.forEach((el) => {
-            el.style.transitionDelay = (el.dataset.delay || 0) + "ms";
+            const d = parseInt(el.dataset.delay, 10) || 0;
+            if (d > maxDelay) maxDelay = d;
+            el.style.transitionDelay = d + "ms";
             el.classList.remove("folded");
             el.classList.add("shown");
           });
+          // The stagger delay must die with the fold — left inline, every
+          // later transform transition (hover lift, dome) inherits it and
+          // the menu feels like it reacts on a lag.
+          setTimeout(() => {
+            list.forEach((el) => {
+              el.style.transitionDelay = "0ms";
+            });
+          }, maxDelay + 420);
         });
       });
     }
@@ -930,6 +941,9 @@
         if (dockBtn._glyphEl) {
           dockBtn._glyphEl.innerHTML = "";
           dockBtn._glyphEl.hidden = true;
+          // The glyph is empty now — the name cache must not claim otherwise,
+          // or setHexIcon skips the rebuild on close and the icon vanishes.
+          dockBtn._iconName = null;
         }
         dockBtn._labelEl.textContent = "×";
         dockBtn._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
