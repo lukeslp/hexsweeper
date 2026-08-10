@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <!--
   File Purpose: Template for the native app's mode picker (build/app/index.html).
-  Primary Functions/Classes: one centered logo tile unfolds into three mode
-    links on the same axial hex grid. The FONTS placeholder is replaced by
-    tools/export-collection.py; do not repeat it outside the tag below.
-  Inputs: none at runtime. Outputs: links into games/*.html.
-  A11y: native button + links, closed links are inert, Escape/background closes,
-    focus is restored, targets exceed 44pt, reduced motion is honoured.
+  Primary Functions/Classes: a full-screen 2D hex field with three mode tiles;
+    activating a mode visually digs its tile before navigating to the game.
+  Inputs: viewport size and saved appearance. Outputs: links into games/*.html.
+  A11y: native links, visible focus, 44pt+ targets, reduced motion, forced colors,
+    and no interaction that depends on gesture, timing, sound, or color alone.
   Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
@@ -19,28 +18,33 @@
 <style>
   :root {
     --font-ui: "IBM Plex Sans", system-ui, sans-serif;
-    --field: #eef2f8;
-    --field-edge: #d4dce8;
-    --paper: #f8fafc;
-    --paper-hover: #e5eaf2;
-    --ink: #26303f;
-    --stroke: rgba(38, 48, 63, .72);
-    --focus: #2f6f9f;
-    --tile-w: clamp(86px, 26.67vw, 104px);
-    --tile-h: calc(var(--tile-w) * 1.1547);
-    --dx: var(--tile-w);
-    --diag-x: calc(var(--tile-w) * .5);
-    --diag-y: calc(var(--tile-h) * .75);
+    --field: #e8eef5;
+    --field-glow: #f8fafc;
+    --tile: #f7f9fc;
+    --tile-edge: #aebdce;
+    --tile-shadow: #d2dce8;
+    --ink: #263240;
+    --muted: #68798c;
+    --focus: #246da0;
+    --dug: #263240;
+    --dug-edge: #111820;
+    --dug-ink: #f8fafc;
+    --hex-w: clamp(84px, 25.5vw, 112px);
+    --hex-h: calc(var(--hex-w) * 1.1547);
     color-scheme: light dark;
   }
   :root[data-appearance="dark"] {
-    --field: #10151d;
-    --field-edge: #080b11;
-    --paper: #171e28;
-    --paper-hover: #242e3c;
-    --ink: #e6edf7;
-    --stroke: rgba(230, 237, 247, .72);
-    --focus: #7fc4f2;
+    --field: #0c1118;
+    --field-glow: #18212d;
+    --tile: #171f29;
+    --tile-edge: #536174;
+    --tile-shadow: #070a0f;
+    --ink: #edf3fb;
+    --muted: #a8b6c7;
+    --focus: #78c5f4;
+    --dug: #edf3fb;
+    --dug-edge: #ffffff;
+    --dug-ink: #17202a;
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -53,235 +57,300 @@
     -webkit-text-size-adjust: 100%;
     font-family: var(--font-ui);
     color: var(--ink);
-    background:
-      radial-gradient(110% 78% at 50% 18%, var(--field) 0%, transparent 68%),
-      var(--field-edge);
+    background: var(--field);
   }
-
-  main, .flower {
+  body::before {
+    content: "";
     position: fixed;
     inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(80% 58% at 50% 46%, color-mix(in srgb, var(--field-glow) 82%, transparent), transparent 72%),
+      linear-gradient(180deg, color-mix(in srgb, var(--field-glow) 30%, transparent), transparent 25% 75%, color-mix(in srgb, var(--tile-shadow) 24%, transparent));
   }
-  .flower {
+
+  main, .board { position: fixed; inset: 0; }
+  .board {
     isolation: isolate;
+    overflow: hidden;
   }
   .hex {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: var(--tile-w);
-    height: var(--tile-h);
-    margin-left: calc(var(--tile-w) / -2);
-    margin-top: calc(var(--tile-h) / -2);
+    width: var(--hex-w);
+    height: var(--hex-h);
+    margin-left: calc(var(--hex-w) / -2);
+    margin-top: calc(var(--hex-h) / -2);
+    transform: translate3d(var(--x), var(--y), 0);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+  .cell {
+    z-index: 0;
+    background: var(--tile-edge);
+    filter: drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 68%, transparent));
+  }
+  .cell::after {
+    content: "";
+    position: absolute;
+    inset: 3px 4px 7px;
+    clip-path: inherit;
+    background:
+      radial-gradient(90% 70% at 48% 30%, var(--field-glow), transparent 78%),
+      var(--tile);
+  }
+  .cell.near {
+    filter: drop-shadow(0 6px 3px color-mix(in srgb, var(--tile-shadow) 82%, transparent));
+  }
+
+  .mode {
+    z-index: 3;
     display: grid;
     place-items: center;
     border: 0;
     padding: 0;
     color: var(--ink);
-    background: var(--stroke);
-    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: var(--tile-edge);
     text-decoration: none;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
     outline: none;
-    filter:
-      drop-shadow(0 0 3px var(--paper))
-      drop-shadow(0 1px 0 var(--paper));
-    transition:
-      transform 340ms cubic-bezier(.22, 1, .3, 1),
-      opacity 220ms ease,
-      background 160ms ease;
-    will-change: transform, opacity;
+    filter: drop-shadow(0 6px 3px color-mix(in srgb, var(--tile-shadow) 90%, transparent));
+    transition: transform 180ms cubic-bezier(.22, 1, .36, 1), filter 180ms ease;
   }
-  .hex::before {
+  .mode::before {
     content: "";
     position: absolute;
-    inset: 1.5px;
+    inset: 3px 4px 7px;
     z-index: -1;
     clip-path: inherit;
-    background: var(--paper);
-    transition: inset 150ms ease, background 160ms ease;
-  }
-  .hex:focus-visible { background: var(--focus); }
-  .hex:focus-visible::before,
-  .hex:hover::before { inset: 3px; background: var(--paper-hover); }
-  .hex:active::before { inset: 4px; }
-
-  .seed {
-    z-index: 3;
-    transform: translate(0, 0);
-  }
-  .logo {
-    width: 54%;
-    max-width: 54px;
-    position: relative;
-    z-index: 1;
-  }
-  .close {
-    display: none;
-    position: relative;
-    z-index: 1;
-    font-size: clamp(1.45rem, 7vw, 1.8rem);
-    font-weight: 500;
-    line-height: 1;
-  }
-  .flower[data-open="true"] .logo { display: none; }
-  .flower[data-open="true"] .close { display: block; }
-
-  .mode {
-    z-index: 2;
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(0, 0) scale(.5) rotateY(-104deg);
-    transform-origin: 50% 50%;
-    transform-style: preserve-3d;
+    background:
+      radial-gradient(95% 78% at 45% 25%, var(--field-glow), transparent 75%),
+      var(--tile);
+    transition: inset 160ms ease, background 160ms ease;
   }
   .mode-content {
     position: relative;
     z-index: 1;
     display: grid;
     justify-items: center;
-    gap: 4px;
+    gap: 3px;
+    padding-top: 1px;
+    transition: transform 160ms ease, color 160ms ease, opacity 120ms ease;
   }
-  .mode svg { width: 34px; height: 34px; }
+  .mode-icon {
+    width: clamp(25px, 7vw, 32px);
+    height: clamp(25px, 7vw, 32px);
+    overflow: visible;
+  }
   .mode-name {
-    max-width: 88%;
-    font-size: clamp(.7rem, 3.1vw, .8rem);
+    max-width: 90%;
+    font-size: clamp(.68rem, 3.05vw, .82rem);
     font-weight: 650;
     line-height: 1;
-    letter-spacing: -.02em;
+    letter-spacing: -.025em;
     text-align: center;
   }
-  .flower[data-open="true"] .mode {
-    opacity: 1;
-    pointer-events: auto;
+  .mode:hover,
+  .mode:focus-visible {
+    filter:
+      drop-shadow(0 6px 3px color-mix(in srgb, var(--tile-shadow) 90%, transparent))
+      drop-shadow(0 0 0 var(--focus));
   }
-  /* Exact alternating ring-1 seats from sphere-ux ?dock=center:
-     NW (q=0,r=-1), E (q=1,r=0), SW (q=-1,r=1). */
-  .flower[data-open="true"] .mode-infinite {
-    transform: translate(calc(var(--diag-x) * -1), calc(var(--diag-y) * -1)) scale(1) rotateY(0);
+  .mode:hover::before { inset: 5px 6px 9px; }
+  .mode:focus-visible { background: var(--focus); }
+  .mode:focus-visible::before { inset: 5px 6px 9px; }
+  .mode:active { transform: translate3d(var(--x), calc(var(--y) + 3px), 0) scale(.97); }
+
+  .mode.is-dug {
+    z-index: 4;
+    pointer-events: none;
+    color: var(--dug-ink);
+    background: var(--dug-edge);
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--tile-shadow) 38%, transparent));
+    transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
   }
-  .flower[data-open="true"] .mode-bounded {
-    transform: translate(var(--dx), 0) scale(1) rotateY(0);
+  .mode.is-dug::before {
+    inset: 8px 9px 11px;
+    background: var(--dug);
   }
-  .flower[data-open="true"] .mode-sphere {
-    transform: translate(calc(var(--diag-x) * -1), var(--diag-y)) scale(1) rotateY(0);
+  .mode.is-dug .mode-content { transform: scale(.92); }
+  .board.is-leaving .mode:not(.is-dug),
+  .board.is-leaving .cell { opacity: .68; }
+  .board.is-leaving .cell.near {
+    animation: settle 260ms cubic-bezier(.22, 1, .36, 1) both;
+  }
+
+  .hint {
+    position: fixed;
+    z-index: 5;
+    left: 50%;
+    top: max(18px, calc(env(safe-area-inset-top) + 12px));
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 7px 12px;
+    max-width: calc(100vw - 32px);
+    color: var(--muted);
+    background: color-mix(in srgb, var(--field) 78%, transparent);
+    border-radius: 999px;
+    font-size: clamp(.69rem, 2.8vw, .82rem);
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-align: center;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .seed { animation: arrive 420ms cubic-bezier(.22, 1, .3, 1) backwards; }
-    .flower[data-open="true"] .mode-infinite { transition-delay: 50ms; }
-    .flower[data-open="true"] .mode-bounded { transition-delay: 110ms; }
-    .flower[data-open="true"] .mode-sphere { transition-delay: 170ms; }
+    .mode { animation: rise 420ms cubic-bezier(.22, 1, .36, 1) backwards; }
+    .mode-bounded { animation-delay: 45ms; }
+    .mode-sphere { animation-delay: 90ms; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
+      scroll-behavior: auto !important;
       transition-duration: .01ms !important;
       animation-duration: .01ms !important;
+      animation-delay: 0ms !important;
     }
   }
   @media (forced-colors: active) {
-    body { background: Canvas; }
-    .hex { background: ButtonText; color: ButtonText; filter: none; }
-    .hex::before { background: Canvas; }
-    .hex:focus-visible { outline: 3px solid Highlight; outline-offset: 3px; }
+    body, body::before { background: Canvas; }
+    .cell, .mode { background: ButtonText; color: ButtonText; filter: none; }
+    .cell::after, .mode::before { background: Canvas; }
+    .mode:focus-visible { outline: 3px solid Highlight; outline-offset: 3px; }
+    .mode.is-dug { color: Canvas; background: ButtonText; }
+    .mode.is-dug::before { background: ButtonText; }
+    .hint { color: CanvasText; background: Canvas; border: 1px solid CanvasText; }
   }
-  @keyframes arrive {
-    from { opacity: 0; transform: scale(.5) rotateY(-70deg); }
+  @keyframes rise {
+    from { opacity: 0; transform: translate3d(var(--x), calc(var(--y) + 14px), 0) scale(.9); }
+  }
+  @keyframes settle {
+    50% { transform: translate3d(var(--x), calc(var(--y) + 3px), 0) scale(.98); }
   }
 </style>
 </head>
 <body>
 <main>
-  <nav class="flower" id="game-menu" aria-label="Choose a game" data-open="false">
-    <a class="hex mode mode-infinite" href="games/infinite.html" tabindex="-1" aria-hidden="true" inert>
+  <nav class="board" id="game-menu" aria-label="Choose a Hexsweeper game">
+    <p class="hint" id="menu-hint">Dig a tile to play</p>
+
+    <a class="hex mode mode-infinite" href="games/infinite.html" data-q="-1" data-r="0" aria-describedby="menu-hint">
       <span class="mode-content">
-        <svg viewBox="0 0 48 48" aria-hidden="true">
-          <g fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M24 4 36 11v14l-12 7-12-7V11Z"/>
-            <path d="m10 27 12 7v10H10L2 39V27Z"/>
-            <path d="m38 27 8 5v12H26V34Z"/>
+        <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+            <path d="M24 5 36 12v14l-12 7-12-7V12Z"/>
+            <path d="m11 29 10 6v9H8l-6-4V29Z"/>
+            <path d="m37 29 9 5v10H27v-9Z"/>
           </g>
-          <text x="24" y="23" text-anchor="middle" font-family="var(--font-ui)" font-size="10" font-weight="650" fill="currentColor">2</text>
+          <text x="24" y="24" text-anchor="middle" font-family="var(--font-ui)" font-size="10" font-weight="700" fill="currentColor">∞</text>
         </svg>
         <span class="mode-name">Infinite</span>
       </span>
     </a>
 
-    <a class="hex mode mode-bounded" href="games/bounded.html" tabindex="-1" aria-hidden="true" inert>
+    <a class="hex mode mode-bounded" href="games/bounded.html" data-q="0" data-r="0" aria-describedby="menu-hint">
       <span class="mode-content">
-        <svg viewBox="0 0 48 48" aria-hidden="true">
-          <rect x="5" y="5" width="38" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/>
-          <path d="m24 9 11 6v12l-11 6-11-6V15Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M24 13 33 18v11l-9 5-9-5V18Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.5 2.5"/>
         </svg>
         <span class="mode-name">Bounded</span>
       </span>
     </a>
 
-    <a class="hex mode mode-sphere" href="games/sphere.html" tabindex="-1" aria-hidden="true" inert>
+    <a class="hex mode mode-sphere" href="games/sphere.html" data-q="1" data-r="0" aria-describedby="menu-hint">
       <span class="mode-content">
-        <svg viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.6"/>
-          <path d="M24 6v36M9 15l30 18M39 15 9 33M6 24h36" fill="none" stroke="currentColor" stroke-width="1" opacity=".7"/>
+        <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M24 6c-7 5-9 12-9 18s2 13 9 18M24 6c7 5 9 12 9 18s-2 13-9 18M6 24h36M9 15c9 4 21 4 30 0M9 33c9-4 21-4 30 0" fill="none" stroke="currentColor" stroke-width="1" opacity=".78"/>
         </svg>
         <span class="mode-name">Sphere</span>
       </span>
     </a>
-
-    <button class="hex seed" id="menu-toggle" type="button" aria-expanded="false" aria-controls="game-menu" aria-label="Choose a game">
-      <img class="logo" src="assets/hexsweeper-logo.png" alt="" aria-hidden="true">
-      <span class="close" aria-hidden="true">×</span>
-    </button>
   </nav>
 </main>
 
 <script>
 (function () {
   "use strict";
-  var flower = document.getElementById("game-menu");
-  var toggle = document.getElementById("menu-toggle");
-  var modes = Array.prototype.slice.call(flower.querySelectorAll(".mode"));
-  var focusTimer = null;
+  var board = document.getElementById("game-menu");
+  var modes = Array.prototype.slice.call(board.querySelectorAll(".mode"));
+  var modeSeats = { "-1,0": true, "0,0": true, "1,0": true };
+  var resizeTimer = null;
+  var leaving = false;
 
-  function setMenu(open, moveFocus) {
-    clearTimeout(focusTimer);
-    flower.dataset.open = open ? "true" : "false";
-    toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    toggle.setAttribute("aria-label", open ? "Close game menu" : "Choose a game");
-    modes.forEach(function (mode) {
-      mode.tabIndex = open ? 0 : -1;
-      mode.setAttribute("aria-hidden", open ? "false" : "true");
-      mode.inert = !open;
-    });
-    if (moveFocus) {
-      if (open) {
-        focusTimer = setTimeout(function () { modes[0].focus(); },
-          matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
-      } else {
-        toggle.focus();
-      }
-    }
+  function place(element, q, r, width, height) {
+    var x = width * (q + r / 2);
+    var y = height * .75 * r;
+    element.style.setProperty("--x", x.toFixed(2) + "px");
+    element.style.setProperty("--y", y.toFixed(2) + "px");
   }
 
-  toggle.addEventListener("click", function (event) {
-    setMenu(flower.dataset.open !== "true", event.detail === 0);
-  });
-  flower.addEventListener("click", function (event) {
-    if (event.target === flower && flower.dataset.open === "true") setMenu(false, false);
-  });
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && flower.dataset.open === "true") {
-      event.preventDefault();
-      setMenu(false, true);
+  function buildField() {
+    Array.prototype.forEach.call(board.querySelectorAll(".cell"), function (cell) {
+      cell.remove();
+    });
+    var probe = modes[0].getBoundingClientRect();
+    var width = probe.width;
+    var height = probe.height;
+    var qLimit = Math.ceil(innerWidth / width) + 3;
+    var rLimit = Math.ceil(innerHeight / (height * .75)) / 2 + 3;
+
+    for (var r = -Math.ceil(rLimit); r <= Math.ceil(rLimit); r += 1) {
+      for (var q = -qLimit; q <= qLimit; q += 1) {
+        if (modeSeats[q + "," + r]) continue;
+        var x = width * (q + r / 2);
+        var y = height * .75 * r;
+        if (Math.abs(x) > innerWidth / 2 + width || Math.abs(y) > innerHeight / 2 + height) continue;
+        var cell = document.createElement("span");
+        cell.className = "hex cell";
+        if (Math.abs(q) <= 2 && Math.abs(r) <= 1) cell.classList.add("near");
+        cell.setAttribute("aria-hidden", "true");
+        place(cell, q, r, width, height);
+        board.insertBefore(cell, board.firstChild);
+      }
     }
+    modes.forEach(function (mode) {
+      place(mode, Number(mode.dataset.q), Number(mode.dataset.r), width, height);
+    });
+  }
+
+  function dig(event) {
+    if (leaving || event.defaultPrevented) return;
+    if (event.button !== undefined && event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    leaving = true;
+    var mode = event.currentTarget;
+    mode.classList.add("is-dug");
+    board.setAttribute("aria-busy", "true");
+    board.classList.add("is-leaving");
+    var delay = matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 260;
+    setTimeout(function () { location.href = mode.href; }, delay);
+  }
+
+  modes.forEach(function (mode) { mode.addEventListener("click", dig); });
+  addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(buildField, 80);
+  });
+  addEventListener("pageshow", function (event) {
+    if (!event.persisted) return;
+    leaving = false;
+    board.classList.remove("is-leaving");
+    board.removeAttribute("aria-busy");
+    modes.forEach(function (mode) { mode.classList.remove("is-dug"); });
   });
 
   var saved = null;
   try { saved = localStorage.getItem("hexsweeper-appearance-v1"); } catch (_) {}
   document.documentElement.dataset.appearance =
     saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  buildField();
 })();
 </script>
 </body>

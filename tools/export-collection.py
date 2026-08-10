@@ -923,10 +923,6 @@ def export_app_launcher() -> str:
         f"<style>\n/* fonts/fonts.css (woff2 inlined) */\n{fonts_css}\n</style>",
         1,
     )
-    logo = ROOT / "tools" / "assets" / "hexsweeper-logo.png"
-    if not logo.is_file():
-        raise SystemExit(f"export_app_launcher: missing {logo}")
-    markup = markup.replace('src="assets/hexsweeper-logo.png"', f'src="{data_uri(logo)}"', 1)
     if "{{FONTS}}" in markup:
         raise SystemExit("export_app_launcher: font placeholder not replaced")
     # The launcher is the top of the stack; it has nowhere to go back to, and
