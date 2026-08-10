@@ -7516,10 +7516,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  // A seven-face cap needs assertive curvature to read head-on. The previous
-  // 4.5× radius produced only ~22° of rim tilt and a ~3% perspective change:
-  // mathematically curved, perceptually flat. 3.4× yields ~29° at ring-1:
-  // enough cap shape without the intersecting triangular flaps at 32–37°.
+  // Seven rigid regular hexes cannot close over positive curvature without an
+  // angular deficit. Keep this cap deliberately shallow: 4.2× yields ~23.6°
+  // at ring-1, enough for the oblique camera to read as domed without turning
+  // that deficit into triangular gaps or overlapping flaps.
   const DOME_RADIUS_HEX = 4.2;
   const DOME_CENTER_RISE_HEX = 0.12;
 
