@@ -491,6 +491,9 @@
 .hex-bloom[data-icon-menu="true"] .is-center-reset .hb-glyph {
   color: #ffd400;
 }
+.hex-bloom[data-icon-menu="true"] .cat-undo .hb-glyph {
+  color: #18a64a;
+}
 .hex-bloom[data-icon-menu="true"] .is-flag-toggle .hb-glyph {
   color: var(--hb-ink);
 }

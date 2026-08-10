@@ -1227,6 +1227,9 @@ body[data-sphere-chrome="dark"] .cz-dot {
 .hex-bloom[data-icon-menu="true"] .is-center-reset .hb-glyph {
   color: #ffd400;
 }
+.hex-bloom[data-icon-menu="true"] .cat-undo .hb-glyph {
+  color: #18a64a;
+}
 .hex-bloom[data-icon-menu="true"] .is-flag-toggle .hb-glyph {
   color: var(--hb-ink);
 }
@@ -7545,8 +7548,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     size:
       '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
-    // Theme control = literally a circle (swatches carry the theme paint)
+    // Theme circle remains available to archived/default variants.
     theme: '<circle cx="12" cy="12" r="8"/>',
+    // Conventional board-theme affordance: handle, ferrule, and bristles.
+    brush:
+      '<path d="M10 9V4a2 2 0 0 1 4 0v5"/><path d="M7 9h10v5H7Z"/>' +
+      '<path d="M8 14h8v3.3c0 2.2-1.8 4-4 4s-4-1.8-4-4V14Z"/>' +
+      '<path d="M10.5 14v5.7M13.5 14v5.7"/>',
     // Settings = a hex nut (hexagon + round bore) — a circle-with-spokes
     // gear read as the Light tile's sun at dock size.
     gear:
@@ -7573,7 +7581,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"/><path d="M20 3.5V8h-4.5"/>' +
       '<path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"/><path d="M4 20.5V16h4.5"/>',
     undo:
-      '<path d="m8.2 7.2-4.5 4.5 4.5 4.5"/><path d="M4.2 11.7h9.1a6.4 6.4 0 0 1 6.4 6.4v1.1"/>',
+      '<path d="M4 4v5h5"/><path d="M4.8 8.2A8.3 8.3 0 1 1 4 16"/>',
     home:
       '<path d="m3.5 10.5 8.5-7 8.5 7"/><path d="M5.5 9.2v10.3h13V9.2"/>' +
       '<path d="M9.2 19.5v-6.2h5.6v6.2"/>',
@@ -7583,6 +7591,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     effects:
       '<path d="m12 2 1.3 5.1L18 8.5l-4.7 1.4L12 15l-1.3-5.1L6 8.5l4.7-1.4L12 2Z"/>' +
       '<path d="m18.2 14 .7 2.5 2.4.7-2.4.7-.7 2.6-.7-2.6-2.4-.7 2.4-.7.7-2.5Z"/>',
+    sliders:
+      '<path d="M4 6h5M13 6h7M4 12h10M18 12h2M4 18h2M10 18h10"/>' +
+      '<path d="M9 3v6M14 9v6M10 15v6"/>',
     flipX:
       '<path d="M12 4v16"/><path d="M4 12h6"/><path d="M14 12h6"/><path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/>',
     flipY:
@@ -8295,7 +8306,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           {
             id: "theme",
             label: "Options",
-            icon: "theme",
+            icon: "brush",
             iconOnly: true,
             hoverSub: true,
             aria: () =>
@@ -8360,7 +8371,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           {
             id: "settings",
             label: "Settings",
-            icon: "gear",
+            icon: "sliders",
             iconOnly: true,
             hoverSub: true,
             aria: () =>
