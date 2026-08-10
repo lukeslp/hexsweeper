@@ -48,24 +48,18 @@
     { q: -1, r: -1 }, // ring-2 up-left
   ];
 
-  // Fixed seats for the primaries, in categories() order. Two rows above the
-  // dock: four across, then a symmetric pair of shoulders flanking the gap.
-  // x = q + r/2, so each row below is centred on the seed:
+  // Fixed seats for the primaries, in categories() order. One row of four
+  // (discuss verdict 2026-08-10): every remaining tile is a 2-5 state cycle,
+  // Invert and Effects moved to the ? modal as set-once plumbing, and
+  // relief+seams merged into the curated Surface cycle.
   //
-  //      [3D]   ·   [123]            r = -2  (x = -1, +1)
-  //   [Seams][Size][L/D][Off]        r = -1  (x = -1.5 … 1.5)
+  //   [L/D][Size][Surface][123]      r = -1  (x = -1.5 … 1.5)
   //      [reset] [x] [flag]          r =  0  (fixed dock)
-  //
-  // The Dig/Flag tile left the bloom when Flag joined the dock; Bg/Shell/Dug
-  // collapsed into one Light/Dark cycle (the three-axis adjusts live on in
-  // flipAxis/axisSwatch and the uxperiments harness for a future variant).
   const PRIMARY_SLOTS = [
+    { q: -1, r: -1 }, // Light / Dark
     { q: 0, r: -1 }, // Size
-    { q: -1, r: -1 }, // Seams
-    { q: 2, r: -1 }, // Invert
-    { q: 1, r: -1 }, // Light / Dark
-    { q: 0, r: -2 }, // 3D / Flush
-    { q: 2, r: -2 }, // Indicators
+    { q: 1, r: -1 }, // Surface
+    { q: 2, r: -1 }, // Indicators
   ];
 
   /**
@@ -75,11 +69,26 @@
    * center tile closes, and tapping the background (anywhere off the sphere)
    * opens it. The bottom dock hides entirely; the corner ? stays.
    *
-   *      [3D]      [123]        r = -2  (x = -1, +1)
-   *    [Size]  [L/D]            NW · NE
+   *    [L/D]   [Size]           NW · NE
    *  [Reset]   [×]   [Flag]     W · center · E
-   *    [Seams]  [Off]           SW · SE
+   *  [Surface]  [123]           SW · SE
+   *
+   * Seven hexes, one perfect ring — the flower the clex study promised.
    */
+  const DOME_TILT = 14; // deg at ring-1
+  const DOME_LIFT = 34; // px translateZ at the center tile
+
+  function applyCenterDome(el, dx, dy, hex) {
+    if (!DOME) return;
+    const d = Math.hypot(dx, dy);
+    const t = Math.min(1, d / (hex * 2.2 || 1));
+    // Bulge: center forward, ring leaning back on inner-edge hinges.
+    el.style.setProperty("--dome", (DOME_TILT * t).toFixed(2) + "deg");
+    el.style.setProperty("--dz", (DOME_LIFT * (1 - t * t)).toFixed(1) + "px");
+    const k = 1 / Math.cos((DOME_TILT * t * Math.PI) / 180);
+    el.style.setProperty("--dscale", k.toFixed(4));
+  }
+
   const DOCK_CENTER = (() => {
     try {
       return new URLSearchParams(location.search).get("dock") === "center";
@@ -87,14 +96,37 @@
       return false;
     }
   })();
+  /**
+   * ?dome=1 — the dome retry, this time where it belongs: on the CENTER
+   * flower, which is radially symmetric (the bottom-dock dome read lopsided
+   * and was reverted). The cluster bulges toward the player: center tile
+   * closest, ring tiles hinged back slightly on their inner edges, 1/cos
+   * scale holding the comb closed.
+   *
+   * ?seed=bare — idle dock shows JUST the gear glyph (same quiet treatment
+   * Reset and ? already get); the seed's hex face appears on activation.
+   */
+  const DOME = (() => {
+    try {
+      return new URLSearchParams(location.search).get("dome") === "1";
+    } catch (_) {
+      return false;
+    }
+  })();
+  const SEED_BARE = (() => {
+    try {
+      return new URLSearchParams(location.search).get("seed") === "bare";
+    } catch (_) {
+      return false;
+    }
+  })();
+
   // In categories() order: the six shared tiles, then Reset and Dig/Flag.
   const CENTER_SLOTS = [
-    { q: 0, r: -1 }, // Size — NW
-    { q: -1, r: 1 }, // Seams — SW
-    { q: 0, r: 1 }, // Invert — SE
-    { q: 1, r: -1 }, // Light / Dark — NE
-    { q: 0, r: -2 }, // 3D — top-left shoulder
-    { q: 2, r: -2 }, // Indicators — top-right shoulder
+    { q: 0, r: -1 }, // Light / Dark — NW
+    { q: 1, r: -1 }, // Size — NE
+    { q: -1, r: 1 }, // Surface — SW
+    { q: 0, r: 1 }, // Indicators — SE
     { q: -1, r: 0 }, // Reset — W
     { q: 1, r: 0 }, // Dig / Flag — E
   ];
@@ -145,6 +177,11 @@
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
     // Theme control = literally a circle (swatches carry the theme paint)
     theme: '<circle cx="12" cy="12" r="8"/>',
+    // Settings = a hex nut (hexagon + round bore) — a circle-with-spokes
+    // gear read as the Light tile's sun at dock size.
+    gear:
+      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
+      '<circle cx="12" cy="12" r="3.4"/>',
     style:
       '<path d="M7 7h.01M12 7h.01M17 7h.01"/><path d="M7 12h.01M12 12h.01M17 12h.01"/>' +
       '<path d="M7 17h.01M12 17h.01M17 17h.01"/>',
@@ -646,6 +683,30 @@
      * concept is stashed in CHROME_HISTORY and the uxperiments harness for a
      * future variant, not deleted.
      */
+    /**
+     * Surface — relief + seams as one curated 3-state cycle (discuss verdict
+     * 2026-08-10): 3D (extruded, seams) → Flat (flush, seams — the diagram
+     * look) → Ink (flush, borderless). The fourth combination (extruded
+     * borderless) was judged least legible; if a stored session is in it,
+     * it displays as 3D and normalizes on the next tap.
+     */
+    function surfaceState() {
+      const st = game.getState();
+      if (st.relief !== "flush") return "3d";
+      return st.seams === false ? "ink" : "flat";
+    }
+
+    function surfaceLabel() {
+      return { "3d": "3D", flat: "Flat", ink: "Ink" }[surfaceState()];
+    }
+
+    function cycleSurface() {
+      const next = { "3d": "flat", flat: "ink", ink: "3d" }[surfaceState()];
+      game.setRelief(next === "3d" ? "extruded" : "flush");
+      game.setSeams(next !== "ink");
+      announce("Surface · " + { "3d": "3D", flat: "Flat", ink: "Ink" }[next]);
+    }
+
     function cycleLightDark() {
       const toDark = getAxes().field !== "dark";
       if (typeof game.setAppearanceAxes === "function") {
@@ -672,33 +733,8 @@
       );
     }
 
-    function invertModeIndex() {
-      const x = invertGet("x");
-      const y = invertGet("y");
-      if (!x && !y) return 0;
-      if (x && !y) return 1;
-      if (!x && y) return 2;
-      return 3;
-    }
 
-    function invertModeLabel() {
-      return ["Off", "X", "Y", "X+Y"][invertModeIndex()];
-    }
 
-    function cycleInvert() {
-      const next = (invertModeIndex() + 1) % 4;
-      const map = [
-        [false, false],
-        [true, false],
-        [false, true],
-        [true, true],
-      ];
-      if (typeof game.setInvertDragX === "function")
-        game.setInvertDragX(map[next][0]);
-      if (typeof game.setInvertDragY === "function")
-        game.setInvertDragY(map[next][1]);
-      announce("Invert · " + ["Off", "X", "Y", "X+Y"][next]);
-    }
 
     function cycleMode() {
       const on = !!game.getState().flagMode;
@@ -716,19 +752,7 @@
       announce("Size · " + SIZES[next][1]);
     }
 
-    function cycleFlush() {
-      const flush = game.getState().relief === "flush";
-      if (typeof game.setRelief === "function") {
-        game.setRelief(flush ? "extruded" : "flush");
-      }
-      announce("Relief · " + (flush ? "3D" : "Flush"));
-    }
 
-    function cycleSeams() {
-      const on = game.getState().seams !== false;
-      if (typeof game.setSeams === "function") game.setSeams(!on);
-      announce("Seams · " + (on ? "off" : "on"));
-    }
 
     function cycleCount() {
       const c = game.getState().countStyle;
@@ -760,43 +784,6 @@
       // Restart / Help live on the always-visible three-tile dock.
       const all = [
         {
-          id: "size",
-          label: () => currentSize(),
-          icon: "size",
-          iconOnly: false,
-          badge: true,
-          aria: () =>
-            "Size: " + currentSize() + ". Activate to cycle board size.",
-          cycle: cycleSize,
-        },
-        {
-          id: "seams",
-          label: () =>
-            game.getState().seams === false ? "Seam" : "Seams",
-          icon: "style",
-          iconOnly: false,
-          aria: () => {
-            const on = game.getState().seams !== false;
-            return (
-              "Seams: " +
-              (on ? "on" : "off") +
-              ". Activate to toggle honeycomb edges."
-            );
-          },
-          cycle: cycleSeams,
-        },
-        {
-          id: "invert",
-          label: () => invertModeLabel(),
-          icon: "drag",
-          iconOnly: false,
-          aria: () =>
-            "Invert drag: " +
-            invertModeLabel() +
-            ". Activate to cycle Off, X, Y, X+Y.",
-          cycle: cycleInvert,
-        },
-        {
           id: "lightdark",
           label: () => (getAxes().field === "dark" ? "Dark" : "Light"),
           icon: () => (getAxes().field === "dark" ? "moon" : "sun"),
@@ -808,20 +795,24 @@
           cycle: cycleLightDark,
         },
         {
-          id: "flush",
-          label: () =>
-            game.getState().relief === "flush" ? "Flush" : "3D",
+          id: "size",
+          label: () => currentSize(),
           icon: "size",
           iconOnly: false,
-          aria: () => {
-            const flush = game.getState().relief === "flush";
-            return (
-              "Relief: " +
-              (flush ? "flush" : "extruded") +
-              ". Activate to toggle."
-            );
-          },
-          cycle: cycleFlush,
+          badge: true,
+          aria: () =>
+            "Size: " + currentSize() + ". Activate to cycle board size.",
+          cycle: cycleSize,
+        },
+        {
+          id: "surface",
+          label: () => surfaceLabel(),
+          icon: "style",
+          iconOnly: false,
+          labelSize: "sm",
+          aria: () =>
+            "Surface: " + surfaceLabel() + ". Activate to cycle 3D, Flat, Ink.",
+          cycle: cycleSurface,
         },
         {
           id: "indicators",
@@ -917,7 +908,7 @@
         dockBtn.setAttribute("aria-label", "Close menu");
         dockBtn.setAttribute("aria-expanded", "true");
       } else {
-        setHexIcon(dockBtn, "menu");
+        setHexIcon(dockBtn, "gear");
         if (dockBtn._glyphEl) dockBtn._glyphEl.hidden = false;
         dockBtn._labelEl.textContent = "Menu";
         dockBtn._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
@@ -1196,7 +1187,7 @@
       dockBtn = makeHex({
         cls: "is-dock is-dock-menu",
         label: "Menu",
-        icon: "menu",
+        icon: "gear",
         iconOnly: true,
         ariaLabel: "Open game menu",
       });
@@ -1310,6 +1301,7 @@
           el.setAttribute("aria-expanded", "false");
         }
         place(el, cx + p.x, cy + p.y, cx, cy);
+        if (DOCK_CENTER) applyCenterDome(el, p.x, p.y, HEX);
         el.classList.add("folded");
         el.dataset.delay = String(i * 26);
         el.addEventListener("click", (e) => {
@@ -1335,6 +1327,7 @@
           collapse();
         });
         place(closeEl, cx, cy, cx, cy);
+        applyCenterDome(closeEl, 0, 0, 1);
         closeEl.classList.add("folded");
         closeEl.dataset.delay = "0";
         stage.appendChild(closeEl);
@@ -1448,6 +1441,7 @@
       phaseTimer = setTimeout(finish, foldMs());
     }
 
+    if (SEED_BARE) root.dataset.seed = "bare";
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
       // The background is the menu activator: a quick tap that lands off the

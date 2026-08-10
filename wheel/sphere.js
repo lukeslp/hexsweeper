@@ -3253,11 +3253,12 @@
       if (cell.flagged && !cell.revealed) {
         return {
           fill: T.tierFlagged || T.flagFill,
-          // Seam ink, not flag color: flagEdge === flagFill in the mono
-          // themes, so adjacent flags fused into one unbroken blob with no
-          // tile boundaries. Takes keep their deliberate halo.
-          stroke: T.takeFlagHalo ? T.flagEdge : T.coveredEdge || T.flagEdge,
-          lineWidth: T.takeFlagHalo ? 3.4 : 2,
+          // Translucent dark seam: reads as a darker line of the flag color
+          // over the fill AND covers the projection gap between lifted flag
+          // faces. Opaque seam ink here made fat pale channels between
+          // adjacent flags; pure flag color made them fuse. Takes keep halos.
+          stroke: T.takeFlagHalo ? T.flagEdge : "rgba(0,0,0,0.38)",
+          lineWidth: T.takeFlagHalo ? 3.4 : 1.75,
           showLabel: false,
         };
       }

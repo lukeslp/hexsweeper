@@ -542,6 +542,28 @@
   color: #ff2200;
   opacity: 1;
 }
+/* ?seed=bare: idle seed is JUST the gear — hex face appears on activation,
+   exactly the treatment Reset and ? already get when closed. */
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu {
+  background: transparent;
+  filter: none;
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.72;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu:hover .hb-glyph,
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu:focus-visible .hb-glyph {
+  opacity: 1;
+}
+
 /* Menu: light outline + hollow-hex icon (reads as “open”) */
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu {
   background: var(--hb-stroke);
@@ -651,10 +673,13 @@
 }
 .hb-hex.shown {
   opacity: 1;
+  /* --dome / --dz / --dscale: the ?dome=1 center-flower bulge (applyCenterDome).
+     Default flat — the bottom dock and undomed blooms are untouched. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, 0deg)
-    scale(1);
+    translateZ(var(--dz, 0px))
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--dome, 0deg))
+    scale(var(--dscale, 1));
 }
 
 

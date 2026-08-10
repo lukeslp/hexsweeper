@@ -1278,6 +1278,28 @@ body[data-sphere-chrome="dark"] .cz-dot {
   color: #ff2200;
   opacity: 1;
 }
+/* ?seed=bare: idle seed is JUST the gear — hex face appears on activation,
+   exactly the treatment Reset and ? already get when closed. */
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu {
+  background: transparent;
+  filter: none;
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.72;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu:hover .hb-glyph,
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu:focus-visible .hb-glyph {
+  opacity: 1;
+}
+
 /* Menu: light outline + hollow-hex icon (reads as “open”) */
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu {
   background: var(--hb-stroke);
@@ -1387,10 +1409,13 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 .hb-hex.shown {
   opacity: 1;
+  /* --dome / --dz / --dscale: the ?dome=1 center-flower bulge (applyCenterDome).
+     Default flat — the bottom dock and undomed blooms are untouched. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, 0deg)
-    scale(1);
+    translateZ(var(--dz, 0px))
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--dome, 0deg))
+    scale(var(--dscale, 1));
 }
 
 
@@ -2224,6 +2249,8 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
 /* Double-tap on any chrome control must never become Safari smart-zoom.
    Declared on the elements: iOS skips body-level touch-action for this. */
 button, a, input[type="range"] { touch-action: manipulation; }
+/* Controls row in the ? modal — set-once plumbing (invert drag, effects). */
+.help-pack.is-text::before { display: none; }
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
@@ -2347,6 +2374,11 @@ button, a, input[type="range"] { touch-action: manipulation; }
       <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
       <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
       <button type="button" class="help-pack" data-pack="water" style="--sw:#12617d" aria-pressed="false">Water</button>
+    </div>
+    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
+      <span class="help-packs-cap">Controls</span>
+      <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
+      <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>
     <p class="help-more">Also <a href="https://dr.eamer.dev/games/hexsweeper/">flat Hexsweeper</a> · <a href="https://dr.eamer.dev/games/hexsweeper/?mode=fire">Fire</a> · <a href="https://dr.eamer.dev/games/hexsweeper/?mode=plague">Plague</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
@@ -3355,9 +3387,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       pressed: -1,
       timeElapsed: 0,
       timerInterval: null,
-      reduceMotion:
-        typeof matchMedia === "function" &&
-        matchMedia("(prefers-reduced-motion: reduce)").matches,
+      reduceMotion: systemReducedMotion(),
+      effectsMode: "auto",
       radius: 1,
       baseScale: 200,
       zoomFactor: INITIAL_ZOOM,
@@ -3845,6 +3876,54 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     }
 
 
+    /**
+     * Controls row in the ? modal: Invert drag and Effects. Set-once plumbing
+     * moved out of the bloom (discuss verdict 2026-08-10) — unlike the failed
+     * split-dock, these are not identity controls anyone scans the menu for.
+     */
+    let syncHelpControls = null;
+
+    function bindHelpControls() {
+      const row = document.getElementById("help-controls");
+      if (!row) return;
+      const invBtn = row.querySelector('[data-ctl="invert"]');
+      const fxBtn = row.querySelector('[data-ctl="effects"]');
+      const INV = [
+        [false, false, "Invert off"],
+        [true, false, "Invert X"],
+        [false, true, "Invert Y"],
+        [true, true, "Invert X+Y"],
+      ];
+      const FX = { auto: "Effects auto", full: "Effects full", reduced: "Effects reduced" };
+      const invIndex = () =>
+        INV.findIndex(
+          ([x, y]) => x === !!state.invertDragX && y === !!state.invertDragY
+        );
+      syncHelpControls = () => {
+        if (invBtn) invBtn.textContent = INV[Math.max(0, invIndex())][2];
+        if (fxBtn) fxBtn.textContent = FX[state.effectsMode] || FX.auto;
+      };
+      if (invBtn) {
+        invBtn.addEventListener("click", () => {
+          const [x, y] = INV[(Math.max(0, invIndex()) + 1) % INV.length];
+          state.invertDragX = x;
+          state.invertDragY = y;
+          persistInvert();
+          syncHelpControls();
+        });
+      }
+      if (fxBtn) {
+        fxBtn.addEventListener("click", () => {
+          const order = ["auto", "full", "reduced"];
+          applyEffectsMode(
+            order[(order.indexOf(state.effectsMode) + 1) % order.length]
+          );
+          syncHelpControls();
+        });
+      }
+      syncHelpControls();
+    }
+
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
       if (fromWelcome) markWelcomeSeen = true;
@@ -3855,6 +3934,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       helpOverlay.hidden = false;
       // The dock can change the pack too; re-read on every open.
       if (syncHelpPacks) syncHelpPacks();
+      if (syncHelpControls) syncHelpControls();
       document.body.classList.add("help-open");
       requestAnimationFrame(() => helpOverlay.classList.add("open"));
       if (releaseFocusTrap) releaseFocusTrap();
@@ -3909,6 +3989,30 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       el.addEventListener("input", () => {
         setWaterLevel(parseFloat(el.value) / 100);
       });
+    }
+
+    const EFFECTS_KEY = "hexsweeper-sphere-effects-v1";
+
+    function systemReducedMotion() {
+      return (
+        typeof matchMedia === "function" &&
+        matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    }
+
+    /** Auto follows the OS; Full and Reduced override it. */
+    function applyEffectsMode(mode, opts) {
+      const m = mode === "full" || mode === "reduced" ? mode : "auto";
+      state.effectsMode = m;
+      state.reduceMotion =
+        m === "reduced" ? true : m === "full" ? false : systemReducedMotion();
+      state.ambientSpin = state.ambientSpin && !state.reduceMotion;
+      if (!opts || opts.persist !== false) {
+        try {
+          localStorage.setItem(EFFECTS_KEY, m);
+        } catch (_) {}
+      }
+      scheduleFrame();
     }
 
     function resize() {
@@ -5870,11 +5974,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       if (cell.flagged && !cell.revealed) {
         return {
           fill: T.tierFlagged || T.flagFill,
-          // Seam ink, not flag color: flagEdge === flagFill in the mono
-          // themes, so adjacent flags fused into one unbroken blob with no
-          // tile boundaries. Takes keep their deliberate halo.
-          stroke: T.takeFlagHalo ? T.flagEdge : T.coveredEdge || T.flagEdge,
-          lineWidth: T.takeFlagHalo ? 3.4 : 2,
+          // Translucent dark seam: reads as a darker line of the flag color
+          // over the fill AND covers the projection gap between lifted flag
+          // faces. Opaque seam ink here made fat pale channels between
+          // adjacent flags; pure flag color made them fuse. Takes keep halos.
+          stroke: T.takeFlagHalo ? T.flagEdge : "rgba(0,0,0,0.38)",
+          lineWidth: T.takeFlagHalo ? 3.4 : 1.75,
           showLabel: false,
         };
       }
@@ -6900,8 +7005,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     resize();
 
     state.waterLevel = readWaterLevel();
+    try {
+      applyEffectsMode(localStorage.getItem(EFFECTS_KEY) || "auto", { persist: false });
+    } catch (_) {}
     bindWaterLevel();
     bindHelpPacks();
+    bindHelpControls();
 
     // Deep-link theme: ?theme=earth|moon|light|…
     try {
@@ -7135,24 +7244,18 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     { q: -1, r: -1 }, // ring-2 up-left
   ];
 
-  // Fixed seats for the primaries, in categories() order. Two rows above the
-  // dock: four across, then a symmetric pair of shoulders flanking the gap.
-  // x = q + r/2, so each row below is centred on the seed:
+  // Fixed seats for the primaries, in categories() order. One row of four
+  // (discuss verdict 2026-08-10): every remaining tile is a 2-5 state cycle,
+  // Invert and Effects moved to the ? modal as set-once plumbing, and
+  // relief+seams merged into the curated Surface cycle.
   //
-  //      [3D]   ·   [123]            r = -2  (x = -1, +1)
-  //   [Seams][Size][L/D][Off]        r = -1  (x = -1.5 … 1.5)
+  //   [L/D][Size][Surface][123]      r = -1  (x = -1.5 … 1.5)
   //      [reset] [x] [flag]          r =  0  (fixed dock)
-  //
-  // The Dig/Flag tile left the bloom when Flag joined the dock; Bg/Shell/Dug
-  // collapsed into one Light/Dark cycle (the three-axis adjusts live on in
-  // flipAxis/axisSwatch and the uxperiments harness for a future variant).
   const PRIMARY_SLOTS = [
+    { q: -1, r: -1 }, // Light / Dark
     { q: 0, r: -1 }, // Size
-    { q: -1, r: -1 }, // Seams
-    { q: 2, r: -1 }, // Invert
-    { q: 1, r: -1 }, // Light / Dark
-    { q: 0, r: -2 }, // 3D / Flush
-    { q: 2, r: -2 }, // Indicators
+    { q: 1, r: -1 }, // Surface
+    { q: 2, r: -1 }, // Indicators
   ];
 
   /**
@@ -7162,11 +7265,26 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    * center tile closes, and tapping the background (anywhere off the sphere)
    * opens it. The bottom dock hides entirely; the corner ? stays.
    *
-   *      [3D]      [123]        r = -2  (x = -1, +1)
-   *    [Size]  [L/D]            NW · NE
+   *    [L/D]   [Size]           NW · NE
    *  [Reset]   [×]   [Flag]     W · center · E
-   *    [Seams]  [Off]           SW · SE
+   *  [Surface]  [123]           SW · SE
+   *
+   * Seven hexes, one perfect ring — the flower the clex study promised.
    */
+  const DOME_TILT = 14; // deg at ring-1
+  const DOME_LIFT = 34; // px translateZ at the center tile
+
+  function applyCenterDome(el, dx, dy, hex) {
+    if (!DOME) return;
+    const d = Math.hypot(dx, dy);
+    const t = Math.min(1, d / (hex * 2.2 || 1));
+    // Bulge: center forward, ring leaning back on inner-edge hinges.
+    el.style.setProperty("--dome", (DOME_TILT * t).toFixed(2) + "deg");
+    el.style.setProperty("--dz", (DOME_LIFT * (1 - t * t)).toFixed(1) + "px");
+    const k = 1 / Math.cos((DOME_TILT * t * Math.PI) / 180);
+    el.style.setProperty("--dscale", k.toFixed(4));
+  }
+
   const DOCK_CENTER = (() => {
     try {
       return new URLSearchParams(location.search).get("dock") === "center";
@@ -7174,14 +7292,37 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       return false;
     }
   })();
+  /**
+   * ?dome=1 — the dome retry, this time where it belongs: on the CENTER
+   * flower, which is radially symmetric (the bottom-dock dome read lopsided
+   * and was reverted). The cluster bulges toward the player: center tile
+   * closest, ring tiles hinged back slightly on their inner edges, 1/cos
+   * scale holding the comb closed.
+   *
+   * ?seed=bare — idle dock shows JUST the gear glyph (same quiet treatment
+   * Reset and ? already get); the seed's hex face appears on activation.
+   */
+  const DOME = (() => {
+    try {
+      return new URLSearchParams(location.search).get("dome") === "1";
+    } catch (_) {
+      return false;
+    }
+  })();
+  const SEED_BARE = (() => {
+    try {
+      return new URLSearchParams(location.search).get("seed") === "bare";
+    } catch (_) {
+      return false;
+    }
+  })();
+
   // In categories() order: the six shared tiles, then Reset and Dig/Flag.
   const CENTER_SLOTS = [
-    { q: 0, r: -1 }, // Size — NW
-    { q: -1, r: 1 }, // Seams — SW
-    { q: 0, r: 1 }, // Invert — SE
-    { q: 1, r: -1 }, // Light / Dark — NE
-    { q: 0, r: -2 }, // 3D — top-left shoulder
-    { q: 2, r: -2 }, // Indicators — top-right shoulder
+    { q: 0, r: -1 }, // Light / Dark — NW
+    { q: 1, r: -1 }, // Size — NE
+    { q: -1, r: 1 }, // Surface — SW
+    { q: 0, r: 1 }, // Indicators — SE
     { q: -1, r: 0 }, // Reset — W
     { q: 1, r: 0 }, // Dig / Flag — E
   ];
@@ -7232,6 +7373,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
     // Theme control = literally a circle (swatches carry the theme paint)
     theme: '<circle cx="12" cy="12" r="8"/>',
+    // Settings = a hex nut (hexagon + round bore) — a circle-with-spokes
+    // gear read as the Light tile's sun at dock size.
+    gear:
+      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
+      '<circle cx="12" cy="12" r="3.4"/>',
     style:
       '<path d="M7 7h.01M12 7h.01M17 7h.01"/><path d="M7 12h.01M12 12h.01M17 12h.01"/>' +
       '<path d="M7 17h.01M12 17h.01M17 17h.01"/>',
@@ -7733,6 +7879,30 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
      * concept is stashed in CHROME_HISTORY and the uxperiments harness for a
      * future variant, not deleted.
      */
+    /**
+     * Surface — relief + seams as one curated 3-state cycle (discuss verdict
+     * 2026-08-10): 3D (extruded, seams) → Flat (flush, seams — the diagram
+     * look) → Ink (flush, borderless). The fourth combination (extruded
+     * borderless) was judged least legible; if a stored session is in it,
+     * it displays as 3D and normalizes on the next tap.
+     */
+    function surfaceState() {
+      const st = game.getState();
+      if (st.relief !== "flush") return "3d";
+      return st.seams === false ? "ink" : "flat";
+    }
+
+    function surfaceLabel() {
+      return { "3d": "3D", flat: "Flat", ink: "Ink" }[surfaceState()];
+    }
+
+    function cycleSurface() {
+      const next = { "3d": "flat", flat: "ink", ink: "3d" }[surfaceState()];
+      game.setRelief(next === "3d" ? "extruded" : "flush");
+      game.setSeams(next !== "ink");
+      announce("Surface · " + { "3d": "3D", flat: "Flat", ink: "Ink" }[next]);
+    }
+
     function cycleLightDark() {
       const toDark = getAxes().field !== "dark";
       if (typeof game.setAppearanceAxes === "function") {
@@ -7759,33 +7929,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       );
     }
 
-    function invertModeIndex() {
-      const x = invertGet("x");
-      const y = invertGet("y");
-      if (!x && !y) return 0;
-      if (x && !y) return 1;
-      if (!x && y) return 2;
-      return 3;
-    }
 
-    function invertModeLabel() {
-      return ["Off", "X", "Y", "X+Y"][invertModeIndex()];
-    }
 
-    function cycleInvert() {
-      const next = (invertModeIndex() + 1) % 4;
-      const map = [
-        [false, false],
-        [true, false],
-        [false, true],
-        [true, true],
-      ];
-      if (typeof game.setInvertDragX === "function")
-        game.setInvertDragX(map[next][0]);
-      if (typeof game.setInvertDragY === "function")
-        game.setInvertDragY(map[next][1]);
-      announce("Invert · " + ["Off", "X", "Y", "X+Y"][next]);
-    }
 
     function cycleMode() {
       const on = !!game.getState().flagMode;
@@ -7803,19 +7948,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       announce("Size · " + SIZES[next][1]);
     }
 
-    function cycleFlush() {
-      const flush = game.getState().relief === "flush";
-      if (typeof game.setRelief === "function") {
-        game.setRelief(flush ? "extruded" : "flush");
-      }
-      announce("Relief · " + (flush ? "3D" : "Flush"));
-    }
 
-    function cycleSeams() {
-      const on = game.getState().seams !== false;
-      if (typeof game.setSeams === "function") game.setSeams(!on);
-      announce("Seams · " + (on ? "off" : "on"));
-    }
 
     function cycleCount() {
       const c = game.getState().countStyle;
@@ -7847,43 +7980,6 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       // Restart / Help live on the always-visible three-tile dock.
       const all = [
         {
-          id: "size",
-          label: () => currentSize(),
-          icon: "size",
-          iconOnly: false,
-          badge: true,
-          aria: () =>
-            "Size: " + currentSize() + ". Activate to cycle board size.",
-          cycle: cycleSize,
-        },
-        {
-          id: "seams",
-          label: () =>
-            game.getState().seams === false ? "Seam" : "Seams",
-          icon: "style",
-          iconOnly: false,
-          aria: () => {
-            const on = game.getState().seams !== false;
-            return (
-              "Seams: " +
-              (on ? "on" : "off") +
-              ". Activate to toggle honeycomb edges."
-            );
-          },
-          cycle: cycleSeams,
-        },
-        {
-          id: "invert",
-          label: () => invertModeLabel(),
-          icon: "drag",
-          iconOnly: false,
-          aria: () =>
-            "Invert drag: " +
-            invertModeLabel() +
-            ". Activate to cycle Off, X, Y, X+Y.",
-          cycle: cycleInvert,
-        },
-        {
           id: "lightdark",
           label: () => (getAxes().field === "dark" ? "Dark" : "Light"),
           icon: () => (getAxes().field === "dark" ? "moon" : "sun"),
@@ -7895,20 +7991,24 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           cycle: cycleLightDark,
         },
         {
-          id: "flush",
-          label: () =>
-            game.getState().relief === "flush" ? "Flush" : "3D",
+          id: "size",
+          label: () => currentSize(),
           icon: "size",
           iconOnly: false,
-          aria: () => {
-            const flush = game.getState().relief === "flush";
-            return (
-              "Relief: " +
-              (flush ? "flush" : "extruded") +
-              ". Activate to toggle."
-            );
-          },
-          cycle: cycleFlush,
+          badge: true,
+          aria: () =>
+            "Size: " + currentSize() + ". Activate to cycle board size.",
+          cycle: cycleSize,
+        },
+        {
+          id: "surface",
+          label: () => surfaceLabel(),
+          icon: "style",
+          iconOnly: false,
+          labelSize: "sm",
+          aria: () =>
+            "Surface: " + surfaceLabel() + ". Activate to cycle 3D, Flat, Ink.",
+          cycle: cycleSurface,
         },
         {
           id: "indicators",
@@ -8004,7 +8104,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         dockBtn.setAttribute("aria-label", "Close menu");
         dockBtn.setAttribute("aria-expanded", "true");
       } else {
-        setHexIcon(dockBtn, "menu");
+        setHexIcon(dockBtn, "gear");
         if (dockBtn._glyphEl) dockBtn._glyphEl.hidden = false;
         dockBtn._labelEl.textContent = "Menu";
         dockBtn._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
@@ -8283,7 +8383,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       dockBtn = makeHex({
         cls: "is-dock is-dock-menu",
         label: "Menu",
-        icon: "menu",
+        icon: "gear",
         iconOnly: true,
         ariaLabel: "Open game menu",
       });
@@ -8397,6 +8497,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           el.setAttribute("aria-expanded", "false");
         }
         place(el, cx + p.x, cy + p.y, cx, cy);
+        if (DOCK_CENTER) applyCenterDome(el, p.x, p.y, HEX);
         el.classList.add("folded");
         el.dataset.delay = String(i * 26);
         el.addEventListener("click", (e) => {
@@ -8422,6 +8523,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           collapse();
         });
         place(closeEl, cx, cy, cx, cy);
+        applyCenterDome(closeEl, 0, 0, 1);
         closeEl.classList.add("folded");
         closeEl.dataset.delay = "0";
         stage.appendChild(closeEl);
@@ -8535,6 +8637,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       phaseTimer = setTimeout(finish, foldMs());
     }
 
+    if (SEED_BARE) root.dataset.seed = "bare";
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
       // The background is the menu activator: a quick tap that lands off the

@@ -29,7 +29,7 @@
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
 <link rel="stylesheet" href="dev-chrome.css?v=20260808f">
-<link rel="stylesheet" href="hex-bloom.css?v=20260810e">
+<link rel="stylesheet" href="hex-bloom.css?v=20260810g">
 <style>
 /* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
 :root,
@@ -761,6 +761,8 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
 /* Double-tap on any chrome control must never become Safari smart-zoom.
    Declared on the elements: iOS skips body-level touch-action for this. */
 button, a, input[type="range"] { touch-action: manipulation; }
+/* Controls row in the ? modal — set-once plumbing (invert drag, effects). */
+.help-pack.is-text::before { display: none; }
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
@@ -885,6 +887,11 @@ button, a, input[type="range"] { touch-action: manipulation; }
       <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
       <button type="button" class="help-pack" data-pack="water" style="--sw:#12617d" aria-pressed="false">Water</button>
     </div>
+    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
+      <span class="help-packs-cap">Controls</span>
+      <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
+      <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
+    </div>
     <p class="help-more">Also <a href="../">flat Hexsweeper</a> · <a href="../?mode=fire">Fire</a> · <a href="../?mode=plague">Plague</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
     <nav class="menu-links" aria-label="Elsewhere">
@@ -900,9 +907,9 @@ button, a, input[type="range"] { touch-action: manipulation; }
   <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
-<script src="hexasphere.js?v=20260810f"></script>
-<script src="sphere.js?v=20260810f"></script>
-<script src="hex-bloom.js?v=20260810e"></script>
+<script src="hexasphere.js?v=20260810g"></script>
+<script src="sphere.js?v=20260810g"></script>
+<script src="hex-bloom.js?v=20260810g"></script>
 <script>
 initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));
 (function () {

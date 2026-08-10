@@ -731,9 +731,8 @@
       pressed: -1,
       timeElapsed: 0,
       timerInterval: null,
-      reduceMotion:
-        typeof matchMedia === "function" &&
-        matchMedia("(prefers-reduced-motion: reduce)").matches,
+      reduceMotion: systemReducedMotion(),
+      effectsMode: "auto",
       radius: 1,
       baseScale: 200,
       zoomFactor: INITIAL_ZOOM,
@@ -1221,6 +1220,54 @@
     }
 
 
+    /**
+     * Controls row in the ? modal: Invert drag and Effects. Set-once plumbing
+     * moved out of the bloom (discuss verdict 2026-08-10) — unlike the failed
+     * split-dock, these are not identity controls anyone scans the menu for.
+     */
+    let syncHelpControls = null;
+
+    function bindHelpControls() {
+      const row = document.getElementById("help-controls");
+      if (!row) return;
+      const invBtn = row.querySelector('[data-ctl="invert"]');
+      const fxBtn = row.querySelector('[data-ctl="effects"]');
+      const INV = [
+        [false, false, "Invert off"],
+        [true, false, "Invert X"],
+        [false, true, "Invert Y"],
+        [true, true, "Invert X+Y"],
+      ];
+      const FX = { auto: "Effects auto", full: "Effects full", reduced: "Effects reduced" };
+      const invIndex = () =>
+        INV.findIndex(
+          ([x, y]) => x === !!state.invertDragX && y === !!state.invertDragY
+        );
+      syncHelpControls = () => {
+        if (invBtn) invBtn.textContent = INV[Math.max(0, invIndex())][2];
+        if (fxBtn) fxBtn.textContent = FX[state.effectsMode] || FX.auto;
+      };
+      if (invBtn) {
+        invBtn.addEventListener("click", () => {
+          const [x, y] = INV[(Math.max(0, invIndex()) + 1) % INV.length];
+          state.invertDragX = x;
+          state.invertDragY = y;
+          persistInvert();
+          syncHelpControls();
+        });
+      }
+      if (fxBtn) {
+        fxBtn.addEventListener("click", () => {
+          const order = ["auto", "full", "reduced"];
+          applyEffectsMode(
+            order[(order.indexOf(state.effectsMode) + 1) % order.length]
+          );
+          syncHelpControls();
+        });
+      }
+      syncHelpControls();
+    }
+
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
       if (fromWelcome) markWelcomeSeen = true;
@@ -1231,6 +1278,7 @@
       helpOverlay.hidden = false;
       // The dock can change the pack too; re-read on every open.
       if (syncHelpPacks) syncHelpPacks();
+      if (syncHelpControls) syncHelpControls();
       document.body.classList.add("help-open");
       requestAnimationFrame(() => helpOverlay.classList.add("open"));
       if (releaseFocusTrap) releaseFocusTrap();
@@ -1285,6 +1333,30 @@
       el.addEventListener("input", () => {
         setWaterLevel(parseFloat(el.value) / 100);
       });
+    }
+
+    const EFFECTS_KEY = "hexsweeper-sphere-effects-v1";
+
+    function systemReducedMotion() {
+      return (
+        typeof matchMedia === "function" &&
+        matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    }
+
+    /** Auto follows the OS; Full and Reduced override it. */
+    function applyEffectsMode(mode, opts) {
+      const m = mode === "full" || mode === "reduced" ? mode : "auto";
+      state.effectsMode = m;
+      state.reduceMotion =
+        m === "reduced" ? true : m === "full" ? false : systemReducedMotion();
+      state.ambientSpin = state.ambientSpin && !state.reduceMotion;
+      if (!opts || opts.persist !== false) {
+        try {
+          localStorage.setItem(EFFECTS_KEY, m);
+        } catch (_) {}
+      }
+      scheduleFrame();
     }
 
     function resize() {
@@ -3246,11 +3318,12 @@
       if (cell.flagged && !cell.revealed) {
         return {
           fill: T.tierFlagged || T.flagFill,
-          // Seam ink, not flag color: flagEdge === flagFill in the mono
-          // themes, so adjacent flags fused into one unbroken blob with no
-          // tile boundaries. Takes keep their deliberate halo.
-          stroke: T.takeFlagHalo ? T.flagEdge : T.coveredEdge || T.flagEdge,
-          lineWidth: T.takeFlagHalo ? 3.4 : 2,
+          // Translucent dark seam: reads as a darker line of the flag color
+          // over the fill AND covers the projection gap between lifted flag
+          // faces. Opaque seam ink here made fat pale channels between
+          // adjacent flags; pure flag color made them fuse. Takes keep halos.
+          stroke: T.takeFlagHalo ? T.flagEdge : "rgba(0,0,0,0.38)",
+          lineWidth: T.takeFlagHalo ? 3.4 : 1.75,
           showLabel: false,
         };
       }
@@ -4276,8 +4349,12 @@
     resize();
 
     state.waterLevel = readWaterLevel();
+    try {
+      applyEffectsMode(localStorage.getItem(EFFECTS_KEY) || "auto", { persist: false });
+    } catch (_) {}
     bindWaterLevel();
     bindHelpPacks();
+    bindHelpControls();
 
     // Deep-link theme: ?theme=earth|moon|light|…
     try {
