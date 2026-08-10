@@ -940,6 +940,7 @@ body[data-sphere-chrome="dark"] .cz-dot {
      flower sits perfectly aligned at rest and gains depth through motion.
      Transform transition off — the rAF lerp is the damper. */
   transition: opacity 0.12s ease, visibility 0.12s;
+  transform-origin: 50% 50%;
 }
 .hex-bloom[data-dome="true"] .hex-bloom-stage {
   transform-style: preserve-3d;
@@ -962,7 +963,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
     drop-shadow(0 0 2px var(--hb-paper));
 }
 .hex-bloom[data-icon-menu="true"]:not([data-dome="true"]) .hb-hex.shown {
-  filter: none;
+  /* The flat center flower is still one thin object hovering above the
+     sphere. A restrained shared shadow gives the pointer tilt something to
+     reveal without making seven independent cards. */
+  filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--hb-ink) 18%, transparent));
 }
 .hex-bloom[data-dome="true"] .hb-hex {
   backface-visibility: hidden;
@@ -971,8 +975,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
    grows with the bloom: it is reference chrome, not part of the flower. */
 .hex-bloom-corner {
   position: absolute;
-  right: max(10px, env(safe-area-inset-right, 0px));
-  bottom: max(2px, env(safe-area-inset-bottom, 0px));
+  /* Keep the bare glyph fully inside the visual viewport. Two pixels left
+     its stroked circle clipped by desktop browser chrome and mobile bars. */
+  right: max(14px, calc(env(safe-area-inset-right, 0px) + 10px));
+  bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px));
   z-index: 3;
   pointer-events: auto;
 }
@@ -7674,12 +7680,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   );
 
   // Stroke icons (24×24) — board language, not tool metaphors
-  const SIZE_OUTWARD =
-    '<path d="M9.5 9.5 5 5M5 5h3.2M5 5v3.2M14.5 14.5l4.5 4.5M19 19h-3.2M19 19v-3.2" stroke-width="1.55"/>';
-  const SIZE_INWARD =
-    '<path d="M5 5l4.5 4.5M9.5 9.5H6.3M9.5 9.5V6.3M19 19l-4.5-4.5M14.5 14.5h3.2M14.5 14.5v3.2" stroke-width="1.55"/>';
-  const INVERT_AXES =
-    '<path d="M5 12h3M16 12h3M12 5v3M12 16v3" fill="none" stroke="#888" stroke-width="1.35" stroke-linecap="round" stroke-dasharray=".7 1.65"/>';
+  const SIZE_OUTSIDE_XS =
+    '<path d="M7.2 7.2 3.3 3.3M3.3 3.3h2.6M3.3 3.3v2.6M16.8 16.8l3.9 3.9M20.7 20.7h-2.6M20.7 20.7v-2.6" stroke-width="1.35"/>';
+  const SIZE_OUTSIDE_S =
+    '<path d="M5.5 5.5 2.2 2.2M2.2 2.2h2.5M2.2 2.2v2.5M18.5 18.5l3.3 3.3M21.8 21.8h-2.5M21.8 21.8v-2.5" stroke-width="1.35"/>';
+  const SIZE_OUTSIDE_M =
+    '<path d="M4.1 4.1 1.1 1.1M1.1 1.1h2.4M1.1 1.1v2.4M19.9 19.9l3 3M22.9 22.9h-2.4M22.9 22.9v-2.4" stroke-width="1.3"/>';
+  const SIZE_INSIDE_OUT =
+    '<path d="M10.4 10.4 6.2 6.2M6.2 6.2H9M6.2 6.2V9M13.6 13.6l4.2 4.2M17.8 17.8H15M17.8 17.8V15" stroke-width="1.4"/>';
+  const SIZE_INSIDE_IN =
+    '<path d="M5.8 5.8 10.1 10.1M10.1 10.1H7.3M10.1 10.1V7.3M18.2 18.2l-4.3-4.3M13.9 13.9h2.8M13.9 13.9v2.8" stroke-width="1.4"/>';
+  // Two mirrored panels use the established horizontal-flip silhouette. Their
+  // left/right and top/bottom fills preserve the four-state quadrant idea,
+  // without a circle, axis, reticle, or extra badge competing for meaning.
+  const INVERT_FLIP =
+    '<path d="M3 3.4 10.2 6v12L3 20.6V3.4ZM21 3.4 13.8 6v12l7.2 2.6V3.4Z" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/>';
   const ICONS = {
     // Dig = open / cleared hex face (hollow honeycomb cell)
     dig:
@@ -7712,11 +7727,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
     // One outline changes physical size across the five board sizes. The
     // silhouette communicates scale before the tooltip has to explain it.
-    sizeXS: '<path d="m12 7.4 4 2.3v4.6l-4 2.3-4-2.3V9.7l4-2.3Z"/>' + SIZE_OUTWARD,
-    sizeS: '<path d="m12 5.7 5.5 3.1v6.4l-5.5 3.1-5.5-3.1V8.8l5.5-3.1Z"/>' + SIZE_OUTWARD,
-    sizeM: '<path d="m12 4 7 4v8l-7 4-7-4V8l7-4Z"/>' + SIZE_OUTWARD,
-    sizeL: '<path d="m12 2.3 8.5 4.9v9.6L12 21.7l-8.5-4.9V7.2L12 2.3Z"/>' + SIZE_OUTWARD,
-    sizeXL: '<path d="m12 .6 10 5.7v11.4l-10 5.7-10-5.7V6.3L12 .6Z"/>' + SIZE_INWARD,
+    sizeXS: '<path d="m12 7.4 4 2.3v4.6l-4 2.3-4-2.3V9.7l4-2.3Z"/>' + SIZE_OUTSIDE_XS,
+    sizeS: '<path d="m12 5.7 5.5 3.1v6.4l-5.5 3.1-5.5-3.1V8.8l5.5-3.1Z"/>' + SIZE_OUTSIDE_S,
+    sizeM: '<path d="m12 4 7 4v8l-7 4-7-4V8l7-4Z"/>' + SIZE_OUTSIDE_M,
+    sizeL: '<path d="m12 2.3 8.5 4.9v9.6L12 21.7l-8.5-4.9V7.2L12 2.3Z"/>' + SIZE_INSIDE_OUT,
+    sizeXL: '<path d="m12 .6 10 5.7v11.4l-10 5.7-10-5.7V6.3L12 .6Z"/>' + SIZE_INSIDE_IN,
     // Theme circle remains available to archived/default variants.
     theme: '<circle cx="12" cy="12" r="8"/>',
     // Conventional board-theme affordance: handle, ferrule, and bristles.
@@ -7742,20 +7757,18 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     drag:
       '<path d="M12 4v16"/><path d="m8 8 4-4 4 4"/><path d="m8 16 4 4 4-4"/>' +
       '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
-    // The disk is the board's two-axis inversion diagram: empty, vertical
-    // half, horizontal half, full. It changes as one coherent silhouette.
+    // The mirrored panels are also the state diagram: empty, right half,
+    // upper half, full. One silhouette communicates both flip and state.
     invertOff:
-      '<circle cx="12" cy="12" r="8.5" fill="var(--hb-paper)"/>' + INVERT_AXES,
+      INVERT_FLIP,
     invertX:
-      '<circle cx="12" cy="12" r="8.5" fill="var(--hb-paper)"/>' +
-      '<path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none"/>' +
-      INVERT_AXES,
+      '<path d="M21 3.4 13.8 6v12l7.2 2.6Z" fill="currentColor" stroke="none"/>' +
+      INVERT_FLIP,
     invertY:
-      '<circle cx="12" cy="12" r="8.5" fill="var(--hb-paper)"/>' +
-      '<path d="M3.5 12a8.5 8.5 0 0 1 17 0Z" fill="currentColor" stroke="none"/>' +
-      INVERT_AXES,
+      '<path d="M3 3.4 10.2 6v6H3ZM21 3.4 13.8 6v6H21Z" fill="currentColor" stroke="none"/>' +
+      INVERT_FLIP,
     invertBoth:
-      '<circle cx="12" cy="12" r="8.5" fill="currentColor"/>' + INVERT_AXES,
+      '<path d="M3 3.4 10.2 6v12L3 20.6ZM21 3.4 13.8 6v12l7.2 2.6Z" fill="currentColor" stroke="none"/>' + INVERT_FLIP,
     more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
     // Menu affordance — hollow hex (board language)
     menu:
@@ -9603,33 +9616,31 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     if (DEFAULT_BLOOM && !SEED_BARE) root.dataset.bottomSeed = "true";
     if (DOME) root.dataset.dome = "true";
 
-    // Pointer parallax while the flower is open (fine pointers only): the
-    // stage tilts a few degrees toward the cursor, so the bowl's depth reads
-    // through motion instead of a baked-in viewing angle — and sits perfectly
-    // aligned at rest. rAF-lerped; the stage's own transform transition is
-    // disabled in center mode so this does not fight it.
-    if (DOCK_CENTER && DOME) {
-      // The bowl must read before the pointer moves. A fixed oblique camera
-      // exposes the center/rim depth; pointer motion only adds a small look-
-      // around, and reduced-motion users retain the same static camera.
-      const BASE_RX = 9;
-      const BASE_RY = -6;
-      const PARALLAX_DEG = 5;
+    // Pointer parallax while a center flower is open (fine pointers only).
+    // Dome gets the full oblique camera; the base flower moves as one nearly
+    // flat plate, just enough to separate it from the sphere without opening
+    // seams between tiles. rAF-lerped so repeated interaction cannot drift.
+    if (DOCK_CENTER) {
+      const BASE_RX = DOME ? 9 : 0.8;
+      const BASE_RY = DOME ? -6 : -0.6;
+      const PARALLAX_DEG = DOME ? 5 : 2.1;
+      const CAMERA_SCALE = DOME ? 1 : 1.006;
       let px = 0;
       let py = 0;
       let txp = 0;
       let typ = 0;
       let parRaf = 0;
-      const paintDomeCamera = () => {
+      const paintCenterCamera = () => {
         stage.style.transform =
           "rotateX(" + (BASE_RX + py * -PARALLAX_DEG).toFixed(2) +
-          "deg) rotateY(" + (BASE_RY + px * PARALLAX_DEG).toFixed(2) + "deg)";
+          "deg) rotateY(" + (BASE_RY + px * PARALLAX_DEG).toFixed(2) +
+          "deg) scale(" + CAMERA_SCALE.toFixed(3) + ")";
       };
       const easeParallax = () => {
         parRaf = 0;
         px += (txp - px) * 0.22;
         py += (typ - py) * 0.22;
-        paintDomeCamera();
+        paintCenterCamera();
         if (Math.abs(txp - px) > 0.003 || Math.abs(typ - py) > 0.003) {
           queueParallax();
         }
@@ -9637,7 +9648,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const queueParallax = () => {
         if (!parRaf) parRaf = requestAnimationFrame(easeParallax);
       };
-      paintDomeCamera();
+      paintCenterCamera();
       if (matchMedia("(pointer: fine)").matches && !prefersReducedMotion()) {
         document.addEventListener(
           "pointermove",
@@ -9647,6 +9658,16 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
             const h = stage.clientHeight || 1;
             txp = (e.clientX / w) * 2 - 1;
             typ = (e.clientY / h) * 2 - 1;
+            queueParallax();
+          },
+          { passive: true }
+        );
+        document.addEventListener(
+          "pointerout",
+          (e) => {
+            if (e.relatedTarget) return;
+            txp = 0;
+            typ = 0;
             queueParallax();
           },
           { passive: true }

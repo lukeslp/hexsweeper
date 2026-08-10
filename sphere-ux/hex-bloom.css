@@ -204,6 +204,7 @@
      flower sits perfectly aligned at rest and gains depth through motion.
      Transform transition off — the rAF lerp is the damper. */
   transition: opacity 0.12s ease, visibility 0.12s;
+  transform-origin: 50% 50%;
 }
 .hex-bloom[data-dome="true"] .hex-bloom-stage {
   transform-style: preserve-3d;
@@ -226,7 +227,10 @@
     drop-shadow(0 0 2px var(--hb-paper));
 }
 .hex-bloom[data-icon-menu="true"]:not([data-dome="true"]) .hb-hex.shown {
-  filter: none;
+  /* The flat center flower is still one thin object hovering above the
+     sphere. A restrained shared shadow gives the pointer tilt something to
+     reveal without making seven independent cards. */
+  filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--hb-ink) 18%, transparent));
 }
 .hex-bloom[data-dome="true"] .hb-hex {
   backface-visibility: hidden;
@@ -235,8 +239,10 @@
    grows with the bloom: it is reference chrome, not part of the flower. */
 .hex-bloom-corner {
   position: absolute;
-  right: max(10px, env(safe-area-inset-right, 0px));
-  bottom: max(2px, env(safe-area-inset-bottom, 0px));
+  /* Keep the bare glyph fully inside the visual viewport. Two pixels left
+     its stroked circle clipped by desktop browser chrome and mobile bars. */
+  right: max(14px, calc(env(safe-area-inset-right, 0px) + 10px));
+  bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px));
   z-index: 3;
   pointer-events: auto;
 }
