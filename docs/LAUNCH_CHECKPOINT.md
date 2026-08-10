@@ -10,7 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [ ] `CURRENT_PROJECT_VERSION` exceeds every build in App Store Connect (≥7)
+- [x] `CURRENT_PROJECT_VERSION` is 8 and exceeds the inherited builds 1–6
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [ ] Archive signs cleanly under team `596T7J7FB6`
@@ -27,17 +27,21 @@ The record was inherited from a different app, but it was found **empty**
 rather than contaminated — every field was null, so this was fill-in.
 
 - [x] App name set — **Hexsweeper 3D** (`Hexsweeper` itself is taken)
-- [x] Description, keywords, subtitle written
+- [x] Description, keywords, subtitle, and promotional text written
 - [x] Screenshots — five 6.9" captures from the real build
 - [x] Support, marketing and privacy policy URLs set
 - [x] Age rating answered — every category NONE/false
 - [x] Export compliance: `ITSAppUsesNonExemptEncryption` is `false`
+- [x] Build 8 processed and attached to version 1.0; nothing submitted for review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
       requests at all and the export guard enforces that at build time.
 
 The record was found **empty**, not filled with the retired app's content —
 worth knowing if you ever inherit another bundle id this way.
+
+Before submission, replace `02-sphere.png`: its HUD was captured mid-render and
+shows “left” and “s” without their numbers.
 
 ## Licensing
 

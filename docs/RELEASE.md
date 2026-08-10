@@ -11,7 +11,8 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Increment `CURRENT_PROJECT_VERSION` for every upload.
+this same record. Build 8 is the current staged release candidate. Increment
+`CURRENT_PROJECT_VERSION` for every upload.
 
 ## Archive → TestFlight
 
@@ -49,19 +50,21 @@ symbolication as a result; upload dSYMs separately if that matters.
 The record was inherited but turned out to be **empty**, not wrong — every
 field was null, so this was fill-in rather than cleanup.
 
-Done (2026-08-09, all via the App Store Connect API):
+Done (updated 2026-08-10, through the App Store Connect API):
 
 - [x] Name **Hexsweeper 3D** — `Hexsweeper`, `Hexsweep`, `Hex Sweeper`,
       `Hex Sweep`, `Hexasweeper`, `Hivesweeper` and `Hexhive` are all taken.
       Every bare form is gone; `Hexsweeper` + any qualifier was free.
 - [x] Subtitle `Hex minesweeper, flat or round` (30/30 chars — at the limit)
-- [x] Description, keywords (87/100)
+- [x] Description, keywords (87/100), and promotional text
 - [x] Support + marketing URLs → the live web game
 - [x] Privacy policy → `privacy.html`, added to the hexsweeper repo and
       deployed to Drummer
 - [x] Age rating — every content question NONE, every behaviour flag false
-- [x] Screenshots — five 6.9" captures (1320×2868) taken from the real build
-      on an iPhone 17 Pro Max simulator, all COMPLETE
+- [x] Screenshots — five 6.9" real-device captures (1320×2868), all COMPLETE;
+      preserved rather than overwritten by the four generated alternatives
+- [x] Build 8 processed, validated, and attached to the 1.0 version. Nothing
+      submitted for review
 
 Still owed:
 
@@ -69,9 +72,9 @@ Still owed:
       API has no endpoint for them (`appPrivacyDetails` → "URL path is not
       valid"). Answer: no data collected, of any kind.
 - [ ] `docs/DEVICE_VERIFY.md` signed on hardware
-- [ ] Better screenshots. The current five are honest captures but sparse —
-      lots of empty ground, sphere small in frame. Fine to ship, worth redoing
-      with tighter framing before a real launch push.
+- [ ] Re-shoot `02-sphere.png`. The current capture caught the HUD mid-render
+      and shows “left” and “s” without their numbers. Four generated alternatives
+      live under `app-store/screenshots/en-US/` for comparison.
 
 Export compliance is already answered: `ITSAppUsesNonExemptEncryption = false`.
 
