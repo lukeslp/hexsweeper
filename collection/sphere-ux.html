@@ -7518,10 +7518,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    */
   // A seven-face cap needs assertive curvature to read head-on. The previous
   // 4.5× radius produced only ~22° of rim tilt and a ~3% perspective change:
-  // mathematically curved, perceptually flat. 3.05× yields ~32.5° at ring-1
-  // without opening the large triangular seams of the 37° trial.
-  const DOME_RADIUS_HEX = 3.05;
-  const DOME_CENTER_RISE_HEX = 0.22;
+  // mathematically curved, perceptually flat. 3.4× yields ~29° at ring-1:
+  // enough cap shape without the intersecting triangular flaps at 32–37°.
+  const DOME_RADIUS_HEX = 3.4;
+  const DOME_CENTER_RISE_HEX = 0.16;
 
   /**
    * Real spherical seating (Luke, 2026-08-10: "how are we fitting them so
@@ -7545,7 +7545,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         ay: 1,
         dome: 0,
         dz: hex * DOME_CENTER_RISE_HEX,
-        scale: 1.05,
+        scale: 0.985,
       };
     }
     const phi = Math.min(maxPhi == null ? 1.1 : maxPhi, s / R);
@@ -7561,9 +7561,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       ay: dx / s,
       dome: (phi * 180) / Math.PI,
       dz: -R * (1 - Math.cos(phi)),
-      // A slight overlap closes sub-pixel cracks between independently
-      // transformed faces and makes the rim read as one shell, not cards.
-      scale: 1.075,
+      // Preserve a controlled seam. Enlarging each independent face hid
+      // sub-pixel cracks but produced obvious triangular flaps at this cap's
+      // unavoidable angular deficit.
+      scale: 1,
     };
   }
 
