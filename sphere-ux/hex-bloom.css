@@ -701,6 +701,10 @@
   color: var(--hb-paper);
   z-index: 42;
 }
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu .hb-glyph,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu .hb-glyph {
+  color: var(--hb-paper);
+}
 .hex-bloom[data-phase="open"] .hb-hex.is-dock-menu::before,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu::before {
   background: var(--hb-ink);
@@ -713,6 +717,18 @@
   font-size: clamp(16px, 4vw, 22px);
   font-weight: 500;
   opacity: 1;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock .hb-glyph,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock .hb-glyph {
+  width: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
+  height: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
+  max-width: none;
+  max-height: none;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock .hb-icon,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock .hb-icon {
+  width: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
+  height: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock {
   pointer-events: auto;

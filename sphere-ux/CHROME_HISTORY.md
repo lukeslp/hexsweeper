@@ -70,6 +70,7 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | 2026-08-10 | `?seed=bare` — idle dock is three naked glyphs; hex faces appear on activation | **Trial** |
 | 2026-08-10 | All variants integrated into the **uxperiments harness**: `dr.eamer.dev/uxperiments/hexdock/` — live builds + frozen archives (nine-tile, dome, split) + shelved concepts. New experiments should land there even when they are not the chosen candidate | **Process** |
 | 2026-08-10 | Default and `?seed=bare` now share the centered flower's current control hierarchy and icon/tooltips, but bloom as a dock-rooted 2-over-3 crown; domed-flower keeps spherical seating. Glyphs scale with tile size, Invert exposes its axes, and Effects uses stateful ripple density instead of sparkles | **Current trial** |
+| 2026-08-10 | Toggle glyphs are now state families: reversed positive/negative rings for day/night, opposing arrows with two binary markers for the four invert modes, and into-well versus solid plate for depth. All SVG strokes are optically heavier; the dock's font `×` became a centered SVG and open Reset/Close/Flag now share the bloom's icon box | **Current trial** |
 
 ### What Luke is asking for (intent thread, in his words + readings)
 
