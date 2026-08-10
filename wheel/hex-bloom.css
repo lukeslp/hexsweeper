@@ -1,0 +1,757 @@
+/*
+ * Hex bloom chrome for sphere-ux.
+ * Closed: three dock hexes at bottom (Restart · Menu · Help).
+ * Open: bloom roots at the Menu tile and fans upward; Menu becomes Close.
+ * Geometry + fold language from /uxperiments/clex.
+ */
+
+.hex-bloom {
+  /* Bloom primaries (full size). Dock idle is smaller; grows to match when open. */
+  --tile-w: 76px;
+  --tile-h: 88px;
+  --tile-w-dock-idle: 40px;
+  --tile-h-dock-idle: 46px;
+  --tile-w-dock: var(--tile-w-dock-idle);
+  --tile-h-dock: var(--tile-h-dock-idle);
+  --dock-rise: 0px;
+  --border-w: 1.5px;
+  --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  --hb-ink: var(--text-main, #000);
+  --hb-paper: var(--bg-color, #fff);
+  --hb-fill: color-mix(in srgb, var(--hb-paper) 94%, var(--hb-ink));
+  --hb-fill-hover: color-mix(in srgb, var(--hb-paper) 82%, var(--hb-ink));
+  --hb-stroke: color-mix(in srgb, var(--hb-ink) 70%, transparent);
+  --hb-center-fill: var(--hb-ink);
+  --hb-center-ink: var(--hb-paper);
+  --hb-active-fill: var(--hb-ink);
+  --hb-active-ink: var(--hb-paper);
+  --hb-accent: var(--hb-ink);
+  --hb-scrim: color-mix(in srgb, var(--hb-paper) 18%, transparent);
+  --rise-y: 0px;
+  --rise-ms: 220ms;
+  --fold-ms: 180ms;
+
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Full-screen blur plate — only intercepts when open */
+.hex-bloom-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--hb-scrim);
+  -webkit-backdrop-filter: blur(5px) saturate(1.02);
+  backdrop-filter: blur(5px) saturate(1.02);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, visibility 0.18s;
+}
+.hex-bloom[data-open="true"] .hex-bloom-scrim {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Stage fills viewport; origin is the dock menu (bottom). */
+.hex-bloom-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  perspective: 1100px;
+  perspective-origin: 50% 100%;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  /* The petal layer rides the dock's grow+lift: --rise-y starts at the
+     idle→open seed delta (dockRiseDelta) and animates to 0, so petals stay
+     rooted to the seed instead of hovering at final seats while the dock
+     catches up underneath. */
+  transform: translateY(var(--rise-y, 0px));
+  transition: opacity 0.12s ease, visibility 0.12s;
+  /* Room for upward fan without clipping south of the dock */
+  overflow: visible;
+}
+.hex-bloom[data-open="true"] .hex-bloom-stage,
+.hex-bloom[data-phase="rising"] .hex-bloom-stage,
+.hex-bloom[data-phase="falling"] .hex-bloom-stage {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.12s ease,
+    visibility 0.12s,
+    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
+}
+
+/* Bottom chrome: Restart · Menu · Help
+   Idle: small + low; open: grow to bloom size and lift with the fan. */
+.hex-bloom-dock {
+  position: absolute;
+  left: 50%;
+  bottom: max(2px, env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(var(--dock-rise, 0px));
+  z-index: 3;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0;
+  width: auto;
+  height: auto;
+  pointer-events: none;
+  opacity: 1;
+  transition:
+    opacity 0.28s ease,
+    transform var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
+}
+.hex-bloom[data-phase="open"] .hex-bloom-dock {
+  /* Lift so the rooted fan has air and matches bloom height language.
+     Only while open: on falling the dock rides back down with the stage
+     and the folding petals — one settle, not two. */
+  --dock-rise: -36px;
+  --tile-w-dock: var(--tile-w);
+  --tile-h-dock: var(--tile-h);
+}
+.hex-bloom-dock .hb-hex.is-dock {
+  position: relative;
+  left: auto;
+  top: auto;
+  margin: 0;
+  flex: 0 0 auto;
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
+  pointer-events: auto;
+  transition:
+    width var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    height var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    background 0.2s ease,
+    color 0.2s ease,
+    filter 0.2s ease,
+    opacity 0.2s ease;
+}
+.hex-bloom-dock .is-dock-menu,
+.hex-bloom-dock .is-dock-side {
+  width: var(--tile-w-dock);
+  height: var(--tile-h-dock);
+  opacity: 1;
+}
+/* ?dock=center: the bloom is the chrome — no bottom dock at all. */
+.hex-bloom[data-dock-mode="center"] .hex-bloom-dock {
+  display: none;
+}
+.hb-hex.is-center-close .hb-label {
+  font-size: 19px;
+  font-weight: 600;
+}
+
+/* Help corner — its own seat, lower right, always idle-sized. It never
+   grows with the bloom: it is reference chrome, not part of the flower. */
+.hex-bloom-corner {
+  position: absolute;
+  right: max(10px, env(safe-area-inset-right, 0px));
+  bottom: max(2px, env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+  pointer-events: auto;
+}
+.hex-bloom-corner .hb-hex.is-dock {
+  position: relative;
+  left: auto;
+  top: auto;
+  margin: 0;
+  width: var(--tile-w-dock-idle);
+  height: var(--tile-h-dock-idle);
+  pointer-events: auto;
+  /* No hex around the ? — bare glyph, same quiet treatment as the idle
+     Restart / Flag icons, one step lighter. */
+  clip-path: none;
+  background: transparent;
+  filter: none;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    filter 0.2s ease,
+    opacity 0.2s ease;
+}
+.hex-bloom-corner .hb-hex.is-dock::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom-corner .hb-hex.is-dock .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.6;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom-corner .hb-hex.is-dock:hover .hb-glyph,
+.hex-bloom-corner .hb-hex.is-dock:focus-visible .hb-glyph {
+  opacity: 1;
+}
+
+/* Flag mode live: the dock tile reads as a planted flag (red face) via the
+   shared .is-flag-icon.is-active language. */
+
+/* While board has attention, whole dock recedes */
+.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-dock,
+.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-corner {
+  opacity: 0;
+}
+.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hb-hex.is-dock {
+  pointer-events: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hex-bloom-dock {
+    transition: opacity 0.12s ease;
+  }
+  .hex-bloom-stage {
+    transition: opacity 0.12s ease;
+  }
+  .hex-bloom-dock .hb-hex.is-dock {
+    transition: none;
+  }
+}
+@media (max-width: 400px) {
+  .hex-bloom {
+    --tile-w: 66px;
+    --tile-h: 76px;
+    --tile-w-dock-idle: 36px;
+    --tile-h-dock-idle: 42px;
+  }
+  .hex-bloom[data-phase="open"] .hex-bloom-dock {
+    --dock-rise: -28px;
+  }
+}
+
+/* ---- Hex tile (clex language) ---- */
+.hb-hex {
+  position: absolute;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  margin-left: calc(var(--tile-w) / -2);
+  /* Placed via `bottom` (see place()) — the centering margin lives on the
+     bottom side so tiles stay glued to the dock when the mobile URL bar
+     resizes the viewport. Dock tiles (.is-dock) reset margin to 0. */
+  margin-bottom: calc(var(--tile-h) / -2);
+  display: grid;
+  place-items: center;
+  clip-path: var(--hex-clip);
+  background: var(--hb-stroke);
+  color: var(--hb-ink);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  /* iOS Safari ignores body-level touch-action for its double-tap-zoom
+     heuristic — it must sit on the touched element. Open+close is two taps
+     on the same spot; without this Safari smart-zooms and position:fixed
+     chrome slides around the visual viewport until the zoom settles. */
+  touch-action: manipulation;
+  transform-style: preserve-3d;
+  transition:
+    transform var(--fold-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    opacity calc(var(--fold-ms) * 0.85) ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    width var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    height var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1),
+    margin var(--rise-ms) cubic-bezier(0.22, 1, 0.3, 1);
+  will-change: transform, opacity;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  filter:
+    drop-shadow(0 0 3px var(--hb-paper))
+    drop-shadow(0 1px 0 var(--hb-paper));
+}
+.hb-hex::before {
+  content: "";
+  position: absolute;
+  inset: var(--border-w);
+  clip-path: var(--hex-clip);
+  background: var(--hb-fill);
+  transition: inset 0.15s ease, background 0.2s ease;
+  z-index: 0;
+}
+.hb-hex .hb-label {
+  position: relative;
+  z-index: 1;
+  max-width: 88%;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  pointer-events: none;
+}
+.hb-hex .hb-label[data-size="sm"] { font-size: 10px; }
+.hb-hex .hb-label[data-size="xs"] { font-size: 9px; }
+
+/* Icon glyphs on primaries / icon-bearing leaves */
+.hb-hex .hb-glyph {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+  color: inherit;
+}
+.hb-hex .hb-icon {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+.hb-hex.is-primary .hb-glyph {
+  width: 30px;
+  height: 30px;
+}
+.hb-hex.is-primary .hb-icon {
+  width: 28px;
+  height: 28px;
+}
+.hb-hex.is-sub .hb-glyph {
+  width: 24px;
+  height: 24px;
+}
+.hb-hex.is-sub .hb-icon {
+  width: 22px;
+  height: 22px;
+}
+/* Visually hide label text while keeping it for SR / aria mirror */
+.hb-hex .hb-label.sr-visual-hide,
+.hb-hex .hb-label.hb-label-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+/* Size primary: nested-hex icon + letter badge */
+.hb-hex.is-primary.has-badge {
+  display: grid;
+  place-items: center;
+}
+.hb-hex.is-primary.has-badge .hb-glyph {
+  opacity: 0.35;
+  position: absolute;
+  z-index: 1;
+}
+.hb-hex.is-primary.has-badge .hb-label {
+  position: relative;
+  z-index: 2;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  max-width: none;
+}
+/* Hybrid primaries: small glyph + short word */
+.hb-hex.is-primary:not(.has-badge) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 2px 6px;
+}
+.hb-hex.is-primary:not(.has-badge) .hb-glyph {
+  width: 22px;
+  height: 22px;
+}
+.hb-hex.is-primary:not(.has-badge) .hb-icon {
+  width: 20px;
+  height: 20px;
+}
+.hb-hex.is-primary:not(.has-badge) .hb-label:not(.sr-visual-hide) {
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  max-width: 90%;
+}
+.hb-hex.is-active .hb-glyph,
+.hb-hex.is-chosen .hb-glyph {
+  color: inherit;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hb-hex:hover .hb-icon,
+  .hb-hex:focus-visible .hb-icon {
+    transform: scale(1.08);
+  }
+  .hb-hex .hb-icon {
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.3, 1);
+  }
+}
+
+/* Dig = open honeycomb cell (hollow stroke hex) */
+.hb-hex.is-dig-icon .hb-icon {
+  stroke-width: 2;
+}
+
+/* Flag = solid red face — same language as in-game flags */
+.hb-hex.is-flag-icon {
+  color: #ff0000;
+}
+.hb-hex.is-flag-icon.is-active,
+.hb-hex.is-flag-icon.is-chosen {
+  background: #ff0000;
+  color: #ff0000;
+}
+.hb-hex.is-flag-icon.is-active::before,
+.hb-hex.is-flag-icon.is-chosen::before {
+  background: color-mix(in srgb, var(--hb-paper) 12%, #ff0000);
+}
+.hb-hex.is-flag-icon.is-active .hb-icon,
+.hb-hex.is-flag-icon.is-chosen .hb-icon {
+  color: #ff0000;
+}
+
+/* Theme primary = plain circle; tint from current theme when available */
+.hb-hex.is-theme-icon .hb-icon {
+  stroke-width: 2.1;
+  color: var(--theme-edge, currentColor);
+}
+.hb-hex.is-theme-icon .hb-icon circle {
+  fill: var(--theme-fill, transparent);
+  fill-opacity: 0.92;
+  stroke: var(--theme-edge, currentColor);
+}
+
+/* Theme leaves: the hex face is painted like that theme’s shell/field */
+.hb-hex.is-theme-swatch {
+  background: var(--theme-edge, var(--hb-stroke));
+  color: var(--theme-ink, var(--hb-ink));
+}
+.hb-hex.is-theme-swatch::before {
+  background: var(--theme-fill, var(--hb-fill));
+  inset: var(--border-w);
+}
+.hb-hex.is-theme-swatch .hb-theme-dot {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--theme-field, transparent);
+  box-shadow:
+    0 0 0 1.5px var(--theme-edge, currentColor),
+    inset 0 0 0 1px color-mix(in srgb, var(--theme-field) 40%, var(--theme-edge));
+  pointer-events: none;
+}
+.hb-hex.is-theme-swatch.is-chosen {
+  background: var(--theme-accent, #ff0000);
+  color: var(--theme-ink, #fff);
+}
+.hb-hex.is-theme-swatch.is-chosen::before {
+  background: var(--theme-fill, var(--hb-fill));
+  inset: 3px;
+}
+.hb-hex.is-theme-swatch.is-chosen .hb-theme-dot {
+  box-shadow:
+    0 0 0 2px var(--theme-accent, #ff0000),
+    inset 0 0 0 1px var(--theme-edge, #000);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hb-hex.is-theme-swatch:hover::before {
+    inset: calc(var(--border-w) + 1px);
+    background: var(--theme-fill, var(--hb-fill-hover));
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hb-hex:hover::before,
+  .hb-hex:focus-visible::before {
+    background: var(--hb-fill-hover);
+    inset: calc(var(--border-w) + 1px);
+  }
+}
+.hb-hex:focus-visible {
+  background: var(--hb-accent);
+}
+
+/* Dock hexes */
+.hb-hex.is-dock {
+  z-index: 40;
+  color: var(--hb-ink);
+  background: var(--hb-stroke);
+  pointer-events: auto;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hb-hex.is-dock::before {
+  background: var(--hb-fill);
+  inset: var(--border-w);
+  transition: inset 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+.hb-hex.is-dock .hb-glyph {
+  width: 55%;
+  height: 55%;
+  max-width: 28px;
+  max-height: 28px;
+  color: var(--hb-ink);
+  transition: width 0.2s ease, height 0.2s ease;
+}
+.hb-hex.is-dock .hb-icon {
+  width: 100%;
+  height: 100%;
+}
+.hb-hex.is-dock .hb-label {
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--hb-ink);
+}
+
+/* ---- Idle (closed): sides are borderless icons; menu is a quiet ring + hex icon ---- */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side {
+  background: transparent;
+  filter: none;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.72;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:hover .hb-glyph,
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:focus-visible .hb-glyph {
+  opacity: 1;
+}
+/* Flag mode on: the dock flag turns red — full strength in every phase
+   (the idle rule above otherwise pins side glyphs to ink at 0.72). */
+.hex-bloom .hb-hex.is-dock-flag.is-flag-icon .hb-glyph {
+  color: #ff2200;
+  opacity: 1;
+}
+/* Menu: light outline + hollow-hex icon (reads as “open”) */
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu {
+  background: var(--hb-stroke);
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu::before {
+  background: var(--hb-fill);
+  inset: var(--border-w);
+  opacity: 1;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  opacity: 1;
+}
+
+/* ---- Open: full bloom borders on all three; menu = solid × ---- */
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-side,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock-side {
+  background: var(--hb-stroke);
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+  z-index: 41;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-side::before,
+.hex-bloom[data-phase="falling"] .hb-hex.is-dock-side::before {
+  opacity: 1;
+  background: var(--hb-fill);
+  inset: var(--border-w);
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu {
+  background: var(--hb-ink);
+  color: var(--hb-paper);
+  z-index: 42;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu::before,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu::before {
+  background: var(--hb-ink);
+  inset: 0;
+  opacity: 1;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu .hb-label,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu .hb-label {
+  color: var(--hb-paper);
+  font-size: clamp(16px, 4vw, 22px);
+  font-weight: 500;
+  opacity: 1;
+}
+.hex-bloom[data-phase="closed"] .hb-hex.is-dock {
+  pointer-events: auto;
+}
+
+/* Primary ring */
+.hb-hex.is-primary {
+  z-index: 20;
+  color: var(--hb-ink);
+}
+.hb-hex.is-primary.is-active {
+  background: var(--hb-accent);
+  color: var(--hb-active-ink);
+  z-index: 28;
+}
+.hb-hex.is-primary.is-active::before {
+  background: var(--hb-active-fill);
+  inset: 2px;
+}
+.hb-hex.is-primary.is-active .hb-label {
+  color: var(--hb-active-ink);
+}
+
+.hex-bloom[data-branch] .hb-hex.is-primary:not(.is-active) {
+  opacity: 0.38;
+}
+
+/* Sub / leaf ring */
+.hb-hex.is-sub {
+  z-index: 24;
+  color: var(--hb-ink);
+}
+.hb-hex.is-sub .hb-label {
+  color: var(--hb-ink);
+  font-size: 10px;
+}
+.hb-hex.is-sub.is-chosen {
+  background: var(--hb-accent);
+  color: var(--hb-active-ink);
+  z-index: 26;
+}
+.hb-hex.is-sub.is-chosen::before {
+  background: var(--hb-active-fill);
+  inset: 2px;
+}
+.hb-hex.is-sub.is-chosen .hb-label {
+  color: var(--hb-active-ink);
+}
+
+/* Fold / unfold (clex) */
+.hb-hex.folded {
+  opacity: 0;
+  pointer-events: none;
+  transform:
+    translate(var(--tx, 0), var(--ty, 0))
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--fold, 82deg))
+    scale(0.86);
+}
+.hb-hex.shown {
+  opacity: 1;
+  transform:
+    translate(var(--tx, 0), var(--ty, 0))
+    rotate3d(var(--ax, 0), var(--ay, 1), 0, 0deg)
+    scale(1);
+}
+
+
+
+/* Stats hub */
+.hex-bloom-hub {
+  --hub-ink: var(--text-main, #000);
+  --hub-halo: var(--bg-color, #fff);
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  z-index: 56;
+  display: flex;
+  gap: 1.35rem;
+  pointer-events: none;
+  color: var(--hub-ink);
+  font: 600 22px/1 "IBM Plex Sans", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+  text-shadow:
+    0 0 12px var(--hub-halo),
+    0 0 5px var(--hub-halo),
+    0 1px 0 var(--hub-halo),
+    0 -1px 0 var(--hub-halo),
+    1px 0 0 var(--hub-halo),
+    -1px 0 0 var(--hub-halo);
+}
+body[data-sphere-chrome="dark"] .hex-bloom-hub {
+  --hub-ink: #fff;
+  --hub-halo: #000;
+}
+.hex-bloom-hub[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.hex-bloom-live {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  margin: -1px !important;
+  padding: 0 !important;
+}
+
+/* Hide legacy gear/help chrome */
+body.hex-bloom-ui .hud-help-fixed,
+body.hex-bloom-ui .hud-cluster {
+  display: none !important;
+  pointer-events: none !important;
+}
+body.hex-bloom-ui .legacy-hud {
+  display: block !important;
+  position: fixed !important;
+  left: -10000px !important;
+  top: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* While menu is the active surface, keep the board inert-looking */
+body.hex-bloom-open .canvas-container {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-hex,
+  .hex-bloom-scrim,
+  .hex-bloom-stage,
+  .hex-bloom-hub {
+    transition: none !important;
+    transition-delay: 0ms !important;
+  }
+  .hex-bloom {
+    --rise-ms: 0ms;
+  }
+  .hb-hex.folded {
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.92);
+  }
+}
+
+@media (max-width: 400px) {
+  .hex-bloom {
+    --tile-w: 66px;
+    --tile-h: 76px;
+  }
+  .hb-hex .hb-label { font-size: 10px; }
+}

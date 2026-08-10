@@ -131,8 +131,12 @@ etc. — one fluid per effect).
 
 Everything needed already exists in sphere-ux: the waterline + level slider
 (`waterLineY`, `?water=`), per-face screen positions (`projectTile`), and
-the flag state. The missing piece is a rule for submerged-flagged faces and
-its cost — without a cost, dousing trivializes the endgame. Archived theme:
+the flag state. **Prototyped 2026-08-10 at `wheel/`** (fully separate build,
+isolated `hexwheel-*` saves): hold a flagged face submerged for ~1.1s —
+correct flag → mine doused (confirmed, inert even if later unflagged and
+dug); wrong flag → washed away. Open questions: the cost (dousing is
+currently pure upside), whether doused should count toward win, and
+persistence of doused state across reloads. Archived theme:
 `collection/theme-water.html`, `?theme=water` on the sphere.
 
 ## Risks
