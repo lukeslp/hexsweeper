@@ -7520,8 +7520,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   // 4.5× radius produced only ~22° of rim tilt and a ~3% perspective change:
   // mathematically curved, perceptually flat. 3.4× yields ~29° at ring-1:
   // enough cap shape without the intersecting triangular flaps at 32–37°.
-  const DOME_RADIUS_HEX = 3.4;
-  const DOME_CENTER_RISE_HEX = 0.16;
+  const DOME_RADIUS_HEX = 4.2;
+  const DOME_CENTER_RISE_HEX = 0.12;
 
   /**
    * Real spherical seating (Luke, 2026-08-10: "how are we fitting them so
@@ -7545,7 +7545,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         ay: 1,
         dome: 0,
         dz: hex * DOME_CENTER_RISE_HEX,
-        scale: 0.985,
+        scale: 1,
       };
     }
     const phi = Math.min(maxPhi == null ? 1.1 : maxPhi, s / R);
@@ -7674,10 +7674,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   );
 
   // Stroke icons (24×24) — board language, not tool metaphors
-  const SIZE_GROWTH =
-    '<path d="M11 13 6.5 17.5M6.5 17.5v-3.2M6.5 17.5h3.2M13 11l4.5-4.5M17.5 6.5v3.2M17.5 6.5h-3.2" stroke-width="1.55"/>';
+  const SIZE_OUTWARD =
+    '<path d="M9.5 9.5 5 5M5 5h3.2M5 5v3.2M14.5 14.5l4.5 4.5M19 19h-3.2M19 19v-3.2" stroke-width="1.55"/>';
+  const SIZE_INWARD =
+    '<path d="M5 5l4.5 4.5M9.5 9.5H6.3M9.5 9.5V6.3M19 19l-4.5-4.5M14.5 14.5h3.2M14.5 14.5v3.2" stroke-width="1.55"/>';
   const INVERT_AXES =
-    '<path d="M5 12h14M12 5v14" fill="none" stroke="#888" stroke-width="1.35" stroke-linecap="round" stroke-dasharray=".7 2.15"/>';
+    '<path d="M5 12h3M16 12h3M12 5v3M12 16v3" fill="none" stroke="#888" stroke-width="1.35" stroke-linecap="round" stroke-dasharray=".7 1.65"/>';
   const ICONS = {
     // Dig = open / cleared hex face (hollow honeycomb cell)
     dig:
@@ -7710,11 +7712,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
     // One outline changes physical size across the five board sizes. The
     // silhouette communicates scale before the tooltip has to explain it.
-    sizeXS: '<path d="m12 7.4 4 2.3v4.6l-4 2.3-4-2.3V9.7l4-2.3Z"/>' + SIZE_GROWTH,
-    sizeS: '<path d="m12 5.7 5.5 3.1v6.4l-5.5 3.1-5.5-3.1V8.8l5.5-3.1Z"/>' + SIZE_GROWTH,
-    sizeM: '<path d="m12 4 7 4v8l-7 4-7-4V8l7-4Z"/>' + SIZE_GROWTH,
-    sizeL: '<path d="m12 2.3 8.5 4.9v9.6L12 21.7l-8.5-4.9V7.2L12 2.3Z"/>' + SIZE_GROWTH,
-    sizeXL: '<path d="m12 .6 10 5.7v11.4l-10 5.7-10-5.7V6.3L12 .6Z"/>' + SIZE_GROWTH,
+    sizeXS: '<path d="m12 7.4 4 2.3v4.6l-4 2.3-4-2.3V9.7l4-2.3Z"/>' + SIZE_OUTWARD,
+    sizeS: '<path d="m12 5.7 5.5 3.1v6.4l-5.5 3.1-5.5-3.1V8.8l5.5-3.1Z"/>' + SIZE_OUTWARD,
+    sizeM: '<path d="m12 4 7 4v8l-7 4-7-4V8l7-4Z"/>' + SIZE_OUTWARD,
+    sizeL: '<path d="m12 2.3 8.5 4.9v9.6L12 21.7l-8.5-4.9V7.2L12 2.3Z"/>' + SIZE_OUTWARD,
+    sizeXL: '<path d="m12 .6 10 5.7v11.4l-10 5.7-10-5.7V6.3L12 .6Z"/>' + SIZE_INWARD,
     // Theme circle remains available to archived/default variants.
     theme: '<circle cx="12" cy="12" r="8"/>',
     // Conventional board-theme affordance: handle, ferrule, and bristles.
