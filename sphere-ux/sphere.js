@@ -3246,7 +3246,10 @@
       if (cell.flagged && !cell.revealed) {
         return {
           fill: T.tierFlagged || T.flagFill,
-          stroke: T.flagEdge,
+          // Seam ink, not flag color: flagEdge === flagFill in the mono
+          // themes, so adjacent flags fused into one unbroken blob with no
+          // tile boundaries. Takes keep their deliberate halo.
+          stroke: T.takeFlagHalo ? T.flagEdge : T.coveredEdge || T.flagEdge,
           lineWidth: T.takeFlagHalo ? 3.4 : 2,
           showLabel: false,
         };
