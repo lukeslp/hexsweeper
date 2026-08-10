@@ -159,11 +159,31 @@
   width: var(--tile-w-dock-idle);
   height: var(--tile-h-dock-idle);
   pointer-events: auto;
+  /* No hex around the ? — bare glyph, same quiet treatment as the idle
+     Restart / Flag icons, one step lighter. */
+  clip-path: none;
+  background: transparent;
+  filter: none;
   transition:
     background 0.2s ease,
     color 0.2s ease,
     filter 0.2s ease,
     opacity 0.2s ease;
+}
+.hex-bloom-corner .hb-hex.is-dock::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom-corner .hb-hex.is-dock .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.6;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom-corner .hb-hex.is-dock:hover .hb-glyph,
+.hex-bloom-corner .hb-hex.is-dock:focus-visible .hb-glyph {
+  opacity: 1;
 }
 
 /* Flag mode live: the dock tile reads as a planted flag (red face) via the
@@ -505,6 +525,12 @@
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:hover .hb-glyph,
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:focus-visible .hb-glyph {
+  opacity: 1;
+}
+/* Flag mode on: the dock flag turns red — full strength in every phase
+   (the idle rule above otherwise pins side glyphs to ink at 0.72). */
+.hex-bloom .hb-hex.is-dock-flag.is-flag-icon .hb-glyph {
+  color: #ff2200;
   opacity: 1;
 }
 /* Menu: light outline + hollow-hex icon (reads as “open”) */

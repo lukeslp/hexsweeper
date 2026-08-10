@@ -103,7 +103,7 @@
       '<path d="M12 2.8 20.2 7.6v8.8L12 21.2 3.8 16.4V7.6L12 2.8Z"/>',
     // Flag = solid red hex face (matches in-game flag fill)
     flag:
-      '<path d="M12 2.8 20.2 7.6v8.8L12 21.2 3.8 16.4V7.6L12 2.8Z" fill="currentColor" stroke="none"/>',
+      '<path d="M6 21.2V3.6"/><path d="M6 4.4h11.6l-2.9 4 2.9 4H6"/>',
     size:
       '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
@@ -883,7 +883,8 @@
         // here too via their paintDock calls.
         const on = !!(game.getState() || {}).flagMode;
         dockFlagBtn.setAttribute("aria-pressed", on ? "true" : "false");
-        dockFlagBtn.classList.toggle("is-active", on);
+        // is-flag-icon turns the glyph red; face stays quiet either way.
+        dockFlagBtn.classList.toggle("is-flag-icon", on);
         dockFlagBtn.setAttribute(
           "aria-label",
           on ? "Flag mode on. Activate for dig mode." : "Flag mode. Activate to flag digs."
@@ -1162,7 +1163,7 @@
       // On mobile there is no right-click; this is the most-flipped switch
       // in the game and it was two taps deep.
       dockFlagBtn = makeHex({
-        cls: "is-dock is-dock-side is-dock-flag is-flag-icon",
+        cls: "is-dock is-dock-side is-dock-flag",
         label: "",
         icon: "flag",
         iconOnly: true,

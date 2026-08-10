@@ -895,11 +895,31 @@ body[data-sphere-chrome="dark"] .cz-dot {
   width: var(--tile-w-dock-idle);
   height: var(--tile-h-dock-idle);
   pointer-events: auto;
+  /* No hex around the ? — bare glyph, same quiet treatment as the idle
+     Restart / Flag icons, one step lighter. */
+  clip-path: none;
+  background: transparent;
+  filter: none;
   transition:
     background 0.2s ease,
     color 0.2s ease,
     filter 0.2s ease,
     opacity 0.2s ease;
+}
+.hex-bloom-corner .hb-hex.is-dock::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom-corner .hb-hex.is-dock .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.6;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom-corner .hb-hex.is-dock:hover .hb-glyph,
+.hex-bloom-corner .hb-hex.is-dock:focus-visible .hb-glyph {
+  opacity: 1;
 }
 
 /* Flag mode live: the dock tile reads as a planted flag (red face) via the
@@ -1241,6 +1261,12 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:hover .hb-glyph,
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:focus-visible .hb-glyph {
+  opacity: 1;
+}
+/* Flag mode on: the dock flag turns red — full strength in every phase
+   (the idle rule above otherwise pins side glyphs to ink at 0.72). */
+.hex-bloom .hb-hex.is-dock-flag.is-flag-icon .hb-glyph {
+  color: #ff2200;
   opacity: 1;
 }
 /* Menu: light outline + hollow-hex icon (reads as “open”) */
@@ -7145,7 +7171,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M12 2.8 20.2 7.6v8.8L12 21.2 3.8 16.4V7.6L12 2.8Z"/>',
     // Flag = solid red hex face (matches in-game flag fill)
     flag:
-      '<path d="M12 2.8 20.2 7.6v8.8L12 21.2 3.8 16.4V7.6L12 2.8Z" fill="currentColor" stroke="none"/>',
+      '<path d="M6 21.2V3.6"/><path d="M6 4.4h11.6l-2.9 4 2.9 4H6"/>',
     size:
       '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
@@ -7925,7 +7951,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         // here too via their paintDock calls.
         const on = !!(game.getState() || {}).flagMode;
         dockFlagBtn.setAttribute("aria-pressed", on ? "true" : "false");
-        dockFlagBtn.classList.toggle("is-active", on);
+        // is-flag-icon turns the glyph red; face stays quiet either way.
+        dockFlagBtn.classList.toggle("is-flag-icon", on);
         dockFlagBtn.setAttribute(
           "aria-label",
           on ? "Flag mode on. Activate for dig mode." : "Flag mode. Activate to flag digs."
@@ -8204,7 +8231,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       // On mobile there is no right-click; this is the most-flipped switch
       // in the game and it was two taps deep.
       dockFlagBtn = makeHex({
-        cls: "is-dock is-dock-side is-dock-flag is-flag-icon",
+        cls: "is-dock is-dock-side is-dock-flag",
         label: "",
         icon: "flag",
         iconOnly: true,
