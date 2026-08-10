@@ -117,6 +117,24 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [ ] Optional: browser probes (desktop/mobile) in CI — sphere neighbor test is covered; visual/interaction smoke still manual
 - [ ] Phase next: full / comprehensive / impressive cut beyond the collection scaffold
 
+### Concept shelf — water as a mechanic, not a theme (Luke, 2026-08-10)
+
+The Water theme was demoted as decoration, but the original intent was
+gameplay: **the sphere as a water wheel**. A fixed waterline crosses the
+globe; rotating the sphere carries faces down through the fluid and out
+again. Flagged mines that pass through (or dwell under) the water get
+"extinguished" for some benefit — defusal, score, or, maybe strongest,
+*information*: dousing confirms whether the flag was right, paying the
+player in certainty for rotation effort, bounded by how much of the sphere
+the waterline can reach. Other fluids could carry other effects (magma,
+etc. — one fluid per effect).
+
+Everything needed already exists in sphere-ux: the waterline + level slider
+(`waterLineY`, `?water=`), per-face screen positions (`projectTile`), and
+the flag state. The missing piece is a rule for submerged-flagged faces and
+its cost — without a cost, dousing trivializes the endgame. Archived theme:
+`collection/theme-water.html`, `?theme=water` on the sphere.
+
 ## Risks
 
 - Live static path — bad deploys are immediate; prefer commit → push → `git pull` on Drummer.
