@@ -48,24 +48,55 @@
     { q: -1, r: -1 }, // ring-2 up-left
   ];
 
-  // Fixed seats for the primaries, in categories() order. Three rows stacked
-  // above the dock, widest row four tiles — a single five-wide row overflows a
-  // phone. x = q + r/2, so each row below is centred on the seed:
+  // Fixed seats for the primaries, in categories() order. Two rows above the
+  // dock: four across, then a symmetric pair of shoulders flanking the gap.
+  // x = q + r/2, so each row below is centred on the seed:
   //
-  //       [3D] [Indicators]          r = -3
-  //     [Bg] [Shell] [Dug]           r = -2
-  //   [Seams][Size][Dig][Invert]     r = -1
-  //     [reset] [x] [help]           r =  0  (fixed dock)
+  //      [3D]   ·   [123]            r = -2  (x = -1, +1)
+  //   [Seams][Size][L/D][Off]        r = -1  (x = -1.5 … 1.5)
+  //      [reset] [x] [flag]          r =  0  (fixed dock)
+  //
+  // The Dig/Flag tile left the bloom when Flag joined the dock; Bg/Shell/Dug
+  // collapsed into one Light/Dark cycle (the three-axis adjusts live on in
+  // flipAxis/axisSwatch and the uxperiments harness for a future variant).
   const PRIMARY_SLOTS = [
-    { q: 1, r: -1 }, // Dig / Flag
     { q: 0, r: -1 }, // Size
     { q: -1, r: -1 }, // Seams
-    { q: 2, r: -1 }, // Invert — the notch right of Dig
-    { q: 0, r: -2 }, // Bg
-    { q: 1, r: -2 }, // Shell
-    { q: 2, r: -2 }, // Dug
-    { q: 1, r: -3 }, // 3D / Flush
-    { q: 2, r: -3 }, // Indicators
+    { q: 2, r: -1 }, // Invert
+    { q: 1, r: -1 }, // Light / Dark
+    { q: 0, r: -2 }, // 3D / Flush
+    { q: 2, r: -2 }, // Indicators
+  ];
+
+  /**
+   * ?dock=center — the original clex axial ring, back for a trial now that the
+   * menu is small enough to sit over the board: the bloom opens at viewport
+   * center on the blurred sphere, Reset and Dig/Flag join the flower, the
+   * center tile closes, and tapping the background (anywhere off the sphere)
+   * opens it. The bottom dock hides entirely; the corner ? stays.
+   *
+   *      [3D]      [123]        r = -2  (x = -1, +1)
+   *    [Size]  [L/D]            NW · NE
+   *  [Reset]   [×]   [Flag]     W · center · E
+   *    [Seams]  [Off]           SW · SE
+   */
+  const DOCK_CENTER = (() => {
+    try {
+      return new URLSearchParams(location.search).get("dock") === "center";
+    } catch (_) {
+      return false;
+    }
+  })();
+  // In categories() order: the six shared tiles, then Reset and Dig/Flag.
+  const CENTER_SLOTS = [
+    { q: 0, r: -1 }, // Size — NW
+    { q: -1, r: 1 }, // Seams — SW
+    { q: 0, r: 1 }, // Invert — SE
+    { q: 1, r: -1 }, // Light / Dark — NE
+    { q: 0, r: -2 }, // 3D — top-left shoulder
+    { q: 2, r: -2 }, // Indicators — top-right shoulder
+    { q: -1, r: 0 }, // Reset — W
+    { q: 1, r: 0 }, // Dig / Flag — E
   ];
 
   /**
@@ -104,6 +135,11 @@
     // Flag = solid red hex face (matches in-game flag fill)
     flag:
       '<path d="M6 21.2V3.6"/><path d="M6 4.4h11.6l-2.9 4 2.9 4H6"/>',
+    sun:
+      '<circle cx="12" cy="12" r="4.2"/>' +
+      '<path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/>',
+    moon:
+      '<path d="M20.4 13.2A8.4 8.4 0 1 1 10.8 3.6a6.8 6.8 0 0 0 9.6 9.6z"/>',
     size:
       '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
@@ -289,6 +325,7 @@
     function centerXY() {
       const h = stage.clientHeight || global.innerHeight;
       const w = stage.clientWidth || global.innerWidth;
+      if (DOCK_CENTER) return { cx: w / 2, cy: h / 2 };
       const csRoot = getComputedStyle(root);
       const csDock = dock ? getComputedStyle(dock) : csRoot;
       // CSS: .hex-bloom-dock { bottom: max(2px, env(safe-area-inset-bottom)) }
@@ -602,6 +639,25 @@
       announce("Indicators · " + lab);
     }
 
+    /**
+     * One light/dark cycle over the three appearance axes: light background +
+     * light shell + dark interior, or the full inversion. The per-axis flips
+     * below stay in the codebase deliberately — the three-tile Bg/Shell/Dug
+     * concept is stashed in CHROME_HISTORY and the uxperiments harness for a
+     * future variant, not deleted.
+     */
+    function cycleLightDark() {
+      const toDark = getAxes().field !== "dark";
+      if (typeof game.setAppearanceAxes === "function") {
+        game.setAppearanceAxes(
+          toDark
+            ? { field: "dark", shell: "dark", well: "light" }
+            : { field: "light", shell: "light", well: "dark" }
+        );
+      }
+      announce("Appearance · " + (toDark ? "Dark" : "Light"));
+    }
+
     function flipAxis(axis) {
       const axes = getAxes();
       const next = Object.assign({}, axes);
@@ -704,15 +760,6 @@
       // Restart / Help live on the always-visible three-tile dock.
       const all = [
         {
-          id: "mode",
-          label: () => currentMode(),
-          icon: () => (game.getState().flagMode ? "flag" : "dig"),
-          iconOnly: false,
-          aria: () =>
-            "Mode: " + currentMode() + ". Activate to switch Dig or Flag.",
-          cycle: cycleMode,
-        },
-        {
           id: "size",
           label: () => currentSize(),
           icon: "size",
@@ -750,31 +797,15 @@
           cycle: cycleInvert,
         },
         {
-          id: "ax-field",
-          label: "Bg",
-          swatch: () => axisSwatch("field", getAxes().field),
-          iconOnly: true,
-          aria: () => "Background: " + getAxes().field + ". Activate to flip.",
-          // Flipping an axis returns to the classic mono look — setAppearanceAxes
-          // clears the surface pack, so these double as the way back from
-          // Earth / Moon / Water.
-          cycle: () => flipAxis("field"),
-        },
-        {
-          id: "ax-shell",
-          label: "Shell",
-          swatch: () => axisSwatch("shell", getAxes().shell),
-          iconOnly: true,
-          aria: () => "Covered faces: " + getAxes().shell + ". Activate to flip.",
-          cycle: () => flipAxis("shell"),
-        },
-        {
-          id: "ax-well",
-          label: "Dug",
-          swatch: () => axisSwatch("well", getAxes().well),
-          iconOnly: true,
-          aria: () => "Dug faces: " + getAxes().well + ". Activate to flip.",
-          cycle: () => flipAxis("well"),
+          id: "lightdark",
+          label: () => (getAxes().field === "dark" ? "Dark" : "Light"),
+          icon: () => (getAxes().field === "dark" ? "moon" : "sun"),
+          iconOnly: false,
+          aria: () =>
+            "Appearance: " +
+            (getAxes().field === "dark" ? "dark" : "light") +
+            ". Activate to toggle.",
+          cycle: cycleLightDark,
         },
         {
           id: "flush",
@@ -806,6 +837,29 @@
           cycle: cycleIndicators,
         },
       ];
+      if (DOCK_CENTER) {
+        // The dock is hidden in center mode, so its two play controls join
+        // the flower at the prominent W / E seats.
+        all.push(
+          {
+            id: "reset",
+            label: "Reset",
+            icon: "reset",
+            iconOnly: false,
+            aria: () => "Restart game",
+            cycle: () => doReset(),
+          },
+          {
+            id: "flagmode",
+            label: () => currentMode(),
+            icon: () => (game.getState().flagMode ? "flag" : "dig"),
+            iconOnly: false,
+            aria: () =>
+              "Mode: " + currentMode() + ". Activate to switch Dig or Flag.",
+            cycle: cycleMode,
+          }
+        );
+      }
       return all;
     }
 
@@ -1219,7 +1273,7 @@
       if (!withPetals) return;
 
       cats.forEach((cat, i) => {
-        const d = PRIMARY_SLOTS[i] || DIRECTIONS[i];
+        const d = (DOCK_CENTER ? CENTER_SLOTS[i] : PRIMARY_SLOTS[i]) || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const iconName =
@@ -1266,6 +1320,25 @@
         });
         stage.appendChild(el);
       });
+
+      // Center mode: the seed is not on screen, so the flower carries its own
+      // close at the middle — where the dock's × would have been.
+      if (DOCK_CENTER) {
+        const closeEl = makeHex({
+          cls: "is-primary is-center-close",
+          label: "×",
+          ariaLabel: "Close menu",
+        });
+        closeEl.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          collapse();
+        });
+        place(closeEl, cx, cy, cx, cy);
+        closeEl.classList.add("folded");
+        closeEl.dataset.delay = "0";
+        stage.appendChild(closeEl);
+      }
     }
 
     function bloomPetals() {
@@ -1318,8 +1391,9 @@
         // place petals at final geometry, then ride the whole layer up in
         // lockstep with the dock — petals stay glued to the seed instead of
         // hovering at their final seats while the dock catches up.
+        // (Center mode has no dock to grow out of: the flower just unfolds.)
         stage.style.transition = "none";
-        root.style.setProperty("--rise-y", dockRiseDelta() + "px");
+        root.style.setProperty("--rise-y", DOCK_CENTER ? "0px" : dockRiseDelta() + "px");
         renderBloom({ petals: true });
         refreshPrimaryLabels();
         void stage.offsetHeight; // commit the pre-rise transform
@@ -1349,8 +1423,8 @@
 
       setPhase("falling");
       // Ride the petal layer back down with the dock while the petals fold —
-      // one coherent settle instead of fold-then-drop.
-      root.style.setProperty("--rise-y", dockRiseDelta() + "px");
+      // one coherent settle instead of fold-then-drop. (No dock in center mode.)
+      if (!DOCK_CENTER) root.style.setProperty("--rise-y", dockRiseDelta() + "px");
 
       const finish = () => {
         if (state.phase !== "falling") return;
@@ -1372,6 +1446,44 @@
       };
 
       phaseTimer = setTimeout(finish, foldMs());
+    }
+
+    if (DOCK_CENTER) {
+      root.dataset.dockMode = "center";
+      // The background is the menu activator: a quick tap that lands off the
+      // sphere's disk (game.getSphereScreen) opens the flower. Drags and taps
+      // on the board never trigger it.
+      const cc = document.querySelector(".canvas-container");
+      if (cc) {
+        let downAt = 0;
+        let sx = 0;
+        let sy = 0;
+        cc.addEventListener(
+          "pointerdown",
+          (e) => {
+            downAt = Date.now();
+            sx = e.clientX;
+            sy = e.clientY;
+          },
+          true
+        );
+        cc.addEventListener(
+          "pointerup",
+          (e) => {
+            if (state.phase !== "closed") return;
+            if (Date.now() - downAt > 350) return;
+            if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) return;
+            const d =
+              typeof game.getSphereScreen === "function"
+                ? game.getSphereScreen()
+                : null;
+            if (d && Math.hypot(e.clientX - d.cx, e.clientY - d.cy) <= d.r)
+              return;
+            expand();
+          },
+          true
+        );
+      }
     }
 
     // Scrim click closes

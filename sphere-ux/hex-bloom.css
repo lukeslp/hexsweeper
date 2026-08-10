@@ -142,6 +142,15 @@
   height: var(--tile-h-dock);
   opacity: 1;
 }
+/* ?dock=center: the bloom is the chrome — no bottom dock at all. */
+.hex-bloom[data-dock-mode="center"] .hex-bloom-dock {
+  display: none;
+}
+.hb-hex.is-center-close .hb-label {
+  font-size: 19px;
+  font-weight: 600;
+}
+
 /* Help corner — its own seat, lower right, always idle-sized. It never
    grows with the bloom: it is reference chrome, not part of the flower. */
 .hex-bloom-corner {

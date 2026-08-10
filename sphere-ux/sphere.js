@@ -4407,6 +4407,13 @@
       setSize: (id) => setDifficulty(id, true),
       setThemeIndex: (i) => applyTheme(i),
       getThemeIndex: () => themeIndex,
+      /** Sphere's screen-space disk in CSS px — for chrome that needs to know
+       *  what counts as "the board" vs background (center-bloom tap-to-open). */
+      getSphereScreen: () => ({
+        cx: state.centerX,
+        cy: state.centerY,
+        r: state.scale * 1.15,
+      }),
       setCountStyle: (id, opts) => setCountStyle(id, opts),
       setRelief: (mode) => setRelief(mode),
       setSeams: (on) => setSeams(on),

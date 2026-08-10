@@ -54,6 +54,9 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | `16c9bf5` | Dome: per-tile hinge tilt toward viewer + translateZ + 1/cos gap compensation | **No** — reverted in `edcd9c5`. Revive with `git revert edcd9c5` |
 | variant A | `?dock=split` — bloom = Dig · Size · Invert only; appearance as Look pills in the ? modal | **Retired 2026-08-10** — Luke: "it's the same w/o themes, basically?" The modal settings were invisible enough that the variant read as the default minus features. Default dock wins. |
 | 2026-08-10 | Dock trio = Restart · Menu · **Flag**; Help moves to its own corner seat (lower right, idle-sized, fades with chrome) | **Keep** — flag is the most-flipped switch on mobile and was two taps deep |
+| 2026-08-10 | Bloom minimized to six: Dig/Flag tile out (Flag lives on the dock), Bg/Shell/Dug collapsed to one **Light/Dark** cycle (sun/moon). Axis machinery kept for a future three-adjusts variant | **Current default** |
+| 2026-08-10 | `?dock=center` — the clex axial ring returns: flower at viewport center over the blurred sphere, Reset + Dig/Flag join it, center tile closes, background tap (off the sphere disk, via `getSphereScreen`) opens. No dock; corner ? stays | **Trial** — compare against the six-tile default |
+| 2026-08-10 | All variants integrated into the **uxperiments harness**: `dr.eamer.dev/uxperiments/hexdock/` — live builds + frozen archives (nine-tile, dome, split) + shelved concepts. New experiments should land there even when they are not the chosen candidate | **Process** |
 
 ### What Luke is asking for (intent thread, in his words + readings)
 
