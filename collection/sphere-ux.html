@@ -903,6 +903,13 @@ body[data-sphere-chrome="dark"] .cz-dot {
    So: centered origin, but a SHORT perspective (stronger z-scaling), a
    deliberate slight off-axis tilt for constant parallax, and z-graded
    shadows so the forward-riding rim visibly floats off the page. */
+/* Spherical seating rotates tiles about their OWN centers (sphere faces
+   curve about their centroids, not their inner edges — edge-hinging is what
+   broke the tessellation). Overrides place()'s inline fold origin, so the
+   fold becomes a center flip; the radial stagger keeps the bloom feel. */
+.hex-bloom[data-dock-mode="center"] .hb-hex {
+  transform-origin: 50% 50% !important;
+}
 .hex-bloom[data-dock-mode="center"] .hex-bloom-stage {
   perspective: 700px;
   perspective-origin: 50% 46%;
@@ -7336,35 +7343,41 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  const DOME_TILT = 28; // deg at ring-1 — leaning toward the viewer
-  const DOME_LIFT = 116; // px translateZ at the rim
-  const DOME_SHRINK = 0.1; // rim tiles scale to 0.9 — air for the tilt
+  const DOME_RADIUS_HEX = 3.4; // bowl sphere radius, in HEX units
+  const DOME_SHRINK = 0.03; // hair of air on the rim so chords never overlap
 
   /**
-   * Bowl, not bulge (Luke, 2026-08-10: "dome the other direction, larger").
-   * The flower is a dish you look into: center recessed, rim rolled toward
-   * the player — ring tiles hinge on their inner edges with negative tilt
-   * and ride forward on translateZ; 1/cos keeps the comb closed.
+   * Real spherical seating (Luke, 2026-08-10: "how are we fitting them so
+   * well in the sphere, if we can't fit them here?"). Exactly — the game
+   * tessellates because its hexes are faces of a true sphere: planar tiles
+   * sharing 3D chord edges. Faking curvature by hinging flat tiles around
+   * their own edges can never tessellate. So the flower is now a patch of
+   * geodesic shell viewed from inside: each tile is pulled in to its chord
+   * position (R·sinφ), lifted to the sphere surface (R·(1−cosφ), rim toward
+   * the viewer), and tilted about its own center by its arc angle φ. The
+   * center tile is the bottom of the bowl by construction — no special case.
    */
-  function applyCenterDome(el, dx, dy, hex) {
-    if (!DOME) return;
-    const d = Math.hypot(dx, dy);
-    if (d < 1) {
-      // The close tile sits at the bottom of the bowl — genuinely recessed,
-      // not just left behind at zero.
-      el.style.setProperty("--dome", "0deg");
-      el.style.setProperty("--dz", "-22px");
-      el.style.setProperty("--dscale", "1");
-      return;
+  function domeSeat(dx, dy, hex) {
+    const R = hex * DOME_RADIUS_HEX;
+    const s = Math.hypot(dx, dy);
+    if (s < 1 || !R) {
+      return { x: dx, y: dy, dome: 0, dz: 0 };
     }
-    const t = Math.min(1, d / (hex * 2.2 || 1));
-    el.style.setProperty("--dome", (-DOME_TILT * t).toFixed(2) + "deg");
-    el.style.setProperty("--dz", (DOME_LIFT * t * t).toFixed(1) + "px");
-    // Outer tiles shrink slightly instead of the old 1/cos growth: the rim
-    // rides toward the viewer and perspective already enlarges it (~20% at
-    // 116px/700px), so growing it too made angled neighbors overlap. A small
-    // shrink gives the tilt room and reads as the bowl curving away.
-    el.style.setProperty("--dscale", (1 - DOME_SHRINK * t).toFixed(4));
+    const phi = Math.min(1.1, s / R);
+    const k = (R * Math.sin(phi)) / s;
+    return {
+      x: dx * k,
+      y: dy * k,
+      dome: -(phi * 180) / Math.PI,
+      dz: R * (1 - Math.cos(phi)),
+    };
+  }
+
+  function applyCenterDome(el, seat) {
+    if (!DOME || !seat) return;
+    el.style.setProperty("--dome", seat.dome.toFixed(2) + "deg");
+    el.style.setProperty("--dz", seat.dz.toFixed(1) + "px");
+    el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, Math.abs(seat.dome) / 30)).toFixed(4));
   }
 
   const DOCK_CENTER = (() => {
@@ -8583,8 +8596,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           el.removeAttribute("aria-haspopup");
           el.setAttribute("aria-expanded", "false");
         }
-        place(el, cx + p.x, cy + p.y, cx, cy);
-        if (DOCK_CENTER) applyCenterDome(el, p.x, p.y, HEX);
+        const seat = DOCK_CENTER && DOME ? domeSeat(p.x, p.y, HEX) : null;
+        place(el, cx + (seat ? seat.x : p.x), cy + (seat ? seat.y : p.y), cx, cy);
+        if (DOCK_CENTER) applyCenterDome(el, seat);
         el.classList.add("folded");
         // Center mode blooms petal-by-petal: the delay sweeps around the ring
         // by seat angle, so the flower visibly opens clockwise from the top
@@ -8620,7 +8634,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           collapse();
         });
         place(closeEl, cx, cy, cx, cy);
-        applyCenterDome(closeEl, 0, 0, 1);
+        applyCenterDome(closeEl, DOME ? domeSeat(0, 0, 1) : null);
         closeEl.classList.add("folded");
         closeEl.dataset.delay = "0";
         // First in DOM = painted under the forward-riding rim (siblings have

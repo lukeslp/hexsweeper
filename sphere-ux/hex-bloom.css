@@ -167,6 +167,13 @@
    So: centered origin, but a SHORT perspective (stronger z-scaling), a
    deliberate slight off-axis tilt for constant parallax, and z-graded
    shadows so the forward-riding rim visibly floats off the page. */
+/* Spherical seating rotates tiles about their OWN centers (sphere faces
+   curve about their centroids, not their inner edges — edge-hinging is what
+   broke the tessellation). Overrides place()'s inline fold origin, so the
+   fold becomes a center flip; the radial stagger keeps the bloom feel. */
+.hex-bloom[data-dock-mode="center"] .hb-hex {
+  transform-origin: 50% 50% !important;
+}
 .hex-bloom[data-dock-mode="center"] .hex-bloom-stage {
   perspective: 700px;
   perspective-origin: 50% 46%;
