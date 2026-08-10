@@ -808,6 +808,14 @@ def appify(markup: str, *, back: bool = True, lock_zoom: bool = True, label: str
     on the web the browser is the user agent and must stay zoomable. The
     picker keeps zoom (it is a normal document, see its touch-action rule).
     """
+    # GoatCounter belongs to the public web pages. Native builds are deliberately
+    # sealed and offline, so remove the complete tag before the remote-asset gate.
+    markup = re.sub(
+        r'\s*<script\s+data-goatcounter="[^"]+"\s+async\s+src="[^"]+/count\.js"></script>',
+        "",
+        markup,
+        flags=re.S,
+    )
     if lock_zoom:
         markup = re.sub(
             r'(<meta name="viewport" content=")([^"]*)(">)',
