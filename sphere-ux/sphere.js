@@ -4474,6 +4474,8 @@
 
     return {
       reset: () => requestReset({ force: true }),
+      undo: () => restoreUndo(),
+      canUndo: () => !!undoSnapshot,
       floodFrom,
       getState: () => state,
       pickTile,

@@ -7249,6 +7249,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 
     return {
       reset: () => requestReset({ force: true }),
+      undo: () => restoreUndo(),
+      canUndo: () => !!undoSnapshot,
       floodFrom,
       getState: () => state,
       pickTile,
@@ -7493,8 +7495,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   const FIXED_CENTER_SLOTS = [
     { q: 0, r: -1 }, // Light / Dark — NW
     { q: 1, r: -1 }, // Theme-style options parent — NE
-    { q: -1, r: 0 }, // Home — W
+    { q: -1, r: 0 }, // Undo — W
     { q: 1, r: 0 }, // Flag — E
+    { q: -1, r: 1 }, // Home — SW
+    { q: 0, r: 1 }, // Settings parent — SE
   ];
 
   /**
@@ -7568,12 +7572,17 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     reset:
       '<path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"/><path d="M20 3.5V8h-4.5"/>' +
       '<path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"/><path d="M4 20.5V16h4.5"/>',
+    undo:
+      '<path d="m8.2 7.2-4.5 4.5 4.5 4.5"/><path d="M4.2 11.7h9.1a6.4 6.4 0 0 1 6.4 6.4v1.1"/>',
     home:
       '<path d="m3.5 10.5 8.5-7 8.5 7"/><path d="M5.5 9.2v10.3h13V9.2"/>' +
       '<path d="M9.2 19.5v-6.2h5.6v6.2"/>',
     help:
       '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 1 1 3.9 2.6c-.9.5-1.6 1.1-1.6 2.2"/>' +
       '<path d="M12 17.2h.01"/>',
+    effects:
+      '<path d="m12 2 1.3 5.1L18 8.5l-4.7 1.4L12 15l-1.3-5.1L6 8.5l4.7-1.4L12 2Z"/>' +
+      '<path d="m18.2 14 .7 2.5 2.4.7-2.4.7-.7 2.6-.7-2.6-2.4-.7 2.4-.7.7-2.5Z"/>',
     flipX:
       '<path d="M12 4v16"/><path d="M4 12h6"/><path d="M14 12h6"/><path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/>',
     flipY:
@@ -8193,6 +8202,34 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       if (state.phase === "open" || state.phase === "rising") collapse();
     }
 
+    function doUndo() {
+      if (typeof game.undo === "function" && game.undo()) {
+        announce("Move undone");
+        return;
+      }
+      const b = document.getElementById("banner-undo-btn");
+      if (b && !b.hidden) {
+        b.click();
+        announce("Move undone");
+        return;
+      }
+      announce("Nothing to undo");
+    }
+
+    function cycleInvert() {
+      const b = document.querySelector('#help-controls [data-ctl="invert"]');
+      if (!b) return;
+      b.click();
+      announce(b.textContent || "Invert changed");
+    }
+
+    function cycleEffects() {
+      const b = document.querySelector('#help-controls [data-ctl="effects"]');
+      if (!b) return;
+      b.click();
+      announce(b.textContent || "Effects changed");
+    }
+
     function doHelp() {
       const b = document.getElementById("help-btn");
       if (b) b.click();
@@ -8294,12 +8331,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
             ],
           },
           {
-            id: "home",
-            label: "Home",
-            icon: "home",
+            id: "undo",
+            label: "Undo",
+            icon: "undo",
             iconOnly: true,
-            aria: () => "Return to Hexsweeper home",
-            cycle: () => doHome(),
+            aria: () => "Undo last move",
+            cycle: doUndo,
           },
           {
             id: "flagmode",
@@ -8311,6 +8348,63 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
                 ? "Flag mode on. Activate for dig mode."
                 : "Flag mode off. Activate for flag mode.",
             cycle: cycleMode,
+          },
+          {
+            id: "home",
+            label: "Home",
+            icon: "home",
+            iconOnly: true,
+            aria: () => "Return to Hexsweeper home",
+            cycle: doHome,
+          },
+          {
+            id: "settings",
+            label: "Settings",
+            icon: "gear",
+            iconOnly: true,
+            hoverSub: true,
+            aria: () =>
+              "Settings. Hover or activate for invert, effects, and help.",
+            sub: () => [
+              {
+                id: "invert",
+                label: "Invert",
+                aria: () => {
+                  const inv =
+                    typeof game.getInvertDrag === "function"
+                      ? game.getInvertDrag()
+                      : { x: false, y: false };
+                  const mode =
+                    inv.x && inv.y
+                      ? "X and Y"
+                      : inv.x
+                        ? "X"
+                        : inv.y
+                          ? "Y"
+                          : "off";
+                  return "Invert " + mode + ". Activate to cycle.";
+                },
+                icon: "drag",
+                iconOnly: true,
+                run: cycleInvert,
+              },
+              {
+                id: "effects",
+                label: "Effects",
+                aria: () => "Effects. Activate to cycle auto, full, and reduced.",
+                icon: "effects",
+                iconOnly: true,
+                run: cycleEffects,
+              },
+              {
+                id: "help",
+                label: "Help",
+                aria: () => "Open help",
+                icon: "help",
+                iconOnly: true,
+                run: doHelp,
+              },
+            ],
           },
         ];
       }
@@ -8489,13 +8583,20 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const px = cx + p.x;
       const py = cy + p.y;
       const items = cat.sub();
-      const offsets =
-        FIXED_CENTER && cat.id === "theme"
+      const offsets = FIXED_CENTER
+        ? cat.id === "theme"
           ? [
               { q: 0, r: -1 },
               { q: 1, r: -1 },
               { q: 1, r: 0 },
             ]
+          : cat.id === "settings"
+            ? [
+                { q: 1, r: 0 },
+                { q: 0, r: 1 },
+                { q: -1, r: 1 },
+              ]
+            : leafOffsets(dirIndex, items.length)
           : leafOffsets(dirIndex, items.length);
 
       items.forEach((item, j) => {
@@ -8662,6 +8763,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       stage
         .querySelectorAll(".hb-hex.is-active")
         .forEach((e) => e.classList.remove("is-active"));
+      stage
+        .querySelectorAll('.hb-hex.is-primary[aria-haspopup="true"]')
+        .forEach((e) => e.setAttribute("aria-expanded", "false"));
       removeSubmenu();
       state.active = null;
       delete root.dataset.branch;
@@ -8691,6 +8795,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       state.active = id;
       root.dataset.branch = id;
       el.classList.add("is-active");
+      el.setAttribute("aria-expanded", "true");
       addSubmenu(dirIndex, cat);
       announce(typeof cat.aria === "function" ? cat.aria() : cat.id);
     }
@@ -9140,25 +9245,29 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     }
 
     if (hoverBloomEnabled) {
-      const isThemeControl = (node) =>
-        !!(
-          node &&
-          node.closest &&
-          node.closest('.hb-hex[data-cat="theme"]')
+      const hoverBranch = (node) => {
+        const el = node && node.closest && node.closest(".hb-hex[data-cat]");
+        if (!el) return null;
+        const cat = categories().find(
+          (candidate) => candidate.id === el.dataset.cat
         );
+        return cat && cat.hoverSub ? cat.id : null;
+      };
       stage.addEventListener("pointerover", (e) => {
-        if (!isThemeControl(e.target)) return;
+        const id = hoverBranch(e.target);
+        if (!id) return;
         clearTimeout(hoverCloseTimer);
-        if (state.active !== "theme") {
-          const i = categories().findIndex((cat) => cat.id === "theme");
-          if (i >= 0) toggleCategory("theme", i);
+        if (state.active !== id) {
+          const i = categories().findIndex((cat) => cat.id === id);
+          if (i >= 0) toggleCategory(id, i);
         }
       });
       stage.addEventListener("pointerout", (e) => {
-        if (!isThemeControl(e.target) || isThemeControl(e.relatedTarget)) return;
+        const id = hoverBranch(e.target);
+        if (!id || hoverBranch(e.relatedTarget) === id) return;
         clearTimeout(hoverCloseTimer);
         hoverCloseTimer = setTimeout(() => {
-          if (state.active === "theme") clearActive();
+          if (state.active === id) clearActive();
         }, 140);
       });
     }
