@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <!--
-  File Purpose: Template for the native app's mode picker (build/app/index.html).
-  Primary Functions/Classes: a full-screen 2D hex field with three mode tiles;
-    activating a mode visually digs its tile before navigating to the game.
-  Inputs: viewport size and saved appearance. Outputs: links into games/*.html.
-  A11y: native links, visible focus, 44pt+ targets, reduced motion, forced colors,
-    and no interaction that depends on gesture, timing, sound, or color alone.
+  File Purpose: Native app launcher staged as one authentic Hexsweeper opening.
+  Primary Functions/Classes: deterministic mine field, neighbor counts, zero-cell
+    flood reveal, and three reserved mode links left standing after the clear.
+  Inputs: viewport, saved appearance, session reveal state. Outputs: game links.
+  A11y: native button/links, visible focus, 50px+ targets, live status, keyboard
+    reveal bypass, reduced motion, forced colors, and no timing-dependent action.
   Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
@@ -13,7 +13,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Hexsweeper</title>
-<meta name="description" content="Choose Infinite, Bounded, or Sphere Hexsweeper.">
+<meta name="description" content="Dig once to uncover Infinite, Bounded, and Sphere Hexsweeper.">
 <style>
 /* fonts/fonts.css (woff2 inlined) */
 /*
@@ -67,18 +67,20 @@
 <style>
   :root {
     --font-ui: "IBM Plex Sans", system-ui, sans-serif;
+    --font-count: "IBM Plex Mono", ui-monospace, monospace;
     --field: #e8eef5;
     --field-glow: #f8fafc;
     --tile: #f7f9fc;
     --tile-edge: #aebdce;
-    --tile-shadow: #d2dce8;
+    --tile-shadow: #c8d4e1;
+    --well: #8f9db0;
+    --well-edge: #738397;
+    --well-shadow: #657386;
     --ink: #263240;
     --muted: #68798c;
     --focus: #246da0;
-    --dug: #263240;
-    --dug-edge: #111820;
-    --dug-ink: #f8fafc;
-    --hex-w: clamp(84px, 25.5vw, 112px);
+    --flag: #e33030;
+    --hex-w: clamp(50px, 17.5vw, 82px);
     --hex-h: calc(var(--hex-w) * 1.1547);
     color-scheme: light dark;
   }
@@ -88,12 +90,12 @@
     --tile: #171f29;
     --tile-edge: #536174;
     --tile-shadow: #070a0f;
+    --well: #d7e0eb;
+    --well-edge: #f2f6fb;
+    --well-shadow: #ffffff;
     --ink: #edf3fb;
     --muted: #a8b6c7;
     --focus: #78c5f4;
-    --dug: #edf3fb;
-    --dug-edge: #ffffff;
-    --dug-ink: #17202a;
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -114,15 +116,16 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(80% 58% at 50% 46%, color-mix(in srgb, var(--field-glow) 82%, transparent), transparent 72%),
-      linear-gradient(180deg, color-mix(in srgb, var(--field-glow) 30%, transparent), transparent 25% 75%, color-mix(in srgb, var(--tile-shadow) 24%, transparent));
+      radial-gradient(82% 62% at 50% 48%, color-mix(in srgb, var(--field-glow) 84%, transparent), transparent 72%),
+      linear-gradient(180deg, color-mix(in srgb, var(--field-glow) 28%, transparent), transparent 24% 76%, color-mix(in srgb, var(--tile-shadow) 24%, transparent));
   }
 
-  main, .board { position: fixed; inset: 0; }
+  main, .board, .field { position: fixed; inset: 0; }
   .board {
     isolation: isolate;
     overflow: hidden;
   }
+  .field { z-index: 0; pointer-events: none; }
   .hex {
     position: absolute;
     left: 50%;
@@ -134,107 +137,189 @@
     transform: translate3d(var(--x), var(--y), 0);
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   }
-  .cell {
-    z-index: 0;
+  .cell,
+  .starter,
+  .mode {
     background: var(--tile-edge);
-    filter: drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 68%, transparent));
+    filter: drop-shadow(0 4px 2px color-mix(in srgb, var(--tile-shadow) 76%, transparent));
   }
-  .cell::after {
+  .cell::before,
+  .starter::before,
+  .mode::before {
     content: "";
     position: absolute;
-    inset: 3px 4px 7px;
+    inset: 2px 3px 6px;
     clip-path: inherit;
     background:
-      radial-gradient(90% 70% at 48% 30%, var(--field-glow), transparent 78%),
+      radial-gradient(90% 70% at 47% 28%, var(--field-glow), transparent 78%),
       var(--tile);
-  }
-  .cell.near {
-    filter: drop-shadow(0 6px 3px color-mix(in srgb, var(--tile-shadow) 82%, transparent));
+    transition: inset 170ms ease, transform 170ms ease, background 170ms ease;
   }
 
+  .cell {
+    z-index: 0;
+    display: grid;
+    place-items: center;
+    transition:
+      transform 210ms cubic-bezier(.22, 1, .36, 1),
+      filter 180ms ease,
+      opacity 180ms ease;
+  }
+  .cell.is-revealed {
+    z-index: 1;
+    background: var(--well-edge);
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
+    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.93);
+  }
+  .cell.is-revealed::before {
+    inset: 5px 6px 7px;
+    background: var(--well);
+  }
+  .count {
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(-2px) scale(.78);
+    color: var(--ink);
+    font: 700 clamp(.78rem, 3.7vw, 1.05rem)/1 var(--font-count);
+    text-shadow: 0 1px 0 color-mix(in srgb, var(--field-glow) 60%, transparent);
+    transition: opacity 130ms ease 50ms, transform 170ms cubic-bezier(.22, 1, .36, 1) 35ms;
+  }
+  .cell.is-revealed .count { opacity: 1; transform: none; }
+  .cell.count-1 .count { color: #125cc8; }
+  .cell.count-2 .count { color: #16794f; }
+  .cell.count-3 .count { color: #c43131; }
+  .cell.count-4 .count { color: #724ab5; }
+  :root[data-appearance="dark"] .cell.count-1 .count { color: #438cff; }
+  :root[data-appearance="dark"] .cell.count-2 .count { color: #20a873; }
+  :root[data-appearance="dark"] .cell.count-3 .count { color: #e05a5a; }
+  :root[data-appearance="dark"] .cell.count-4 .count { color: #aa83e8; }
+
+  .starter,
   .mode {
-    z-index: 3;
+    z-index: 4;
     display: grid;
     place-items: center;
     border: 0;
     padding: 0;
     color: var(--ink);
-    background: var(--tile-edge);
     text-decoration: none;
-    cursor: pointer;
-    touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
     outline: none;
-    filter: drop-shadow(0 6px 3px color-mix(in srgb, var(--tile-shadow) 90%, transparent));
+  }
+  .starter {
+    cursor: pointer;
+    touch-action: manipulation;
     transition: transform 180ms cubic-bezier(.22, 1, .36, 1), filter 180ms ease;
   }
-  .mode::before {
-    content: "";
-    position: absolute;
-    inset: 3px 4px 7px;
-    z-index: -1;
-    clip-path: inherit;
-    background:
-      radial-gradient(95% 78% at 45% 25%, var(--field-glow), transparent 75%),
-      var(--tile);
-    transition: inset 160ms ease, background 160ms ease;
-  }
+  .starter-content,
   .mode-content {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     display: grid;
     justify-items: center;
-    gap: 3px;
-    padding-top: 1px;
-    transition: transform 160ms ease, color 160ms ease, opacity 120ms ease;
+    gap: 1px;
   }
-  .mode-icon {
-    width: clamp(25px, 7vw, 32px);
-    height: clamp(25px, 7vw, 32px);
-    overflow: visible;
+  .starter-icon {
+    width: clamp(20px, 6vw, 28px);
+    height: clamp(20px, 6vw, 28px);
   }
+  .starter-label,
   .mode-name {
-    max-width: 90%;
-    font-size: clamp(.68rem, 3.05vw, .82rem);
-    font-weight: 650;
+    max-width: 92%;
+    font-size: clamp(.58rem, 2.7vw, .72rem);
+    font-weight: 700;
     line-height: 1;
-    letter-spacing: -.025em;
+    letter-spacing: -.02em;
     text-align: center;
   }
-  .mode:hover,
+  .starter:hover,
+  .starter:focus-visible,
   .mode:focus-visible {
+    background: var(--focus);
     filter:
-      drop-shadow(0 6px 3px color-mix(in srgb, var(--tile-shadow) 90%, transparent))
-      drop-shadow(0 0 0 var(--focus));
+      drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 80%, transparent))
+      drop-shadow(0 0 5px color-mix(in srgb, var(--focus) 72%, transparent));
   }
-  .mode:hover::before { inset: 5px 6px 9px; }
-  .mode:focus-visible { background: var(--focus); }
-  .mode:focus-visible::before { inset: 5px 6px 9px; }
-  .mode:active { transform: translate3d(var(--x), calc(var(--y) + 3px), 0) scale(.97); }
-
-  .mode.is-dug {
-    z-index: 4;
+  .starter:hover::before,
+  .starter:focus-visible::before,
+  .mode:focus-visible::before { inset: 4px 5px 8px; }
+  .starter:active {
+    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.94);
+  }
+  .starter.is-hit {
     pointer-events: none;
-    color: var(--dug-ink);
-    background: var(--dug-edge);
-    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--tile-shadow) 38%, transparent));
     transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
   }
-  .mode.is-dug::before {
-    inset: 8px 9px 11px;
-    background: var(--dug);
+  .starter.is-hit .starter-content { opacity: 0; transform: scale(.72); }
+  .starter.is-cleared {
+    z-index: 1;
+    color: transparent;
+    background: var(--well-edge);
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
+    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.93);
   }
-  .mode.is-dug .mode-content { transform: scale(.92); }
+  .starter.is-cleared::before {
+    inset: 5px 6px 7px;
+    background: var(--well);
+  }
+  .starter-content {
+    transition: opacity 120ms ease, transform 170ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .mode {
+    cursor: default;
+    pointer-events: none;
+    transition:
+      transform 190ms cubic-bezier(.22, 1, .36, 1),
+      filter 180ms ease,
+      opacity 180ms ease;
+  }
+  .mode-content {
+    opacity: 0;
+    transform: translateY(5px) scale(.78);
+    transition: opacity 170ms ease, transform 230ms cubic-bezier(.22, 1, .36, 1);
+  }
+  .mode-icon {
+    width: clamp(21px, 6.5vw, 30px);
+    height: clamp(21px, 6.5vw, 30px);
+    overflow: visible;
+  }
+  .mode.is-available {
+    z-index: 6;
+    cursor: pointer;
+    pointer-events: auto;
+    filter:
+      drop-shadow(0 6px 3px color-mix(in srgb, var(--tile-shadow) 92%, transparent))
+      drop-shadow(0 0 10px color-mix(in srgb, var(--field-glow) 58%, transparent));
+  }
+  .mode.is-available .mode-content { opacity: 1; transform: none; }
+  .mode.is-available:hover::before { inset: 4px 5px 8px; }
+  .mode.is-available:active {
+    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.95);
+  }
+  .mode.is-dug {
+    pointer-events: none;
+    color: color-mix(in srgb, var(--ink) 8%, var(--field));
+    background: var(--well-edge);
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
+    transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
+  }
+  .mode.is-dug::before { inset: 6px 7px 8px; background: var(--well); }
+  .mode.is-dug .mode-content { transform: scale(.9); }
+
+  .board[data-phase="clearing"] .starter { animation: hit 220ms cubic-bezier(.22, 1, .36, 1) both; }
+  .board[data-phase="ready"] .mode.is-available { animation: mode-rise 330ms cubic-bezier(.22, 1, .36, 1) backwards; }
+  .board[data-phase="ready"] .mode-bounded { animation-delay: 45ms; }
+  .board[data-phase="ready"] .mode-sphere { animation-delay: 90ms; }
   .board.is-leaving .mode:not(.is-dug),
-  .board.is-leaving .cell { opacity: .68; }
-  .board.is-leaving .cell.near {
-    animation: settle 260ms cubic-bezier(.22, 1, .36, 1) both;
-  }
+  .board.is-leaving .cell,
+  .board.is-leaving .starter { opacity: .52; }
 
   .hint {
     position: fixed;
-    z-index: 5;
+    z-index: 10;
     left: 50%;
     top: max(18px, calc(env(safe-area-inset-top) + 12px));
     transform: translateX(-50%);
@@ -242,21 +327,18 @@
     padding: 7px 12px;
     max-width: calc(100vw - 32px);
     color: var(--muted);
-    background: color-mix(in srgb, var(--field) 78%, transparent);
+    background: color-mix(in srgb, var(--field) 80%, transparent);
+    border: 1px solid color-mix(in srgb, var(--tile-edge) 34%, transparent);
     border-radius: 999px;
-    font-size: clamp(.69rem, 2.8vw, .82rem);
+    font-size: clamp(.68rem, 2.8vw, .82rem);
     font-weight: 600;
-    letter-spacing: .02em;
+    letter-spacing: .015em;
     text-align: center;
     white-space: nowrap;
     backdrop-filter: blur(8px);
+    transition: color 180ms ease, background 180ms ease;
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    .mode { animation: rise 420ms cubic-bezier(.22, 1, .36, 1) backwards; }
-    .mode-bounded { animation-delay: 45ms; }
-    .mode-sphere { animation-delay: 90ms; }
-  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       scroll-behavior: auto !important;
@@ -267,27 +349,43 @@
   }
   @media (forced-colors: active) {
     body, body::before { background: Canvas; }
-    .cell, .mode { background: ButtonText; color: ButtonText; filter: none; }
-    .cell::after, .mode::before { background: Canvas; }
-    .mode:focus-visible { outline: 3px solid Highlight; outline-offset: 3px; }
-    .mode.is-dug { color: Canvas; background: ButtonText; }
-    .mode.is-dug::before { background: ButtonText; }
+    .cell, .starter, .mode { color: ButtonText; background: ButtonText; filter: none; }
+    .cell::before, .starter::before, .mode::before { background: Canvas; }
+    .cell.is-revealed, .starter.is-cleared, .mode.is-dug { background: ButtonText; }
+    .cell.is-revealed::before, .starter.is-cleared::before, .mode.is-dug::before { background: Canvas; }
+    .count, .cell.count-1 .count, .cell.count-2 .count,
+    .cell.count-3 .count, .cell.count-4 .count { color: CanvasText; text-shadow: none; }
+    .starter:focus-visible, .mode:focus-visible { outline: 3px solid Highlight; outline-offset: -5px; }
     .hint { color: CanvasText; background: Canvas; border: 1px solid CanvasText; }
   }
-  @keyframes rise {
-    from { opacity: 0; transform: translate3d(var(--x), calc(var(--y) + 14px), 0) scale(.9); }
+  @keyframes hit {
+    45% { transform: translate3d(var(--x), calc(var(--y) + 7px), 0) scale(.86); }
   }
-  @keyframes settle {
-    50% { transform: translate3d(var(--x), calc(var(--y) + 3px), 0) scale(.98); }
+  @keyframes mode-rise {
+    from {
+      opacity: .35;
+      transform: translate3d(var(--x), calc(var(--y) + 10px), 0) scale(.88);
+    }
   }
 </style>
 </head>
 <body>
 <main>
-  <nav class="board" id="game-menu" aria-label="Choose a Hexsweeper game">
-    <p class="hint" id="menu-hint">Dig a tile to play</p>
+  <nav class="board" id="game-menu" data-phase="covered" aria-label="Choose a Hexsweeper game">
+    <p class="hint" id="menu-status" role="status" aria-live="polite">Dig once to uncover the games</p>
+    <div class="field" id="menu-field" aria-hidden="true"></div>
 
-    <a class="hex mode mode-infinite" href="games/infinite.html" data-q="-1" data-r="0" aria-describedby="menu-hint">
+    <button class="hex starter" id="opening-dig" type="button" data-q="0" data-r="0" aria-describedby="menu-status" aria-label="Dig the opening tile to reveal game choices">
+      <span class="starter-content">
+        <svg class="starter-icon" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="14" cy="18" r="8" fill="currentColor"/>
+          <path d="M19 12.5 24.5 7M22 4.5l4.2 4.2" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+        </svg>
+        <span class="starter-label">Dig</span>
+      </span>
+    </button>
+
+    <a class="hex mode mode-infinite" href="games/infinite.html" data-q="0" data-r="-2" aria-label="Play Infinite Hexsweeper">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
@@ -301,7 +399,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-bounded" href="games/bounded.html" data-q="0" data-r="0" aria-describedby="menu-hint">
+    <a class="hex mode mode-bounded" href="games/bounded.html" data-q="2" data-r="0" aria-label="Play Bounded Hexsweeper">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -311,7 +409,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-sphere" href="games/sphere.html" data-q="1" data-r="0" aria-describedby="menu-hint">
+    <a class="hex mode mode-sphere" href="games/sphere.html" data-q="-2" data-r="2" aria-label="Play Sphere Hexsweeper">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -326,11 +424,67 @@
 <script>
 (function () {
   "use strict";
+
   var board = document.getElementById("game-menu");
+  var field = document.getElementById("menu-field");
+  var starter = document.getElementById("opening-dig");
+  var status = document.getElementById("menu-status");
   var modes = Array.prototype.slice.call(board.querySelectorAll(".mode"));
-  var modeSeats = { "-1,0": true, "0,0": true, "1,0": true };
+  var modeSeats = { "0,-2": true, "2,0": true, "-2,2": true };
+  var directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+  var cells = new Map();
+  var mines = new Set();
+  var revealed = new Set();
+  var timers = [];
   var resizeTimer = null;
+  var phase = "covered";
   var leaving = false;
+  var keyboardOpening = false;
+  var SESSION_KEY = "hexsweeper-launcher-opening-v1";
+
+  function key(q, r) { return q + "," + r; }
+  function distance(q, r) { return Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)); }
+  function reducedMotion() { return matchMedia("(prefers-reduced-motion: reduce)").matches; }
+
+  function hash(q, r) {
+    var n = Math.imul(q + 37, 374761393) ^ Math.imul(r - 19, 668265263) ^ 0x5f3759df;
+    n = Math.imul(n ^ (n >>> 13), 1274126177);
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+  }
+
+  function buildMines() {
+    mines.clear();
+    for (var r = -14; r <= 14; r += 1) {
+      for (var q = -14; q <= 14; q += 1) {
+        if (distance(q, r) >= 4 && hash(q, r) < .205) mines.add(key(q, r));
+      }
+    }
+    // Every ring-three boundary face gets at least one real outward mine, so
+    // the zero flood always stops in a readable numbered frontier.
+    for (var rr = -3; rr <= 3; rr += 1) {
+      for (var qq = -3; qq <= 3; qq += 1) {
+        if (distance(qq, rr) !== 3) continue;
+        var outward = [];
+        directions.forEach(function (dir) {
+          var nq = qq + dir[0];
+          var nr = rr + dir[1];
+          if (distance(nq, nr) === 4) outward.push([nq, nr]);
+        });
+        if (!outward.some(function (p) { return mines.has(key(p[0], p[1])); })) {
+          outward.sort(function (a, b) { return hash(a[0], a[1]) - hash(b[0], b[1]); });
+          if (outward[0]) mines.add(key(outward[0][0], outward[0][1]));
+        }
+      }
+    }
+  }
+
+  function countAt(q, r) {
+    var count = 0;
+    directions.forEach(function (dir) {
+      if (mines.has(key(q + dir[0], r + dir[1]))) count += 1;
+    });
+    return count;
+  }
 
   function place(element, q, r, width, height) {
     var x = width * (q + r / 2);
@@ -340,52 +494,176 @@
   }
 
   function buildField() {
-    Array.prototype.forEach.call(board.querySelectorAll(".cell"), function (cell) {
-      cell.remove();
-    });
-    var probe = modes[0].getBoundingClientRect();
+    field.textContent = "";
+    cells.clear();
+    var probe = starter.getBoundingClientRect();
     var width = probe.width;
     var height = probe.height;
-    var qLimit = Math.ceil(innerWidth / width) + 3;
-    var rLimit = Math.ceil(innerHeight / (height * .75)) / 2 + 3;
+    var qLimit = Math.ceil(innerWidth / width) + 4;
+    var rLimit = Math.ceil(innerHeight / (height * .75)) / 2 + 4;
+    var fragment = document.createDocumentFragment();
 
     for (var r = -Math.ceil(rLimit); r <= Math.ceil(rLimit); r += 1) {
       for (var q = -qLimit; q <= qLimit; q += 1) {
-        if (modeSeats[q + "," + r]) continue;
+        var id = key(q, r);
+        if (id === "0,0" || modeSeats[id]) continue;
         var x = width * (q + r / 2);
         var y = height * .75 * r;
         if (Math.abs(x) > innerWidth / 2 + width || Math.abs(y) > innerHeight / 2 + height) continue;
         var cell = document.createElement("span");
-        cell.className = "hex cell";
-        if (Math.abs(q) <= 2 && Math.abs(r) <= 1) cell.classList.add("near");
-        cell.setAttribute("aria-hidden", "true");
+        var count = countAt(q, r);
+        cell.className = "hex cell" + (count ? " count-" + Math.min(4, count) : "");
+        cell.dataset.key = id;
+        cell.dataset.count = String(count);
         place(cell, q, r, width, height);
-        board.insertBefore(cell, board.firstChild);
+        var mark = document.createElement("span");
+        mark.className = "count";
+        mark.textContent = count ? String(count) : "";
+        cell.appendChild(mark);
+        if (revealed.has(id)) cell.classList.add("is-revealed");
+        cells.set(id, cell);
+        fragment.appendChild(cell);
       }
     }
+    field.appendChild(fragment);
+    place(starter, 0, 0, width, height);
     modes.forEach(function (mode) {
       place(mode, Number(mode.dataset.q), Number(mode.dataset.r), width, height);
     });
   }
 
-  function dig(event) {
+  function floodPlan() {
+    var queue = [{ q: 0, r: 0, step: 0 }];
+    var seen = new Set(["0,0"]);
+    var plan = [];
+    while (queue.length) {
+      var item = queue.shift();
+      var id = key(item.q, item.r);
+      if (id !== "0,0" && !modeSeats[id]) {
+        plan.push({ key: id, step: item.step, jitter: Math.round(hash(item.q, item.r) * 34) });
+      }
+      if (countAt(item.q, item.r) !== 0 || distance(item.q, item.r) >= 3) continue;
+      directions.forEach(function (dir) {
+        var q = item.q + dir[0];
+        var r = item.r + dir[1];
+        var nextKey = key(q, r);
+        if (seen.has(nextKey) || mines.has(nextKey) || modeSeats[nextKey]) return;
+        seen.add(nextKey);
+        queue.push({ q: q, r: r, step: item.step + 1 });
+      });
+    }
+    return plan;
+  }
+
+  function revealCell(id) {
+    revealed.add(id);
+    var cell = cells.get(id);
+    if (cell) cell.classList.add("is-revealed");
+  }
+
+  function clearTimers() {
+    timers.forEach(clearTimeout);
+    timers.length = 0;
+  }
+
+  function rememberReady() {
+    try { sessionStorage.setItem(SESSION_KEY, "1"); } catch (_) {}
+  }
+
+  function finishOpening(instant) {
+    if (phase === "ready") return;
+    clearTimers();
+    floodPlan().forEach(function (item) { revealCell(item.key); });
+    phase = "ready";
+    board.dataset.phase = "ready";
+    board.removeAttribute("aria-busy");
+    starter.classList.remove("is-hit");
+    starter.classList.add("is-cleared");
+    starter.disabled = true;
+    starter.tabIndex = -1;
+    starter.setAttribute("aria-hidden", "true");
+    modes.forEach(function (mode) { mode.classList.add("is-available"); });
+    status.textContent = "Choose a game";
+    rememberReady();
+    if (instant) board.classList.add("opening-was-skipped");
+    if (keyboardOpening) {
+      keyboardOpening = false;
+      modes[0].focus({ preventScroll: true });
+    }
+  }
+
+  function startOpening(event) {
+    if (phase !== "covered") return;
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      keyboardOpening = event.detail === 0;
+    }
+    phase = "clearing";
+    board.dataset.phase = "clearing";
+    board.setAttribute("aria-busy", "true");
+    starter.classList.add("is-hit");
+    status.textContent = "Clearing a safe opening…";
+    if (reducedMotion()) {
+      finishOpening(true);
+      return;
+    }
+    var plan = floodPlan();
+    var latest = 0;
+    plan.forEach(function (item) {
+      var delay = 65 + item.step * 92 + item.jitter;
+      latest = Math.max(latest, delay);
+      timers.push(setTimeout(function () {
+        if (phase === "clearing") revealCell(item.key);
+      }, delay));
+    });
+    timers.push(setTimeout(function () {
+      if (phase !== "clearing") return;
+      starter.classList.add("is-cleared");
+    }, 70));
+    timers.push(setTimeout(function () { finishOpening(false); }, latest + 125));
+  }
+
+  function chooseMode(event) {
+    var mode = event.currentTarget;
+    if (phase !== "ready") {
+      event.preventDefault();
+      finishOpening(true);
+      return;
+    }
     if (leaving || event.defaultPrevented) return;
     if (event.button !== undefined && event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     leaving = true;
-    var mode = event.currentTarget;
     mode.classList.add("is-dug");
     board.setAttribute("aria-busy", "true");
     board.classList.add("is-leaving");
-    var delay = matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 260;
+    status.textContent = "Opening " + mode.querySelector(".mode-name").textContent;
+    var delay = reducedMotion() ? 30 : 230;
     setTimeout(function () { location.href = mode.href; }, delay);
   }
 
-  modes.forEach(function (mode) { mode.addEventListener("click", dig); });
+  starter.addEventListener("click", startOpening);
+  board.addEventListener("click", function (event) {
+    if (phase === "clearing" && !event.target.closest(".mode") && !event.target.closest(".starter")) {
+      event.preventDefault();
+      finishOpening(true);
+    }
+  });
+  modes.forEach(function (mode) {
+    mode.addEventListener("focus", function () {
+      if (phase !== "ready") finishOpening(true);
+    });
+    mode.addEventListener("click", chooseMode);
+  });
+
   addEventListener("resize", function () {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(buildField, 80);
+    resizeTimer = setTimeout(function () {
+      if (phase === "clearing") finishOpening(true);
+      buildField();
+    }, 80);
   });
   addEventListener("pageshow", function (event) {
     if (!event.persisted) return;
@@ -393,13 +671,19 @@
     board.classList.remove("is-leaving");
     board.removeAttribute("aria-busy");
     modes.forEach(function (mode) { mode.classList.remove("is-dug"); });
+    finishOpening(true);
   });
 
   var saved = null;
   try { saved = localStorage.getItem("hexsweeper-appearance-v1"); } catch (_) {}
   document.documentElement.dataset.appearance =
     saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+  buildMines();
   buildField();
+  var alreadyOpened = false;
+  try { alreadyOpened = sessionStorage.getItem(SESSION_KEY) === "1"; } catch (_) {}
+  if (alreadyOpened) finishOpening(true);
 })();
 </script>
 <script>
