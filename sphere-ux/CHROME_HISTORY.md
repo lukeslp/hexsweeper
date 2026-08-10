@@ -52,7 +52,8 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | `128f04f` | Indicators = one rotation (123 → Mark → Rings); dedicated glyph (the `numerals` icon read as "1s") | **Keep** |
 | `17a1dd6` | Seat swap: Invert to the notch right of Dig, Indicators up by 3D | **Keep** |
 | `16c9bf5` | Dome: per-tile hinge tilt toward viewer + translateZ + 1/cos gap compensation | **No** — reverted in `edcd9c5`. Revive with `git revert edcd9c5` |
-| variant A | `?dock=split` — bloom = Dig · Size · Invert only; Bg/Shell/Dug/Indicators/3D/Seams move to a Look pill row in the ? modal | **Trial** — compare live against default before promoting |
+| variant A | `?dock=split` — bloom = Dig · Size · Invert only; appearance as Look pills in the ? modal | **Retired 2026-08-10** — Luke: "it's the same w/o themes, basically?" The modal settings were invisible enough that the variant read as the default minus features. Default dock wins. |
+| 2026-08-10 | Dock trio = Restart · Menu · **Flag**; Help moves to its own corner seat (lower right, idle-sized, fades with chrome) | **Keep** — flag is the most-flipped switch on mobile and was two taps deep |
 
 ### What Luke is asking for (intent thread, in his words + readings)
 

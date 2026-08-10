@@ -142,8 +142,36 @@
   height: var(--tile-h-dock);
   opacity: 1;
 }
+/* Help corner — its own seat, lower right, always idle-sized. It never
+   grows with the bloom: it is reference chrome, not part of the flower. */
+.hex-bloom-corner {
+  position: absolute;
+  right: max(10px, env(safe-area-inset-right, 0px));
+  bottom: max(2px, env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+  pointer-events: auto;
+}
+.hex-bloom-corner .hb-hex.is-dock {
+  position: relative;
+  left: auto;
+  top: auto;
+  margin: 0;
+  width: var(--tile-w-dock-idle);
+  height: var(--tile-h-dock-idle);
+  pointer-events: auto;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    filter 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* Flag mode live: the dock tile reads as a planted flag (red face) via the
+   shared .is-flag-icon.is-active language. */
+
 /* While board has attention, whole dock recedes */
-.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-dock {
+.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-dock,
+.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-corner {
   opacity: 0;
 }
 .hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hb-hex.is-dock {

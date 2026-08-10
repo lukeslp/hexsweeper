@@ -69,26 +69,6 @@
   ];
 
   /**
-   * ?dock=split — variant A from CHROME_HISTORY (2026-08-09): the bloom keeps
-   * play controls only (Dig · Size · Invert, one row); every appearance
-   * toggle moves into the ? modal beside the Surface row. The default dock is
-   * untouched — this flag exists so the two can be compared live.
-   */
-  const DOCK_SPLIT = (() => {
-    try {
-      return new URLSearchParams(location.search).get("dock") === "split";
-    } catch (_) {
-      return false;
-    }
-  })();
-  const SPLIT_SLOTS = [
-    { q: 1, r: -1 }, // Dig / Flag — same seat as the full dock
-    { q: 0, r: -1 }, // Size — same seat
-    { q: -1, r: -1 }, // Invert — takes Seams' old seat
-  ];
-  const ACTIVE_SLOTS = DOCK_SPLIT ? SPLIT_SLOTS : PRIMARY_SLOTS;
-
-  /**
    * iOS Safari double-tap smart-zoom, layer two. touch-action: manipulation
    * on the tiles covers taps that land ON them — but the dock grows and lifts
    * as it opens, so the second tap of a fast open/close often lands where the
@@ -248,6 +228,12 @@
     const dock = document.createElement("div");
     dock.className = "hex-bloom-dock";
     root.appendChild(dock);
+
+    // Help lives in its own corner seat, outside the dock's grammar —
+    // the dock trio is all play controls (Restart · Menu · Flag).
+    const helpCorner = document.createElement("div");
+    helpCorner.className = "hex-bloom-corner";
+    root.appendChild(helpCorner);
 
     const live = document.createElement("p");
     live.className = "hex-bloom-live";
@@ -661,6 +647,7 @@
     function cycleMode() {
       const on = !!game.getState().flagMode;
       game.setFlagMode(!on);
+      paintDock();
       announce("Mode · " + (!on ? "Flag" : "Dig"));
     }
 
@@ -819,13 +806,7 @@
           cycle: cycleIndicators,
         },
       ];
-      if (!DOCK_SPLIT) return all;
-      // Split dock: play controls only, in SPLIT_SLOTS order. The appearance
-      // tiles' jobs move to the ? modal (see bindHelpLook in sphere.js).
-      const keep = ["mode", "size", "invert"];
-      return keep
-        .map((id) => all.find((c) => c.id === id))
-        .filter(Boolean);
+      return all;
     }
 
     // ---- State ----
@@ -839,7 +820,8 @@
     let phaseTimer = null;
     let dockBtn = null; // center menu / close
     let dockResetBtn = null;
-    let dockHelpBtn = null;
+    let dockFlagBtn = null;
+    let dockHelpBtn = null; // corner seat, lower right
     let lastFocus = null;
 
     function announce(msg) {
@@ -896,6 +878,17 @@
         dockHelpBtn.hidden = false;
         dockHelpBtn.setAttribute("aria-hidden", "false");
       }
+      if (dockFlagBtn) {
+        // Mirrors game state — keyboard F and the bloom's Dig/Flag tile land
+        // here too via their paintDock calls.
+        const on = !!(game.getState() || {}).flagMode;
+        dockFlagBtn.setAttribute("aria-pressed", on ? "true" : "false");
+        dockFlagBtn.classList.toggle("is-active", on);
+        dockFlagBtn.setAttribute(
+          "aria-label",
+          on ? "Flag mode on. Activate for dig mode." : "Flag mode. Activate to flag digs."
+        );
+      }
     }
 
     function readStats() {
@@ -947,7 +940,7 @@
     function addSubmenu(dirIndex, cat) {
       const { HEX } = tileMetrics();
       const { cx, cy } = centerXY();
-      const dir = ACTIVE_SLOTS[dirIndex] || DIRECTIONS[dirIndex];
+      const dir = PRIMARY_SLOTS[dirIndex] || DIRECTIONS[dirIndex];
       const p = hexToPixel(dir.q, dir.r, HEX);
       const px = cx + p.x;
       const py = cy + p.y;
@@ -1165,9 +1158,33 @@
         else if (state.phase === "closed") expand();
       });
 
-      // Help — right, quieter
+      // Flag — right of Menu: dig/flag mode without opening the bloom.
+      // On mobile there is no right-click; this is the most-flipped switch
+      // in the game and it was two taps deep.
+      dockFlagBtn = makeHex({
+        cls: "is-dock is-dock-side is-dock-flag is-flag-icon",
+        label: "",
+        icon: "flag",
+        iconOnly: true,
+        ariaLabel: "Flag mode",
+      });
+      dockFlagBtn.title = "Flag mode";
+      dockFlagBtn.setAttribute("aria-pressed", "false");
+      dockFlagBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ignoreOutsideUntil = Date.now() + 250;
+        const on = !game.getState().flagMode;
+        game.setFlagMode(on);
+        paintDock();
+        if (state.phase === "open") refreshPrimaryLabels();
+        announce(on ? "Flag mode" : "Dig mode");
+      });
+
+      // Help — corner seat, lower right
+      helpCorner.textContent = "";
       dockHelpBtn = makeHex({
-        cls: "is-dock is-dock-side is-dock-help",
+        cls: "is-dock is-dock-help",
         label: "",
         icon: "help",
         iconOnly: true,
@@ -1180,10 +1197,11 @@
         ignoreOutsideUntil = Date.now() + 250;
         doHelp();
       });
+      helpCorner.appendChild(dockHelpBtn);
 
       dock.appendChild(dockResetBtn);
       dock.appendChild(dockBtn);
-      dock.appendChild(dockHelpBtn);
+      dock.appendChild(dockFlagBtn);
       paintDock();
     }
 
@@ -1200,7 +1218,7 @@
       if (!withPetals) return;
 
       cats.forEach((cat, i) => {
-        const d = ACTIVE_SLOTS[i] || DIRECTIONS[i];
+        const d = PRIMARY_SLOTS[i] || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const iconName =
@@ -1418,6 +1436,8 @@
     });
 
     document.addEventListener("keyup", (e) => {
+      // F flips flag mode from anywhere; the dock tile must follow.
+      if (/^[fF]$/.test(e.key)) paintDock();
       if (state.phase !== "open") return;
       if (/^[stnfrSTNFR]$/.test(e.key)) refreshPrimaryLabels();
     });
