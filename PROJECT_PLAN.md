@@ -19,10 +19,11 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
       `iris` antagonist, and the React/Radix/Tailwind toolchain all removed
 - [x] `FoundationModelsPlugin.swift` + `AppViewController.swift` deleted;
       `Main.storyboard` back to stock `CAPBridgeViewController`
-- [x] `www/` vendored from hexsweeper `6704bca`, provenance in `WWW_SOURCE.txt`
+- [x] `www/` vendored from hexsweeper `a504d52`, provenance in `WWW_SOURCE.txt`
 - [x] Display name / `PRODUCT_NAME` → Hexsweeper; bundle id retained
-- [x] `CURRENT_PROJECT_VERSION` 1 → 8 (ASC holds builds 1–6; build 7 was the
-      first TestFlight binary and build 8 is the staged release candidate)
+- [x] `CURRENT_PROJECT_VERSION` 1 → 9 (ASC holds builds 1–6; build 7 was the
+      first TestFlight binary, build 8 is attached to 1.0, and build 9 carries
+      the centered app launcher)
 - [x] `capacitor.config` → `.js`; `CapacitorHttp` dropped; payload proven to make
       no network calls
 - [x] Smoke gates rewritten: payload checksum integrity + `cap sync`, plus an
@@ -45,6 +46,8 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
       alternatives and their reproducible pipeline are committed, but were not
       uploaded over the device captures
 - [x] **Release candidate attached: 1.0 (8), VALID**; nothing submitted for review
+- [x] **TestFlight build 1.0 (9), VALID**; centered logo unfolds into Infinite,
+      Bounded, and Sphere mode links
 - [ ] App Privacy nutrition labels — no API endpoint, must be clicked through
       in the ASC web UI. Answer is "Data Not Collected" throughout
 - [ ] Device verification (`docs/DEVICE_VERIFY.md`) — tap-target size at XL is

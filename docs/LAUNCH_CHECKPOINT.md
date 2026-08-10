@@ -4,16 +4,16 @@ Gate before widening TestFlight or submitting for review.
 
 ## Automated
 
-- [ ] `scripts/smoke.sh --with-source ../hexsweeper` green
+- [x] `scripts/smoke.sh --with-source ../hexsweeper` green
 - [ ] CI green on `main`
-- [ ] `www/` matches the hexsweeper commit recorded in `WWW_SOURCE.txt`
+- [x] `www/` matches the hexsweeper commit recorded in `WWW_SOURCE.txt`
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` is 8 and exceeds the inherited builds 1–6
+- [x] `CURRENT_PROJECT_VERSION` is 9 and exceeds the inherited builds 1–6
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
-- [ ] Archive signs cleanly under team `596T7J7FB6`
+- [x] Archive signs cleanly under team `596T7J7FB6`
 
 ## Hardware
 
@@ -32,7 +32,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Support, marketing and privacy policy URLs set
 - [x] Age rating answered — every category NONE/false
 - [x] Export compliance: `ITSAppUsesNonExemptEncryption` is `false`
-- [x] Build 8 processed and attached to version 1.0; nothing submitted for review
+- [x] Build 8 remains attached to version 1.0; build 9 is `VALID` in TestFlight;
+      nothing submitted for review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
       requests at all and the export guard enforces that at build time.
