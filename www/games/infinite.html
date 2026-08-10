@@ -432,6 +432,7 @@ body[data-mode="light"] .canvas-container,
 body[data-mode="dark"] .canvas-container,
 body[data-mode="escape"] .canvas-container,
 body[data-mode="fire"] .canvas-container,
+body[data-mode="water"] .canvas-container,
 body[data-mode="plague"] .canvas-container {
   position: fixed;
   inset: 0;
@@ -440,6 +441,7 @@ body[data-mode="light"] canvas,
 body[data-mode="dark"] canvas,
 body[data-mode="escape"] canvas,
 body[data-mode="fire"] canvas,
+body[data-mode="water"] canvas,
 body[data-mode="plague"] canvas {
   /* Fill the fixed inset container — NOT 100vw/100vh.
      On mobile Safari, 100vh is often taller than window.innerHeight, so a
@@ -519,6 +521,13 @@ body[data-mode="plague"] .chrome-glass {
   box-shadow:
     0 1px 0 rgba(200, 240, 210, 0.06) inset,
     0 10px 32px rgba(0, 0, 0, 0.38);
+}
+body[data-mode="water"] .chrome-glass {
+  background: rgba(8, 40, 58, 0.52);
+  border-color: rgba(150, 225, 245, 0.18);
+  box-shadow:
+    0 1px 0 rgba(200, 245, 255, 0.1) inset,
+    0 10px 32px rgba(0, 20, 34, 0.42);
 }
 
 .hud-actions {
@@ -1028,6 +1037,51 @@ body[data-mode="escape"] .modal-actions button[aria-pressed="true"] {
 }
 body[data-mode="escape"] .menu-links a:hover { color: #7fd8c4; }
 body[data-mode="escape"] .menu-links a:focus-visible { outline-color: #7fd8c4; }
+
+body[data-mode="water"] .modal-overlay {
+  background: rgba(4, 24, 36, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+body[data-mode="water"] .modal-content {
+  background:
+    linear-gradient(170deg, #12455e 0%, #0c3145 55%, #061f2d 100%);
+  color: #e2f4fb;
+  border: 1px solid rgba(150, 225, 245, 0.22);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 rgba(210, 245, 255, 0.07) inset,
+    0 22px 52px rgba(0, 14, 24, 0.52);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body[data-mode="water"] .menu-title { color: #e2f4fb; }
+body[data-mode="water"] .close-btn {
+  color: #5f97ac;
+  border: 1px solid rgba(150, 205, 225, 0.24);
+  background: rgba(10, 42, 60, 0.55);
+  border-radius: 8px;
+}
+body[data-mode="water"] .close-btn:hover {
+  color: #e2f4fb;
+  border-color: rgba(120, 225, 240, 0.42);
+}
+body[data-mode="water"] .mode-switch button,
+body[data-mode="water"] .modal-actions button,
+body[data-mode="water"] .diff-option {
+  border-radius: 8px;
+}
+body[data-mode="water"] .mode-switch button[aria-pressed="true"],
+body[data-mode="water"] .modal-actions button[aria-pressed="true"],
+body[data-mode="water"] .diff-option.active,
+body[data-mode="water"] .diff-option[aria-pressed="true"] {
+  background: color-mix(in srgb, #7fe0e8 22%, transparent);
+  border-color: rgba(127, 224, 232, 0.45);
+  color: #eafbff;
+}
+body[data-mode="water"] .instructions-text { color: #5f97ac; }
+body[data-mode="water"] .menu-links a:hover { color: #7fe0e8; }
+body[data-mode="water"] .menu-links a:focus-visible { outline-color: #7fe0e8; }
 
 .welcome-overlay {
   position: fixed;
@@ -4243,6 +4297,71 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         flag: "rgba(212,160,140,0.88)",
       },
     },
+    {
+      ...MATERIAL_LIBRARY[0],
+      id: "water",
+      name: "Water · Tide",
+      material: "water",
+      // Finite raft. The board has to sit still against the horizon — an
+      // endless field drifting under a fixed waterline reads as the sea
+      // sliding rather than the camera, and the illusion dies. Note that
+      // MATERIAL_LIBRARY[0] ships `endless: true`, so it must be turned back
+      // off explicitly here.
+      endless: false,
+      cameraLock: true,
+      // Deliberately shorter than the other finite themes: the raft needs sky
+      // above it and open sea below, or "half submerged" has nothing to read
+      // against and the board just looks tinted blue.
+      boardConfig: {
+        viewportFill: 0.68,
+        easy: { radius: 4, mines: 10, cellSize: 48 },
+        medium: { radius: 6, mines: 28, cellSize: 42 },
+        hard: { radius: 8, mines: 52, cellSize: 36 },
+      },
+      css: {
+        "--bg-color": "#0a2a3c",
+        "--text-main": "#e2f4fb",
+        "--text-sub": "#5f97ac",
+        "--nav-bg": "#0e2f42",
+        "--nav-ink": "#e2f4fb",
+      },
+      bodyBg: "#04202f",
+      fx: {
+        // The canvas paints the real sky and sea; this only keeps the page
+        // behind the board from flashing desk-grey on load and theme swaps.
+        bg: "linear-gradient(180deg, #0b2438 0%, #2d7b96 58%, #0a3f57 60%, #04202f 100%)",
+      },
+      theme: {
+        flag: "#ffb454",
+        text: {
+          1: "#8fd9f0",
+          2: "#6fe3c4",
+          3: "#ffab7a",
+          4: "#a9b8f5",
+          5: "#ffd684",
+          6: "#7fe0e8",
+          mine: "#f2fbff",
+        },
+      },
+      states: {
+        // Wet stone: covers hold the light, wells drink it.
+        covered:  { h: 196, s: 20, l: 58 },
+        revealed: { h: 202, s: 34, l: 16 },
+        flagged:  { h: 32, s: 62, l: 46 },
+      },
+      glow: {
+        colors: ["rgba(120,220,240,0.18)", "rgba(40,130,170,0.12)"],
+        pulse: 0.1,
+        bloom: 1.15,
+      },
+      particles: {
+        count: 34,
+        ambient: "rgba(180,235,250,0.2)",
+        reveal: "rgba(150,230,240,0.6)",
+        mine: "rgba(255,180,120,0.95)",
+        flag: "rgba(255,180,84,0.85)",
+      },
+    },
   ];
 
   const FINITE_DEFAULT_CONFIG = {
@@ -4284,6 +4403,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       fire: "fire",
       "biolume-reef": "plague",
       plague: "plague",
+      water: "water",
+      tide: "water",
     };
     let id = aliases[raw] || raw;
     // Former Minimalist + Settings tone → Light or Dark
@@ -4337,7 +4458,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (fromQuery) {
         themeIndex = THEMES.findIndex((t) => t.id === fromQuery);
       } else {
-        const stored = resolveThemeId(localStorage.getItem(STORAGE_KEY));
+        let stored = resolveThemeId(localStorage.getItem(STORAGE_KEY));
+        // Water was demoted off the production surface (2026-08-10): the
+        // renderer and ?mode=water stay, but a stored session must not strand
+        // the player on a theme with no button back out.
+        if (stored === "water") stored = "light";
         if (stored) themeIndex = THEMES.findIndex((t) => t.id === stored);
         else if (localStorage.getItem(LEGACY_TONE_KEY) === "dark") {
           themeIndex = THEMES.findIndex((t) => t.id === "dark");
@@ -5247,6 +5372,255 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.restore();
   }
 
+  /**
+   * Water · Tide — a finite raft floating half under the surface.
+   *
+   * Screen-space post-pass over the finished frame: only pixels below the
+   * waterline are recomposited, so geometry, camera and hit-testing are
+   * untouched.
+   *
+   * The globe carries a parallel implementation in sphere-ux/sphere.js,
+   * anchored to the sphere instead of the board — a change to the wave, the
+   * meniscus or the depth haze here usually wants mirroring there.
+   *
+   * Adapted from Wakana Y.K.'s SVG feTurbulence water reflection
+   * (codepen oNOwpqM). The displacement runs as canvas row slices rather than
+   * a real `filter: url(#…)` on the canvas, because an SVG filter warps what
+   * you see but not where the pointer lands — every dig below the line would
+   * miss by the displacement amount. Slices keep the click honest.
+   */
+  const WATER = {
+    buf: null,
+    bctx: null,
+    /**
+     * Where the surface crosses the raft, as a fraction of the board's painted
+     * height. Measured against the board and not the viewport: a fixed
+     * fraction of canvas height slides off the tiles as soon as the window
+     * shape or the difficulty changes, and the raft ends up sitting on the
+     * water instead of in it.
+     */
+    level: 0.62,
+    /**
+     * Resolved once per frame by drawWaterField (beforeFrame) and read back by
+     * drawWaterPass (afterFrame). Ticked on a counter rather than a timestamp:
+     * performance.now() is sub-millisecond, so the two hooks never landed on
+     * the same key and the line could drift between the sea and the reflection
+     * drawn into it.
+     */
+    _y: 0,
+    _bottom: 0,
+    _ready: false,
+  };
+
+  /** Three octaves standing in for feTurbulence fractalNoise. Returns ~[-1,1]. */
+  function waterWave(y, t) {
+    return (
+      (Math.sin(y * 0.021 + t * 1.9) +
+        Math.sin(y * 0.052 - t * 2.7) * 0.42 +
+        Math.sin(y * 0.009 + t * 1.1) * 0.72) /
+      2.14
+    );
+  }
+
+  /**
+   * Waterline in canvas px, breathing on a slow tide. Called once per frame
+   * from drawWaterField; the post-pass reuses the stored value so the sea and
+   * the reflection drawn into it cannot land on different rows.
+   */
+  function computeWaterLine(s) {
+    const h = s.canvas.height;
+    const now = performance.now();
+
+    let top = h * 0.3;
+    let bottom = h * 0.78;
+    let seen = false;
+    s.map.forEach((cell) => {
+      if (cell._offscreen) return;
+      if (!seen) {
+        top = bottom = cell.y;
+        seen = true;
+        return;
+      }
+      if (cell.y < top) top = cell.y;
+      if (cell.y > bottom) bottom = cell.y;
+    });
+    // Cell centers only — push out by a face so the rim rides the surface too.
+    const face = (s.cellSize || 40) * 0.9;
+    top -= face;
+    bottom += face;
+
+    const tide = reduceMotion ? 0 : Math.sin(now * 0.00011) * 0.015;
+    WATER._y = Math.round(
+      Math.max(h * 0.18, Math.min(h * 0.92, top + (bottom - top) * (WATER.level + tide)))
+    );
+    // Last row that can hold board pixels. Past it the frame is flat sea, and
+    // refracting sea onto identical sea is hundreds of copies for no pixel.
+    WATER._bottom = Math.min(h, Math.ceil(bottom));
+    WATER._ready = true;
+    return WATER._y;
+  }
+
+  /**
+   * Sea underlay — painted before the tiles so the submerged half of the raft
+   * sits *in* the water rather than on top of it. Above the line stays sky.
+   */
+  function drawWaterField(ctx, s) {
+    const w = s.canvas.width;
+    const h = s.canvas.height;
+    const t = performance.now();
+    const surf = computeWaterLine(s);
+
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+
+    // Sky: cool haze over a low sun, so the horizon has somewhere to sit.
+    const sky = ctx.createLinearGradient(0, 0, 0, Math.max(1, surf));
+    sky.addColorStop(0, "#0b2438");
+    sky.addColorStop(0.55, "#14415c");
+    sky.addColorStop(1, "#2d7b96");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, surf);
+
+    const sunX = w / 2 + ox * 0.3;
+    const sunY = surf - h * 0.06;
+    const sun = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, Math.max(w, h) * 0.42);
+    sun.addColorStop(0, "rgba(190,240,255,0.26)");
+    sun.addColorStop(0.4, "rgba(120,200,225,0.12)");
+    sun.addColorStop(1, "transparent");
+    ctx.fillStyle = sun;
+    ctx.fillRect(0, 0, w, surf);
+
+    // Sea: darkening with depth.
+    const sea = ctx.createLinearGradient(0, surf, 0, h);
+    sea.addColorStop(0, "#12617d");
+    sea.addColorStop(0.35, "#0a3f57");
+    sea.addColorStop(1, "#04202f");
+    ctx.fillStyle = sea;
+    ctx.fillRect(0, surf, w, h - surf);
+
+    // Caustics — light sheets bending through the surface onto the field.
+    const bands = reduceMotion ? 4 : 9;
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < bands; i++) {
+      const phase = reduceMotion ? i * 0.7 : t * 0.00016 + i * 0.7;
+      const cx = w * (0.5 + Math.sin(phase) * 0.42);
+      const spread = w * (0.05 + 0.035 * Math.sin(phase * 1.7 + i));
+      const g = ctx.createLinearGradient(cx - spread, 0, cx + spread, 0);
+      g.addColorStop(0, "transparent");
+      g.addColorStop(0.5, `rgba(150,230,240,${0.05 + 0.03 * Math.sin(phase * 2.3)})`);
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - spread, surf, spread * 2, h - surf);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Water post-pass — refraction, reflection and the meniscus.
+   * Called from afterFrame with the frame already fully painted.
+   */
+  function drawWaterPass(ctx, s) {
+    const w = s.canvas.width;
+    const h = s.canvas.height;
+    if (!w || !h || !WATER._ready) return;
+    const surf = WATER._y;
+    const depth = h - surf;
+    if (depth < 4) return;
+    const t = performance.now() * 0.001;
+
+    // Snapshot the dry frame; every slice reads from this so the pass never
+    // samples pixels it has already written.
+    if (!WATER.buf) {
+      WATER.buf = document.createElement("canvas");
+      WATER.bctx = WATER.buf.getContext("2d");
+    }
+    if (WATER.buf.width !== w || WATER.buf.height !== h) {
+      WATER.buf.width = w;
+      WATER.buf.height = h;
+    }
+    const buf = WATER.buf;
+    WATER.bctx.clearRect(0, 0, w, h);
+    WATER.bctx.drawImage(s.canvas, 0, 0);
+
+    const size = s.cellSize || 40;
+    const amp = Math.max(2.4, size * 0.15);
+    const slice = 2;
+    // Foreshortening: the mirror image compresses toward the horizon.
+    const squeeze = 0.78;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, surf, w, depth);
+    ctx.clip();
+
+    // Deep water first, so the strip a slice vacates when it shifts sideways
+    // resolves to sea rather than a smear of its own edge pixels.
+    const fill = ctx.createLinearGradient(0, surf, 0, h);
+    fill.addColorStop(0, "#0d4d67");
+    fill.addColorStop(1, "#04202f");
+    ctx.fillStyle = fill;
+    ctx.fillRect(0, surf, w, depth);
+
+    // 1 · Refraction — the submerged part of the raft, wobbling where it sits.
+    const stop = Math.min(h, WATER._bottom);
+    for (let y = surf; y < stop; y += slice) {
+      const d = (y - surf) / depth;
+      const dx = waterWave(y, t) * amp * (0.35 + d * 1.15);
+      ctx.drawImage(buf, 0, y, w, slice, dx, y, w, slice);
+    }
+
+    // 2 · Reflection — the dry half mirrored down, fading with distance.
+    for (let y = surf; y < h; y += slice) {
+      const d = (y - surf) / depth;
+      const srcY = surf - (y - surf) * squeeze;
+      if (srcY < 0) break;
+      const dx = waterWave(y * 1.7 + 40, t * 1.25) * amp * (0.6 + d * 1.7);
+      ctx.globalAlpha = 0.32 * Math.max(0, 1 - d * 1.05);
+      ctx.drawImage(buf, 0, srcY, w, slice, dx, y, w, slice);
+    }
+    ctx.globalAlpha = 1;
+
+    // 3 · Depth haze — everything below reads colder and dimmer with distance.
+    const haze = ctx.createLinearGradient(0, surf, 0, h);
+    haze.addColorStop(0, "rgba(20,110,140,0.07)");
+    haze.addColorStop(0.45, "rgba(10,70,100,0.3)");
+    haze.addColorStop(1, "rgba(3,26,40,0.66)");
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, surf, w, depth);
+    ctx.restore();
+
+    // 4 · The meniscus — bright rim where air meets sea, chased along the wave.
+    ctx.save();
+    const band = Math.max(2.5, size * 0.06);
+    const glow = ctx.createLinearGradient(0, surf - band * 5, 0, surf + band * 5);
+    glow.addColorStop(0, "rgba(190,240,255,0)");
+    glow.addColorStop(0.5, "rgba(200,245,255,0.24)");
+    glow.addColorStop(0.62, "rgba(255,255,255,0.42)");
+    glow.addColorStop(1, "rgba(120,200,230,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, surf - band * 5, w, band * 10);
+
+    // Broken specular chop. Hash-jittered rather than a clean sine, or the
+    // highlights land on an even pitch and the horizon reads as a dashed rule.
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = "rgba(226,250,255,0.9)";
+    const step = Math.max(9, Math.round(w / 74));
+    for (let x = 0; x < w; x += step) {
+      const j = cellHash(x, 17, 3);
+      const ph = x * 0.014 + t * 1.6 + j * 6.283;
+      const a = Math.sin(ph) * Math.sin(ph * 0.37 + 1.1);
+      if (a < 0.3) continue;
+      ctx.globalAlpha = Math.min(0.6, a * 0.55);
+      ctx.fillRect(
+        x + j * step * 0.6,
+        surf - 1 + Math.sin(ph * 1.3) * 1.6,
+        step * (0.3 + j * 0.5),
+        1.5
+      );
+    }
+    ctx.restore();
+  }
+
   /** Large elliptical ground shadow for the whole honeycomb (parallax-aware). */
   function drawBoardGroundShadow(ctx, s, th, flat) {
     if (th.material === "magma") {
@@ -5255,6 +5629,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
     if (th.material === "mycelium") {
       drawPlagueSpecimenField(ctx, s);
+      return;
+    }
+    if (th.material === "water") {
+      drawWaterField(ctx, s);
       return;
     }
     if (flat) return;
@@ -7184,6 +7562,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         !!(
           t.material === "neumorph" ||
           t.material === "magma" ||
+          t.material === "water" ||
           (t.flatGrid && t.material !== "mycelium")
         )
       );
@@ -7713,6 +8092,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   /** Board-level atmosphere under the honeycomb (lab caustic / void / underworld). */
   function drawThemeAtmosphere(ctx, s, th, t) {
     if (th.material === "neumorph" || th.material === "bubblewrap") return;
+    // Water owns its whole environment in drawWaterField (sky, sea, caustics).
+    if (th.material === "water") return;
     const time = mt(t);
     const cx = s.canvas.width / 2 + ox * 0.12;
     const cy = s.canvas.height / 2 + oy * 0.1 + 22;
@@ -8516,6 +8897,23 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         { mode: "fire", label: "Fire" },
       ],
     },
+    water: {
+      title: "Hexsweeper · Water",
+      lede:
+        "A finite raft, half under the tide.<br>Six neighbors per cell · first dig is always safe.",
+      body: [
+        "Clear every safe cell without detonating a mine.<br>Numbers count mines among the six touching neighbors.",
+        "Flag suspected mines, then dig elsewhere.<br>When a revealed cell’s flags match its count, tap it again to chord-open the rest.",
+        "The waterline cuts across the board. Rows below it ripple and reflect, but they dig exactly where you tap.<br>Clear all safe cells to win.",
+      ],
+      keys:
+        "<kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>Esc</kbd> close",
+      modes: [
+        { mode: "light", label: "Light / Dark plate" },
+        { mode: "fire", label: "Fire" },
+        { mode: "plague", label: "Plague" },
+      ],
+    },
     escape: {
       title: "Hexsweeper · Escape",
       lede:
@@ -8951,6 +9349,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
           ctx.restore();
           BLAST._shaking = false;
         }
+        // Water composites the finished frame in screen space, so it runs last
+        // — after the shake transform is released, or the waterline shudders
+        // loose from the horizon during a detonation.
+        if (THEMES[themeIndex].material === "water") drawWaterPass(ctx, s);
       },
       drawCell(ctx, cell, size, api) {
         if (cell._offscreen) return;
@@ -9839,6 +10241,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 })();
 </script>
 
+<!-- GoatCounter Analytics -->
 <style>
 .app-back{position:fixed;z-index:9999;
  top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));

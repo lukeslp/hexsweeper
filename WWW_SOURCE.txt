@@ -6,10 +6,10 @@
 # then refresh this file. scripts/smoke.sh verifies these checksums.
 
 source_repo   https://github.com/lukeslp/hexsweeper
-source_commit 7ad15c7c35896f92ddab99daa5b5322c53023631
+source_commit a504d5252bfa61f1d4754136ab78c72afe93538e
 
 b42114581fded77b4aa8e003634ee68682a7013f3ce7d43f2ac119b4fc0360fa  assets/classic-minesweeper.png
 8bd499218e9f332cc908b775e8c25259ba9a4f2b75a42862463d2b608afbab35  games/bounded.html
-b7af9f387bdc1f5bd266cbd5e024610b4b0bf2b4fd9a88ff5921488c8b5fa7e7  games/infinite.html
-2c2e941ca556cbcd9ec2dfdff8252d83cdbc65a7728a0bc115cd64ca798d0aa1  games/sphere.html
-c1ece04b026d52ba14b3a11b32f6096f4fb15734c32542a6d46be41cecf84100  index.html
+fff4df8b0b8953d0a5790783e2dd6419821dfce5a64cf2e72e5dcbcf0f38fe23  games/infinite.html
+79abf525ee7dced5729870a08338074ca2a1413a24d8fe48af3a7dc796017d27  games/sphere.html
+61fc49d1ac0df999e2600b0cf5142bdb9ef3e19b18bd27a0d45406d7f98502eb  index.html
