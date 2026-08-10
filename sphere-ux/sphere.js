@@ -1513,6 +1513,49 @@
       state.projectedCache = null;
     }
 
+    /**
+     * Return one real front-facing hex and its six projected neighbours for
+     * chrome experiments that inhabit the board instead of floating over it.
+     * Coordinates are CSS pixels in the canvas coordinate space. A hex is
+     * deliberately preferred over the twelve Goldberg pentagons so callers
+     * always receive a complete seven-face patch.
+     */
+    function getMenuPatch() {
+      const projected = getProjected().filter((face) => face.z > 0.08);
+      const byIndex = new Map(projected.map((face) => [face.index, face]));
+      const candidates = projected
+        .filter((face) => {
+          const tile = state.tiles[face.index];
+          return (
+            tile &&
+            tile.neighborIndices &&
+            tile.neighborIndices.length === 6 &&
+            tile.neighborIndices.every((index) => byIndex.has(index))
+          );
+        })
+        .sort((a, b) => {
+          const ad = Math.hypot(a.center.x - state.centerX, a.center.y - state.centerY);
+          const bd = Math.hypot(b.center.x - state.centerX, b.center.y - state.centerY);
+          return ad - bd || b.z - a.z;
+        });
+      const center = candidates[0];
+      if (!center) return null;
+      const ring = state.tiles[center.index].neighborIndices
+        .map((index) => byIndex.get(index))
+        .filter(Boolean);
+      if (ring.length !== 6) return null;
+      const copyFace = (face) => ({
+        index: face.index,
+        z: face.z,
+        center: { x: face.center.x, y: face.center.y },
+        boundary: face.boundary.map((point) => ({ x: point.x, y: point.y })),
+      });
+      return {
+        center: copyFace(center),
+        ring: ring.map(copyFace),
+      };
+    }
+
     function pointInPoly(x, y, poly) {
       let inside = false;
       for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -4501,6 +4544,7 @@
         cy: state.centerY,
         r: state.scale * 1.15,
       }),
+      getMenuPatch,
       setCountStyle: (id, opts) => setCountStyle(id, opts),
       setRelief: (mode) => setRelief(mode),
       setSeams: (on) => setSeams(on),

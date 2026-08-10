@@ -72,6 +72,8 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/sphere-kimi.html` | Take: Moon Ink Orrery (Kimi) |
 | `collection/sphere-claude.html` | Take: Amber Codex (Claude) |
 | `collection/sphere-muse.html` | Take: Starlit Void (Muse) |
+| `collection/sphere-face-takeover.html` | Control study: seven real sphere faces become the menu |
+| `collection/sphere-equator-ribbon.html` | Control study: draggable depth-sorted equator ribbon |
 | `sphere/takes/*.json` | Model design specs for the three takes |
 | `sphere/assets/textures/` | Earth & Moon 2k daymaps for globe themes (`?theme=earth\|moon`) |
 | `collection/index.html` | Desk tile grid — sphere + takes under Experiments (Open + Copy HTML) |

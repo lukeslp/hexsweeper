@@ -884,6 +884,102 @@
   --hov: 7px;
 }
 
+/* ---- Query studies: chrome inhabits the sphere instead of covering it ---- */
+.hex-bloom[data-face-takeover="true"] .hex-bloom-scrim,
+.hex-bloom[data-equator-ribbon="true"] .hex-bloom-scrim {
+  background: color-mix(in srgb, var(--hb-paper) 7%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Face takeover uses the renderer's real projected polygons. Each control is
+   therefore the exact size, skew and neighbour seam of the board face below. */
+.hex-bloom[data-face-takeover="true"] .hb-face-action {
+  margin: 0;
+  clip-path: var(--face-poly);
+  background: color-mix(in srgb, var(--hb-ink) 78%, transparent);
+  transform-origin: 50% 50% !important;
+  transition:
+    transform 210ms cubic-bezier(0.22, 1, 0.3, 1),
+    opacity 160ms ease,
+    filter 140ms ease;
+}
+.hex-bloom[data-face-takeover="true"] .hb-face-action::before {
+  inset: 1.5px;
+  clip-path: var(--face-poly);
+  background: color-mix(in srgb, var(--hb-paper) 92%, transparent);
+}
+.hex-bloom[data-face-takeover="true"][data-icon-menu="true"] .hb-hex.hb-face-action .hb-glyph,
+.hex-bloom[data-face-takeover="true"][data-icon-menu="true"] .hb-hex.hb-face-action .hb-icon {
+  width: var(--face-icon);
+  height: var(--face-icon);
+  max-width: none;
+  max-height: none;
+}
+.hex-bloom[data-face-takeover="true"] .hb-face-action.folded {
+  transform: scale(0.58);
+  opacity: 0;
+}
+.hex-bloom[data-face-takeover="true"] .hb-face-action.shown {
+  transform: scale(0.97);
+  opacity: 0.96;
+  filter: drop-shadow(0 3px 5px color-mix(in srgb, var(--hb-ink) 28%, transparent));
+}
+.hex-bloom[data-face-takeover="true"] .hb-face-action.shown:hover,
+.hex-bloom[data-face-takeover="true"] .hb-face-action.shown:focus-visible {
+  transform: scale(1.055);
+  opacity: 1;
+  z-index: 140 !important;
+}
+.hex-bloom[data-face-takeover="true"] .hb-face-center.shown {
+  filter: drop-shadow(0 5px 8px color-mix(in srgb, var(--hb-ink) 38%, transparent));
+}
+
+/* Equator ribbon: seven controls orbit one shared belt. Screen position is
+   recalculated in JS; scale, opacity and blur carry front/back depth. */
+.hex-bloom[data-equator-ribbon="true"] .hb-ribbon-action {
+  margin-left: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  transform-origin: 50% 50% !important;
+  cursor: grab;
+  touch-action: none;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.3, 1),
+    opacity 150ms ease,
+    filter 150ms ease;
+}
+.hex-bloom[data-equator-ribbon="true"][data-icon-menu="true"] .hb-hex.hb-ribbon-action .hb-glyph {
+  width: 44%;
+  height: 44%;
+  max-width: 42px;
+  max-height: 42px;
+}
+.hex-bloom[data-equator-ribbon="true"][data-icon-menu="true"] .hb-hex.hb-ribbon-action .hb-icon {
+  width: 100%;
+  height: 100%;
+}
+.hex-bloom[data-equator-ribbon="true"] .hb-ribbon-action.folded {
+  transform: translate(-50%, -50%) scale(0.28);
+  opacity: 0;
+}
+.hex-bloom[data-equator-ribbon="true"] .hb-ribbon-action.shown {
+  transform: translate(-50%, -50%) scale(var(--ribbon-scale, 1));
+  opacity: var(--ribbon-opacity, 1);
+  filter:
+    blur(var(--ribbon-blur, 0px))
+    drop-shadow(0 4px 7px color-mix(in srgb, var(--hb-ink) 30%, transparent));
+}
+.hex-bloom[data-equator-ribbon="true"] .hb-ribbon-action.shown:hover,
+.hex-bloom[data-equator-ribbon="true"] .hb-ribbon-action.shown:focus-visible {
+  opacity: 1;
+  filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--hb-ink) 38%, transparent));
+}
+.hex-bloom[data-equator-ribbon="true"][data-ribbon-dragging="true"] .hb-ribbon-action {
+  cursor: grabbing;
+  transition: none;
+}
+
 
 
 /* Stats hub */

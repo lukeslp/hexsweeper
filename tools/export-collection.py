@@ -133,6 +133,44 @@ EXPERIMENTS = [
         "boot": "initHexBloom",
         "ogImage": f"{OG}/sphere-og.png",
     },
+    {
+        "id": "sphere-face-takeover",
+        "title": "Sphere UX · Face Takeover",
+        "ogTitle": "Hexsweeper 3D — Face Takeover",
+        "ogDescription": "A sphere menu formed from one real projected board face and its six neighbours.",
+        "tag": "Experiment · spatial chrome",
+        "blurb": "The menu inhabits an actual seven-face patch of the current sphere: true projection, shared seams, direct controls.",
+        "filter": "sphere ux face takeover projected board faces spatial menu experiment",
+        "swatch": ("#ffffff", "#111111", "#d8d8d8", "#ffd400"),
+        "file": "sphere-face-takeover.html",
+        "href": "sphere-face-takeover.html",
+        "liveHref": "../sphere-ux/?dock=faces",
+        "source": "sphere-ux",
+        "css": ["dev-chrome.css", "hex-bloom.css"],
+        "scripts": ["hexasphere.js", "sphere.js", "hex-bloom.js"],
+        "boot": "initHexBloom",
+        "dockMode": "faces",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-equator-ribbon",
+        "title": "Sphere UX · Equator Ribbon",
+        "ogTitle": "Hexsweeper 3D — Equator Ribbon",
+        "ogDescription": "A draggable belt of controls orbiting the Hexsweeper sphere.",
+        "tag": "Experiment · orbital chrome",
+        "blurb": "Seven controls circle the sphere on a draggable equatorial belt; scale and depth make the front action dominant.",
+        "filter": "sphere ux equator ribbon orbit carousel draggable spatial menu experiment",
+        "swatch": ("#ffffff", "#111111", "#888888", "#18a64a"),
+        "file": "sphere-equator-ribbon.html",
+        "href": "sphere-equator-ribbon.html",
+        "liveHref": "../sphere-ux/?dock=equator",
+        "source": "sphere-ux",
+        "css": ["dev-chrome.css", "hex-bloom.css"],
+        "scripts": ["hexasphere.js", "sphere.js", "hex-bloom.js"],
+        "boot": "initHexBloom",
+        "dockMode": "equator",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
     # Model-authored unique takes (specs from Kimi / Claude / Muse; wired via ?take=)
     {
         "id": "sphere-kimi",
@@ -712,6 +750,12 @@ def export_sphere(exp: dict) -> str:
     take_line = (
         f"window.HEXSWEEPER_SPHERE_TAKE = {json.dumps(take_id)};\n" if take_id else ""
     )
+    dock_mode = exp.get("dockMode")
+    dock_line = (
+        f"window.HEXSWEEPER_SPHERE_DOCK_MODE = {json.dumps(dock_mode)};\n"
+        if dock_mode
+        else ""
+    )
     boot = (
         "<script>\n"
         "/* collection / CodePen boot */\n"
@@ -720,6 +764,7 @@ def export_sphere(exp: dict) -> str:
         "} catch (_) {}\n"
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;\n"
         f"{take_line}"
+        f"{dock_line}"
         "</script>\n"
     )
     # Do not use re.sub with JS source as the replacement — backslashes break the template.

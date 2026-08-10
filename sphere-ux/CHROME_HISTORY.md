@@ -80,6 +80,8 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | 2026-08-10 | Invert breaks its dotted axes into four perimeter stubs so it no longer reads as a crosshair. Size keeps arrows wholly outside XS–M, brings outward arrows inside L, then reverses them inward inside XL to preview the cycle wrapping back to XS. | **Keep** — controls describe both current state and next action |
 | 2026-08-10 | Invert drops the reticle entirely for the established mirrored-panel flip silhouette. Empty/right/top/full panel fills preserve the four black/white states without a second symbol competing with them. | **Keep** — flip convention and state become one glyph |
 | 2026-08-10 | Base center flower gains a restrained whole-cluster pointer tilt and shared lift shadow; dome keeps its stronger oblique camera. The corner `?` moves onto a 10–14px safe inset after its stroked circle clipped at a 2px bottom offset. | **Keep** — depth without reopening seams; reference control stays reachable |
+| 2026-08-10 | `?dock=faces` turns a centered seven-face patch of the rendered sphere into the control surface itself. The buttons inherit the exact projected polygons, skew, and seams of those live board faces. | **Trial** — the strongest integration concept; deliberately compact at dense sizes |
+| 2026-08-10 | `?dock=equator` places Reset plus the six outcome controls on a draggable geodesic belt. Front controls grow and sharpen while the back arc recedes, fades, and stops intercepting input. | **Trial** — spatial browsing with no flower laid over the sphere |
 
 ### What Luke is asking for (intent thread, in his words + readings)
 

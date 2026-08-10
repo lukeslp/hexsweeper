@@ -140,16 +140,21 @@
   const DOCK_MODE = (() => {
     try {
       return (
-        new URLSearchParams(location.search).get("dock") || "default"
+        new URLSearchParams(location.search).get("dock") ||
+        global.HEXSWEEPER_SPHERE_DOCK_MODE ||
+        "default"
       ).replace(/[;,]+$/, "");
     } catch (_) {
       return "default";
     }
   })();
   const DOCK_CONTEXT = DOCK_MODE === "context";
-  const FIXED_CENTER = DOCK_MODE === "center";
+  const FACE_TAKEOVER = DOCK_MODE === "faces";
+  const EQUATOR_RIBBON = DOCK_MODE === "equator";
+  const FIXED_CENTER =
+    DOCK_MODE === "center" || FACE_TAKEOVER || EQUATOR_RIBBON;
   const DEFAULT_BLOOM = DOCK_MODE === "default";
-  const DOCK_CENTER = DOCK_MODE === "center" || DOCK_CONTEXT;
+  const DOCK_CENTER = FIXED_CENTER || DOCK_CONTEXT;
   const SHARED_MENU = FIXED_CENTER || DEFAULT_BLOOM;
   /**
    * ?dome=1 — the flower seated on a convex sphere segment: center tile at
@@ -1409,6 +1414,9 @@
     let dockHelpBtn = null; // corner seat, lower right
     let centerActionBtn = null;
     let lastFocus = null;
+    let ribbonAngle = Math.PI / 2;
+    let ribbonActions = [];
+    let ribbonSuppressClickUntil = 0;
 
     function announce(msg) {
       live.textContent = msg || "";
@@ -1516,6 +1524,7 @@
       hideTooltip();
       stage.querySelectorAll(".hb-hex").forEach((n) => n.remove());
       centerActionBtn = null;
+      ribbonActions = [];
     }
 
     function removeSubmenu() {
@@ -1887,6 +1896,202 @@
       paintDock();
     }
 
+    function makeExperimentAction(cat, index, extraClass) {
+      const label = typeof cat.label === "function" ? cat.label() : cat.label;
+      const iconName =
+        typeof cat.icon === "function" ? cat.icon() : cat.icon;
+      const flagModeActive =
+        cat.id === "flagmode" && !!game.getState().flagMode;
+      const el = makeHex({
+        cls:
+          "is-primary " +
+          (extraClass || "") +
+          " cat-" +
+          cat.id +
+          (iconName === "flag" && cat.id !== "flagmode" ? " is-flag-icon" : "") +
+          (cat.id === "flagmode" ? " is-flag-toggle" : "") +
+          (flagModeActive ? " is-mode-active" : ""),
+        label,
+        ariaLabel: typeof cat.aria === "function" ? cat.aria() : label,
+        icon: iconName,
+        iconOnly: true,
+        tooltip: label,
+      });
+      el.dataset.cat = cat.id;
+      el.dataset.index = String(index);
+      if (cat.id === "flagmode") {
+        el.setAttribute("aria-pressed", flagModeActive ? "true" : "false");
+      }
+      el.addEventListener("click", (event) => {
+        if (EQUATOR_RIBBON && Date.now() < ribbonSuppressClickUntil) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        ignoreOutsideUntil = Date.now() + 200;
+        if (typeof cat.cycle === "function") cat.cycle();
+        refreshPrimaryLabels();
+        announce(typeof cat.aria === "function" ? cat.aria() : label);
+        if (cat.id === "size" && (FACE_TAKEOVER || EQUATOR_RIBBON)) {
+          requestAnimationFrame(() => {
+            if (state.phase !== "open") return;
+            renderBloom({ petals: true });
+            bloomPetals();
+          });
+        }
+      });
+      return el;
+    }
+
+    function makeExperimentReset(extraClass) {
+      const el = makeHex({
+        cls: "is-primary is-center-reset " + (extraClass || ""),
+        label: "Reset",
+        ariaLabel: "Restart game",
+        icon: "reset",
+        iconOnly: true,
+        tooltip: "Reset",
+      });
+      el.addEventListener("click", (event) => {
+        if (EQUATOR_RIBBON && Date.now() < ribbonSuppressClickUntil) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        doReset();
+      });
+      return el;
+    }
+
+    function orderProjectedRing(patch) {
+      const available = patch.ring.slice();
+      return FIXED_CENTER_SLOTS.map((slot) => {
+        const target = hexToPixel(slot.q, slot.r, 1);
+        const targetAngle = Math.atan2(target.y, target.x);
+        let bestIndex = 0;
+        let bestDelta = Infinity;
+        available.forEach((face, index) => {
+          const angle = Math.atan2(
+            face.center.y - patch.center.center.y,
+            face.center.x - patch.center.center.x
+          );
+          const delta = Math.abs(
+            Math.atan2(Math.sin(angle - targetAngle), Math.cos(angle - targetAngle))
+          );
+          if (delta < bestDelta) {
+            bestDelta = delta;
+            bestIndex = index;
+          }
+        });
+        return available.splice(bestIndex, 1)[0];
+      });
+    }
+
+    function placeProjectedFace(el, face, canvasRect) {
+      const points = face.boundary.map((point) => ({
+        x: canvasRect.left + point.x,
+        y: canvasRect.top + point.y,
+      }));
+      const minX = Math.min(...points.map((point) => point.x));
+      const maxX = Math.max(...points.map((point) => point.x));
+      const minY = Math.min(...points.map((point) => point.y));
+      const maxY = Math.max(...points.map((point) => point.y));
+      const width = Math.max(1, maxX - minX);
+      const height = Math.max(1, maxY - minY);
+      const polygon = points
+        .map(
+          (point) =>
+            (((point.x - minX) / width) * 100).toFixed(2) +
+            "% " +
+            (((point.y - minY) / height) * 100).toFixed(2) +
+            "%"
+        )
+        .join(",");
+      el.style.left = minX.toFixed(1) + "px";
+      el.style.top = minY.toFixed(1) + "px";
+      el.style.bottom = "auto";
+      el.style.width = width.toFixed(1) + "px";
+      el.style.height = height.toFixed(1) + "px";
+      el.style.setProperty("--face-poly", "polygon(" + polygon + ")");
+      el.style.setProperty("--face-icon", Math.max(22, Math.min(46, height * 0.5)).toFixed(1) + "px");
+    }
+
+    function renderFaceTakeover(cats) {
+      const patch =
+        typeof game.getMenuPatch === "function" ? game.getMenuPatch() : null;
+      const canvas = document.getElementById("gameCanvas");
+      if (!patch || !canvas) return false;
+      const canvasRect = canvas.getBoundingClientRect();
+      const ring = orderProjectedRing(patch);
+      ring.forEach((face, index) => {
+        const el = makeExperimentAction(cats[index], index, "hb-face-action");
+        placeProjectedFace(el, face, canvasRect);
+        el.classList.add("folded");
+        el.dataset.delay = String(45 + index * 38);
+        stage.appendChild(el);
+      });
+      const reset = makeExperimentReset("hb-face-action hb-face-center");
+      placeProjectedFace(reset, patch.center, canvasRect);
+      reset.classList.add("folded");
+      reset.dataset.delay = "0";
+      centerActionBtn = reset;
+      stage.appendChild(reset);
+      return true;
+    }
+
+    function layoutEquatorRibbon() {
+      if (!ribbonActions.length) return;
+      const disk =
+        typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
+      if (!disk || !disk.r) return;
+      const canvas = document.getElementById("gameCanvas");
+      const canvasRect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
+      const cx = canvasRect.left + disk.cx;
+      const cy = canvasRect.top + disk.cy;
+      const tileW = Math.max(46, Math.min(78, disk.r * 0.27));
+      const tileH = tileW / 0.873;
+      const ringX = disk.r * 0.78;
+      const ringY = disk.r * 0.24;
+      ribbonActions.forEach((el, index) => {
+        const angle = ribbonAngle + (index * Math.PI * 2) / ribbonActions.length;
+        const depth = (Math.sin(angle) + 1) / 2;
+        const scale = 0.58 + depth * 0.46;
+        el.style.left = (cx + Math.cos(angle) * ringX).toFixed(1) + "px";
+        el.style.top = (cy + Math.sin(angle) * ringY).toFixed(1) + "px";
+        el.style.bottom = "auto";
+        el.style.width = tileW.toFixed(1) + "px";
+        el.style.height = tileH.toFixed(1) + "px";
+        el.style.setProperty("--ribbon-scale", scale.toFixed(3));
+        el.style.setProperty("--ribbon-opacity", (0.28 + depth * 0.72).toFixed(3));
+        el.style.setProperty("--ribbon-blur", ((1 - depth) * 0.65).toFixed(2) + "px");
+        el.style.zIndex = String(20 + Math.round(depth * 100));
+        el.style.pointerEvents = depth < 0.16 ? "none" : "auto";
+      });
+    }
+
+    function renderEquatorRibbon(cats) {
+      ribbonActions = [];
+      const reset = makeExperimentReset("hb-ribbon-action");
+      ribbonActions.push(reset);
+      cats.forEach((cat, index) => {
+        ribbonActions.push(
+          makeExperimentAction(cat, index, "hb-ribbon-action")
+        );
+      });
+      ribbonActions.forEach((el, index) => {
+        el.classList.add("folded");
+        el.dataset.delay = String(index * 28);
+        stage.appendChild(el);
+      });
+      centerActionBtn = reset;
+      layoutEquatorRibbon();
+      return true;
+    }
+
     function renderBloom(options) {
       const withPetals = !options || options.petals !== false;
       clearStage();
@@ -1898,6 +2103,8 @@
       // Center is the activation node (dock menu). When open, dock menu is the
       // close control — no separate traveler hex (avoids double × and rise).
       if (!withPetals) return;
+      if (FACE_TAKEOVER && renderFaceTakeover(cats)) return;
+      if (EQUATOR_RIBBON && renderEquatorRibbon(cats)) return;
 
       cats.forEach((cat, i) => {
         const d =
@@ -2050,7 +2257,7 @@
     const FLOWER_OUTER_HEX = Math.sqrt(3) + 1;
     const FLOWER_FIT = 0.72; // fraction of the sphere radius the flower may fill
     function sizeCenterFlower() {
-      if (!DOCK_CENTER) return;
+      if (!DOCK_CENTER || FACE_TAKEOVER || EQUATOR_RIBBON) return;
       const disk =
         typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
       if (!disk || !disk.r) return;
@@ -2174,7 +2381,7 @@
     // Dome gets the full oblique camera; the base flower moves as one nearly
     // flat plate, just enough to separate it from the sphere without opening
     // seams between tiles. rAF-lerped so repeated interaction cannot drift.
-    if (DOCK_CENTER) {
+    if (DOCK_CENTER && !FACE_TAKEOVER && !EQUATOR_RIBBON) {
       const BASE_RX = DOME ? 9 : 0.8;
       const BASE_RY = DOME ? -6 : -0.6;
       const PARALLAX_DEG = DOME ? 5 : 2.1;
@@ -2232,6 +2439,8 @@
       root.dataset.dockMode = "center";
       root.dataset.iconMenu = "true";
       if (DOCK_CONTEXT) root.dataset.contextMenu = "true";
+      if (FACE_TAKEOVER) root.dataset.faceTakeover = "true";
+      if (EQUATOR_RIBBON) root.dataset.equatorRibbon = "true";
       // The background is the menu activator: a quick tap that lands off the
       // sphere's disk (game.getSphereScreen) opens the flower. In contextual
       // mode the flower follows that canvas point, then centerXY clamps its
@@ -2270,6 +2479,44 @@
           true
         );
       }
+    }
+
+    if (EQUATOR_RIBBON) {
+      let ribbonDrag = null;
+      stage.addEventListener("pointerdown", (event) => {
+        if (state.phase !== "open") return;
+        const tile = event.target.closest && event.target.closest(".hb-ribbon-action");
+        if (!tile) return;
+        ribbonDrag = {
+          pointerId: event.pointerId,
+          x: event.clientX,
+          distance: 0,
+        };
+        stage.setPointerCapture(event.pointerId);
+        root.dataset.ribbonDragging = "true";
+      });
+      stage.addEventListener("pointermove", (event) => {
+        if (!ribbonDrag || ribbonDrag.pointerId !== event.pointerId) return;
+        const dx = event.clientX - ribbonDrag.x;
+        ribbonDrag.x = event.clientX;
+        ribbonDrag.distance += Math.abs(dx);
+        ribbonAngle += dx * 0.012;
+        layoutEquatorRibbon();
+        if (ribbonDrag.distance > 4) event.preventDefault();
+      });
+      const finishRibbonDrag = (event) => {
+        if (!ribbonDrag || ribbonDrag.pointerId !== event.pointerId) return;
+        if (ribbonDrag.distance > 5) {
+          ribbonSuppressClickUntil = Date.now() + 180;
+        }
+        try {
+          stage.releasePointerCapture(event.pointerId);
+        } catch (_) {}
+        ribbonDrag = null;
+        delete root.dataset.ribbonDragging;
+      };
+      stage.addEventListener("pointerup", finishRibbonDrag);
+      stage.addEventListener("pointercancel", finishRibbonDrag);
     }
 
     stage.addEventListener("pointerover", (e) => {
