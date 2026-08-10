@@ -66,11 +66,12 @@
    * ?dock=center — the original clex axial ring, back for a trial now that the
    * menu is small enough to sit over the board: the bloom opens at viewport
    * center on the blurred sphere, Reset and Dig/Flag join the flower, the
-   * center tile closes, and tapping the background (anywhere off the sphere)
-   * opens it. The bottom dock hides entirely; the corner ? stays.
+   * center tile resets, and tapping the background (anywhere off the sphere)
+   * opens it. The bottom dock hides entirely; outside click / Escape closes;
+   * the corner ? stays.
    *
    *    [L/D]   [Size]           NW · NE
-   *  [Reset]   [×]   [Flag]     W · center · E
+   *  [Home] [Reset]  [Flag]     W · center · E
    *  [Surface]  [123]           SW · SE
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
@@ -123,7 +124,9 @@
 
   const DOCK_MODE = (() => {
     try {
-      return new URLSearchParams(location.search).get("dock") || "default";
+      return (
+        new URLSearchParams(location.search).get("dock") || "default"
+      ).replace(/[;,]+$/, "");
     } catch (_) {
       return "default";
     }
@@ -910,39 +913,26 @@
         },
       ];
       if (DOCK_CENTER) {
-        // The dock is hidden in center mode, so its two play controls join
-        // the flower at the prominent W / E seats.
+        // The dock is hidden in both center variants. Home and Flag occupy
+        // the west/east seats; Reset is promoted to the middle tile.
         all.push(
-          DOCK_CONTEXT
-            ? {
-                id: "home",
-                label: "Home",
-                icon: "home",
-                iconOnly: true,
-                aria: () => "Return to Hexsweeper home",
-                cycle: () => doHome(),
-              }
-            : {
-                id: "reset",
-                label: "Reset",
-                icon: "reset",
-                iconOnly: false,
-                aria: () => "Restart game",
-                cycle: () => doReset(),
-              },
+          {
+            id: "home",
+            label: "Home",
+            icon: "home",
+            iconOnly: true,
+            aria: () => "Return to Hexsweeper home",
+            cycle: () => doHome(),
+          },
           {
             id: "flagmode",
-            label: DOCK_CONTEXT ? "Flag" : () => currentMode(),
-            icon: DOCK_CONTEXT
-              ? "flag"
-              : () => (game.getState().flagMode ? "flag" : "dig"),
-            iconOnly: DOCK_CONTEXT,
+            label: "Flag",
+            icon: "flag",
+            iconOnly: true,
             aria: () =>
-              DOCK_CONTEXT
-                ? game.getState().flagMode
-                  ? "Flag mode on. Activate for dig mode."
-                  : "Flag mode off. Activate for flag mode."
-                : "Mode: " + currentMode() + ". Activate to switch Dig or Flag.",
+              game.getState().flagMode
+                ? "Flag mode on. Activate for dig mode."
+                : "Flag mode off. Activate for flag mode.",
             cycle: cycleMode,
           }
         );
@@ -963,6 +953,7 @@
     let dockResetBtn = null;
     let dockFlagBtn = null;
     let dockHelpBtn = null; // corner seat, lower right
+    let centerActionBtn = null;
     let lastFocus = null;
 
     function announce(msg) {
@@ -1069,6 +1060,7 @@
 
     function clearStage() {
       stage.querySelectorAll(".hb-hex").forEach((n) => n.remove());
+      centerActionBtn = null;
     }
 
     function removeSubmenu() {
@@ -1193,12 +1185,12 @@
           setHexIcon(el, name);
           el.classList.toggle(
             "is-flag-icon",
-            name === "flag" && !(DOCK_CONTEXT && cat.id === "flagmode")
+            name === "flag" && !(DOCK_CENTER && cat.id === "flagmode")
           );
           el.classList.toggle("is-dig-icon", name === "dig");
           el.classList.toggle("is-theme-icon", name === "theme");
         }
-        if (DOCK_CONTEXT && cat.id === "flagmode") {
+        if (DOCK_CENTER && cat.id === "flagmode") {
           const on = !!game.getState().flagMode;
           el.classList.toggle("is-mode-active", on);
           el.setAttribute("aria-pressed", on ? "true" : "false");
@@ -1212,7 +1204,7 @@
         }
         // Size keeps a visible letter badge; other primaries are icon-only
         if (el._labelEl) {
-          if (DOCK_CONTEXT) {
+          if (DOCK_CENTER) {
             el._labelEl.textContent = lab;
             el._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
             el.classList.remove("has-badge");
@@ -1382,17 +1374,17 @@
           typeof cat.icon === "function" ? cat.icon() : cat.icon;
         const swatch =
           typeof cat.swatch === "function" ? cat.swatch() : cat.swatch;
-        const showBadge = !!cat.badge && !DOCK_CONTEXT;
+        const showBadge = !!cat.badge && !DOCK_CENTER;
         const flagModeActive =
-          DOCK_CONTEXT && cat.id === "flagmode" && !!game.getState().flagMode;
+          DOCK_CENTER && cat.id === "flagmode" && !!game.getState().flagMode;
         const el = makeHex({
           cls:
             "is-primary cat-" +
             cat.id +
             (state.active === cat.id ? " is-active" : "") +
             (showBadge ? " has-badge" : "") +
-            (iconName === "flag" && !(DOCK_CONTEXT && cat.id === "flagmode") ? " is-flag-icon" : "") +
-            (DOCK_CONTEXT && cat.id === "flagmode" ? " is-flag-toggle" : "") +
+            (iconName === "flag" && !(DOCK_CENTER && cat.id === "flagmode") ? " is-flag-icon" : "") +
+            (DOCK_CENTER && cat.id === "flagmode" ? " is-flag-toggle" : "") +
             (flagModeActive ? " is-mode-active" : "") +
             (iconName === "dig" ? " is-dig-icon" : "") +
             (iconName === "theme" ? " is-theme-icon" : "") +
@@ -1401,13 +1393,13 @@
           labelSize: cat.labelSize,
           ariaLabel: typeof cat.aria === "function" ? cat.aria() : lab,
           icon: swatch ? null : iconName,
-          iconOnly: DOCK_CONTEXT || swatch ? true : !!cat.iconOnly && !showBadge,
+          iconOnly: DOCK_CENTER || swatch ? true : !!cat.iconOnly && !showBadge,
         });
         if (swatch) applyPrimarySwatch(el, swatch);
         if (showBadge && el._labelEl) {
           el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
         }
-        if (DOCK_CONTEXT && cat.id === "flagmode") {
+        if (DOCK_CENTER && cat.id === "flagmode") {
           el.setAttribute("aria-pressed", flagModeActive ? "true" : "false");
         }
         el.dataset.cat = cat.id;
@@ -1444,29 +1436,26 @@
         stage.appendChild(el);
       });
 
-      // Center modes have no dock seed. The fixed-center trial carries a
-      // close control; the contextual version makes the middle the most-used
-      // destructive action instead, with outside click / Escape still close.
+      // Center modes have no dock seed. Reset occupies the strongest middle
+      // seat; outside click and Escape close the flower.
       if (DOCK_CENTER) {
         const centerEl = makeHex({
-          cls:
-            "is-primary is-center-close" +
-            (DOCK_CONTEXT ? " is-context-reset" : ""),
-          label: DOCK_CONTEXT ? "Reset" : "×",
-          icon: DOCK_CONTEXT ? "reset" : null,
-          iconOnly: DOCK_CONTEXT,
-          ariaLabel: DOCK_CONTEXT ? "Restart game" : "Close menu",
+          cls: "is-primary is-center-reset",
+          label: "Reset",
+          icon: "reset",
+          iconOnly: true,
+          ariaLabel: "Restart game",
         });
         centerEl.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (DOCK_CONTEXT) doReset();
-          else collapse();
+          doReset();
         });
         place(centerEl, cx, cy, cx, cy);
         applyCenterDome(centerEl, DOME ? domeSeat(0, 0, 1) : null);
         centerEl.classList.add("folded");
         centerEl.dataset.delay = "0";
+        centerActionBtn = centerEl;
         // First in DOM = painted under the forward-riding rim (siblings have
         // no shared 3D context, so translateZ does not sort them).
         stage.insertBefore(centerEl, stage.firstChild);
@@ -1484,8 +1473,12 @@
           root.dataset.branch = state.active;
         }
       }
-      // focus the close dock — menu is the active surface
-      if (dockBtn) dockBtn.focus({ preventScroll: true });
+      // Focus the menu's primary action when the flower finishes opening.
+      if (DOCK_CENTER && centerActionBtn) {
+        centerActionBtn.focus({ preventScroll: true });
+      } else if (dockBtn) {
+        dockBtn.focus({ preventScroll: true });
+      }
     }
 
     function setCanvasInert(on) {
@@ -1609,7 +1602,7 @@
         setCanvasInert(false);
         if (typeof game.resumeTimer === "function") game.resumeTimer();
         announce("Menu closed");
-        if (dockBtn) dockBtn.focus({ preventScroll: true });
+        if (!DOCK_CENTER && dockBtn) dockBtn.focus({ preventScroll: true });
         else if (lastFocus && lastFocus.focus) {
           try {
             lastFocus.focus({ preventScroll: true });
@@ -1661,6 +1654,7 @@
     }
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
+      root.dataset.iconMenu = "true";
       if (DOCK_CONTEXT) root.dataset.contextMenu = "true";
       // The background is the menu activator: a quick tap that lands off the
       // sphere's disk (game.getSphereScreen) opens the flower. In contextual
@@ -1728,14 +1722,23 @@
         }
 
         if (e.key === "Tab") {
-          const focusables = [
-            dockResetBtn,
-            dockBtn,
-            dockHelpBtn,
-            ...stage.querySelectorAll(
-              ".hb-hex.is-primary.shown, .hb-hex.is-sub.shown"
-            ),
-          ].filter(Boolean);
+          const focusables = (
+            DOCK_CENTER
+              ? [
+                  ...stage.querySelectorAll(
+                    ".hb-hex.is-primary.shown, .hb-hex.is-sub.shown"
+                  ),
+                  dockHelpBtn,
+                ]
+              : [
+                  dockResetBtn,
+                  dockBtn,
+                  dockHelpBtn,
+                  ...stage.querySelectorAll(
+                    ".hb-hex.is-primary.shown, .hb-hex.is-sub.shown"
+                  ),
+                ]
+          ).filter(Boolean);
           if (!focusables.length) return;
           const i = focusables.indexOf(document.activeElement);
           e.preventDefault();

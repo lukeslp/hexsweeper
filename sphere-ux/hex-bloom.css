@@ -163,17 +163,19 @@
   --fold-ms: 340ms;
 }
 .hex-bloom[data-context-menu="true"] {
-  --border-w: 1px;
-  --hb-fill: var(--hb-paper);
-  --hb-fill-hover: var(--hb-paper);
-  --hb-stroke: var(--hb-ink);
   --fold: 88deg;
   --fold-scale: 0.68;
   --fold-ms: 140ms;
 }
-.hex-bloom[data-context-menu="true"] .hb-hex { filter: none; }
-.hex-bloom[data-context-menu="true"] .hb-hex:hover::before,
-.hex-bloom[data-context-menu="true"] .hb-hex:focus-visible::before {
+.hex-bloom[data-icon-menu="true"] {
+  --border-w: 1px;
+  --hb-fill: var(--hb-paper);
+  --hb-fill-hover: var(--hb-paper);
+  --hb-stroke: var(--hb-ink);
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex { filter: none; }
+.hex-bloom[data-icon-menu="true"] .hb-hex:hover::before,
+.hex-bloom[data-icon-menu="true"] .hb-hex:focus-visible::before {
   inset: var(--border-w);
   background: var(--hb-paper);
 }
@@ -213,14 +215,9 @@
     )
     drop-shadow(0 0 2px var(--hb-paper));
 }
-.hex-bloom[data-context-menu="true"] .hb-hex.shown {
+.hex-bloom[data-icon-menu="true"] .hb-hex.shown {
   filter: none;
 }
-.hb-hex.is-center-close .hb-label {
-  font-size: 19px;
-  font-weight: 600;
-}
-
 /* Help corner — its own seat, lower right, always idle-sized. It never
    grows with the bloom: it is reference chrome, not part of the flower. */
 .hex-bloom-corner {
@@ -487,21 +484,21 @@
 /* Contextual flower: Home and Reset share a warm navigation/action signal,
    while Flag stays neutral until the mode is actually active. Tile materials
    never change — state lives in the glyphs only. */
-.hex-bloom[data-context-menu="true"] .cat-home .hb-glyph,
-.hex-bloom[data-context-menu="true"] .is-context-reset .hb-glyph {
+.hex-bloom[data-icon-menu="true"] .cat-home .hb-glyph,
+.hex-bloom[data-icon-menu="true"] .is-center-reset .hb-glyph {
   color: #ffd400;
 }
-.hex-bloom[data-context-menu="true"] .is-flag-toggle .hb-glyph {
+.hex-bloom[data-icon-menu="true"] .is-flag-toggle .hb-glyph {
   color: var(--hb-ink);
 }
-.hex-bloom[data-context-menu="true"] .is-flag-toggle.is-mode-active .hb-glyph {
+.hex-bloom[data-icon-menu="true"] .is-flag-toggle.is-mode-active .hb-glyph {
   color: #ff2200;
 }
-.hex-bloom[data-context-menu="true"] .hb-hex.is-primary .hb-glyph {
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-glyph {
   width: 38px;
   height: 38px;
 }
-.hex-bloom[data-context-menu="true"] .hb-hex.is-primary .hb-icon {
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-icon {
   width: 34px;
   height: 34px;
 }
