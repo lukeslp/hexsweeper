@@ -75,9 +75,9 @@
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  const DOME_RADIUS_HEX = 2.5; // bowl sphere radius, in HEX units — tighter
-  // = more curvature per tile (Luke: "more parallax") without changing tile size.
-  const DOME_SHRINK = 0.022; // hair of air on the rim so chords never overlap
+  const DOME_RADIUS_HEX = 4.5; // bowl sphere radius, in HEX units — bigger
+  // sphere = LESS angle per tile (Luke: "less angled"; ~40deg -> ~22deg at ring-1).
+  const DOME_SHRINK = 0.014; // hair of air on the rim so chords never overlap
 
   /**
    * Real spherical seating (Luke, 2026-08-10: "how are we fitting them so

@@ -885,16 +885,19 @@ body[data-sphere-chrome="dark"] .cz-dot {
 /* The flower earns bigger tiles (no dock to clear) and folds like origami:
    deeper fold angle, harder scale-down, slower open. */
 .hex-bloom[data-dock-mode="center"] {
-  --tile-w: 96px;
-  --tile-h: 110px;
+  /* Luke: "larger — same size as the full sphere." The flower's footprint
+     (2 tile-widths across the ring) should read against the sphere disk
+     behind it, not sit small in the middle of it. */
+  --tile-w: 150px;
+  --tile-h: 172px;
   --fold: 104deg;
   --fold-scale: 0.5;
   --fold-ms: 340ms;
 }
 @media (max-width: 400px) {
   .hex-bloom[data-dock-mode="center"] {
-    --tile-w: 82px;
-    --tile-h: 94px;
+    --tile-w: 118px;
+    --tile-h: 136px;
   }
 }
 /* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
@@ -911,7 +914,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
   transform-origin: 50% 50% !important;
 }
 .hex-bloom[data-dock-mode="center"] .hex-bloom-stage {
-  perspective: 700px;
+  /* Longer than the bottom-dock's 1100px default would be, but longer than
+     the earlier 700px here: bigger tiles at the old short distance was
+     over-foreshortening (the faceted/octagon look in Luke's screenshot). */
+  perspective: 1000px;
   perspective-origin: 50% 46%;
   /* No baked tilt: pointer parallax owns the stage transform (JS), so the
      flower sits perfectly aligned at rest and gains depth through motion.
@@ -7344,9 +7350,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  const DOME_RADIUS_HEX = 2.5; // bowl sphere radius, in HEX units — tighter
-  // = more curvature per tile (Luke: "more parallax") without changing tile size.
-  const DOME_SHRINK = 0.022; // hair of air on the rim so chords never overlap
+  const DOME_RADIUS_HEX = 4.5; // bowl sphere radius, in HEX units — bigger
+  // sphere = LESS angle per tile (Luke: "less angled"; ~40deg -> ~22deg at ring-1).
+  const DOME_SHRINK = 0.014; // hair of air on the rim so chords never overlap
 
   /**
    * Real spherical seating (Luke, 2026-08-10: "how are we fitting them so
