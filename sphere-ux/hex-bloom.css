@@ -182,12 +182,10 @@
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-active::before {
   background: var(--hb-ink);
 }
-/* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
-   user"). A symmetric bowl viewed dead-on from its own axis shows almost no
-   parallax — the old lopsided origin was accidentally the viewing angle.
-   So: centered origin, but a SHORT perspective (stronger z-scaling), a
-   deliberate slight off-axis tilt for constant parallax, and z-graded
-   shadows so the forward-riding rim visibly floats off the page. */
+/* Depth that reads at rest: a convex cap viewed slightly off-axis, with a
+   short perspective and z-graded shadows. The center rides forward while
+   the ring falls away, matching the sphere underneath instead of forming
+   the old inside-out bowl. */
 /* Spherical seating rotates tiles about their OWN centers (sphere faces
    curve about their centroids, not their inner edges — edge-hinging is what
    broke the tessellation). Overrides place()'s inline fold origin, so the
@@ -199,12 +197,16 @@
   /* Longer than the bottom-dock's 1100px default would be, but longer than
      the earlier 700px here: bigger tiles at the old short distance was
      over-foreshortening (the faceted/octagon look in Luke's screenshot). */
-  perspective: 1000px;
-  perspective-origin: 50% 46%;
+  perspective: 620px;
+  perspective-origin: 50% 44%;
   /* No baked tilt: pointer parallax owns the stage transform (JS), so the
      flower sits perfectly aligned at rest and gains depth through motion.
      Transform transition off — the rAF lerp is the damper. */
   transition: opacity 0.12s ease, visibility 0.12s;
+}
+.hex-bloom[data-dome="true"] .hex-bloom-stage {
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
 }
 .hex-bloom[data-dock-mode="center"] .hb-hex.shown {
   /* Subtle z-graded shadow; max() clamps the recessed center to zero so a
@@ -218,8 +220,11 @@
     )
     drop-shadow(0 0 2px var(--hb-paper));
 }
-.hex-bloom[data-icon-menu="true"] .hb-hex.shown {
+.hex-bloom[data-icon-menu="true"]:not([data-dome="true"]) .hb-hex.shown {
   filter: none;
+}
+.hex-bloom[data-dome="true"] .hb-hex {
+  backface-visibility: hidden;
 }
 /* Help corner — its own seat, lower right, always idle-sized. It never
    grows with the bloom: it is reference chrome, not part of the flower. */

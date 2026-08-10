@@ -918,12 +918,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
 .hex-bloom[data-icon-menu="true"] .hb-hex.is-active::before {
   background: var(--hb-ink);
 }
-/* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
-   user"). A symmetric bowl viewed dead-on from its own axis shows almost no
-   parallax — the old lopsided origin was accidentally the viewing angle.
-   So: centered origin, but a SHORT perspective (stronger z-scaling), a
-   deliberate slight off-axis tilt for constant parallax, and z-graded
-   shadows so the forward-riding rim visibly floats off the page. */
+/* Depth that reads at rest: a convex cap viewed slightly off-axis, with a
+   short perspective and z-graded shadows. The center rides forward while
+   the ring falls away, matching the sphere underneath instead of forming
+   the old inside-out bowl. */
 /* Spherical seating rotates tiles about their OWN centers (sphere faces
    curve about their centroids, not their inner edges — edge-hinging is what
    broke the tessellation). Overrides place()'s inline fold origin, so the
@@ -935,12 +933,16 @@ body[data-sphere-chrome="dark"] .cz-dot {
   /* Longer than the bottom-dock's 1100px default would be, but longer than
      the earlier 700px here: bigger tiles at the old short distance was
      over-foreshortening (the faceted/octagon look in Luke's screenshot). */
-  perspective: 1000px;
-  perspective-origin: 50% 46%;
+  perspective: 620px;
+  perspective-origin: 50% 44%;
   /* No baked tilt: pointer parallax owns the stage transform (JS), so the
      flower sits perfectly aligned at rest and gains depth through motion.
      Transform transition off — the rAF lerp is the damper. */
   transition: opacity 0.12s ease, visibility 0.12s;
+}
+.hex-bloom[data-dome="true"] .hex-bloom-stage {
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
 }
 .hex-bloom[data-dock-mode="center"] .hb-hex.shown {
   /* Subtle z-graded shadow; max() clamps the recessed center to zero so a
@@ -954,8 +956,11 @@ body[data-sphere-chrome="dark"] .cz-dot {
     )
     drop-shadow(0 0 2px var(--hb-paper));
 }
-.hex-bloom[data-icon-menu="true"] .hb-hex.shown {
+.hex-bloom[data-icon-menu="true"]:not([data-dome="true"]) .hb-hex.shown {
   filter: none;
+}
+.hex-bloom[data-dome="true"] .hb-hex {
+  backface-visibility: hidden;
 }
 /* Help corner — its own seat, lower right, always idle-sized. It never
    grows with the bloom: it is reference chrome, not part of the flower. */
@@ -7446,9 +7451,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  const DOME_RADIUS_HEX = 4.5; // bowl sphere radius, in HEX units — bigger
-  // sphere = LESS angle per tile (Luke: "less angled"; ~40deg -> ~22deg at ring-1).
-  const DOME_SHRINK = 0.014; // hair of air on the rim so chords never overlap
+  // A seven-face cap needs assertive curvature to read head-on. The previous
+  // 4.5× radius produced only ~22° of rim tilt and a ~3% perspective change:
+  // mathematically curved, perceptually flat. 3.05× yields ~32.5° at ring-1
+  // without opening the large triangular seams of the 37° trial.
+  const DOME_RADIUS_HEX = 3.05;
+  const DOME_CENTER_RISE_HEX = 0.22;
 
   /**
    * Real spherical seating (Luke, 2026-08-10: "how are we fitting them so
@@ -7456,16 +7464,24 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    * tessellates because its hexes are faces of a true sphere: planar tiles
    * sharing 3D chord edges. Faking curvature by hinging flat tiles around
    * their own edges can never tessellate. So the flower is now a patch of
-   * geodesic shell viewed from inside: each tile is pulled in to its chord
-   * position (R·sinφ), lifted to the sphere surface (R·(1−cosφ), rim toward
-   * the viewer), and tilted about its own center by its arc angle φ. The
-   * center tile is the bottom of the bowl by construction — no special case.
+   * convex geodesic cap: each tile is pulled in to its chord position
+   * (R·sinφ), receded from the frontmost center by R·(1−cosφ), and tilted
+   * outward around its own tangent axis. This matches the sphere behind it:
+   * Reset is nearest the viewer; the six rim faces fall away.
    */
   function domeSeat(dx, dy, hex) {
     const R = hex * DOME_RADIUS_HEX;
     const s = Math.hypot(dx, dy);
     if (s < 1 || !R) {
-      return { x: dx, y: dy, ax: 0, ay: 1, dome: 0, dz: 0 };
+      return {
+        x: dx,
+        y: dy,
+        ax: 0,
+        ay: 1,
+        dome: 0,
+        dz: hex * DOME_CENTER_RISE_HEX,
+        scale: 1.05,
+      };
     }
     const phi = Math.min(1.1, s / R);
     const k = (R * Math.sin(phi)) / s;
@@ -7478,8 +7494,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       // and a single rotation has no order to get wrong.
       ax: -(dy / s),
       ay: dx / s,
-      dome: -(phi * 180) / Math.PI,
-      dz: R * (1 - Math.cos(phi)),
+      dome: (phi * 180) / Math.PI,
+      dz: -R * (1 - Math.cos(phi)),
+      // A slight overlap closes sub-pixel cracks between independently
+      // transformed faces and makes the rim read as one shell, not cards.
+      scale: 1.075,
     };
   }
 
@@ -7489,7 +7508,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     el.style.setProperty("--domeay", seat.ay.toFixed(4));
     el.style.setProperty("--dome", seat.dome.toFixed(2) + "deg");
     el.style.setProperty("--dz", seat.dz.toFixed(1) + "px");
-    el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, Math.abs(seat.dome) / 30)).toFixed(4));
+    el.style.setProperty("--dscale", (seat.scale || 1).toFixed(4));
   }
 
   const DOCK_MODE = (() => {
@@ -7507,11 +7526,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   const DOCK_CENTER = DOCK_MODE === "center" || DOCK_CONTEXT;
   const SHARED_MENU = FIXED_CENTER || DEFAULT_BLOOM;
   /**
-   * ?dome=1 — the flower seated on a real sphere segment, viewed from
-   * inside: center tile at the bottom of the bowl, ring tiles pulled to
-   * their chord position and tilted to their true spherical normal (see
-   * domeSeat). Sized live against the actual rendered sphere so it fits
-   * inside it at any board size or zoom (sizeCenterFlower).
+   * ?dome=1 — the flower seated on a convex sphere segment: center tile at
+   * the front of the cap, ring tiles pulled to chord positions and tilted to
+   * spherical normals (see domeSeat). Sized live against the rendered sphere
+   * so it fits at any board size or zoom (sizeCenterFlower).
    *
    * ?seed=bare — idle dock shows JUST the gear glyph (same quiet treatment
    * Reset and ? already get); the seed's hex face appears on activation.
@@ -7544,21 +7562,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   ];
   const FIXED_CENTER_SLOTS = [
     { q: 0, r: -1 }, // Light / Dark — NW
-    { q: 1, r: -1 }, // Indicator/display parent — NE
+    { q: 1, r: -1 }, // Warning style — NE
     { q: -1, r: 0 }, // Undo — W
     { q: 1, r: 0 }, // Flag — E
-    { q: -1, r: 1 }, // Home — SW
-    { q: 0, r: 1 }, // Settings parent — SE
+    { q: -1, r: 1 }, // Invert — SW
+    { q: 0, r: 1 }, // Size — SE
   ];
   // Default / ?seed=bare keep the dock as their origin, but share the
   // center flower's content hierarchy. Five primaries form a compact 2-over-3
   // crown above Restart · Menu · Flag instead of imitating the center ring.
   const DEFAULT_BLOOM_SLOTS = [
     { q: -1, r: -1 }, // Light / Dark — lower left
-    { q: 0, r: -2 }, // Indicator/display parent — upper left
+    { q: 0, r: -2 }, // Warning style — upper left
     { q: 0, r: -1 }, // Undo — lower center
-    { q: 1, r: -1 }, // Home — lower right
-    { q: 1, r: -2 }, // Settings parent — upper right
+    { q: 1, r: -1 }, // Invert — lower right
+    { q: 1, r: -2 }, // Size — upper right
   ];
 
   /**
@@ -7620,6 +7638,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     size:
       '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
+    sizeXS:
+      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
+      '<text x="12" y="15.2" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="8.2" font-weight="700">XS</text>',
+    sizeS:
+      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
+      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="700">S</text>',
+    sizeM:
+      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
+      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10" font-weight="700">M</text>',
+    sizeL:
+      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
+      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="700">L</text>',
+    sizeXL:
+      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
+      '<text x="12" y="15.2" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="8.2" font-weight="700">XL</text>',
     // Theme circle remains available to archived/default variants.
     theme: '<circle cx="12" cy="12" r="8"/>',
     // Conventional board-theme affordance: handle, ferrule, and bristles.
@@ -7703,6 +7736,17 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M4 6h5M13 6h7M4 12h10M18 12h2M4 18h2M10 18h10"/>' +
       '<path d="M9 3v6M14 9v6M10 15v6"/>',
     bang: '<path d="M12 3.5v12"/><path d="M12 20.5h.01"/>',
+    warningNumbersDepth:
+      '<text x="12" y="13.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="9.2" font-weight="700">123</text>' +
+      '<path d="m6 16.2 6 3.2 6-3.2"/>',
+    warningNumbersFlat:
+      '<text x="12" y="15.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="11" font-weight="700">123</text>',
+    warningMonoDepth:
+      '<path d="m7.4 5.7 4.2 2.4v4.8l-4.2 2.4-4.2-2.4V8.1l4.2-2.4Z" fill="currentColor"/>' +
+      '<path d="m16.6 5.7 4.2 2.4v4.8l-4.2 2.4-4.2-2.4V8.1l4.2-2.4Z"/>' +
+      '<path d="m7.4 15.3 4.6 2.6 4.6-2.6"/>',
+    warningYellowInk:
+      '<path d="m7 7 4 2.3v4.6L7 16.2 3 13.9V9.3L7 7Zm10 0 4 2.3v4.6l-4 2.3-4-2.3V9.3L17 7Z" fill="#ffd400" stroke="#ffd400"/>',
     countNumbers:
       '<text x="12" y="15.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="650">123</text>',
     countHex:
@@ -8244,6 +8288,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const hit = SIZES.find((s) => s[0] === d);
       return hit ? hit[1] : "S";
     }
+    function sizeIcon() {
+      return "size" + currentSize();
+    }
     function currentTheme() {
       const i =
         typeof game.getThemeIndex === "function" ? game.getThemeIndex() : 0;
@@ -8361,6 +8408,72 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 
     function depthIcon() {
       return depthIs3d() ? "depth3d" : "depthFlat";
+    }
+
+    // One outcome-level Warning control owns the combinations that matter in
+    // play. Seams and depth stop being independent menu concepts; they remain
+    // implementation details of four deliberately legible warning styles.
+    const WARNING_MODES = [
+      {
+        id: "numbers-depth",
+        label: "Numbers · depth",
+        icon: "warningNumbersDepth",
+        count: "numerals",
+        relief: "extruded",
+        seams: true,
+      },
+      {
+        id: "numbers-flat",
+        label: "Numbers · flush",
+        icon: "warningNumbersFlat",
+        count: "numerals",
+        relief: "flush",
+        seams: false,
+      },
+      {
+        id: "mono-depth",
+        label: "Black + white · depth",
+        icon: "warningMonoDepth",
+        count: "rings",
+        relief: "extruded",
+        seams: true,
+      },
+      {
+        id: "yellow-flat",
+        label: "Yellow · no seams",
+        icon: "warningYellowInk",
+        count: "yellow",
+        relief: "flush",
+        seams: false,
+      },
+    ];
+
+    function warningModeIndex() {
+      const st = game.getState();
+      if (st.countStyle === "yellow") return 3;
+      if (st.countStyle === "rings") return 2;
+      if (st.relief === "flush" && st.seams === false) return 1;
+      return 0;
+    }
+
+    function warningMode() {
+      return WARNING_MODES[warningModeIndex()];
+    }
+
+    function warningModeIcon() {
+      return warningMode().icon;
+    }
+
+    function warningModeLabel() {
+      return warningMode().label;
+    }
+
+    function cycleWarningMode() {
+      const next = WARNING_MODES[(warningModeIndex() + 1) % WARNING_MODES.length];
+      game.setCountStyle(next.count, { syncSurface: false });
+      game.setRelief(next.relief);
+      game.setSeams(next.seams);
+      announce("Warnings · " + next.label);
     }
 
     /**
@@ -8566,53 +8679,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         const menu = [
           all[0],
           {
-            id: "display",
-            label: "Indicators",
-            icon: "bang",
+            id: "warnings",
+            label: warningModeLabel,
+            icon: warningModeIcon,
             iconOnly: true,
-            hoverSub: true,
             aria: () =>
-              "Board indicators. Hover or activate for indicator form, seams, and depth.",
-            sub: () => [
-              {
-                id: "indicator-form",
-                label: () =>
-                  indicatorsAreHexes() ? "Inner hex" : "Numerals",
-                aria: () =>
-                  "Indicators: " +
-                  (indicatorsAreHexes() ? "inner hex" : "numerals") +
-                  ". Activate to toggle.",
-                tooltip: () =>
-                  indicatorsAreHexes()
-                    ? "Indicators: inner hex"
-                    : "Indicators: numerals",
-                icon: indicatorFormIcon,
-                iconOnly: true,
-                run: toggleIndicatorForm,
-              },
-              {
-                id: "seams",
-                label: () => "Seams " + (seamsOn() ? "on" : "off"),
-                aria: () =>
-                  "Seams " + (seamsOn() ? "on" : "off") + ". Activate to toggle.",
-                tooltip: () => "Seams: " + (seamsOn() ? "on" : "off"),
-                icon: seamsIcon,
-                iconOnly: true,
-                run: toggleSeams,
-              },
-              {
-                id: "depth",
-                label: () => (depthIs3d() ? "3D" : "Flush"),
-                aria: () =>
-                  "Depth: " +
-                  (depthIs3d() ? "3D" : "flush") +
-                  ". Activate to toggle.",
-                tooltip: () => "Depth: " + (depthIs3d() ? "3D" : "flush"),
-                icon: depthIcon,
-                iconOnly: true,
-                run: toggleDepth,
-              },
-            ],
+              "Warning style: " + warningModeLabel() + ". Activate to cycle.",
+            cycle: cycleWarningMode,
           },
           {
             id: "undo",
@@ -8634,64 +8707,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
             cycle: cycleMode,
           },
           {
-            id: "home",
-            label: "Home",
-            icon: "home",
+            id: "invert",
+            label: invertLabel,
+            icon: invertIcon,
             iconOnly: true,
-            aria: () => "Return to Hexsweeper home",
-            cycle: doHome,
+            aria: () => invertLabel() + ". Activate to cycle.",
+            cycle: cycleInvert,
           },
           {
-            id: "settings",
-            label: "Settings",
-            icon: "sliders",
+            id: "size",
+            label: () => "Size " + currentSize(),
+            icon: sizeIcon,
             iconOnly: true,
-            hoverSub: true,
             aria: () =>
-              "Settings. Hover or activate for invert, effects, and help.",
-            sub: () => [
-              {
-                id: "invert",
-                label: "Invert",
-                aria: () => {
-                  const inv =
-                    typeof game.getInvertDrag === "function"
-                      ? game.getInvertDrag()
-                      : { x: false, y: false };
-                  const mode =
-                    inv.x && inv.y
-                      ? "X and Y"
-                      : inv.x
-                        ? "X"
-                        : inv.y
-                          ? "Y"
-                          : "off";
-                  return "Invert " + mode + ". Activate to cycle.";
-                },
-                tooltip: invertLabel,
-                icon: invertIcon,
-                iconOnly: true,
-                run: cycleInvert,
-              },
-              {
-                id: "effects",
-                label: "Effects",
-                aria: () => "Effects. Activate to cycle auto, full, and reduced.",
-                tooltip: effectsLabel,
-                icon: effectsIcon,
-                iconOnly: true,
-                run: cycleEffects,
-              },
-              {
-                id: "help",
-                label: "Help",
-                aria: () => "Open help",
-                tooltip: "Help",
-                icon: "help",
-                iconOnly: true,
-                run: doHelp,
-              },
-            ],
+              "Board size " + currentSize() + ". Activate to cycle.",
+            cycle: cycleSize,
           },
         ];
         // Flag remains a permanent dock action in the bottom-bloom variants;
@@ -9323,7 +9353,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           doReset();
         });
         place(centerEl, cx, cy, cx, cy);
-        applyCenterDome(centerEl, DOME ? domeSeat(0, 0, 1) : null);
+        applyCenterDome(centerEl, DOME ? domeSeat(0, 0, HEX) : null);
         centerEl.classList.add("folded");
         centerEl.dataset.delay = "0";
         centerActionBtn = centerEl;
@@ -9494,18 +9524,28 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     // through motion instead of a baked-in viewing angle — and sits perfectly
     // aligned at rest. rAF-lerped; the stage's own transform transition is
     // disabled in center mode so this does not fight it.
-    if (DOCK_CENTER && DOME && matchMedia("(pointer: fine)").matches) {
+    if (DOCK_CENTER && DOME) {
+      // The bowl must read before the pointer moves. A fixed oblique camera
+      // exposes the center/rim depth; pointer motion only adds a small look-
+      // around, and reduced-motion users retain the same static camera.
+      const BASE_RX = 9;
+      const BASE_RY = -6;
+      const PARALLAX_DEG = 5;
       let px = 0;
       let py = 0;
       let txp = 0;
       let typ = 0;
       let parRaf = 0;
+      const paintDomeCamera = () => {
+        stage.style.transform =
+          "rotateX(" + (BASE_RX + py * -PARALLAX_DEG).toFixed(2) +
+          "deg) rotateY(" + (BASE_RY + px * PARALLAX_DEG).toFixed(2) + "deg)";
+      };
       const easeParallax = () => {
         parRaf = 0;
         px += (txp - px) * 0.22;
         py += (typ - py) * 0.22;
-        stage.style.transform =
-          "rotateX(" + (py * -11).toFixed(2) + "deg) rotateY(" + (px * 11).toFixed(2) + "deg)";
+        paintDomeCamera();
         if (Math.abs(txp - px) > 0.003 || Math.abs(typ - py) > 0.003) {
           queueParallax();
         }
@@ -9513,18 +9553,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const queueParallax = () => {
         if (!parRaf) parRaf = requestAnimationFrame(easeParallax);
       };
-      document.addEventListener(
-        "pointermove",
-        (e) => {
-          if (state.phase !== "open") return;
-          const w = stage.clientWidth || 1;
-          const h = stage.clientHeight || 1;
-          txp = (e.clientX / w) * 2 - 1;
-          typ = (e.clientY / h) * 2 - 1;
-          queueParallax();
-        },
-        { passive: true }
-      );
+      paintDomeCamera();
+      if (matchMedia("(pointer: fine)").matches && !prefersReducedMotion()) {
+        document.addEventListener(
+          "pointermove",
+          (e) => {
+            if (state.phase !== "open") return;
+            const w = stage.clientWidth || 1;
+            const h = stage.clientHeight || 1;
+            txp = (e.clientX / w) * 2 - 1;
+            typ = (e.clientY / h) * 2 - 1;
+            queueParallax();
+          },
+          { passive: true }
+        );
+      }
     }
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
