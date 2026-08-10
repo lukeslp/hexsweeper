@@ -179,6 +179,11 @@
   padding: 0;
   cursor: pointer;
   pointer-events: auto;
+  /* iOS Safari ignores body-level touch-action for its double-tap-zoom
+     heuristic — it must sit on the touched element. Open+close is two taps
+     on the same spot; without this Safari smart-zooms and position:fixed
+     chrome slides around the visual viewport until the zoom settles. */
+  touch-action: manipulation;
   transform-style: preserve-3d;
   transition:
     transform var(--fold-ms) cubic-bezier(0.22, 1, 0.3, 1),

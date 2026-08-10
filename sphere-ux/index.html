@@ -762,6 +762,9 @@ body:not([data-sphere-theme="water"]) .water-level { display: none; }
    grammar as the Surface row; text pills drop the swatch dot. */
 body:not(.dock-split) .help-look { display: none; }
 .help-pack.is-text::before { display: none; }
+/* Double-tap on any chrome control must never become Safari smart-zoom.
+   Declared on the elements: iOS skips body-level touch-action for this. */
+button, a, input[type="range"] { touch-action: manipulation; }
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
