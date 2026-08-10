@@ -37,7 +37,7 @@ hexsweeper change that never gets re-vendored — fails the build.
 ## Build numbers
 
 App Store Connect already holds builds 1–6 under this bundle id from the retired
-app. `CURRENT_PROJECT_VERSION` is 8; increment it for every upload. A number ≤6
+app. `CURRENT_PROJECT_VERSION` is 9; increment it for every upload. A number ≤6
 is rejected as a duplicate.
 
 ## Deliberately absent
