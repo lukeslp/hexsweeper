@@ -94,36 +94,31 @@
     const R = hex * DOME_RADIUS_HEX;
     const s = Math.hypot(dx, dy);
     if (s < 1 || !R) {
-      return { x: dx, y: dy, domex: 0, domey: 0, dz: 0 };
+      return { x: dx, y: dy, ax: 0, ay: 1, dome: 0, dz: 0 };
     }
     const phi = Math.min(1.1, s / R);
     const k = (R * Math.sin(phi)) / s;
-    const deg = (phi * 180) / Math.PI;
     return {
       x: dx * k,
       y: dy * k,
-      // Global-axis decomposition, not a per-tile custom axis (Luke: "better
-      // joining of the tiles"). The old rotate3d(ax,ay,0,dome) tilted each
-      // tile around ITS OWN radial axis by one angle — two ring neighbors
-      // 60deg apart shared no axis, so their shared edge twisted out of
-      // alignment. rotateX/rotateY use the SAME two global axes for every
-      // tile; neighbors that share a dy share domex, neighbors that share a
-      // dx share domey — that shared component is what keeps a common edge
-      // from twisting relative to its neighbor. Standard technique for
-      // CSS DOM-sphere galleries.
-      domex: -((dy / s) * deg),
-      domey: (dx / s) * deg,
+      // Rotate around the tile's own tangent axis (perpendicular to its
+      // radius from center) by its arc angle — the exact transform for
+      // "point this face's normal along the sphere radius at this spot,"
+      // and a single rotation has no order to get wrong.
+      ax: -(dy / s),
+      ay: dx / s,
+      dome: -(phi * 180) / Math.PI,
       dz: R * (1 - Math.cos(phi)),
     };
   }
 
   function applyCenterDome(el, seat) {
     if (!DOME || !seat) return;
-    el.style.setProperty("--domex", seat.domex.toFixed(2) + "deg");
-    el.style.setProperty("--domey", seat.domey.toFixed(2) + "deg");
+    el.style.setProperty("--domeax", seat.ax.toFixed(4));
+    el.style.setProperty("--domeay", seat.ay.toFixed(4));
+    el.style.setProperty("--dome", seat.dome.toFixed(2) + "deg");
     el.style.setProperty("--dz", seat.dz.toFixed(1) + "px");
-    const mag = Math.hypot(seat.domex, seat.domey);
-    el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, mag / 30)).toFixed(4));
+    el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, Math.abs(seat.dome) / 30)).toFixed(4));
   }
 
   const DOCK_CENTER = (() => {
@@ -134,11 +129,11 @@
     }
   })();
   /**
-   * ?dome=1 — the dome retry, this time where it belongs: on the CENTER
-   * flower, which is radially symmetric (the bottom-dock dome read lopsided
-   * and was reverted). The cluster bulges toward the player: center tile
-   * closest, ring tiles hinged back slightly on their inner edges, 1/cos
-   * scale holding the comb closed.
+   * ?dome=1 — the flower seated on a real sphere segment, viewed from
+   * inside: center tile at the bottom of the bowl, ring tiles pulled to
+   * their chord position and tilted to their true spherical normal (see
+   * domeSeat). Sized live against the actual rendered sphere so it fits
+   * inside it at any board size or zoom (sizeCenterFlower).
    *
    * ?seed=bare — idle dock shows JUST the gear glyph (same quiet treatment
    * Reset and ? already get); the seed's hex face appears on activation.
@@ -1426,7 +1421,31 @@
       }
     }
 
+    /**
+     * Size the flower against the sphere it sits on, not a guessed constant.
+     * Ring-1 tile centers land at sqrt(3)*HEX from the seed (see the
+     * hexToPixel geometry CENTER_SLOTS uses) and each tile's own circum-
+     * radius is ~HEX, so the flower's worst-case outer edge is roughly
+     * HEX*(sqrt(3)+1) from center. Solve that against FIT * sphereRadius so
+     * the whole flower sits inside the sphere's disk, not past its rim.
+     */
+    const FLOWER_OUTER_HEX = Math.sqrt(3) + 1;
+    const FLOWER_FIT = 0.72; // fraction of the sphere radius the flower may fill
+    function sizeCenterFlower() {
+      if (!DOCK_CENTER) return;
+      const disk =
+        typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
+      if (!disk || !disk.r) return;
+      const hex = Math.max(
+        30,
+        Math.min(90, (disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX)
+      );
+      root.style.setProperty("--tile-h", (hex * 2).toFixed(1) + "px");
+      root.style.setProperty("--tile-w", (hex * 1.746).toFixed(1) + "px");
+    }
+
     function expand() {
+      sizeCenterFlower();
       if (state.phase !== "closed") return;
       clearTimeout(phaseTimer);
       lastFocus = document.activeElement;
@@ -1678,6 +1697,7 @@
         if (!widthChanged) return;
         if (state.phase === "open") {
           // rebuild petal positions without losing open state
+          sizeCenterFlower();
           const active = state.active;
           renderBloom({ petals: true });
           state.active = active;

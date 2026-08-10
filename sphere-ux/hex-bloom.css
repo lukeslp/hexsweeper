@@ -149,20 +149,18 @@
 /* The flower earns bigger tiles (no dock to clear) and folds like origami:
    deeper fold angle, harder scale-down, slower open. */
 .hex-bloom[data-dock-mode="center"] {
-  /* Luke: "larger — same size as the full sphere." The flower's footprint
-     (2 tile-widths across the ring) should read against the sphere disk
-     behind it, not sit small in the middle of it. */
-  --tile-w: 150px;
-  --tile-h: 172px;
+  /* Modest fallback only — sizeCenterFlower() in JS overrides --tile-w/-h
+     inline against the ACTUAL rendered sphere radius (game.getSphereScreen)
+     the instant the menu opens, which is the only way "fits inside the
+     sphere" holds at every board size and zoom level. A fixed px guess
+     failed twice in testing (too small, then bigger than the sphere itself)
+     because the sphere's own on-screen size moves with board size and zoom
+     while a CSS constant does not. */
+  --tile-w: 84px;
+  --tile-h: 96px;
   --fold: 104deg;
   --fold-scale: 0.5;
   --fold-ms: 340ms;
-}
-@media (max-width: 400px) {
-  .hex-bloom[data-dock-mode="center"] {
-    --tile-w: 118px;
-    --tile-h: 136px;
-  }
 }
 /* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
    user"). A symmetric bowl viewed dead-on from its own axis shows almost no
@@ -723,15 +721,16 @@
 }
 .hb-hex.shown {
   opacity: 1;
-  /* --domex / --domey / --dz / --dscale: the ?dome=1 bowl (applyCenterDome),
-     as two GLOBAL-axis rotations rather than one per-tile custom-axis spin —
-     see the domeSeat comment for why that is what actually joins the tiles.
+  /* --domeax/--domeay/--dome/--dz/--dscale: the ?dome=1 bowl (applyCenterDome)
+     — a single rotation around each tile's own tangent axis, the exact
+     "point this face at the sphere's center" transform (external review,
+     2026-08-10: a two-axis rotateX+rotateY split does not commute and only
+     half-shares an axis between neighbors — one rotation has no such flaw).
      --hov: hover/select lift. Defaults keep everything flat. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
     translateZ(calc(var(--dz, 0px) + var(--hov, 0px)))
-    rotateX(var(--domex, 0deg))
-    rotateY(var(--domey, 0deg))
+    rotate3d(var(--domeax, 0), var(--domeay, 1), 0, var(--dome, 0deg))
     scale(var(--dscale, 1));
 }
 /* Tiles flip up a touch toward the player on hover / keyboard focus.
