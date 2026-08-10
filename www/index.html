@@ -1,15 +1,12 @@
 <!DOCTYPE html>
 <!--
   File Purpose: Template for the native app's mode picker (build/app/index.html).
-  Primary Functions/Classes: centered hex flower; the FONTS placeholder below
-    is replaced with inlined IBM Plex woff2 by tools/export-collection.py
-    (export_app_launcher). Do not repeat that token anywhere but the tag itself.
+  Primary Functions/Classes: one centered logo tile unfolds into three mode
+    links on the same axial hex grid. The FONTS placeholder is replaced by
+    tools/export-collection.py; do not repeat it outside the tag below.
   Inputs: none at runtime. Outputs: links into games/*.html.
-  Notes: The picker offers the three STRUCTURAL choices — infinite, bounded,
-    sphere. Everything else (theme, board size, counts) is a setting inside the
-    game, not a peer of it. The closed logo tile unfolds into three native links.
-  A11y: native button + links, 44pt+ targets, Escape closes, focus is managed,
-    visible focus and reduced-motion are honoured.
+  A11y: native button + links, closed links are inert, Escape/background closes,
+    focus is restored, targets exceed 44pt, reduced motion is honoured.
   Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
@@ -17,7 +14,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Hexsweeper</title>
-<meta name="description" content="Three ways to sweep a honeycomb.">
+<meta name="description" content="Choose Infinite, Bounded, or Sphere Hexsweeper.">
 <style>
 /* fonts/fonts.css (woff2 inlined) */
 /*
@@ -71,361 +68,227 @@
 <style>
   :root {
     --font-ui: "IBM Plex Sans", system-ui, sans-serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-    --field: #d4dce8;
-    --field-hi: #eef2f8;
-    --field-lo: #b9c4d4;
-    --well: #c6cfdd;
+    --field: #eef2f8;
+    --field-edge: #d4dce8;
+    --paper: #f8fafc;
+    --paper-hover: #e5eaf2;
     --ink: #26303f;
-    --ink-soft: #5f6c80;
-    --seam: rgba(38, 48, 63, 0.13);
-    --raise-hi: rgba(255, 255, 255, 0.92);
-    --raise-lo: rgba(38, 48, 63, 0.20);
-    --pill: rgba(255, 255, 255, 0.72);
-    --pill-edge: rgba(38, 48, 63, 0.12);
+    --stroke: rgba(38, 48, 63, .72);
     --focus: #2f6f9f;
-    --tile-w: clamp(108px, 33vw, 128px);
+    --tile-w: clamp(86px, 26.67vw, 104px);
     --tile-h: calc(var(--tile-w) * 1.1547);
+    --dx: var(--tile-w);
+    --diag-x: calc(var(--tile-w) * .5);
+    --diag-y: calc(var(--tile-h) * .75);
+    color-scheme: light dark;
   }
   :root[data-appearance="dark"] {
     --field: #10151d;
-    --field-hi: #1c2430;
-    --field-lo: #080b11;
-    --well: #0a0e15;
-    --ink: #dde5f0;
-    --ink-soft: #8794a8;
-    --seam: rgba(221, 229, 240, 0.11);
-    --raise-hi: rgba(255, 255, 255, 0.07);
-    --raise-lo: rgba(0, 0, 0, 0.72);
-    --pill: rgba(255, 255, 255, 0.07);
-    --pill-edge: rgba(255, 255, 255, 0.14);
+    --field-edge: #080b11;
+    --paper: #171e28;
+    --paper-hover: #242e3c;
+    --ink: #e6edf7;
+    --stroke: rgba(230, 237, 247, .72);
     --focus: #7fc4f2;
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
+  html, body { width: 100%; height: 100%; }
   body {
     margin: 0;
     min-width: 280px;
+    overflow: hidden;
     touch-action: manipulation;
     -webkit-text-size-adjust: 100%;
     font-family: var(--font-ui);
     color: var(--ink);
-    background: var(--field);
-    background-image:
-      radial-gradient(120% 85% at 50% 6%, var(--field-hi) 0%, transparent 60%),
-      radial-gradient(140% 100% at 50% 106%, var(--field-lo) 0%, transparent 56%);
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    overflow: hidden;
-    transition: background-color .4s ease, color .4s ease;
-    padding:
-      max(18px, env(safe-area-inset-top))
-      max(16px, env(safe-area-inset-right))
-      max(18px, env(safe-area-inset-bottom))
-      max(16px, env(safe-area-inset-left));
+    background:
+      radial-gradient(110% 78% at 50% 18%, var(--field) 0%, transparent 68%),
+      var(--field-edge);
   }
 
-  header { text-align: center; padding-top: 4px; }
-  h1 {
-    margin: 0;
-    font-size: clamp(1.45rem, 6.5vw, 2.15rem);
-    font-weight: 600;
-    letter-spacing: -0.025em;
-  }
-  .lede {
-    margin: 5px 0 0;
-    font: .68rem/1.3 var(--font-mono);
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-  }
-
-  main {
-    min-height: 0;
-    display: grid;
-    place-items: center;
+  main, .flower {
+    position: fixed;
+    inset: 0;
   }
   .flower {
-    position: relative;
-    width: min(100%, 330px);
-    height: min(47vh, 330px);
-    min-height: 276px;
     isolation: isolate;
   }
   .hex {
     position: absolute;
-    left: 50%; top: 50%;
+    left: 50%;
+    top: 50%;
     width: var(--tile-w);
     height: var(--tile-h);
-    margin: calc(var(--tile-h) / -2) 0 0 calc(var(--tile-w) / -2);
+    margin-left: calc(var(--tile-w) / -2);
+    margin-top: calc(var(--tile-h) / -2);
+    display: grid;
+    place-items: center;
     border: 0;
     padding: 0;
-    color: inherit;
-    background: transparent;
+    color: var(--ink);
+    background: var(--stroke);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     text-decoration: none;
     cursor: pointer;
-    filter:
-      drop-shadow(-2px -2px 3px var(--raise-hi))
-      drop-shadow(3px 4px 7px var(--raise-lo));
+    touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
+    outline: none;
+    filter:
+      drop-shadow(0 0 3px var(--paper))
+      drop-shadow(0 1px 0 var(--paper));
+    transition:
+      transform 340ms cubic-bezier(.22, 1, .3, 1),
+      opacity 220ms ease,
+      background 160ms ease;
+    will-change: transform, opacity;
   }
-  .face {
-    position: absolute;
-    inset: 0;
-    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-    background: var(--well);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    overflow: hidden;
-  }
-  .face::after {
+  .hex::before {
     content: "";
     position: absolute;
-    inset: 0;
-    background: linear-gradient(160deg, rgba(0,0,0,.16), transparent 42%, rgba(255,255,255,.10));
-    pointer-events: none;
+    inset: 1.5px;
+    z-index: -1;
+    clip-path: inherit;
+    background: var(--paper);
+    transition: inset 150ms ease, background 160ms ease;
   }
-  .hex:focus-visible { outline: none; }
-  .hex:focus-visible .face { box-shadow: inset 0 0 0 4px var(--focus); }
-  .hex:active .face { transform: scale(.975); }
+  .hex:focus-visible { background: var(--focus); }
+  .hex:focus-visible::before,
+  .hex:hover::before { inset: 3px; background: var(--paper-hover); }
+  .hex:active::before { inset: 4px; }
 
-  .seed { z-index: 4; }
-  .seed .face {
-    background: linear-gradient(150deg, var(--field-hi), var(--well));
+  .seed {
+    z-index: 3;
+    transform: translate(0, 0);
   }
   .logo {
-    width: 50%;
-    max-width: 58px;
-    color: var(--ink);
-  }
-  .seed-label,
-  .mode-name {
+    width: 54%;
+    max-width: 54px;
     position: relative;
     z-index: 1;
-    font-weight: 600;
+  }
+  .close {
+    display: none;
+    position: relative;
+    z-index: 1;
+    font-size: clamp(1.45rem, 7vw, 1.8rem);
+    font-weight: 500;
     line-height: 1;
-    text-align: center;
   }
-  .seed-label {
-    font: 600 .62rem/1 var(--font-mono);
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-  }
-  .seed .when-open { display: none; }
-  .flower[data-open="true"] .seed .when-closed { display: none; }
-  .flower[data-open="true"] .seed .when-open { display: inline; }
+  .flower[data-open="true"] .logo { display: none; }
+  .flower[data-open="true"] .close { display: block; }
 
   .mode {
     z-index: 2;
     opacity: 0;
     pointer-events: none;
-    transform: translate(0, 0) scale(.3) rotate(-24deg);
-    transition:
-      transform .42s cubic-bezier(.2,.78,.25,1),
-      opacity .18s ease;
+    transform: translate(0, 0) scale(.5) rotateY(-104deg);
+    transform-origin: 50% 50%;
+    transform-style: preserve-3d;
   }
-  .mode .face { background: var(--well); }
-  .mode-art { width: 38%; max-width: 44px; height: 44px; position: relative; z-index: 1; }
-  .mode-name { font-size: clamp(.8rem, 3.5vw, .95rem); }
-  .mode-meta {
+  .mode-content {
     position: relative;
     z-index: 1;
-    font: .52rem/1.1 var(--font-mono);
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
+    display: grid;
+    justify-items: center;
+    gap: 4px;
   }
-  .flower[data-open="true"] .mode { opacity: 1; pointer-events: auto; }
+  .mode svg { width: 34px; height: 34px; }
+  .mode-name {
+    max-width: 88%;
+    font-size: clamp(.7rem, 3.1vw, .8rem);
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: -.02em;
+    text-align: center;
+  }
+  .flower[data-open="true"] .mode {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* Exact alternating ring-1 seats from sphere-ux ?dock=center:
+     NW (q=0,r=-1), E (q=1,r=0), SW (q=-1,r=1). */
   .flower[data-open="true"] .mode-infinite {
-    transform: translate(0, calc(var(--tile-h) * -.75)) scale(1) rotate(0);
+    transform: translate(calc(var(--diag-x) * -1), calc(var(--diag-y) * -1)) scale(1) rotateY(0);
   }
   .flower[data-open="true"] .mode-bounded {
-    transform: translate(calc(var(--tile-w) * -.5), calc(var(--tile-h) * .375)) scale(1) rotate(0);
+    transform: translate(var(--dx), 0) scale(1) rotateY(0);
   }
   .flower[data-open="true"] .mode-sphere {
-    transform: translate(calc(var(--tile-w) * .5), calc(var(--tile-h) * .375)) scale(1) rotate(0);
+    transform: translate(calc(var(--diag-x) * -1), var(--diag-y)) scale(1) rotateY(0);
   }
-
-  .hint {
-    position: absolute;
-    left: 50%; bottom: 0;
-    width: 100%;
-    transform: translateX(-50%);
-    margin: 0;
-    text-align: center;
-    color: var(--ink-soft);
-    font: .62rem/1.3 var(--font-mono);
-    letter-spacing: .05em;
-    transition: opacity .18s ease;
-  }
-  .flower[data-open="true"] .hint { opacity: 0; }
-
-  footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 2px 4px 0;
-  }
-  .effects {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    border: 1px solid var(--pill-edge);
-    border-radius: 999px;
-    background: var(--pill);
-    -webkit-backdrop-filter: blur(9px);
-    backdrop-filter: blur(9px);
-    padding: 0 4px;
-  }
-  .effects button {
-    min-width: 44px; height: 44px;
-    display: grid; place-items: center;
-    border: 0; background: none; color: var(--ink);
-    font: 600 .74rem var(--font-mono); letter-spacing: .05em;
-    cursor: pointer; border-radius: 999px; padding: 0 6px;
-  }
-  .effects button:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
-  .effects .value {
-    min-width: 66px;
-    font: .68rem var(--font-mono);
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    text-align: center;
-  }
-  .effects .label {
-    font: .55rem var(--font-mono);
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-    padding-left: 8px;
-  }
-  .sr-only {
-    position: absolute; width: 1px; height: 1px; margin: -1px;
-    padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-  }
-  #appearance {
-    width: 46px; height: 46px;
-    display: grid; place-items: center;
-    border: 1px solid var(--pill-edge);
-    border-radius: 999px;
-    background: var(--pill);
-    color: var(--ink);
-    cursor: pointer;
-    -webkit-backdrop-filter: blur(9px);
-    backdrop-filter: blur(9px);
-  }
-  #appearance:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-  #appearance svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; }
-  :root[data-appearance="dark"] .i-sun,
-  :root:not([data-appearance="dark"]) .i-moon { display: none; }
 
   @media (prefers-reduced-motion: no-preference) {
-    .seed { animation: arrive .5s cubic-bezier(.2,.75,.3,1) backwards; }
-    header, footer, .hint { animation: rise .4s ease backwards .05s; }
-    .flower[data-open="true"] .mode-bounded { transition-delay: .045s; }
-    .flower[data-open="true"] .mode-sphere { transition-delay: .09s; }
+    .seed { animation: arrive 420ms cubic-bezier(.22, 1, .3, 1) backwards; }
+    .flower[data-open="true"] .mode-infinite { transition-delay: 50ms; }
+    .flower[data-open="true"] .mode-bounded { transition-delay: 110ms; }
+    .flower[data-open="true"] .mode-sphere { transition-delay: 170ms; }
   }
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    *, *::before, *::after {
+      transition-duration: .01ms !important;
+      animation-duration: .01ms !important;
+    }
   }
-  @media (max-height: 560px) and (orientation: landscape) {
-    :root { --tile-w: clamp(96px, 18vw, 112px); }
-    body { grid-template-columns: 150px minmax(0, 1fr) 150px; grid-template-rows: 1fr; }
-    header { align-self: center; text-align: left; }
-    footer { align-self: end; }
-    .flower { height: min(94vh, 290px); }
+  @media (forced-colors: active) {
+    body { background: Canvas; }
+    .hex { background: ButtonText; color: ButtonText; filter: none; }
+    .hex::before { background: Canvas; }
+    .hex:focus-visible { outline: 3px solid Highlight; outline-offset: 3px; }
   }
-  @keyframes arrive { from { opacity: 0; transform: scale(.82) rotate(-9deg); } }
-  @keyframes rise { from { opacity: 0; transform: translateY(-5px); } }
+  @keyframes arrive {
+    from { opacity: 0; transform: scale(.5) rotateY(-70deg); }
+  }
 </style>
 </head>
 <body>
-
-<header>
-  <h1>Hexsweeper</h1>
-  <p class="lede">Three ways to sweep a honeycomb</p>
-</header>
-
 <main>
   <nav class="flower" id="game-menu" aria-label="Choose a game" data-open="false">
     <a class="hex mode mode-infinite" href="games/infinite.html" tabindex="-1" aria-hidden="true" inert>
-      <span class="face">
-        <svg class="mode-art" viewBox="0 0 48 48" aria-hidden="true">
-          <g fill="none" stroke="currentColor" stroke-width="1.5" opacity=".88">
-            <path d="M24 4 36 11v14l-12 7-12-7V11Z"/><path d="m10 27 12 7v10H10L2 39V27Z"/>
+      <span class="mode-content">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M24 4 36 11v14l-12 7-12-7V11Z"/>
+            <path d="m10 27 12 7v10H10L2 39V27Z"/>
             <path d="m38 27 8 5v12H26V34Z"/>
           </g>
-          <text x="24" y="23" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="600" fill="#3b7fc4">2</text>
+          <text x="24" y="23" text-anchor="middle" font-family="var(--font-ui)" font-size="10" font-weight="650" fill="currentColor">2</text>
         </svg>
         <span class="mode-name">Infinite</span>
-        <span class="mode-meta">Grows outward</span>
       </span>
     </a>
 
     <a class="hex mode mode-bounded" href="games/bounded.html" tabindex="-1" aria-hidden="true" inert>
-      <span class="face">
-        <svg class="mode-art" viewBox="0 0 48 48" aria-hidden="true">
-          <rect x="5" y="5" width="38" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" opacity=".7"/>
+      <span class="mode-content">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <rect x="5" y="5" width="38" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/>
           <path d="m24 9 11 6v12l-11 6-11-6V15Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
         </svg>
         <span class="mode-name">Bounded</span>
-        <span class="mode-meta">Fixed board</span>
       </span>
     </a>
 
     <a class="hex mode mode-sphere" href="games/sphere.html" tabindex="-1" aria-hidden="true" inert>
-      <span class="face">
-        <svg class="mode-art" viewBox="0 0 48 48" aria-hidden="true">
+      <span class="mode-content">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
           <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.6"/>
-          <path d="M24 6v36M9 15l30 18M39 15 9 33M6 24h36" fill="none" stroke="currentColor" stroke-width="1" opacity=".65"/>
+          <path d="M24 6v36M9 15l30 18M39 15 9 33M6 24h36" fill="none" stroke="currentColor" stroke-width="1" opacity=".7"/>
         </svg>
         <span class="mode-name">Sphere</span>
-        <span class="mode-meta">Closed · 3D</span>
       </span>
     </a>
 
     <button class="hex seed" id="menu-toggle" type="button" aria-expanded="false" aria-controls="game-menu" aria-label="Choose a game">
-      <span class="face">
-        <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M32 4 54 17v30L32 60 10 47V17Z" fill="none" stroke="currentColor" stroke-width="3"/>
-          <circle cx="32" cy="32" r="6" fill="currentColor"/>
-          <path d="M32 13v10M32 41v10M15 22l9 5M40 37l9 5M49 22l-9 5M24 37l-9 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-        <span class="seed-label when-closed">Choose game</span>
-        <span class="seed-label when-open">Close</span>
-      </span>
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M32 4 54 17v30L32 60 10 47V17Z" fill="none" stroke="currentColor" stroke-width="3"/>
+        <circle cx="32" cy="32" r="6" fill="currentColor"/>
+        <path d="M32 13v10M32 41v10M15 22l9 5M40 37l9 5M49 22l-9 5M24 37l-9 5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="close" aria-hidden="true">×</span>
     </button>
-
-    <p class="hint" aria-hidden="true">Tap the hex to choose a board</p>
   </nav>
 </main>
-
-<footer>
-  <div class="effects" role="group" aria-label="Effects">
-    <span class="label" aria-hidden="true">FX</span>
-    <button id="fx-prev" type="button" aria-label="Previous effects setting">&lsaquo;</button>
-    <span class="value" id="fx-value">Auto</span>
-    <button id="fx-next" type="button" aria-label="Next effects setting">&rsaquo;</button>
-  </div>
-  <p class="sr-only" id="fx-live" role="status" aria-live="polite"></p>
-
-  <button id="appearance" type="button" aria-label="Switch appearance">
-    <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="4.2"/>
-      <path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.9 1.9M17.2 17.2l1.9 1.9M19.1 4.9l-1.9 1.9M6.8 17.2l-1.9 1.9"/>
-    </svg>
-    <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M20 13.4A8.2 8.2 0 1 1 10.6 4a6.6 6.6 0 0 0 9.4 9.4z"/>
-    </svg>
-  </button>
-</footer>
 
 <script>
 (function () {
@@ -433,8 +296,10 @@
   var flower = document.getElementById("game-menu");
   var toggle = document.getElementById("menu-toggle");
   var modes = Array.prototype.slice.call(flower.querySelectorAll(".mode"));
+  var focusTimer = null;
 
   function setMenu(open, moveFocus) {
+    clearTimeout(focusTimer);
     flower.dataset.open = open ? "true" : "false";
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     toggle.setAttribute("aria-label", open ? "Close game menu" : "Choose a game");
@@ -443,10 +308,21 @@
       mode.setAttribute("aria-hidden", open ? "false" : "true");
       mode.inert = !open;
     });
-    if (moveFocus) (open ? modes[0] : toggle).focus();
+    if (moveFocus) {
+      if (open) {
+        focusTimer = setTimeout(function () { modes[0].focus(); },
+          matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
+      } else {
+        toggle.focus();
+      }
+    }
   }
+
   toggle.addEventListener("click", function (event) {
     setMenu(flower.dataset.open !== "true", event.detail === 0);
+  });
+  flower.addEventListener("click", function (event) {
+    if (event.target === flower && flower.dataset.open === "true") setMenu(false, false);
   });
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" && flower.dataset.open === "true") {
@@ -455,53 +331,12 @@
     }
   });
 
-  var KEY = "hexsweeper-appearance-v1";
-  var root = document.documentElement;
-  var btn = document.getElementById("appearance");
-  function apply(mode) {
-    root.dataset.appearance = mode;
-    btn.setAttribute("aria-label", mode === "dark" ? "Switch to light" : "Switch to dark");
-  }
   var saved = null;
-  try { saved = localStorage.getItem(KEY); } catch (e) {}
-  apply(saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
-  btn.addEventListener("click", function () {
-    var next = root.dataset.appearance === "dark" ? "light" : "dark";
-    apply(next);
-    try { localStorage.setItem(KEY, next); } catch (e) {}
-  });
-
-  /* Effects preference. MIRROR of the helper in core.js and sphere/sphere.js. */
-  var FX_KEY = "hexsweeper-effects-v1";
-  var FX = [
-    ["auto", "Auto", "following the system setting"],
-    ["full", "Full", "all particles and motion"],
-    ["reduced", "Reduced", "particles and motion off"]
-  ];
-  var value = document.getElementById("fx-value");
-  var live = document.getElementById("fx-live");
-  function read() {
-    var v = null;
-    try { v = localStorage.getItem(FX_KEY); } catch (e) {}
-    for (var i = 0; i < FX.length; i++) if (FX[i][0] === v) return i;
-    return 0;
-  }
-  function paint(i, announce) {
-    value.textContent = FX[i][1];
-    root.setAttribute("data-effects-pref", FX[i][0]);
-    if (announce) live.textContent = "Effects " + FX[i][1] + ", " + FX[i][2];
-  }
-  function step(delta) {
-    var i = (read() + delta + FX.length) % FX.length;
-    try { localStorage.setItem(FX_KEY, FX[i][0]); } catch (e) {}
-    paint(i, true);
-  }
-  paint(read(), false);
-  document.getElementById("fx-prev").addEventListener("click", function () { step(-1); });
-  document.getElementById("fx-next").addEventListener("click", function () { step(1); });
+  try { saved = localStorage.getItem("hexsweeper-appearance-v1"); } catch (_) {}
+  document.documentElement.dataset.appearance =
+    saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 })();
 </script>
-
 <script>
 /* app: dismiss the native launch screen after first paint */
 (function () {
