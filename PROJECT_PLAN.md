@@ -2,7 +2,7 @@
 
 ## Objective
 
-Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, with a clear six-theme product surface (Light / Dark / Fire / Plague / Water / Escape) and a retained skin lab as dormant prior art.
+Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, with a clear five-theme product surface (Light / Dark / Fire / Plague / Escape; Water demoted to the collection archive) and a retained skin lab as dormant prior art.
 
 ## Architecture
 
@@ -48,7 +48,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Fire mobile/desktop: `cameraLock` — drag tilts at zoom 1; zoom in → clamped pan (zoom slack + no dig-focus steal); hold = flag
 - [x] Infinite Light/Dark distinct materials: porcelain chalk desk vs night-iron plate (desk field + bevel language)
 
-- [x] Public themes: Light / Dark / Fire / Plague / Water / Escape
+- [x] Public themes: Light / Dark / Fire / Plague / Escape (Water demoted 2026-08-10)
 - [x] Theme selector + `T` shortcut
 - [x] Biolume recast as Plague (flat, hyphae, spores)
 - [x] Fire magma pit (viewport-fit board, pit tilt, boiling center, contact shadows; no streak rain)

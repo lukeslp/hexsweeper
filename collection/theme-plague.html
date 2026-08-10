@@ -1377,7 +1377,6 @@ body[data-mode="escape"] .menu-links {
       <button type="button" data-welcome-mode="dark" aria-pressed="false">Dark</button>
       <button type="button" data-welcome-mode="fire" aria-pressed="false">Fire</button>
       <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-welcome-mode="water" aria-pressed="false">Water</button>
       <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
     </div>
     <p class="welcome-theme-note" id="welcome-theme-note">Light — porcelain infinite plate</p>
@@ -1399,7 +1398,6 @@ body[data-mode="escape"] .menu-links {
       <button type="button" data-welcome-mode="dark" aria-pressed="false">Dark</button>
       <button type="button" data-welcome-mode="fire" aria-pressed="false">Fire</button>
       <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-welcome-mode="water" aria-pressed="false">Water</button>
       <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
     </div>
     <button type="button" class="welcome-play" id="welcome-play">Got it — play</button>
@@ -1425,7 +1423,6 @@ body[data-mode="escape"] .menu-links {
       <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
       <button type="button" data-mode="fire" aria-pressed="false">Fire</button>
       <button type="button" data-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-mode="water" aria-pressed="false">Water</button>
       <button type="button" data-mode="escape" aria-pressed="false">Escape</button>
     </div>
     <div class="modal-row" id="size-row">
@@ -4457,7 +4454,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       if (fromQuery) {
         themeIndex = THEMES.findIndex((t) => t.id === fromQuery);
       } else {
-        const stored = resolveThemeId(localStorage.getItem(STORAGE_KEY));
+        let stored = resolveThemeId(localStorage.getItem(STORAGE_KEY));
+        // Water was demoted off the production surface (2026-08-10): the
+        // renderer and ?mode=water stay, but a stored session must not strand
+        // the player on a theme with no button back out.
+        if (stored === "water") stored = "light";
         if (stored) themeIndex = THEMES.findIndex((t) => t.id === stored);
         else if (localStorage.getItem(LEGACY_TONE_KEY) === "dark") {
           themeIndex = THEMES.findIndex((t) => t.id === "dark");
@@ -7578,7 +7579,6 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     dark: "Dark — night-iron infinite plate",
     fire: "Fire — finite magma pit",
     plague: "Plague — verdigris mycelium specimen",
-    water: "Water — finite raft, half under the tide",
     escape: "Escape — minesweeper with a slow rift behind you",
   };
 
@@ -8859,7 +8859,6 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       modes: [
         { mode: "fire", label: "Fire" },
         { mode: "plague", label: "Plague" },
-        { mode: "water", label: "Water" },
       ],
     },
     fire: {

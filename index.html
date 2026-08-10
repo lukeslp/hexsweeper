@@ -14,11 +14,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Hexsweeper — Light, Dark, Fire, Plague, Water, Escape</title>
-<meta name="description" content="Hexagonal minesweeper: Light/Dark plates, Fire, Plague, a half-submerged Water tide, and Escape rift chase.">
+<title>Hexsweeper — Light, Dark, Fire, Plague, Escape</title>
+<meta name="description" content="Hexagonal minesweeper: Light/Dark plates, Fire, Plague, and Escape rift chase.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hexsweeper">
-<meta property="og:description" content="Hexagonal minesweeper: six neighbors instead of eight, across six boards.">
+<meta property="og:description" content="Hexagonal minesweeper: six neighbors instead of eight, across five boards.">
 <meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/">
 <meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/home-og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -957,7 +957,6 @@ body[data-mode="escape"] .menu-links {
       <button type="button" data-welcome-mode="dark" aria-pressed="false">Dark</button>
       <button type="button" data-welcome-mode="fire" aria-pressed="false">Fire</button>
       <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-welcome-mode="water" aria-pressed="false">Water</button>
       <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
     </div>
     <p class="welcome-theme-note" id="welcome-theme-note">Light — porcelain infinite plate</p>
@@ -979,7 +978,6 @@ body[data-mode="escape"] .menu-links {
       <button type="button" data-welcome-mode="dark" aria-pressed="false">Dark</button>
       <button type="button" data-welcome-mode="fire" aria-pressed="false">Fire</button>
       <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-welcome-mode="water" aria-pressed="false">Water</button>
       <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
     </div>
     <button type="button" class="welcome-play" id="welcome-play">Got it — play</button>
@@ -1005,7 +1003,6 @@ body[data-mode="escape"] .menu-links {
       <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
       <button type="button" data-mode="fire" aria-pressed="false">Fire</button>
       <button type="button" data-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-mode="water" aria-pressed="false">Water</button>
       <button type="button" data-mode="escape" aria-pressed="false">Escape</button>
     </div>
     <div class="modal-row" id="size-row">
@@ -1866,7 +1863,11 @@ body[data-mode="escape"] .menu-links {
       if (fromQuery) {
         themeIndex = THEMES.findIndex((t) => t.id === fromQuery);
       } else {
-        const stored = resolveThemeId(localStorage.getItem(STORAGE_KEY));
+        let stored = resolveThemeId(localStorage.getItem(STORAGE_KEY));
+        // Water was demoted off the production surface (2026-08-10): the
+        // renderer and ?mode=water stay, but a stored session must not strand
+        // the player on a theme with no button back out.
+        if (stored === "water") stored = "light";
         if (stored) themeIndex = THEMES.findIndex((t) => t.id === stored);
         else if (localStorage.getItem(LEGACY_TONE_KEY) === "dark") {
           themeIndex = THEMES.findIndex((t) => t.id === "dark");
@@ -4987,7 +4988,6 @@ body[data-mode="escape"] .menu-links {
     dark: "Dark — night-iron infinite plate",
     fire: "Fire — finite magma pit",
     plague: "Plague — verdigris mycelium specimen",
-    water: "Water — finite raft, half under the tide",
     escape: "Escape — minesweeper with a slow rift behind you",
   };
 
@@ -6268,7 +6268,6 @@ body[data-mode="escape"] .menu-links {
       modes: [
         { mode: "fire", label: "Fire" },
         { mode: "plague", label: "Plague" },
-        { mode: "water", label: "Water" },
       ],
     },
     fire: {

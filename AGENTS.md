@@ -11,7 +11,7 @@ Saved edits on Drummer are live on the public site. Prefer: edit → verify loca
 
 ## Product surface
 
-Production is **only** Light / Dark / Fire / Plague / Water / Escape in `index.html`. Do not re-expose the skin lab from the main game chrome. Lab files stay for technique reference.
+Production is **only** Light / Dark / Fire / Plague / Escape in `index.html`. (Water was demoted 2026-08-10: renderer and `?mode=water` deep link remain, and `collection/theme-water.html` archives it, but it has no button and storage never restores it.) Do not re-expose the skin lab from the main game chrome. Lab files stay for technique reference.
 
 ## Docs to keep in sync
 
