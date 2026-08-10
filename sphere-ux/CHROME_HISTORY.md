@@ -57,7 +57,8 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | 2026-08-10 | Bloom minimized to six: Dig/Flag tile out (Flag lives on the dock), Bg/Shell/Dug collapsed to one **Light/Dark** cycle (sun/moon). Axis machinery kept for a future three-adjusts variant | **Current default** |
 | 2026-08-10 | `?dock=center` — the clex axial ring returns: flower at viewport center over the blurred sphere, Reset + Dig/Flag join it, center tile closes, background tap (off the sphere disk, via `getSphereScreen`) opens. No dock; corner ? stays | **Trial** — compare against the six-tile default |
 | 2026-08-10 | **Four-tile row** (discuss --debate verdict): Theme · Size · Surface (3D/Flat/Ink curated 3-state) · Marks; Invert + Effects (new Auto/Full/Reduced) moved to ? modal Controls pills; seed icon = hex-nut settings. Center mode = true 7-hex flower | **Current default** |
-| 2026-08-10 | `?dome=1` — dome retry on the center flower (radially symmetric, bulges at the player) | **Trial** |
+| 2026-08-10 | `?dome=1` — dome retry on the center flower; inverted to a **bowl** per Luke (center recessed, rim rolled toward the player, larger: 24°/72px) | **Trial** |
+| 2026-08-10 | Harness note: under `--virtual-time-budget` the compositor can go idle and **starve every queued rAF** (bloom renders schedule via rAF) — a pump can't bootstrap itself either. When headless captures come up empty but the code is sound, verify on a live browser; Luke's device screenshots are the ground truth channel | **Process** |
 | 2026-08-10 | `?seed=bare` — idle dock is three naked glyphs; hex faces appear on activation | **Trial** |
 | 2026-08-10 | All variants integrated into the **uxperiments harness**: `dr.eamer.dev/uxperiments/hexdock/` — live builds + frozen archives (nine-tile, dome, split) + shelved concepts. New experiments should land there even when they are not the chosen candidate | **Process** |
 

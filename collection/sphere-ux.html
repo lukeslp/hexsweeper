@@ -7271,16 +7271,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    *
    * Seven hexes, one perfect ring — the flower the clex study promised.
    */
-  const DOME_TILT = 14; // deg at ring-1
-  const DOME_LIFT = 34; // px translateZ at the center tile
+  const DOME_TILT = 24; // deg at ring-1 — leaning toward the viewer
+  const DOME_LIFT = 72; // px translateZ at the rim
 
+  /**
+   * Bowl, not bulge (Luke, 2026-08-10: "dome the other direction, larger").
+   * The flower is a dish you look into: center recessed, rim rolled toward
+   * the player — ring tiles hinge on their inner edges with negative tilt
+   * and ride forward on translateZ; 1/cos keeps the comb closed.
+   */
   function applyCenterDome(el, dx, dy, hex) {
     if (!DOME) return;
     const d = Math.hypot(dx, dy);
     const t = Math.min(1, d / (hex * 2.2 || 1));
-    // Bulge: center forward, ring leaning back on inner-edge hinges.
-    el.style.setProperty("--dome", (DOME_TILT * t).toFixed(2) + "deg");
-    el.style.setProperty("--dz", (DOME_LIFT * (1 - t * t)).toFixed(1) + "px");
+    el.style.setProperty("--dome", (-DOME_TILT * t).toFixed(2) + "deg");
+    el.style.setProperty("--dz", (DOME_LIFT * t * t).toFixed(1) + "px");
     const k = 1 / Math.cos((DOME_TILT * t * Math.PI) / 180);
     el.style.setProperty("--dscale", k.toFixed(4));
   }
@@ -8526,7 +8531,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         applyCenterDome(closeEl, 0, 0, 1);
         closeEl.classList.add("folded");
         closeEl.dataset.delay = "0";
-        stage.appendChild(closeEl);
+        // First in DOM = painted under the forward-riding rim (siblings have
+        // no shared 3D context, so translateZ does not sort them).
+        stage.insertBefore(closeEl, stage.firstChild);
       }
     }
 
