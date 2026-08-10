@@ -787,12 +787,12 @@
 /* Tiles flip up a touch toward the player on hover / keyboard focus.
    Snappier than the fold: the lift must not ride --fold-ms (340ms in
    center mode read as lag, not response). */
-.hb-hex.is-primary.shown:hover,
-.hb-hex.is-primary.shown:focus-visible {
+.hex-bloom[data-dome="true"] .hb-hex.is-primary.shown:hover,
+.hex-bloom[data-dome="true"] .hb-hex.is-primary.shown:focus-visible {
   --hov: 14px;
   transition-duration: 130ms;
 }
-.hb-hex.is-primary.shown:active {
+.hex-bloom[data-dome="true"] .hb-hex.is-primary.shown:active {
   --hov: 7px;
 }
 

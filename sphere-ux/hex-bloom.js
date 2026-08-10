@@ -172,7 +172,7 @@
   ];
   const FIXED_CENTER_SLOTS = [
     { q: 0, r: -1 }, // Light / Dark — NW
-    { q: 1, r: -1 }, // Theme-style options parent — NE
+    { q: 1, r: -1 }, // Indicator/display parent — NE
     { q: -1, r: 0 }, // Undo — W
     { q: 1, r: 0 }, // Flag — E
     { q: -1, r: 1 }, // Home — SW
@@ -248,6 +248,16 @@
     drag:
       '<path d="M12 4v16"/><path d="m8 8 4-4 4 4"/><path d="m8 16 4 4 4-4"/>' +
       '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
+    invertOff:
+      '<circle cx="12" cy="12" r="8" fill="#fff" stroke="#000"/>',
+    invertX:
+      '<circle cx="12" cy="12" r="8" fill="#fff" stroke="#000"/>' +
+      '<path d="M12 4a8 8 0 0 1 0 16Z" fill="#000" stroke="none"/>',
+    invertY:
+      '<circle cx="12" cy="12" r="8" fill="#fff" stroke="#000"/>' +
+      '<path d="M4 12a8 8 0 0 0 16 0Z" fill="#000" stroke="none"/>',
+    invertBoth:
+      '<circle cx="12" cy="12" r="8" fill="#000" stroke="#000"/>',
     more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
     // Menu affordance — hollow hex (board language)
     menu:
@@ -269,6 +279,24 @@
     sliders:
       '<path d="M4 6h5M13 6h7M4 12h10M18 12h2M4 18h2M10 18h10"/>' +
       '<path d="M9 3v6M14 9v6M10 15v6"/>',
+    bang: '<path d="M12 3.5v12"/><path d="M12 20.5h.01"/>',
+    countNumbers:
+      '<text x="12" y="15.5" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="8.2" font-weight="700">123</text>',
+    countHex:
+      '<path d="M12 3.5 19.4 7.8v8.4L12 20.5l-7.4-4.3V7.8L12 3.5Z"/>' +
+      '<path d="M12 8 15.5 10v4L12 16l-3.5-2v-4L12 8Z"/>',
+    seamsOn:
+      '<path d="m8 3.7 4 2.3v4.6l-4 2.3-4-2.3V6l4-2.3Z"/>' +
+      '<path d="m16 11.1 4 2.3V18l-4 2.3-4-2.3v-4.6l4-2.3Z"/>' +
+      '<path d="m16 3.7 4 2.3v4.6l-4 2.3-4-2.3V6l4-2.3Z"/>',
+    seamsOff:
+      '<path d="m12 3.5 7.4 4.3v8.4L12 20.5l-7.4-4.3V7.8L12 3.5Z"/>' +
+      '<path d="M4 20 20 4"/>',
+    depth3d:
+      '<path d="m12 3.5 7 4-7 4-7-4 7-4Z"/>' +
+      '<path d="m5 11.5 7 4 7-4M5 15.5l7 4 7-4"/>',
+    depthFlat:
+      '<path d="m12 7 8 4.5-8 4.5-8-4.5L12 7Z"/>',
     flipX:
       '<path d="M12 4v16"/><path d="M4 12h6"/><path d="M14 12h6"/><path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/>',
     flipY:
@@ -688,6 +716,15 @@
       return axis === "y" ? !!inv.y : !!inv.x;
     }
 
+    function invertIcon() {
+      const x = invertGet("x");
+      const y = invertGet("y");
+      if (x && y) return "invertBoth";
+      if (x) return "invertX";
+      if (y) return "invertY";
+      return "invertOff";
+    }
+
     function currentMode() {
       return game.getState().flagMode ? "Flag" : "Dig";
     }
@@ -779,6 +816,40 @@
       const [id, lab] = INDICATORS[(i + 1) % INDICATORS.length];
       game.setCountStyle(id, { syncSurface: false });
       announce("Indicators · " + lab);
+    }
+
+    function indicatorsAreHexes() {
+      return game.getState().countStyle === "rings";
+    }
+
+    function toggleIndicatorForm() {
+      const hexes = !indicatorsAreHexes();
+      game.setCountStyle(hexes ? "rings" : "numerals", {
+        syncSurface: false,
+      });
+      announce("Indicators · " + (hexes ? "Inner hex" : "Numerals"));
+    }
+
+    function indicatorFormIcon() {
+      return indicatorsAreHexes() ? "countHex" : "countNumbers";
+    }
+
+    function seamsIcon() {
+      return seamsOn() ? "seamsOn" : "seamsOff";
+    }
+
+    function depthIs3d() {
+      return game.getState().relief !== "flush";
+    }
+
+    function toggleDepth() {
+      const to3d = !depthIs3d();
+      game.setRelief(to3d ? "extruded" : "flush");
+      announce("Depth · " + (to3d ? "3D" : "Flush"));
+    }
+
+    function depthIcon() {
+      return depthIs3d() ? "depth3d" : "depthFlat";
     }
 
     /**
@@ -979,40 +1050,45 @@
         return [
           all[0],
           {
-            id: "theme",
-            label: "Options",
-            icon: "brush",
+            id: "display",
+            label: "Indicators",
+            icon: "bang",
             iconOnly: true,
             hoverSub: true,
             aria: () =>
-              "Board options. Hover or activate for size, seams, and indicators.",
+              "Board indicators. Hover or activate for indicator form, seams, and depth.",
             sub: () => [
               {
-                id: "size",
-                label: () => "Size " + currentSize(),
+                id: "indicator-form",
+                label: () =>
+                  indicatorsAreHexes() ? "Inner hex" : "Numerals",
                 aria: () =>
-                  "Size: " + currentSize() + ". Activate to cycle board size.",
-                icon: "size",
+                  "Indicators: " +
+                  (indicatorsAreHexes() ? "inner hex" : "numerals") +
+                  ". Activate to toggle.",
+                icon: indicatorFormIcon,
                 iconOnly: true,
-                run: cycleSize,
+                run: toggleIndicatorForm,
               },
               {
                 id: "seams",
                 label: () => "Seams " + (seamsOn() ? "on" : "off"),
                 aria: () =>
                   "Seams " + (seamsOn() ? "on" : "off") + ". Activate to toggle.",
-                icon: "style",
+                icon: seamsIcon,
                 iconOnly: true,
                 run: toggleSeams,
               },
               {
-                id: "indicators",
-                label: () => "Indicators " + indicatorLabel(),
+                id: "depth",
+                label: () => (depthIs3d() ? "3D" : "Flush"),
                 aria: () =>
-                  "Indicators: " + indicatorLabel() + ". Activate to cycle.",
-                icon: "indicators",
+                  "Depth: " +
+                  (depthIs3d() ? "3D" : "flush") +
+                  ". Activate to toggle.",
+                icon: depthIcon,
                 iconOnly: true,
-                run: cycleIndicators,
+                run: toggleDepth,
               },
             ],
           },
@@ -1070,7 +1146,7 @@
                           : "off";
                   return "Invert " + mode + ". Activate to cycle.";
                 },
-                icon: "drag",
+                icon: invertIcon,
                 iconOnly: true,
                 run: cycleInvert,
               },
@@ -1270,7 +1346,7 @@
       const py = cy + p.y;
       const items = cat.sub();
       const offsets = FIXED_CENTER
-        ? cat.id === "theme"
+        ? cat.id === "display"
           ? [
               { q: 0, r: -1 },
               { q: 1, r: -1 },
@@ -1289,6 +1365,8 @@
         const off = offsets[j] || DIRECTIONS[dirIndex];
         const o = hexToPixel(off.q, off.r, HEX);
         const isSwatch = !!item.themeSwatch;
+        const itemIcon =
+          typeof item.icon === "function" ? item.icon() : item.icon;
         const itemLabel =
           typeof item.label === "function" ? item.label() : item.label;
         const itemAria =
@@ -1299,15 +1377,15 @@
           cls:
             "is-sub" +
             (item.chosen && item.chosen() ? " is-chosen" : "") +
-            (item.icon ? " has-icon" : "") +
+            (itemIcon ? " has-icon" : "") +
             (isSwatch ? " is-theme-swatch" : ""),
           label: itemLabel,
           labelSize: item.labelSize,
           ariaLabel: itemAria,
-          icon: isSwatch ? null : item.icon,
+          icon: isSwatch ? null : itemIcon,
           iconOnly: isSwatch
             ? true
-            : !!item.icon && item.iconOnly !== false && !item.labelKeep,
+            : !!itemIcon && item.iconOnly !== false && !item.labelKeep,
         });
         if (isSwatch) {
           const sw = themeSwatchVars(item.themeSwatch);
@@ -1323,10 +1401,10 @@
           el.appendChild(dot);
         }
         // Flag leaf paints red like in-game flags
-        if (item.icon === "flag") el.classList.add("is-flag-icon");
-        if (item.icon === "dig") el.classList.add("is-dig-icon");
+        if (itemIcon === "flag") el.classList.add("is-flag-icon");
+        if (itemIcon === "dig") el.classList.add("is-dig-icon");
         // Subs with icons still keep short labels when useful
-        if (item.icon && itemLabel && !item.iconOnly && !isSwatch) {
+        if (itemIcon && itemLabel && !item.iconOnly && !isSwatch) {
           el.classList.add("is-sub-icon-label");
           if (el._labelEl)
             el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
@@ -1350,6 +1428,9 @@
                 : cat.id + ": " + freshLabel;
             el.setAttribute("aria-label", freshAria);
             if (el._labelEl) el._labelEl.textContent = freshLabel;
+            const freshIcon =
+              typeof fresh.icon === "function" ? fresh.icon() : fresh.icon;
+            if (freshIcon) setHexIcon(el, freshIcon);
           }
           refreshChosen(cat.id);
           refreshPrimaryLabels();
@@ -1854,7 +1935,7 @@
     // through motion instead of a baked-in viewing angle — and sits perfectly
     // aligned at rest. rAF-lerped; the stage's own transform transition is
     // disabled in center mode so this does not fight it.
-    if (DOCK_CENTER && matchMedia("(pointer: fine)").matches) {
+    if (DOCK_CENTER && DOME && matchMedia("(pointer: fine)").matches) {
       let px = 0;
       let py = 0;
       let txp = 0;
@@ -1889,6 +1970,7 @@
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
       root.dataset.iconMenu = "true";
+      if (DOME) root.dataset.dome = "true";
       if (DOCK_CONTEXT) root.dataset.contextMenu = "true";
       // The background is the menu activator: a quick tap that lands off the
       // sphere's disk (game.getSphereScreen) opens the flower. In contextual
