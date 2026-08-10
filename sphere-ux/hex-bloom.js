@@ -278,7 +278,13 @@
       const csRoot = getComputedStyle(root);
       const csDock = dock ? getComputedStyle(dock) : csRoot;
       // CSS: .hex-bloom-dock { bottom: max(2px, env(safe-area-inset-bottom)) }
-      const bottomPad = 2;
+      // Computed style resolves the max()/env() to px — hardcoding 2 put the
+      // petals ~30px low on phones with a home indicator (viewport-fit=cover).
+      let bottomPad = 2;
+      if (dock) {
+        const b = parseFloat(getComputedStyle(dock).bottom);
+        if (Number.isFinite(b) && b >= 0 && b < 120) bottomPad = b;
+      }
       if (dockOpen()) {
         // Final open size = full bloom tiles (--tile-h on root; dock mirrors it)
         const th =
@@ -373,8 +379,14 @@
     }
 
     function place(el, x, y, originX, originY) {
+      // Bottom-anchored, same as the dock's CSS seat: a height-only viewport
+      // change (mobile URL bar show/hide) then moves dock and petals together
+      // with zero re-layout, instead of detaching them for a frame and
+      // rebuilding. y stays in top-down stage coordinates for the fold math.
+      const stageH = stage.clientHeight || global.innerHeight;
       el.style.left = x + "px";
-      el.style.top = y + "px";
+      el.style.bottom = stageH - y + "px";
+      el.style.top = "auto";
       el.style.setProperty("--tx", "0px");
       el.style.setProperty("--ty", "0px");
       const dx = x - originX;
@@ -1350,18 +1362,26 @@
     });
 
     let raf;
+    // Seeded now, not 0 — otherwise the first URL-bar height change would
+    // read as a width change and trigger the rebuild this gate exists to stop.
+    let lastStageW = stage.clientWidth || global.innerWidth;
     window.addEventListener("resize", () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         setRiseVar();
+        // Height-only changes are the mobile URL bar showing/hiding — petals
+        // are bottom-anchored, so they already rode along with the dock.
+        // Rebuilding on those is what made the open bloom jitter and resettle.
+        const w = stage.clientWidth || global.innerWidth;
+        const widthChanged = Math.abs(w - lastStageW) > 1;
+        lastStageW = w;
+        if (!widthChanged) return;
         if (state.phase === "open") {
           // rebuild petal positions without losing open state
           const active = state.active;
           renderBloom({ petals: true });
           state.active = active;
           bloomPetals();
-        } else if (state.phase === "rising" || state.phase === "falling") {
-          setRiseVar();
         }
       });
     });

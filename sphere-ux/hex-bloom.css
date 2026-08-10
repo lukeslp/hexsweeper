@@ -166,7 +166,10 @@
   width: var(--tile-w);
   height: var(--tile-h);
   margin-left: calc(var(--tile-w) / -2);
-  margin-top: calc(var(--tile-h) / -2);
+  /* Placed via `bottom` (see place()) — the centering margin lives on the
+     bottom side so tiles stay glued to the dock when the mobile URL bar
+     resizes the viewport. Dock tiles (.is-dock) reset margin to 0. */
+  margin-bottom: calc(var(--tile-h) / -2);
   display: grid;
   place-items: center;
   clip-path: var(--hex-clip);
