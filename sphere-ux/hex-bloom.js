@@ -77,6 +77,7 @@
    */
   const DOME_TILT = 28; // deg at ring-1 — leaning toward the viewer
   const DOME_LIFT = 116; // px translateZ at the rim
+  const DOME_SHRINK = 0.1; // rim tiles scale to 0.9 — air for the tilt
 
   /**
    * Bowl, not bulge (Luke, 2026-08-10: "dome the other direction, larger").
@@ -98,8 +99,11 @@
     const t = Math.min(1, d / (hex * 2.2 || 1));
     el.style.setProperty("--dome", (-DOME_TILT * t).toFixed(2) + "deg");
     el.style.setProperty("--dz", (DOME_LIFT * t * t).toFixed(1) + "px");
-    const k = 1 / Math.cos((DOME_TILT * t * Math.PI) / 180);
-    el.style.setProperty("--dscale", k.toFixed(4));
+    // Outer tiles shrink slightly instead of the old 1/cos growth: the rim
+    // rides toward the viewer and perspective already enlarges it (~20% at
+    // 116px/700px), so growing it too made angled neighbors overlap. A small
+    // shrink gives the tilt room and reads as the bowl curving away.
+    el.style.setProperty("--dscale", (1 - DOME_SHRINK * t).toFixed(4));
   }
 
   const DOCK_CENTER = (() => {

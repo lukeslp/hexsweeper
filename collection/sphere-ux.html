@@ -984,14 +984,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
   pointer-events: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
+  /* Stage / .hb-hex reduced-motion handling lives in the !important block
+     near the end of this file — only the dock's own fade is decided here. */
   .hex-bloom-dock {
     transition: opacity 0.12s ease;
-  }
-  .hex-bloom-stage {
-    transition: opacity 0.12s ease;
-  }
-  .hex-bloom-dock .hb-hex.is-dock {
-    transition: none;
   }
 }
 @media (max-width: 400px) {
@@ -1459,11 +1455,14 @@ body[data-sphere-chrome="dark"] .cz-dot {
     rotate3d(var(--ax, 0), var(--ay, 1), 0, calc(var(--dome, 0deg) + var(--domehov, 0deg)))
     scale(var(--dscale, 1));
 }
-/* Tiles flip up a touch toward the player on hover / keyboard focus. */
+/* Tiles flip up a touch toward the player on hover / keyboard focus.
+   Snappier than the fold: the lift must not ride --fold-ms (340ms in
+   center mode read as lag, not response). */
 .hb-hex.is-primary.shown:hover,
 .hb-hex.is-primary.shown:focus-visible {
   --hov: 14px;
   --domehov: -6deg;
+  transition-duration: 130ms;
 }
 .hb-hex.is-primary.shown:active {
   --hov: 7px;
@@ -7339,6 +7338,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    */
   const DOME_TILT = 28; // deg at ring-1 — leaning toward the viewer
   const DOME_LIFT = 116; // px translateZ at the rim
+  const DOME_SHRINK = 0.1; // rim tiles scale to 0.9 — air for the tilt
 
   /**
    * Bowl, not bulge (Luke, 2026-08-10: "dome the other direction, larger").
@@ -7360,8 +7360,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     const t = Math.min(1, d / (hex * 2.2 || 1));
     el.style.setProperty("--dome", (-DOME_TILT * t).toFixed(2) + "deg");
     el.style.setProperty("--dz", (DOME_LIFT * t * t).toFixed(1) + "px");
-    const k = 1 / Math.cos((DOME_TILT * t * Math.PI) / 180);
-    el.style.setProperty("--dscale", k.toFixed(4));
+    // Outer tiles shrink slightly instead of the old 1/cos growth: the rim
+    // rides toward the viewer and perspective already enlarges it (~20% at
+    // 116px/700px), so growing it too made angled neighbors overlap. A small
+    // shrink gives the tilt room and reads as the bowl curving away.
+    el.style.setProperty("--dscale", (1 - DOME_SHRINK * t).toFixed(4));
   }
 
   const DOCK_CENTER = (() => {

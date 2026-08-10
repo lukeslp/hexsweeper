@@ -248,14 +248,10 @@
   pointer-events: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
+  /* Stage / .hb-hex reduced-motion handling lives in the !important block
+     near the end of this file — only the dock's own fade is decided here. */
   .hex-bloom-dock {
     transition: opacity 0.12s ease;
-  }
-  .hex-bloom-stage {
-    transition: opacity 0.12s ease;
-  }
-  .hex-bloom-dock .hb-hex.is-dock {
-    transition: none;
   }
 }
 @media (max-width: 400px) {
@@ -723,11 +719,14 @@
     rotate3d(var(--ax, 0), var(--ay, 1), 0, calc(var(--dome, 0deg) + var(--domehov, 0deg)))
     scale(var(--dscale, 1));
 }
-/* Tiles flip up a touch toward the player on hover / keyboard focus. */
+/* Tiles flip up a touch toward the player on hover / keyboard focus.
+   Snappier than the fold: the lift must not ride --fold-ms (340ms in
+   center mode read as lag, not response). */
 .hb-hex.is-primary.shown:hover,
 .hb-hex.is-primary.shown:focus-visible {
   --hov: 14px;
   --domehov: -6deg;
+  transition-duration: 130ms;
 }
 .hb-hex.is-primary.shown:active {
   --hov: 7px;
