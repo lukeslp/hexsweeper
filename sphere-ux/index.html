@@ -3,9 +3,9 @@
   File Purpose: Experimental Hexsweeper on a closed hex sphere (Canvas projection).
   Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
   Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
-  Chrome (sphere-ux): three-tile dock — Restart · Menu · Help.
-  Idle: small/low; sides borderless; Menu has hollow-hex icon.
-  Open: dock grows to bloom size, lifts; borders on all three; Menu = ×; fan up.
+  Chrome (sphere-ux): horizon seed blooms to Undo · Close · Flag.
+  Idle: one black half-hidden settings seed.
+  Open: seed rises; Undo · Close · Flag form the keel; five settings fan up.
   See CHROME_HISTORY.md. Legacy IDs kept for sphere.js.
   Notes: Starts zoomed out. Author: Luke Steuber <luke@lukesteuber.com>
 -->
@@ -29,7 +29,7 @@
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
 <link rel="stylesheet" href="dev-chrome.css?v=20260808f">
-<link rel="stylesheet" href="hex-bloom.css?v=20260810z6">
+<link rel="stylesheet" href="hex-bloom.css?v=20260810z7">
 <style>
 /* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
 :root,
@@ -222,6 +222,8 @@ body[data-sphere-chrome="dark"] .settings-stack {
   cursor: pointer;
 }
 .sphere-banner .banner-btn svg { width: 20px; height: 20px; stroke-width: 2; }
+.sphere-banner #banner-undo-btn { color: #18a64a; }
+.sphere-banner #banner-again-btn { color: #ffd400; }
 /* The label still exists for screen readers and carries share progress —
    sphere.js updates this span, never the button, so the icon survives. */
 .sr-only {
@@ -786,16 +788,17 @@ button, a, input[type="range"] { touch-action: manipulation; }
     </button>
     <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="3 7 3 13 9 13"></polyline>
-        <path d="M3.51 13a9 9 0 1 0 2.13-5.36L3 11"></path>
+        <path d="M4 4v5h5"></path>
+        <path d="M4.8 8.2A8.3 8.3 0 1 1 4 16"></path>
       </svg>
       <span class="sr-only">Undo last move</span>
     </button>
     <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="23 4 23 10 17 10"></polyline>
-        <polyline points="1 20 1 14 7 14"></polyline>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        <path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"></path>
+        <path d="M20 3.5V8h-4.5"></path>
+        <path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"></path>
+        <path d="M4 20.5V16h4.5"></path>
       </svg>
       <span class="sr-only">Play again</span>
     </button>
@@ -869,7 +872,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Bottom bar: reset, board size (XS–XL), and Look — background, shell and dug colours, plus indicators. Surface packs are just below. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+      <p>The bottom seed opens Undo, Flag, Reset, board size, theme, warning style and inversion. Surface packs are just below. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
     </div>
     <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -907,8 +910,8 @@ button, a, input[type="range"] { touch-action: manipulation; }
 </div>
 
 <script src="hexasphere.js?v=20260810j"></script>
-<script src="sphere.js?v=20260810l"></script>
-<script src="hex-bloom.js?v=20260810z6"></script>
+<script src="sphere.js?v=20260810m"></script>
+<script src="hex-bloom.js?v=20260810z7"></script>
 <script>
 initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));
 (function () {

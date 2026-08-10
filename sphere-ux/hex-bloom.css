@@ -1,7 +1,7 @@
 /*
  * Hex bloom chrome for sphere-ux.
- * Closed: three dock hexes at bottom (Restart · Menu · Help).
- * Open: bloom roots at the Menu tile and fans upward; Menu becomes Close.
+ * Closed: one black horizon seed at bottom.
+ * Open: bloom roots at the seed; Undo · Close · Flag form its keel.
  * Geometry + fold language from /uxperiments/clex.
  */
 
@@ -14,6 +14,7 @@
   --tile-w-dock: var(--tile-w-dock-idle);
   --tile-h-dock: var(--tile-h-dock-idle);
   --dock-rise: 0px;
+  --seed-sink: 44px;
   --border-w: 1.5px;
   --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   --hb-ink: var(--text-main, #000);
@@ -207,6 +208,10 @@
 .hex-bloom[data-dome="true"] .hex-bloom-stage {
   transform-style: preserve-3d;
   transform-origin: 50% 50%;
+}
+.hex-bloom[data-dome="true"]:not([data-dock-mode="center"]) .hex-bloom-stage {
+  perspective: 760px;
+  perspective-origin: 50% 100%;
 }
 .hex-bloom[data-dock-mode="center"] .hb-hex.shown {
   /* Subtle z-graded shadow; max() clamps the recessed center to zero so a
@@ -494,7 +499,8 @@
    while Flag stays neutral until the mode is actually active. Tile materials
    never change — state lives in the glyphs only. */
 .hex-bloom[data-icon-menu="true"] .cat-home .hb-glyph,
-.hex-bloom[data-icon-menu="true"] .is-center-reset .hb-glyph {
+.hex-bloom[data-icon-menu="true"] .is-center-reset .hb-glyph,
+.hex-bloom[data-icon-menu="true"] .cat-reset .hb-glyph {
   color: #ffd400;
 }
 .hex-bloom[data-icon-menu="true"] .cat-undo .hb-glyph {
@@ -641,6 +647,9 @@
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:focus-visible .hb-glyph {
   opacity: 1;
 }
+.hex-bloom .hb-hex.is-dock-reset .hb-glyph {
+  color: #18a64a;
+}
 /* Flag mode on: the dock flag turns red — full strength in every phase
    (the idle rule above otherwise pins side glyphs to ink at 0.72). */
 .hex-bloom .hb-hex.is-dock-flag.is-flag-icon .hb-glyph {
@@ -689,6 +698,43 @@
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
   opacity: 1;
+}
+
+/* Default and bottom-dome launch from one deliberate horizon tab. Its full
+   88px hex leaves a 44px exposed target; the other two actions retain their
+   seats invisibly so the seed never jumps sideways when it blooms. */
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hex-bloom-dock {
+  --dock-rise: var(--seed-sink);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-side {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.72);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu {
+  width: var(--tile-w);
+  height: var(--tile-h);
+  background: var(--hb-ink);
+  color: var(--hb-paper);
+  filter: none;
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu::before {
+  inset: 0;
+  opacity: 1;
+  background: var(--hb-ink);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  width: 36px;
+  height: 36px;
+  max-width: none;
+  max-height: none;
+  color: var(--hb-paper);
+  transform: translateY(calc(var(--seed-sink) * -0.48));
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="open"] .hb-hex.is-dock-menu .hb-glyph,
+.hex-bloom[data-bottom-seed="true"][data-phase="falling"] .hb-hex.is-dock-menu .hb-glyph {
+  transform: translateY(0);
 }
 
 /* ---- Open: full bloom borders on all three; menu = solid × ---- */
@@ -947,6 +993,11 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom[data-icon-menu="true"]:not([data-dock-mode="center"]) {
     --tile-w: 76px;
     --tile-h: 88px;
+  }
+  .hex-bloom[data-bottom-seed="true"][data-icon-menu="true"]:not([data-dock-mode="center"]) {
+    --tile-w: 92px;
+    --tile-h: 106px;
+    --seed-sink: 53px;
   }
   .hb-hex .hb-label { font-size: 10px; }
 }

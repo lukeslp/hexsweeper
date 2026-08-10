@@ -2445,13 +2445,13 @@
         bannerActions.hidden = false;
       }
       if (shareWinBtn) {
-        shareWinBtn.hidden = false;
-        shareWinBtn.disabled = false;
-        setShareState("idle");
+        shareWinBtn.hidden = !opts.share;
+        shareWinBtn.disabled = !opts.share;
+        if (opts.share) setShareState("idle");
       }
       if (bannerUndoBtn) bannerUndoBtn.hidden = !undoSnapshot;
       pendingShareFile = null;
-      prepareShareFile();
+      if (opts.share) prepareShareFile();
       el.hidden = false;
       el.classList.add("visible");
     }

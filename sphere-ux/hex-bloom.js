@@ -94,8 +94,8 @@
    * outward around its own tangent axis. This matches the sphere behind it:
    * Reset is nearest the viewer; the six rim faces fall away.
    */
-  function domeSeat(dx, dy, hex) {
-    const R = hex * DOME_RADIUS_HEX;
+  function domeSeat(dx, dy, hex, radiusHex, maxPhi) {
+    const R = hex * (radiusHex || DOME_RADIUS_HEX);
     const s = Math.hypot(dx, dy);
     if (s < 1 || !R) {
       return {
@@ -108,7 +108,7 @@
         scale: 1.05,
       };
     }
-    const phi = Math.min(1.1, s / R);
+    const phi = Math.min(maxPhi == null ? 1.1 : maxPhi, s / R);
     const k = (R * Math.sin(phi)) / s;
     return {
       x: dx * k,
@@ -199,7 +199,7 @@
   const DEFAULT_BLOOM_SLOTS = [
     { q: -1, r: -1 }, // Light / Dark — lower left
     { q: 0, r: -2 }, // Warning style — upper left
-    { q: 0, r: -1 }, // Undo — lower center
+    { q: 0, r: -1 }, // Reset — lower center
     { q: 1, r: -1 }, // Invert — lower right
     { q: 1, r: -2 }, // Size — upper right
   ];
@@ -263,21 +263,13 @@
     size:
       '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
-    sizeXS:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.2" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="8.2" font-weight="700">XS</text>',
-    sizeS:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="700">S</text>',
-    sizeM:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10" font-weight="700">M</text>',
-    sizeL:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="700">L</text>',
-    sizeXL:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.2" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="8.2" font-weight="700">XL</text>',
+    // One outline changes physical size across the five board sizes. The
+    // silhouette communicates scale before the tooltip has to explain it.
+    sizeXS: '<path d="m12 7.4 4 2.3v4.6l-4 2.3-4-2.3V9.7l4-2.3Z"/>',
+    sizeS: '<path d="m12 5.7 5.5 3.1v6.4l-5.5 3.1-5.5-3.1V8.8l5.5-3.1Z"/>',
+    sizeM: '<path d="m12 4 7 4v8l-7 4-7-4V8l7-4Z"/>',
+    sizeL: '<path d="m12 2.3 8.5 4.9v9.6L12 21.7l-8.5-4.9V7.2L12 2.3Z"/>',
+    sizeXL: '<path d="m12 .6 10 5.7v11.4l-10 5.7-10-5.7V6.3L12 .6Z"/>',
     // Theme circle remains available to archived/default variants.
     theme: '<circle cx="12" cy="12" r="8"/>',
     // Conventional board-theme affordance: handle, ferrule, and bristles.
@@ -303,32 +295,16 @@
     drag:
       '<path d="M12 4v16"/><path d="m8 8 4-4 4 4"/><path d="m8 16 4 4 4-4"/>' +
       '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
-    // Opposing arrows make the operation legible; the two markers encode the
-    // four axis states (rings = normal, dots = inverted).
-    invertOff:
-      '<path d="M4.5 9.5c.8-3.7 3.3-5.8 6.4-5.8 2.5 0 4.4 1.3 5.6 3.4"/>' +
-      '<path d="m13.6 6.6 3.1.7.7-3.1"/>' +
-      '<path d="M19.5 14.5c-.8 3.7-3.3 5.8-6.4 5.8-2.5 0-4.4-1.3-5.6-3.4"/>' +
-      '<path d="m10.4 17.4-3.1-.7-.7 3.1"/>' +
-      '<circle cx="5" cy="16.5" r="1.8"/><circle cx="19" cy="7.5" r="1.8"/>',
+    // The disk is the board's two-axis inversion diagram: empty, vertical
+    // half, horizontal half, full. It changes as one coherent silhouette.
+    invertOff: '<circle cx="12" cy="12" r="8.5" fill="#fff"/>',
     invertX:
-      '<path d="M4.5 9.5c.8-3.7 3.3-5.8 6.4-5.8 2.5 0 4.4 1.3 5.6 3.4"/>' +
-      '<path d="m13.6 6.6 3.1.7.7-3.1"/>' +
-      '<path d="M19.5 14.5c-.8 3.7-3.3 5.8-6.4 5.8-2.5 0-4.4-1.3-5.6-3.4"/>' +
-      '<path d="m10.4 17.4-3.1-.7-.7 3.1"/>' +
-      '<circle cx="5" cy="16.5" r="1.8" fill="currentColor"/><circle cx="19" cy="7.5" r="1.8"/>',
+      '<circle cx="12" cy="12" r="8.5" fill="#fff"/>' +
+      '<path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none"/>',
     invertY:
-      '<path d="M4.5 9.5c.8-3.7 3.3-5.8 6.4-5.8 2.5 0 4.4 1.3 5.6 3.4"/>' +
-      '<path d="m13.6 6.6 3.1.7.7-3.1"/>' +
-      '<path d="M19.5 14.5c-.8 3.7-3.3 5.8-6.4 5.8-2.5 0-4.4-1.3-5.6-3.4"/>' +
-      '<path d="m10.4 17.4-3.1-.7-.7 3.1"/>' +
-      '<circle cx="5" cy="16.5" r="1.8"/><circle cx="19" cy="7.5" r="1.8" fill="currentColor"/>',
-    invertBoth:
-      '<path d="M4.5 9.5c.8-3.7 3.3-5.8 6.4-5.8 2.5 0 4.4 1.3 5.6 3.4"/>' +
-      '<path d="m13.6 6.6 3.1.7.7-3.1"/>' +
-      '<path d="M19.5 14.5c-.8 3.7-3.3 5.8-6.4 5.8-2.5 0-4.4-1.3-5.6-3.4"/>' +
-      '<path d="m10.4 17.4-3.1-.7-.7 3.1"/>' +
-      '<circle cx="5" cy="16.5" r="1.8" fill="currentColor"/><circle cx="19" cy="7.5" r="1.8" fill="currentColor"/>',
+      '<circle cx="12" cy="12" r="8.5" fill="#fff"/>' +
+      '<path d="M3.5 12a8.5 8.5 0 0 1 17 0Z" fill="currentColor" stroke="none"/>',
+    invertBoth: '<circle cx="12" cy="12" r="8.5" fill="currentColor"/>',
     more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
     // Menu affordance — hollow hex (board language)
     menu:
@@ -362,8 +338,9 @@
       '<path d="M9 3v6M14 9v6M10 15v6"/>',
     bang: '<path d="M12 3.5v12"/><path d="M12 20.5h.01"/>',
     warningNumbersDepth:
-      '<text x="12" y="13.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="9.2" font-weight="700">123</text>' +
-      '<path d="m6 16.2 6 3.2 6-3.2"/>',
+      '<path d="m12 4.4 7 4v8l-7 4-7-4v-8l7-4Z" fill="currentColor" stroke="none" opacity=".24" transform="translate(1 1)"/>' +
+      '<path d="m12 3 7 4v8l-7 4-7-4V7l7-4Z" fill="#fff"/>' +
+      '<text x="12" y="14.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="9.8" font-weight="700">3</text>',
     warningNumbersFlat:
       '<text x="12" y="15.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="11" font-weight="700">123</text>',
     warningMonoDepth:
@@ -696,6 +673,12 @@
       }
       if (!Number.isFinite(rise) || rise === 0) {
         rise = (stage.clientWidth || global.innerWidth) <= 400 ? -28 : -36;
+      }
+      if (root.dataset.bottomSeed === "true") {
+        const sink =
+          parseFloat(csRoot.getPropertyValue("--seed-sink")) ||
+          ((stage.clientWidth || global.innerWidth) <= 400 ? 53 : 44);
+        return sink - rise;
       }
       return (th - thIdle) / 2 - rise;
     }
@@ -1349,11 +1332,20 @@
             cycle: cycleSize,
           },
         ];
-        // Flag remains a permanent dock action in the bottom-bloom variants;
-        // the centered flower has no dock, so it owns a flag tile in the ring.
-        return FIXED_CENTER
-          ? menu
-          : menu.filter((category) => category.id !== "flagmode");
+        // Undo and Flag live beside the raised seed in bottom variants. Reset
+        // takes Undo's former crown seat, preserving seven distinct actions.
+        if (FIXED_CENTER) return menu;
+        const reset = {
+          id: "reset",
+          label: "Reset",
+          icon: "reset",
+          iconOnly: true,
+          aria: () => "Restart game",
+          cycle: doReset,
+        };
+        return menu
+          .filter((category) => category.id !== "flagmode")
+          .map((category) => (category.id === "undo" ? reset : category));
       }
       if (DOCK_CONTEXT) {
         // The dock is hidden in both center variants. Home and Flag occupy
@@ -1445,9 +1437,11 @@
         dockBtn.setAttribute("aria-label", "Open game menu");
         dockBtn.setAttribute("aria-expanded", "false");
       }
+      const sideActionsShown = root.dataset.bottomSeed !== "true" || open;
       if (dockResetBtn) {
         dockResetBtn.hidden = false;
-        dockResetBtn.setAttribute("aria-hidden", "false");
+        dockResetBtn.setAttribute("aria-hidden", sideActionsShown ? "false" : "true");
+        dockResetBtn.tabIndex = sideActionsShown ? 0 : -1;
       }
       if (dockHelpBtn) {
         dockHelpBtn.hidden = false;
@@ -1464,6 +1458,8 @@
           "aria-label",
           on ? "Flag mode on. Activate for dig mode." : "Flag mode. Activate to flag digs."
         );
+        dockFlagBtn.setAttribute("aria-hidden", sideActionsShown ? "false" : "true");
+        dockFlagBtn.tabIndex = sideActionsShown ? 0 : -1;
       }
     }
 
@@ -1783,23 +1779,21 @@
       dock.setAttribute("role", "toolbar");
       dock.setAttribute("aria-label", "Game chrome");
 
-      // The bare seed makes the left shortcut Undo: it is useful during play
-      // without duplicating Reset, which remains in the opened flower.
-      // Other dock variants retain the established Restart shortcut.
+      // Undo and Flag form the action keel beside the raised black seed.
+      // Reset remains available in the settings crown above.
       dockResetBtn = makeHex({
         cls: "is-dock is-dock-side is-dock-reset",
         label: "",
-        icon: SEED_BARE ? "undo" : "reset",
+        icon: "undo",
         iconOnly: true,
-        ariaLabel: SEED_BARE ? "Undo move" : "Restart game",
+        ariaLabel: "Undo move",
       });
-      dockResetBtn.title = SEED_BARE ? "Undo" : "Restart";
+      dockResetBtn.title = "Undo";
       dockResetBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         ignoreOutsideUntil = Date.now() + 250;
-        if (SEED_BARE) doUndo();
-        else doReset();
+        doUndo();
       });
 
       // Menu — center, primary (opens bloom / closes when open)
@@ -1822,6 +1816,11 @@
         if (state.phase === "open" || state.phase === "rising") collapse();
         else if (state.phase === "closed") expand();
       });
+      if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        dockBtn.addEventListener("pointerenter", () => {
+          if (state.phase === "closed") expand();
+        });
+      }
 
       // Flag — right of Menu: dig/flag mode without opening the bloom.
       // On mobile there is no right-click; this is the most-flipped switch
@@ -1934,9 +1933,13 @@
           el.removeAttribute("aria-haspopup");
           el.setAttribute("aria-expanded", "false");
         }
-        const seat = DOCK_CENTER && DOME ? domeSeat(p.x, p.y, HEX) : null;
+        const seat = DOME
+          ? DOCK_CENTER
+            ? domeSeat(p.x, p.y, HEX)
+            : domeSeat(p.x, p.y, HEX, 7.2, 0.48)
+          : null;
         place(el, cx + (seat ? seat.x : p.x), cy + (seat ? seat.y : p.y), cx, cy);
-        if (DOCK_CENTER) applyCenterDome(el, seat);
+        if (DOME) applyCenterDome(el, seat);
         el.classList.add("folded");
         // Center mode blooms petal-by-petal: the delay sweeps around the ring
         // by seat angle, so the flower visibly opens clockwise from the top
@@ -2146,6 +2149,8 @@
 
     if (SEED_BARE) root.dataset.seed = "bare";
     if (DEFAULT_BLOOM) root.dataset.iconMenu = "true";
+    if (DEFAULT_BLOOM && !SEED_BARE) root.dataset.bottomSeed = "true";
+    if (DOME) root.dataset.dome = "true";
 
     // Pointer parallax while the flower is open (fine pointers only): the
     // stage tilts a few degrees toward the cursor, so the bowl's depth reads
@@ -2200,7 +2205,6 @@
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
       root.dataset.iconMenu = "true";
-      if (DOME) root.dataset.dome = "true";
       if (DOCK_CONTEXT) root.dataset.contextMenu = "true";
       // The background is the menu activator: a quick tap that lands off the
       // sphere's disk (game.getSphereScreen) opens the flower. In contextual
@@ -2340,6 +2344,7 @@
               : [
                   dockResetBtn,
                   dockBtn,
+                  dockFlagBtn,
                   dockHelpBtn,
                   ...stage.querySelectorAll(
                     ".hb-hex.is-primary.shown, .hb-hex.is-sub.shown"

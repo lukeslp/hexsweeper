@@ -736,8 +736,8 @@ body[data-sphere-chrome="dark"] .cz-dot {
 /* hex-bloom.css */
 /*
  * Hex bloom chrome for sphere-ux.
- * Closed: three dock hexes at bottom (Restart · Menu · Help).
- * Open: bloom roots at the Menu tile and fans upward; Menu becomes Close.
+ * Closed: one black horizon seed at bottom.
+ * Open: bloom roots at the seed; Undo · Close · Flag form its keel.
  * Geometry + fold language from /uxperiments/clex.
  */
 
@@ -750,6 +750,7 @@ body[data-sphere-chrome="dark"] .cz-dot {
   --tile-w-dock: var(--tile-w-dock-idle);
   --tile-h-dock: var(--tile-h-dock-idle);
   --dock-rise: 0px;
+  --seed-sink: 44px;
   --border-w: 1.5px;
   --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   --hb-ink: var(--text-main, #000);
@@ -943,6 +944,10 @@ body[data-sphere-chrome="dark"] .cz-dot {
 .hex-bloom[data-dome="true"] .hex-bloom-stage {
   transform-style: preserve-3d;
   transform-origin: 50% 50%;
+}
+.hex-bloom[data-dome="true"]:not([data-dock-mode="center"]) .hex-bloom-stage {
+  perspective: 760px;
+  perspective-origin: 50% 100%;
 }
 .hex-bloom[data-dock-mode="center"] .hb-hex.shown {
   /* Subtle z-graded shadow; max() clamps the recessed center to zero so a
@@ -1230,7 +1235,8 @@ body[data-sphere-chrome="dark"] .cz-dot {
    while Flag stays neutral until the mode is actually active. Tile materials
    never change — state lives in the glyphs only. */
 .hex-bloom[data-icon-menu="true"] .cat-home .hb-glyph,
-.hex-bloom[data-icon-menu="true"] .is-center-reset .hb-glyph {
+.hex-bloom[data-icon-menu="true"] .is-center-reset .hb-glyph,
+.hex-bloom[data-icon-menu="true"] .cat-reset .hb-glyph {
   color: #ffd400;
 }
 .hex-bloom[data-icon-menu="true"] .cat-undo .hb-glyph {
@@ -1377,6 +1383,9 @@ body[data-sphere-chrome="dark"] .cz-dot {
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:focus-visible .hb-glyph {
   opacity: 1;
 }
+.hex-bloom .hb-hex.is-dock-reset .hb-glyph {
+  color: #18a64a;
+}
 /* Flag mode on: the dock flag turns red — full strength in every phase
    (the idle rule above otherwise pins side glyphs to ink at 0.72). */
 .hex-bloom .hb-hex.is-dock-flag.is-flag-icon .hb-glyph {
@@ -1425,6 +1434,43 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
   opacity: 1;
+}
+
+/* Default and bottom-dome launch from one deliberate horizon tab. Its full
+   88px hex leaves a 44px exposed target; the other two actions retain their
+   seats invisibly so the seed never jumps sideways when it blooms. */
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hex-bloom-dock {
+  --dock-rise: var(--seed-sink);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-side {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.72);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu {
+  width: var(--tile-w);
+  height: var(--tile-h);
+  background: var(--hb-ink);
+  color: var(--hb-paper);
+  filter: none;
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu::before {
+  inset: 0;
+  opacity: 1;
+  background: var(--hb-ink);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  width: 36px;
+  height: 36px;
+  max-width: none;
+  max-height: none;
+  color: var(--hb-paper);
+  transform: translateY(calc(var(--seed-sink) * -0.48));
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="open"] .hb-hex.is-dock-menu .hb-glyph,
+.hex-bloom[data-bottom-seed="true"][data-phase="falling"] .hb-hex.is-dock-menu .hb-glyph {
+  transform: translateY(0);
 }
 
 /* ---- Open: full bloom borders on all three; menu = solid × ---- */
@@ -1684,6 +1730,11 @@ body.hex-bloom-open .canvas-container {
     --tile-w: 76px;
     --tile-h: 88px;
   }
+  .hex-bloom[data-bottom-seed="true"][data-icon-menu="true"]:not([data-dock-mode="center"]) {
+    --tile-w: 92px;
+    --tile-h: 106px;
+    --seed-sink: 53px;
+  }
   .hb-hex .hb-label { font-size: 10px; }
 }
 
@@ -1889,6 +1940,8 @@ body[data-sphere-chrome="dark"] .settings-stack {
   cursor: pointer;
 }
 .sphere-banner .banner-btn svg { width: 20px; height: 20px; stroke-width: 2; }
+.sphere-banner #banner-undo-btn { color: #18a64a; }
+.sphere-banner #banner-again-btn { color: #ffd400; }
 /* The label still exists for screen readers and carries share progress —
    sphere.js updates this span, never the button, so the icon survives. */
 .sr-only {
@@ -2453,16 +2506,17 @@ button, a, input[type="range"] { touch-action: manipulation; }
     </button>
     <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="3 7 3 13 9 13"></polyline>
-        <path d="M3.51 13a9 9 0 1 0 2.13-5.36L3 11"></path>
+        <path d="M4 4v5h5"></path>
+        <path d="M4.8 8.2A8.3 8.3 0 1 1 4 16"></path>
       </svg>
       <span class="sr-only">Undo last move</span>
     </button>
     <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="23 4 23 10 17 10"></polyline>
-        <polyline points="1 20 1 14 7 14"></polyline>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        <path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"></path>
+        <path d="M20 3.5V8h-4.5"></path>
+        <path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"></path>
+        <path d="M4 20.5V16h4.5"></path>
       </svg>
       <span class="sr-only">Play again</span>
     </button>
@@ -2536,7 +2590,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Bottom bar: reset, board size (XS–XL), and Look — background, shell and dug colours, plus indicators. Surface packs are just below. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+      <p>The bottom seed opens Undo, Flag, Reset, board size, theme, warning style and inversion. Surface packs are just below. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
     </div>
     <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -5279,13 +5333,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         bannerActions.hidden = false;
       }
       if (shareWinBtn) {
-        shareWinBtn.hidden = false;
-        shareWinBtn.disabled = false;
-        setShareState("idle");
+        shareWinBtn.hidden = !opts.share;
+        shareWinBtn.disabled = !opts.share;
+        if (opts.share) setShareState("idle");
       }
       if (bannerUndoBtn) bannerUndoBtn.hidden = !undoSnapshot;
       pendingShareFile = null;
-      prepareShareFile();
+      if (opts.share) prepareShareFile();
       el.hidden = false;
       el.classList.add("visible");
     }
@@ -7475,8 +7529,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
    * outward around its own tangent axis. This matches the sphere behind it:
    * Reset is nearest the viewer; the six rim faces fall away.
    */
-  function domeSeat(dx, dy, hex) {
-    const R = hex * DOME_RADIUS_HEX;
+  function domeSeat(dx, dy, hex, radiusHex, maxPhi) {
+    const R = hex * (radiusHex || DOME_RADIUS_HEX);
     const s = Math.hypot(dx, dy);
     if (s < 1 || !R) {
       return {
@@ -7489,7 +7543,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         scale: 1.05,
       };
     }
-    const phi = Math.min(1.1, s / R);
+    const phi = Math.min(maxPhi == null ? 1.1 : maxPhi, s / R);
     const k = (R * Math.sin(phi)) / s;
     return {
       x: dx * k,
@@ -7580,7 +7634,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   const DEFAULT_BLOOM_SLOTS = [
     { q: -1, r: -1 }, // Light / Dark — lower left
     { q: 0, r: -2 }, // Warning style — upper left
-    { q: 0, r: -1 }, // Undo — lower center
+    { q: 0, r: -1 }, // Reset — lower center
     { q: 1, r: -1 }, // Invert — lower right
     { q: 1, r: -2 }, // Size — upper right
   ];
@@ -7644,21 +7698,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     size:
       '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
       '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
-    sizeXS:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.2" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="8.2" font-weight="700">XS</text>',
-    sizeS:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="700">S</text>',
-    sizeM:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10" font-weight="700">M</text>',
-    sizeL:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.6" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="700">L</text>',
-    sizeXL:
-      '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6L12 3.2Z"/>' +
-      '<text x="12" y="15.2" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="8.2" font-weight="700">XL</text>',
+    // One outline changes physical size across the five board sizes. The
+    // silhouette communicates scale before the tooltip has to explain it.
+    sizeXS: '<path d="m12 7.4 4 2.3v4.6l-4 2.3-4-2.3V9.7l4-2.3Z"/>',
+    sizeS: '<path d="m12 5.7 5.5 3.1v6.4l-5.5 3.1-5.5-3.1V8.8l5.5-3.1Z"/>',
+    sizeM: '<path d="m12 4 7 4v8l-7 4-7-4V8l7-4Z"/>',
+    sizeL: '<path d="m12 2.3 8.5 4.9v9.6L12 21.7l-8.5-4.9V7.2L12 2.3Z"/>',
+    sizeXL: '<path d="m12 .6 10 5.7v11.4l-10 5.7-10-5.7V6.3L12 .6Z"/>',
     // Theme circle remains available to archived/default variants.
     theme: '<circle cx="12" cy="12" r="8"/>',
     // Conventional board-theme affordance: handle, ferrule, and bristles.
@@ -7684,32 +7730,16 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     drag:
       '<path d="M12 4v16"/><path d="m8 8 4-4 4 4"/><path d="m8 16 4 4 4-4"/>' +
       '<path d="M4 12h16"/><path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/>',
-    // Opposing arrows make the operation legible; the two markers encode the
-    // four axis states (rings = normal, dots = inverted).
-    invertOff:
-      '<path d="M4.5 9.5c.8-3.7 3.3-5.8 6.4-5.8 2.5 0 4.4 1.3 5.6 3.4"/>' +
-      '<path d="m13.6 6.6 3.1.7.7-3.1"/>' +
-      '<path d="M19.5 14.5c-.8 3.7-3.3 5.8-6.4 5.8-2.5 0-4.4-1.3-5.6-3.4"/>' +
-      '<path d="m10.4 17.4-3.1-.7-.7 3.1"/>' +
-      '<circle cx="5" cy="16.5" r="1.8"/><circle cx="19" cy="7.5" r="1.8"/>',
+    // The disk is the board's two-axis inversion diagram: empty, vertical
+    // half, horizontal half, full. It changes as one coherent silhouette.
+    invertOff: '<circle cx="12" cy="12" r="8.5" fill="#fff"/>',
     invertX:
-      '<path d="M4.5 9.5c.8-3.7 3.3-5.8 6.4-5.8 2.5 0 4.4 1.3 5.6 3.4"/>' +
-      '<path d="m13.6 6.6 3.1.7.7-3.1"/>' +
-      '<path d="M19.5 14.5c-.8 3.7-3.3 5.8-6.4 5.8-2.5 0-4.4-1.3-5.6-3.4"/>' +
-      '<path d="m10.4 17.4-3.1-.7-.7 3.1"/>' +
-      '<circle cx="5" cy="16.5" r="1.8" fill="currentColor"/><circle cx="19" cy="7.5" r="1.8"/>',
+      '<circle cx="12" cy="12" r="8.5" fill="#fff"/>' +
+      '<path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none"/>',
     invertY:
-      '<path d="M4.5 9.5c.8-3.7 3.3-5.8 6.4-5.8 2.5 0 4.4 1.3 5.6 3.4"/>' +
-      '<path d="m13.6 6.6 3.1.7.7-3.1"/>' +
-      '<path d="M19.5 14.5c-.8 3.7-3.3 5.8-6.4 5.8-2.5 0-4.4-1.3-5.6-3.4"/>' +
-      '<path d="m10.4 17.4-3.1-.7-.7 3.1"/>' +
-      '<circle cx="5" cy="16.5" r="1.8"/><circle cx="19" cy="7.5" r="1.8" fill="currentColor"/>',
-    invertBoth:
-      '<path d="M4.5 9.5c.8-3.7 3.3-5.8 6.4-5.8 2.5 0 4.4 1.3 5.6 3.4"/>' +
-      '<path d="m13.6 6.6 3.1.7.7-3.1"/>' +
-      '<path d="M19.5 14.5c-.8 3.7-3.3 5.8-6.4 5.8-2.5 0-4.4-1.3-5.6-3.4"/>' +
-      '<path d="m10.4 17.4-3.1-.7-.7 3.1"/>' +
-      '<circle cx="5" cy="16.5" r="1.8" fill="currentColor"/><circle cx="19" cy="7.5" r="1.8" fill="currentColor"/>',
+      '<circle cx="12" cy="12" r="8.5" fill="#fff"/>' +
+      '<path d="M3.5 12a8.5 8.5 0 0 1 17 0Z" fill="currentColor" stroke="none"/>',
+    invertBoth: '<circle cx="12" cy="12" r="8.5" fill="currentColor"/>',
     more: '<circle cx="6.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17.5" cy="12" r="1.6"/>',
     // Menu affordance — hollow hex (board language)
     menu:
@@ -7743,8 +7773,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       '<path d="M9 3v6M14 9v6M10 15v6"/>',
     bang: '<path d="M12 3.5v12"/><path d="M12 20.5h.01"/>',
     warningNumbersDepth:
-      '<text x="12" y="13.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="9.2" font-weight="700">123</text>' +
-      '<path d="m6 16.2 6 3.2 6-3.2"/>',
+      '<path d="m12 4.4 7 4v8l-7 4-7-4v-8l7-4Z" fill="currentColor" stroke="none" opacity=".24" transform="translate(1 1)"/>' +
+      '<path d="m12 3 7 4v8l-7 4-7-4V7l7-4Z" fill="#fff"/>' +
+      '<text x="12" y="14.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="9.8" font-weight="700">3</text>',
     warningNumbersFlat:
       '<text x="12" y="15.8" text-anchor="middle" fill="currentColor" stroke="none" font-family="IBM Plex Sans, sans-serif" font-size="11" font-weight="700">123</text>',
     warningMonoDepth:
@@ -8077,6 +8108,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       }
       if (!Number.isFinite(rise) || rise === 0) {
         rise = (stage.clientWidth || global.innerWidth) <= 400 ? -28 : -36;
+      }
+      if (root.dataset.bottomSeed === "true") {
+        const sink =
+          parseFloat(csRoot.getPropertyValue("--seed-sink")) ||
+          ((stage.clientWidth || global.innerWidth) <= 400 ? 53 : 44);
+        return sink - rise;
       }
       return (th - thIdle) / 2 - rise;
     }
@@ -8730,11 +8767,20 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
             cycle: cycleSize,
           },
         ];
-        // Flag remains a permanent dock action in the bottom-bloom variants;
-        // the centered flower has no dock, so it owns a flag tile in the ring.
-        return FIXED_CENTER
-          ? menu
-          : menu.filter((category) => category.id !== "flagmode");
+        // Undo and Flag live beside the raised seed in bottom variants. Reset
+        // takes Undo's former crown seat, preserving seven distinct actions.
+        if (FIXED_CENTER) return menu;
+        const reset = {
+          id: "reset",
+          label: "Reset",
+          icon: "reset",
+          iconOnly: true,
+          aria: () => "Restart game",
+          cycle: doReset,
+        };
+        return menu
+          .filter((category) => category.id !== "flagmode")
+          .map((category) => (category.id === "undo" ? reset : category));
       }
       if (DOCK_CONTEXT) {
         // The dock is hidden in both center variants. Home and Flag occupy
@@ -8826,9 +8872,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         dockBtn.setAttribute("aria-label", "Open game menu");
         dockBtn.setAttribute("aria-expanded", "false");
       }
+      const sideActionsShown = root.dataset.bottomSeed !== "true" || open;
       if (dockResetBtn) {
         dockResetBtn.hidden = false;
-        dockResetBtn.setAttribute("aria-hidden", "false");
+        dockResetBtn.setAttribute("aria-hidden", sideActionsShown ? "false" : "true");
+        dockResetBtn.tabIndex = sideActionsShown ? 0 : -1;
       }
       if (dockHelpBtn) {
         dockHelpBtn.hidden = false;
@@ -8845,6 +8893,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           "aria-label",
           on ? "Flag mode on. Activate for dig mode." : "Flag mode. Activate to flag digs."
         );
+        dockFlagBtn.setAttribute("aria-hidden", sideActionsShown ? "false" : "true");
+        dockFlagBtn.tabIndex = sideActionsShown ? 0 : -1;
       }
     }
 
@@ -9164,23 +9214,21 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       dock.setAttribute("role", "toolbar");
       dock.setAttribute("aria-label", "Game chrome");
 
-      // The bare seed makes the left shortcut Undo: it is useful during play
-      // without duplicating Reset, which remains in the opened flower.
-      // Other dock variants retain the established Restart shortcut.
+      // Undo and Flag form the action keel beside the raised black seed.
+      // Reset remains available in the settings crown above.
       dockResetBtn = makeHex({
         cls: "is-dock is-dock-side is-dock-reset",
         label: "",
-        icon: SEED_BARE ? "undo" : "reset",
+        icon: "undo",
         iconOnly: true,
-        ariaLabel: SEED_BARE ? "Undo move" : "Restart game",
+        ariaLabel: "Undo move",
       });
-      dockResetBtn.title = SEED_BARE ? "Undo" : "Restart";
+      dockResetBtn.title = "Undo";
       dockResetBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         ignoreOutsideUntil = Date.now() + 250;
-        if (SEED_BARE) doUndo();
-        else doReset();
+        doUndo();
       });
 
       // Menu — center, primary (opens bloom / closes when open)
@@ -9203,6 +9251,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         if (state.phase === "open" || state.phase === "rising") collapse();
         else if (state.phase === "closed") expand();
       });
+      if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        dockBtn.addEventListener("pointerenter", () => {
+          if (state.phase === "closed") expand();
+        });
+      }
 
       // Flag — right of Menu: dig/flag mode without opening the bloom.
       // On mobile there is no right-click; this is the most-flipped switch
@@ -9315,9 +9368,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           el.removeAttribute("aria-haspopup");
           el.setAttribute("aria-expanded", "false");
         }
-        const seat = DOCK_CENTER && DOME ? domeSeat(p.x, p.y, HEX) : null;
+        const seat = DOME
+          ? DOCK_CENTER
+            ? domeSeat(p.x, p.y, HEX)
+            : domeSeat(p.x, p.y, HEX, 7.2, 0.48)
+          : null;
         place(el, cx + (seat ? seat.x : p.x), cy + (seat ? seat.y : p.y), cx, cy);
-        if (DOCK_CENTER) applyCenterDome(el, seat);
+        if (DOME) applyCenterDome(el, seat);
         el.classList.add("folded");
         // Center mode blooms petal-by-petal: the delay sweeps around the ring
         // by seat angle, so the flower visibly opens clockwise from the top
@@ -9527,6 +9584,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 
     if (SEED_BARE) root.dataset.seed = "bare";
     if (DEFAULT_BLOOM) root.dataset.iconMenu = "true";
+    if (DEFAULT_BLOOM && !SEED_BARE) root.dataset.bottomSeed = "true";
+    if (DOME) root.dataset.dome = "true";
 
     // Pointer parallax while the flower is open (fine pointers only): the
     // stage tilts a few degrees toward the cursor, so the bowl's depth reads
@@ -9581,7 +9640,6 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
       root.dataset.iconMenu = "true";
-      if (DOME) root.dataset.dome = "true";
       if (DOCK_CONTEXT) root.dataset.contextMenu = "true";
       // The background is the menu activator: a quick tap that lands off the
       // sphere's disk (game.getSphereScreen) opens the flower. In contextual
@@ -9721,6 +9779,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
               : [
                   dockResetBtn,
                   dockBtn,
+                  dockFlagBtn,
                   dockHelpBtn,
                   ...stage.querySelectorAll(
                     ".hb-hex.is-primary.shown, .hb-hex.is-sub.shown"
