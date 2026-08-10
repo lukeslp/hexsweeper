@@ -466,6 +466,20 @@
   color: #ff0000;
 }
 
+/* Contextual flower: Home and Reset share a warm navigation/action signal,
+   while Flag stays neutral until the mode is actually active. Tile materials
+   never change — state lives in the glyphs only. */
+.hex-bloom[data-context-menu="true"] .cat-home .hb-glyph,
+.hex-bloom[data-context-menu="true"] .is-context-reset .hb-glyph {
+  color: #ffd400;
+}
+.hex-bloom[data-context-menu="true"] .is-flag-toggle .hb-glyph {
+  color: var(--hb-ink);
+}
+.hex-bloom[data-context-menu="true"] .is-flag-toggle.is-mode-active .hb-glyph {
+  color: #ff2200;
+}
+
 /* Theme primary = plain circle; tint from current theme when available */
 .hb-hex.is-theme-icon .hb-icon {
   stroke-width: 2.1;

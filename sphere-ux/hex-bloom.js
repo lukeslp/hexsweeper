@@ -121,13 +121,15 @@
     el.style.setProperty("--dscale", (1 - DOME_SHRINK * Math.min(1, Math.abs(seat.dome) / 30)).toFixed(4));
   }
 
-  const DOCK_CENTER = (() => {
+  const DOCK_MODE = (() => {
     try {
-      return new URLSearchParams(location.search).get("dock") === "center";
+      return new URLSearchParams(location.search).get("dock") || "default";
     } catch (_) {
-      return false;
+      return "default";
     }
   })();
+  const DOCK_CONTEXT = DOCK_MODE === "context";
+  const DOCK_CENTER = DOCK_MODE === "center" || DOCK_CONTEXT;
   /**
    * ?dome=1 — the flower seated on a real sphere segment, viewed from
    * inside: center tile at the bottom of the bowl, ring tiles pulled to
@@ -153,7 +155,9 @@
     }
   })();
 
-  // In categories() order: the six shared tiles, then Reset and Dig/Flag.
+  // In categories() order: four setting tiles, then the west/east actions.
+  // Fixed-center uses Reset + Dig/Flag; contextual uses Home + Flag, with
+  // Reset promoted to the center tile.
   const CENTER_SLOTS = [
     { q: 0, r: -1 }, // Light / Dark — NW
     { q: 1, r: -1 }, // Size — NE
@@ -234,6 +238,9 @@
     reset:
       '<path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"/><path d="M20 3.5V8h-4.5"/>' +
       '<path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"/><path d="M4 20.5V16h4.5"/>',
+    home:
+      '<path d="m3.5 10.5 8.5-7 8.5 7"/><path d="M5.5 9.2v10.3h13V9.2"/>' +
+      '<path d="M9.2 19.5v-6.2h5.6v6.2"/>',
     help:
       '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 1 1 3.9 2.6c-.9.5-1.6 1.1-1.6 2.2"/>' +
       '<path d="M12 17.2h.01"/>',
@@ -365,12 +372,14 @@
     }
     const hubMines = document.getElementById("hex-bloom-hub-mines");
     const hubTime = document.getElementById("hex-bloom-hub-time");
+    let contextAnchor = null;
 
     // ---- Hex math (clex) ----
     function tileMetrics() {
       const cs = getComputedStyle(root);
       const th = parseFloat(cs.getPropertyValue("--tile-h")) || 88;
-      return { HEX: th / 2, tileH: th };
+      const tw = parseFloat(cs.getPropertyValue("--tile-w")) || th * 0.873;
+      return { HEX: th / 2, tileH: th, tileW: tw };
     }
 
     function hexToPixel(q, r, HEX) {
@@ -399,6 +408,26 @@
     function centerXY() {
       const h = stage.clientHeight || global.innerHeight;
       const w = stage.clientWidth || global.innerWidth;
+      if (DOCK_CONTEXT) {
+        const anchor = contextAnchor || { x: w / 2, y: h / 2 };
+        const { HEX, tileH, tileW } = tileMetrics();
+        const seats = CENTER_SLOTS.map((d) => hexToPixel(d.q, d.r, HEX));
+        seats.push({ x: 0, y: 0 });
+        const minDx = Math.min(...seats.map((p) => p.x));
+        const maxDx = Math.max(...seats.map((p) => p.x));
+        const minDy = Math.min(...seats.map((p) => p.y));
+        const maxDy = Math.max(...seats.map((p) => p.y));
+        const margin = 14;
+        const topMargin = 56; // keep the open-menu mines/timer hub readable
+        const lowX = margin + tileW / 2 - minDx;
+        const highX = w - margin - tileW / 2 - maxDx;
+        const lowY = topMargin + tileH / 2 - minDy;
+        const highY = h - margin - tileH / 2 - maxDy;
+        return {
+          cx: lowX <= highX ? Math.max(lowX, Math.min(highX, anchor.x)) : w / 2,
+          cy: lowY <= highY ? Math.max(lowY, Math.min(highY, anchor.y)) : h / 2,
+        };
+      }
       if (DOCK_CENTER) return { cx: w / 2, cy: h / 2 };
       const csRoot = getComputedStyle(root);
       const csDock = dock ? getComputedStyle(dock) : csRoot;
@@ -827,6 +856,10 @@
       if (state.phase === "open" || state.phase === "rising") collapse();
     }
 
+    function doHome() {
+      global.location.href = "../";
+    }
+
     function categories() {
       // Cycle primaries — every tile flips state on click (no submenus).
       // Restart / Help live on the always-visible three-tile dock.
@@ -880,21 +913,36 @@
         // The dock is hidden in center mode, so its two play controls join
         // the flower at the prominent W / E seats.
         all.push(
-          {
-            id: "reset",
-            label: "Reset",
-            icon: "reset",
-            iconOnly: false,
-            aria: () => "Restart game",
-            cycle: () => doReset(),
-          },
+          DOCK_CONTEXT
+            ? {
+                id: "home",
+                label: "Home",
+                icon: "home",
+                iconOnly: true,
+                aria: () => "Return to Hexsweeper home",
+                cycle: () => doHome(),
+              }
+            : {
+                id: "reset",
+                label: "Reset",
+                icon: "reset",
+                iconOnly: false,
+                aria: () => "Restart game",
+                cycle: () => doReset(),
+              },
           {
             id: "flagmode",
-            label: () => currentMode(),
-            icon: () => (game.getState().flagMode ? "flag" : "dig"),
-            iconOnly: false,
+            label: DOCK_CONTEXT ? "Flag" : () => currentMode(),
+            icon: DOCK_CONTEXT
+              ? "flag"
+              : () => (game.getState().flagMode ? "flag" : "dig"),
+            iconOnly: DOCK_CONTEXT,
             aria: () =>
-              "Mode: " + currentMode() + ". Activate to switch Dig or Flag.",
+              DOCK_CONTEXT
+                ? game.getState().flagMode
+                  ? "Flag mode on. Activate for dig mode."
+                  : "Flag mode off. Activate for flag mode."
+                : "Mode: " + currentMode() + ". Activate to switch Dig or Flag.",
             cycle: cycleMode,
           }
         );
@@ -1143,9 +1191,17 @@
           const name =
             typeof cat.icon === "function" ? cat.icon() : cat.icon;
           setHexIcon(el, name);
-          el.classList.toggle("is-flag-icon", name === "flag");
+          el.classList.toggle(
+            "is-flag-icon",
+            name === "flag" && !(DOCK_CONTEXT && cat.id === "flagmode")
+          );
           el.classList.toggle("is-dig-icon", name === "dig");
           el.classList.toggle("is-theme-icon", name === "theme");
+        }
+        if (DOCK_CONTEXT && cat.id === "flagmode") {
+          const on = !!game.getState().flagMode;
+          el.classList.toggle("is-mode-active", on);
+          el.setAttribute("aria-pressed", on ? "true" : "false");
         }
         // Axis tiles repaint their swatch as the look changes under them.
         if (cat.swatch) {
@@ -1156,7 +1212,11 @@
         }
         // Size keeps a visible letter badge; other primaries are icon-only
         if (el._labelEl) {
-          if (cat.badge) {
+          if (DOCK_CONTEXT) {
+            el._labelEl.textContent = lab;
+            el._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
+            el.classList.remove("has-badge");
+          } else if (cat.badge) {
             el._labelEl.textContent = lab;
             el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
             el.classList.add("has-badge");
@@ -1322,13 +1382,18 @@
           typeof cat.icon === "function" ? cat.icon() : cat.icon;
         const swatch =
           typeof cat.swatch === "function" ? cat.swatch() : cat.swatch;
+        const showBadge = !!cat.badge && !DOCK_CONTEXT;
+        const flagModeActive =
+          DOCK_CONTEXT && cat.id === "flagmode" && !!game.getState().flagMode;
         const el = makeHex({
           cls:
             "is-primary cat-" +
             cat.id +
             (state.active === cat.id ? " is-active" : "") +
-            (cat.badge ? " has-badge" : "") +
-            (iconName === "flag" ? " is-flag-icon" : "") +
+            (showBadge ? " has-badge" : "") +
+            (iconName === "flag" && !(DOCK_CONTEXT && cat.id === "flagmode") ? " is-flag-icon" : "") +
+            (DOCK_CONTEXT && cat.id === "flagmode" ? " is-flag-toggle" : "") +
+            (flagModeActive ? " is-mode-active" : "") +
             (iconName === "dig" ? " is-dig-icon" : "") +
             (iconName === "theme" ? " is-theme-icon" : "") +
             (swatch ? " is-theme-swatch" : ""),
@@ -1336,11 +1401,14 @@
           labelSize: cat.labelSize,
           ariaLabel: typeof cat.aria === "function" ? cat.aria() : lab,
           icon: swatch ? null : iconName,
-          iconOnly: swatch ? true : !!cat.iconOnly && !cat.badge,
+          iconOnly: DOCK_CONTEXT || swatch ? true : !!cat.iconOnly && !showBadge,
         });
         if (swatch) applyPrimarySwatch(el, swatch);
-        if (cat.badge && el._labelEl) {
+        if (showBadge && el._labelEl) {
           el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
+        }
+        if (DOCK_CONTEXT && cat.id === "flagmode") {
+          el.setAttribute("aria-pressed", flagModeActive ? "true" : "false");
         }
         el.dataset.cat = cat.id;
         el.dataset.index = String(i);
@@ -1375,26 +1443,32 @@
         stage.appendChild(el);
       });
 
-      // Center mode: the seed is not on screen, so the flower carries its own
-      // close at the middle — where the dock's × would have been.
+      // Center modes have no dock seed. The fixed-center trial carries a
+      // close control; the contextual version makes the middle the most-used
+      // destructive action instead, with outside click / Escape still close.
       if (DOCK_CENTER) {
-        const closeEl = makeHex({
-          cls: "is-primary is-center-close",
-          label: "×",
-          ariaLabel: "Close menu",
+        const centerEl = makeHex({
+          cls:
+            "is-primary is-center-close" +
+            (DOCK_CONTEXT ? " is-context-reset" : ""),
+          label: DOCK_CONTEXT ? "Reset" : "×",
+          icon: DOCK_CONTEXT ? "reset" : null,
+          iconOnly: DOCK_CONTEXT,
+          ariaLabel: DOCK_CONTEXT ? "Restart game" : "Close menu",
         });
-        closeEl.addEventListener("click", (e) => {
+        centerEl.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          collapse();
+          if (DOCK_CONTEXT) doReset();
+          else collapse();
         });
-        place(closeEl, cx, cy, cx, cy);
-        applyCenterDome(closeEl, DOME ? domeSeat(0, 0, 1) : null);
-        closeEl.classList.add("folded");
-        closeEl.dataset.delay = "0";
+        place(centerEl, cx, cy, cx, cy);
+        applyCenterDome(centerEl, DOME ? domeSeat(0, 0, 1) : null);
+        centerEl.classList.add("folded");
+        centerEl.dataset.delay = "0";
         // First in DOM = painted under the forward-riding rim (siblings have
         // no shared 3D context, so translateZ does not sort them).
-        stage.insertBefore(closeEl, stage.firstChild);
+        stage.insertBefore(centerEl, stage.firstChild);
       }
     }
 
@@ -1436,9 +1510,15 @@
       const disk =
         typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
       if (!disk || !disk.r) return;
+      const viewportCap = DOCK_CONTEXT
+        ? Math.min(
+            ((stage.clientWidth || global.innerWidth) - 28) / 5.21,
+            ((stage.clientHeight || global.innerHeight) - 28) / 5
+          )
+        : 90;
       const hex = Math.max(
         30,
-        Math.min(90, (disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX)
+        Math.min(90, viewportCap, (disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX)
       );
       root.style.setProperty("--tile-h", (hex * 2).toFixed(1) + "px");
       root.style.setProperty("--tile-w", (hex * 1.746).toFixed(1) + "px");
@@ -1573,9 +1653,11 @@
     }
     if (DOCK_CENTER) {
       root.dataset.dockMode = "center";
+      if (DOCK_CONTEXT) root.dataset.contextMenu = "true";
       // The background is the menu activator: a quick tap that lands off the
-      // sphere's disk (game.getSphereScreen) opens the flower. Drags and taps
-      // on the board never trigger it.
+      // sphere's disk (game.getSphereScreen) opens the flower. In contextual
+      // mode the flower follows that canvas point, then centerXY clamps its
+      // complete seven-tile footprint into the viewport.
       const cc = document.querySelector(".canvas-container");
       if (cc) {
         let downAt = 0;
@@ -1602,6 +1684,9 @@
                 : null;
             if (d && Math.hypot(e.clientX - d.cx, e.clientY - d.cy) <= d.r)
               return;
+            if (DOCK_CONTEXT) {
+              contextAnchor = { x: e.clientX, y: e.clientY };
+            }
             expand();
           },
           true
@@ -1682,6 +1767,7 @@
     // Seeded now, not 0 — otherwise the first URL-bar height change would
     // read as a width change and trigger the rebuild this gate exists to stop.
     let lastStageW = stage.clientWidth || global.innerWidth;
+    let lastStageH = stage.clientHeight || global.innerHeight;
     window.addEventListener("resize", () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
@@ -1692,9 +1778,12 @@
         // are bottom-anchored, so they already rode along with the dock.
         // Rebuilding on those is what made the open bloom jitter and resettle.
         const w = stage.clientWidth || global.innerWidth;
+        const h = stage.clientHeight || global.innerHeight;
         const widthChanged = Math.abs(w - lastStageW) > 1;
+        const heightChanged = Math.abs(h - lastStageH) > 1;
         lastStageW = w;
-        if (!widthChanged) return;
+        lastStageH = h;
+        if (!widthChanged && !(DOCK_CONTEXT && heightChanged)) return;
         if (state.phase === "open") {
           // rebuild petal positions without losing open state
           sizeCenterFlower();
