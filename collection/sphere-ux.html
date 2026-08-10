@@ -898,6 +898,11 @@ body[data-sphere-chrome="dark"] .cz-dot {
   --fold-scale: 0.5;
   --fold-ms: 340ms;
 }
+.hex-bloom[data-context-menu="true"] {
+  --fold: 88deg;
+  --fold-scale: 0.68;
+  --fold-ms: 140ms;
+}
 /* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
    user"). A symmetric bowl viewed dead-on from its own axis shows almost no
    parallax — the old lopsided origin was accidentally the viewing angle.
@@ -1214,6 +1219,14 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 .hex-bloom[data-context-menu="true"] .is-flag-toggle.is-mode-active .hb-glyph {
   color: #ff2200;
+}
+.hex-bloom[data-context-menu="true"] .hb-hex.is-primary .hb-glyph {
+  width: 38px;
+  height: 38px;
+}
+.hex-bloom[data-context-menu="true"] .hb-hex.is-primary .hb-icon {
+  width: 34px;
+  height: 34px;
 }
 
 /* Theme primary = plain circle; tint from current theme when available */
@@ -7590,7 +7603,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
-    return 180; // petal fold / close settle — snappier than the rise
+    return DOCK_CONTEXT ? 140 : 180;
   }
 
   function initHexBloom(game) {
@@ -8714,9 +8727,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         // instead of in DOM order.
         el.dataset.delay = DOCK_CENTER
           ? String(
-              110 +
+              (DOCK_CONTEXT ? 18 : 110) +
                 Math.round(
-                  260 * ((Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI))
+                  (DOCK_CONTEXT ? 72 : 260) *
+                    ((Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI))
                 )
             )
           : String(i * 26);
@@ -8803,8 +8817,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           )
         : 90;
       const hex = Math.max(
-        30,
-        Math.min(90, viewportCap, (disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX)
+        DOCK_CONTEXT ? 25 : 30,
+        Math.min(
+          DOCK_CONTEXT ? 66 : 90,
+          viewportCap,
+          ((disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX) *
+            (DOCK_CONTEXT ? 0.72 : 1)
+        )
       );
       root.style.setProperty("--tile-h", (hex * 2).toFixed(1) + "px");
       root.style.setProperty("--tile-w", (hex * 1.746).toFixed(1) + "px");

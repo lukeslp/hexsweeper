@@ -304,7 +304,7 @@
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
-    return 180; // petal fold / close settle — snappier than the rise
+    return DOCK_CONTEXT ? 140 : 180;
   }
 
   function initHexBloom(game) {
@@ -1428,9 +1428,10 @@
         // instead of in DOM order.
         el.dataset.delay = DOCK_CENTER
           ? String(
-              110 +
+              (DOCK_CONTEXT ? 18 : 110) +
                 Math.round(
-                  260 * ((Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI))
+                  (DOCK_CONTEXT ? 72 : 260) *
+                    ((Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI))
                 )
             )
           : String(i * 26);
@@ -1517,8 +1518,13 @@
           )
         : 90;
       const hex = Math.max(
-        30,
-        Math.min(90, viewportCap, (disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX)
+        DOCK_CONTEXT ? 25 : 30,
+        Math.min(
+          DOCK_CONTEXT ? 66 : 90,
+          viewportCap,
+          ((disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX) *
+            (DOCK_CONTEXT ? 0.72 : 1)
+        )
       );
       root.style.setProperty("--tile-h", (hex * 2).toFixed(1) + "px");
       root.style.setProperty("--tile-w", (hex * 1.746).toFixed(1) + "px");

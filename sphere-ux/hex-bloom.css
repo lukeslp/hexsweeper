@@ -162,6 +162,11 @@
   --fold-scale: 0.5;
   --fold-ms: 340ms;
 }
+.hex-bloom[data-context-menu="true"] {
+  --fold: 88deg;
+  --fold-scale: 0.68;
+  --fold-ms: 140ms;
+}
 /* Depth that actually reads (Luke: "we lost the 3d element — TOWards the
    user"). A symmetric bowl viewed dead-on from its own axis shows almost no
    parallax — the old lopsided origin was accidentally the viewing angle.
@@ -478,6 +483,14 @@
 }
 .hex-bloom[data-context-menu="true"] .is-flag-toggle.is-mode-active .hb-glyph {
   color: #ff2200;
+}
+.hex-bloom[data-context-menu="true"] .hb-hex.is-primary .hb-glyph {
+  width: 38px;
+  height: 38px;
+}
+.hex-bloom[data-context-menu="true"] .hb-hex.is-primary .hb-icon {
+  width: 34px;
+  height: 34px;
 }
 
 /* Theme primary = plain circle; tint from current theme when available */
