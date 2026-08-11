@@ -8,8 +8,15 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 
 - **Static artifact** under `www/dr.eamer.dev/games/hexsweeper/` (symlink: `~/dr.eamer.dev`).
 - **`core.js`**: axial hex map, finite + endless modes, input (mouse/touch), flood reveal, flags, RAF loop, skin hooks.
-- **`index.html`**: production chrome + five-theme model + custom Canvas rendering (Soft UI Light/Dark, Escape neumorph, Fire magma pit, mycelium Plague).
+- **`index.html`**: production chrome + declarative product profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes; renderers remain in place.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
+
+## Current status (2026-08-10)
+
+- [x] Product profile seam separates structural mode behavior, material identity, optional ambient/reveal/flag effects, and mandatory endgame feedback.
+- [x] Infinite Light/Dark normal digs are particle-quiet without losing the shared mine detonation.
+- [x] Reduced Effects retains the calm readable detonation path (no shake or shards) instead of suppressing loss feedback.
+- [ ] Future: compatibility metadata and UI for promoting selected collection materials/effects as skins. Do not treat Fire, Plague, Water, or Escape mechanics as cosmetic skins.
 
 ## Current status (2026-08-08)
 

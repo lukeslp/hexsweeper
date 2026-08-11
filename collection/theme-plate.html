@@ -4126,6 +4126,60 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   /** Light/Dark landing zoom — nearer seam crossover than MIN so a slight zoom-out hits seam LOD. */
   const PLATE_INITIAL_ZOOM = 0.72;
 
+  /**
+   * Product profiles keep structural behavior separate from material paint.
+   * Renderers still consume the flattened theme shape below; these records are
+   * the compatibility seam for future material and effect skins.
+   */
+  const MODE_PROFILES = Object.freeze({
+    infinite: Object.freeze({ endless: true, camera: "pan", persistence: "plate", rules: "classic" }),
+    escape: Object.freeze({ endless: true, camera: "pan", persistence: "escape", rules: "rift" }),
+    finite: Object.freeze({ endless: false, camera: "pan", persistence: null, rules: "classic" }),
+    "finite-tilt": Object.freeze({ endless: false, camera: "tilt", persistence: null, rules: "classic" }),
+  });
+
+  const EFFECT_PROFILES = Object.freeze({
+    // Plate digs stay tactile through the tiles themselves; loss feedback is separate.
+    "quiet-plate": Object.freeze({ ambient: false, reveal: false, flag: false, revealDensity: "quiet" }),
+    rift: Object.freeze({ ambient: true, reveal: true, flag: true, revealDensity: "quiet" }),
+    magma: Object.freeze({ ambient: true, reveal: true, flag: true, revealDensity: "magma" }),
+    plague: Object.freeze({ ambient: true, reveal: true, flag: true, revealDensity: "standard" }),
+    water: Object.freeze({ ambient: true, reveal: true, flag: true, revealDensity: "standard" }),
+  });
+
+  const ENDGAME_PROFILES = Object.freeze({
+    blast: Object.freeze({ loss: "blast", win: "bloom" }),
+    infection: Object.freeze({ loss: "infection", win: "bloom" }),
+    rift: Object.freeze({ loss: "rift", win: "bloom" }),
+  });
+
+  const PRODUCT_PROFILES = Object.freeze({
+    light: Object.freeze({ mode: "infinite", material: "porcelain", effects: "quiet-plate", endgame: "blast" }),
+    dark: Object.freeze({ mode: "infinite", material: "night-iron", effects: "quiet-plate", endgame: "blast" }),
+    escape: Object.freeze({ mode: "escape", material: "rift-steel", effects: "rift", endgame: "rift" }),
+    fire: Object.freeze({ mode: "finite-tilt", material: "magma", effects: "magma", endgame: "blast" }),
+    plague: Object.freeze({ mode: "finite", material: "mycelium", effects: "plague", endgame: "infection" }),
+    water: Object.freeze({ mode: "finite-tilt", material: "tide", effects: "water", endgame: "blast" }),
+  });
+
+  function defineTheme(theme) {
+    const product = PRODUCT_PROFILES[theme.id];
+    if (!product) throw new Error(`Missing product profile for ${theme.id}`);
+    const mode = MODE_PROFILES[product.mode];
+    if (!mode) throw new Error(`Missing mode profile ${product.mode}`);
+    if (!EFFECT_PROFILES[product.effects]) throw new Error(`Missing effects profile ${product.effects}`);
+    if (!ENDGAME_PROFILES[product.endgame]) throw new Error(`Missing endgame profile ${product.endgame}`);
+    return {
+      ...theme,
+      // Legacy renderer reads are derived here instead of duplicating behavior
+      // across every visual record.
+      endless: mode.endless,
+      cameraLock: mode.camera === "tilt",
+      rift: mode.rules === "rift",
+      profile: Object.freeze({ ...product, ...mode }),
+    };
+  }
+
   // ?deal=1 opens a starting patch in any mode, the way Escape always does.
   // Used by tools/og-card.html so social cards show a game rather than a lid.
   const FORCE_OPENING_DIG = (() => {
@@ -4156,8 +4210,6 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       ...MATERIAL_LIBRARY[0],
       id: "escape",
       name: "Escape · Rift",
-      rift: true,
-      endless: true,
       // Fresh runs open a patch so the rift has somewhere to seep from
       openingDig: true,
       // Escape reads as a field to cross, not a handful of hexes, so it opens
@@ -4218,7 +4270,6 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       id: "fire",
       name: "Fire · Magma",
       // Pit fits → drag tilts; zoomed past the frame → clamped pan to the rim.
-      cameraLock: true,
       boardConfig: {
         // Outer hex ≈ 98% of the live window; tiny pad — packing is face-scale, not sink.
         viewportFill: 0.98,
@@ -4306,9 +4357,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       // endless field drifting under a fixed waterline reads as the sea
       // sliding rather than the camera, and the illusion dies. Note that
       // MATERIAL_LIBRARY[0] ships `endless: true`, so it must be turned back
-      // off explicitly here.
-      endless: false,
-      cameraLock: true,
+      // off through the finite-tilt mode profile.
       // Deliberately shorter than the other finite themes: the raft needs sky
       // above it and open sea below, or "half submerged" has nothing to read
       // against and the board just looks tinted blue.
@@ -4362,7 +4411,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         flag: "rgba(255,180,84,0.85)",
       },
     },
-  ];
+  ].map(defineTheme);
 
   const FINITE_DEFAULT_CONFIG = {
     viewportFill: 0.94,
@@ -6697,13 +6746,15 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
   function riftThemeActive() {
     const th = THEMES[themeIndex];
-    return !!(th && th.rift);
+    return th?.profile?.rules === "rift";
   }
 
   function persistLaneKey(th) {
     const theme = th || THEMES[themeIndex];
-    if (!theme || !theme.endless) return null;
-    return theme.rift ? ESCAPE_SAVE_KEY : PLATE_SAVE_KEY;
+    if (!theme) return null;
+    if (theme.profile?.persistence === "plate") return PLATE_SAVE_KEY;
+    if (theme.profile?.persistence === "escape") return ESCAPE_SAVE_KEY;
+    return null;
   }
 
   function exportRiftBlob(force) {
@@ -7378,7 +7429,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     ctx.restore();
   }
 
-  // —— Particles (lab-style bloom + ambient dust). Soft White opts out. ——
+  // —— Optional cosmetic particles. Endgame feedback is dispatched separately. ——
   const particles = [];
   const streaks = [];
   const MAX_PARTICLES = 320;
@@ -7386,8 +7437,16 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   /** Chaos: Fire hover spite-burp throttle (ms). */
   let fireSpiteBurpAt = 0;
 
-  function isFxTheme(th) {
-    return !!(th && th.particles);
+  function effectProfile(th) {
+    return EFFECT_PROFILES[th?.profile?.effects] || null;
+  }
+
+  function isFxTheme(th, channel) {
+    if (!(th && th.particles)) return false;
+    if (!channel) return true;
+    const fx = effectProfile(th);
+    // Legacy material studies without a product profile retain their particle behavior.
+    return fx ? fx[channel] !== false : true;
   }
 
   /**
@@ -7447,7 +7506,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     streaks.length = 0;
     lastAmbientThemeId = th ? th.id : null;
     if (th && th.material === "mycelium") seedPlagueHive(w, h);
-    if (!isFxTheme(th)) return;
+    if (!isFxTheme(th, "ambient")) return;
     const p = th.particles;
     const count = p.count || 70;
     for (let i = 0; i < count; i++) {
@@ -7641,7 +7700,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         if (z < 1) live.setZoom(1);
       }
       // Magma pit: lock camera to center so drag is tilt, not translation.
-      if (live.state.hooks) live.state.hooks.cameraLock = !!t.cameraLock;
+      if (live.state.hooks) live.state.hooks.cameraLock = t.profile?.camera === "tilt";
       if (t.cameraLock && typeof live.setCamera === "function") live.setCamera(0, 0);
     }
     // Light↔Dark keeps the run; Escape / finite swaps rebuild (no persist wipe).
@@ -9046,7 +9105,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     },
     hooks: {
       usePathHitTest: true,
-      cameraLock: !!active.cameraLock,
+      cameraLock: active.profile?.camera === "tilt",
       layout(api) {
         const s = api.state;
         // Match the visible layout viewport (visualViewport when present) so the
@@ -9080,35 +9139,35 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         const th = THEMES[themeIndex];
         if (th.rift) noteRiftReveal(cell, api, meta);
         schedulePersist();
-        if (!isFxTheme(th)) return;
+        if (!isFxTheme(th, "reveal")) return;
         const p = th.particles;
         const color = cell.isMine ? p.mine : p.reveal;
-        // Magma empty vents throw extra embers when the crust opens
+        const density = effectProfile(th)?.revealDensity || "standard";
         let n = cell.isMine ? 28 : 9 + (cell.neighborMines || 0) * 2;
-        if (th.material === "magma" && !cell.isMine && cell.neighborMines === 0) n = 16;
-        if (th.material === "magma" && cell.isMine) n = 36;
-        if (th.material === "bubblewrap") n = cell.isMine ? 22 : 6 + (cell.neighborMines || 0);
-        // Soft plates: quieter dig puffs (bomb blast / rift are separate)
-        if (th.material === "neumorph") n = cell.isMine ? 22 : th.rift ? 3 : 4;
+        if (density === "magma" && !cell.isMine && cell.neighborMines === 0) n = 16;
+        if (density === "magma" && cell.isMine) n = 36;
+        if (density === "quiet") n = cell.isMine ? 22 : 3;
         emit(cell.x, cell.y, n, color);
       },
       onFlag(cell) {
         schedulePersist();
         const th = THEMES[themeIndex];
-        if (!isFxTheme(th) || !cell.flagged) return;
-        emit(cell.x, cell.y, th.material === "neumorph" ? 5 : 8, th.particles.flag);
+        if (!isFxTheme(th, "flag") || !cell.flagged) return;
+        emit(cell.x, cell.y, effectProfile(th)?.revealDensity === "quiet" ? 5 : 8, th.particles.flag);
       },
       onGameOver(win, api, meta) {
         flushPersist();
+        const endgame = ENDGAME_PROFILES[THEMES[themeIndex]?.profile?.endgame] || ENDGAME_PROFILES.blast;
         if (win) {
-          startWinBloom(api);
+          if (endgame.win === "bloom") startWinBloom(api);
           if (meta && meta.reason === "finish" && typeof showToast === "function") {
             showToast("Escaped");
           }
-        } else if (meta && meta.reason === "rift") startOrganicSeep(api, meta.detonator, "rift");
-        else if (THEMES[themeIndex]?.material === "mycelium") {
+        } else if (meta && meta.reason === "rift") {
+          startOrganicSeep(api, meta.detonator, "rift");
+        } else if (endgame.loss === "infection") {
           startOrganicSeep(api, meta && meta.detonator, "plague");
-        } else if (THEMES[themeIndex]?.rift) {
+        } else if (endgame.loss === "rift") {
           startOrganicSeep(api, meta && meta.detonator, "rift");
         } else startDetonation(api, meta && meta.detonator);
       },

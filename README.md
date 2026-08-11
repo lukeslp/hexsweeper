@@ -39,6 +39,17 @@ Fresh runs (cold load or Reset) share one `startFreshRun` path after theme chrom
 
 Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Light/Dark, `hexsweeper-endless-escape-v1` for Escape).
 
+### Profiles, materials, and effects
+
+Production choices are composed in `index.html` from four declarative axes:
+
+- **Mode profile** — finite/endless topology, camera behavior, rules, and autosave lane.
+- **Material** — the existing Canvas renderer/material record and its color tokens.
+- **Cosmetic effects profile** — ambient, reveal, and flag particles. These channels can be enabled independently without changing the board or save lane.
+- **Endgame profile** — mandatory semantic win/loss feedback. Infinite Light/Dark and Fire use the shared detonation; Plague uses infection; Escape uses the rift catch.
+
+Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion carries normal digs, while the full shared bomb detonation remains intact. **Effects: Reduced** selects the detonation's calm, non-shaking path; it never removes loss feedback. This profile seam is the supported path for promoting collection materials or effects into future skins. Material changes must not restart a run, alter rules, or change persistence lanes.
+
 ## Layout
 
 | File | Role |
