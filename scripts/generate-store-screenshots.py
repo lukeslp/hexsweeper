@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render App Store screenshots from the real shipped payload.
 
-Five portrait iPhone 6.9" (1320x2868) shots into app-store/screenshots/en-US/.
+Five portrait shots per device family into app-store/screenshots/en-US/.
 Tall phone-sized headless viewports wedge this Chrome build, so each shot is
 rendered as a square (the size that provably works) and composited onto the
 device-size canvas with a caption band — the artwork is still the real game.
@@ -12,7 +12,16 @@ device-size canvas with a caption band — the artwork is still the real game.
   04 bounded board
   05 the mode picker
 
-Usage: python3 scripts/generate-store-screenshots.py  (needs Chrome + Pillow)
+Both device families are required by App Store Connect because the app ships
+with TARGETED_DEVICE_FAMILY = "1,2". Apple downscales the largest size in each
+family to fill every smaller device, so exactly two sets are needed: 6.9-inch
+iPhone and 13-inch iPad. An iPad-supporting listing is rejected if it carries
+only iPhone screenshots.
+
+Usage:
+  python3 scripts/generate-store-screenshots.py            # iPhone 6.9"
+  python3 scripts/generate-store-screenshots.py --ipad     # iPad 13"
+  python3 scripts/generate-store-screenshots.py --all      # both
 """
 
 from __future__ import annotations
@@ -29,7 +38,15 @@ OUT_DIR = REPO / "app-store/screenshots/en-US"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 FONT = "/System/Library/Fonts/Supplemental/Futura.ttc"
 
-W, H = 1320, 2868
+# (canvas size, filename suffix). The iPad canvas is far squarer than the
+# phone's, so caption and art geometry are derived from the canvas rather than
+# hardcoded — see compose().
+DEVICES = {
+    "iphone": ((1320, 2868), ""),
+    "ipad": ((2064, 2752), "-ipad"),
+}
+
+W, H = DEVICES["iphone"][0]
 # 1200 square is the render size that provably completes; the Glow theme's
 # animation loop never lets virtual time settle headlessly, so the sphere
 # shots use the stark Shell/Ink themes (which also match the app icon).
@@ -37,9 +54,13 @@ RENDER_SIZE = 1200
 
 PLAY_HARNESS = """
 <style>
+  /* The help affordances are IDs, not classes; the original class selectors
+     here never matched, which is why a faint "?" survived into every sphere
+     shot. Keep both forms in case a future re-vendor swaps them. */
   .hud-stats,.hud-actions,.hud-cluster,.legacy-hud,.customize-panel,
   .help-overlay,.help-panel,.sphere-banner,.count-style-toast,.lightbox,
-  .app-back
+  .app-back,
+  #help-btn,#help-overlay,#help-panel,#help-controls
   { display:none !important; visibility:hidden !important; }
   html,body { background:__BG__ !important; }
 </style>
@@ -96,12 +117,21 @@ def render_square(src_rel: str, theme_index, bg_css: str, out: Path) -> None:
         return chrome_shot(page, out)
     html = src_path.read_text(encoding="utf-8")
     if theme_index is not None:
-        boot = 'initDevChrome(SphereSweeper.boot({ canvasId: "gameCanvas" }));'
+        # Capture the booted game on window.__shot without caring which chrome
+        # wrapper consumes it. That wrapper has changed name at least once
+        # (initDevChrome -> initHexBloom when the centre bloom menu landed),
+        # which silently broke this script for ~24 builds; match only the boot
+        # call itself so a future rename cannot break it again.
+        boot = 'SphereSweeper.boot({ canvasId: "gameCanvas" })'
         if boot not in html:
-            sys.exit("boot call not found in sphere.html")
+            sys.exit(
+                "SphereSweeper.boot({ canvasId: \"gameCanvas\" }) not found in "
+                "sphere.html — the payload's boot signature changed; update this "
+                "script against the current www/."
+            )
         html = html.replace(
             boot,
-            'window.__shot = SphereSweeper.boot({ canvasId: "gameCanvas" }); initDevChrome(window.__shot);',
+            '(window.__shot = SphereSweeper.boot({ canvasId: "gameCanvas" }))',
             1,
         )
         html = html.replace(
@@ -149,35 +179,59 @@ def crop_to_sphere(img: Image.Image, backdrop_hex: str, pad_frac: float = 0.07) 
     return img.crop((round(cx - side), round(cy - side), round(cx + side), round(cy + side)))
 
 
-def compose(art: Image.Image, bg: str, fg: str, caption: str, out: Path) -> None:
-    canvas = Image.new("RGB", (W, H), bg)
+def compose(art: Image.Image, bg: str, fg: str, caption: str, out: Path,
+            size: tuple[int, int]) -> None:
+    """Caption band above, square art below, centred on the device canvas.
+
+    Geometry scales off the canvas width so the iPad's squarer 3:4 canvas does
+    not push the art off the bottom the way fixed phone offsets would.
+    """
+    width, height = size
+    scale = width / 1320  # phone canvas is the reference the captions were tuned on
+    canvas = Image.new("RGB", (width, height), bg)
     draw = ImageDraw.Draw(canvas)
-    font = ImageFont.truetype(FONT, 96)
+    font = ImageFont.truetype(FONT, round(96 * scale))
     lines = caption.split("\n")
-    y = 190
+    y = round(190 * scale)
     for line in lines:
         box = draw.textbbox((0, 0), line, font=font)
-        draw.text(((W - (box[2] - box[0])) / 2, y), line, font=font, fill=fg)
-        y += (box[3] - box[1]) + 34
-    art_side = W - 80
+        draw.text(((width - (box[2] - box[0])) / 2, y), line, font=font, fill=fg)
+        y += (box[3] - box[1]) + round(34 * scale)
+    gap = round(170 * scale)
+    # Fit the art to whichever bound binds first: canvas width, or the height
+    # left under the caption. The phone has height to spare; the iPad does not.
+    art_side = min(width - round(80 * scale), height - (y + gap) - round(80 * scale))
     art_scaled = art.resize((art_side, art_side), Image.LANCZOS)
-    canvas.paste(art_scaled, ((W - art_side) // 2, y + 170))
+    canvas.paste(art_scaled, ((width - art_side) // 2, y + gap))
     canvas.save(out)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if "--all" in argv:
+        targets = ["iphone", "ipad"]
+    elif "--ipad" in argv:
+        targets = ["ipad"]
+    else:
+        targets = ["iphone"]
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for filename, src_rel, theme_index, do_crop, bg, fg, caption in SHOTS:
-        if (OUT_DIR / filename).is_file():
-            print(f"{filename}: exists, skipping (delete to regenerate)")
-            continue
-        raw = Path(tempfile.mkdtemp()) / "raw.png"
-        render_square(src_rel, theme_index, bg, raw)
-        img = Image.open(raw).convert("RGB")
-        art = crop_to_sphere(img, bg) if do_crop else img
-        compose(art, bg, fg, caption, OUT_DIR / filename)
-        w, h = Image.open(OUT_DIR / filename).size
-        print(f"{filename}: {w}x{h}")
+    for device in targets:
+        size, suffix = DEVICES[device]
+        print(f"── {device} {size[0]}x{size[1]} ──")
+        for filename, src_rel, theme_index, do_crop, bg, fg, caption in SHOTS:
+            stem, ext = filename.rsplit(".", 1)
+            out_name = f"{stem}{suffix}.{ext}"
+            if (OUT_DIR / out_name).is_file():
+                print(f"{out_name}: exists, skipping (delete to regenerate)")
+                continue
+            raw = Path(tempfile.mkdtemp()) / "raw.png"
+            render_square(src_rel, theme_index, bg, raw)
+            img = Image.open(raw).convert("RGB")
+            art = crop_to_sphere(img, bg) if do_crop else img
+            compose(art, bg, fg, caption, OUT_DIR / out_name, size)
+            w, h = Image.open(OUT_DIR / out_name).size
+            print(f"{out_name}: {w}x{h}")
     return 0
 
 

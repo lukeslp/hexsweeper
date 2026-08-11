@@ -41,8 +41,14 @@ rather than contaminated — every field was null, so this was fill-in.
 The record was found **empty**, not filled with the retired app's content —
 worth knowing if you ever inherit another bundle id this way.
 
-Before submission, replace `02-sphere.png`: its HUD was captured mid-render and
-shows “left” and “s” without their numbers.
+Before submission, replace the ASC **device capture** `02-sphere.png`: its HUD
+was captured mid-render and shows “left” and “s” without their numbers. That
+file exists only in App Store Connect — the repo's `02-sphere-ink.png` is a
+separate captioned composite with no HUD and is not the one at fault.
+
+Also still owed: **iPad screenshots at 2064×2752**. The app declares
+`TARGETED_DEVICE_FAMILY = "1,2"`, and ASC will not accept an iPad-supporting
+listing with iPhone screenshots alone.
 
 ## Licensing
 

@@ -42,11 +42,30 @@ and any network dependency is a defect.
 | 22 | Android Back | From a game, **‹ Games** returns to the picker; system Back exits or follows documented platform behaviour without losing state | |
 | 23 | Android system bars | Content clears status/navigation/gesture insets in both orientations | |
 
+## iPad gates
+
+The app ships `TARGETED_DEVICE_FAMILY = "1,2"`, so iPad is a supported device
+and Apple reviews it as one. These gates were missing entirely until
+2026-08-11; nothing below has ever been checked on a tablet.
+
+| # | Check | Pass criteria | Result |
+|---|---|---|---|
+| 22 | iPad launch | Launch screen and picker fill the display; no letterboxing or phone-sized layout stranded in a corner | |
+| 23 | iPad sphere | Sphere scales to the larger canvas rather than staying phone-sized; still centred and unclipped | |
+| 24 | Split View / Slide Over | Resizing does not break the canvas or lose the run | |
+| 25 | iPad rotation | All four orientations reflow (iPad allows upside-down, unlike iPhone) | |
+| 26 | Pointer / trackpad | If a Magic Keyboard or mouse is attached, hover and click behave sanely | |
+| 27 | Apple Pencil | Tap and long-press register as touch; no stray digs while resting a hand | |
+
 ## Known open question
 
 Gate 12 is the one most likely to fail. `pickTile` uses exact polygon hit-testing
 with no touch padding, and XL is 2252 faces. If small boards are comfortable but
 XL is not, the fix is a per-device board cap in hexsweeper, not here.
+
+Note that iPad's larger display cuts the other way on gate 12 — the same face
+count is far more tappable on a 13-inch panel, so a phone-only cap may be the
+right shape of fix.
 
 ## Sign-off
 

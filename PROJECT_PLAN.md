@@ -46,15 +46,34 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
       alternatives and their reproducible pipeline are committed, but were not
       uploaded over the device captures
 - [x] **Release candidate attached: 1.0 (8), VALID**; nothing submitted for review
-- [x] **TestFlight build 1.0 (9), VALID**; first three-mode launcher uploaded
-- [x] Current launcher auto-digs a safe opening into clearly labeled Infinite,
+- [x] **TestFlight through 1.0 (33)**, CI green on every push
+- [x] Launcher auto-digs a safe opening into clearly labeled Infinite,
       Classic, and Sphere choices with Endless, Fixed, and 3D qualifiers
+- [x] Android native build added (`versionCode 1`, unsigned, never uploaded)
+- [x] Screenshot pipeline parameterised per device family (2026-08-11);
+      `05-picker` generated, closing the set the script always declared
+- [ ] **iPad screenshots (2064×2752) — submission blocker.**
+      `TARGETED_DEVICE_FAMILY = "1,2"` claims iPad support, and App Store
+      Connect rejects an iPad-supporting listing that carries only iPhone
+      screenshots. Either generate the set
+      (`python3 scripts/generate-store-screenshots.py --ipad`) **or** drop to
+      `TARGETED_DEVICE_FAMILY = 1` and ship iPhone-only. Not previously tracked
+      anywhere.
 - [ ] App Privacy nutrition labels — no API endpoint, must be clicked through
       in the ASC web UI. Answer is "Data Not Collected" throughout
-- [ ] Device verification (`docs/DEVICE_VERIFY.md`) — tap-target size at XL is
-      the gate most likely to fail
-- [ ] Re-shoot `02-sphere.png` before submission; its HUD was captured
-      mid-render and shows “left” and “s” without their numbers
+- [ ] Device verification (`docs/DEVICE_VERIFY.md`) — 21 gates, none filled in
+- [ ] Capacitor 8.3.1 → 8.5.0 available (splash-screen 8.0.1 → 8.0.2). Minor
+      bump; regenerates native projects, so it wants its own build + smoke run
+
+### Screenshot naming, clarified
+
+The repo holds **generated marketing shots** — `01-sphere-shell`,
+`02-sphere-ink`, `03-infinite`, `04-bounded`, `05-picker` — all captioned
+composites at 1320×2868. The **device captures uploaded to ASC are a separate,
+older set that does not live in this repo.** The long-standing "re-shoot
+`02-sphere.png`" note refers to one of *those*, not to `02-sphere-ink.png`
+here, which has no HUD at all and is fine. Whether to replace the ASC device
+captures with these generated ones is still an open call.
 
 ## Outstanding decisions
 

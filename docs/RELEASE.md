@@ -102,9 +102,16 @@ Still owed:
       API has no endpoint for them (`appPrivacyDetails` → "URL path is not
       valid"). Answer: no data collected, of any kind.
 - [ ] `docs/DEVICE_VERIFY.md` signed on hardware
-- [ ] Re-shoot `02-sphere.png`. The current capture caught the HUD mid-render
-      and shows “left” and “s” without their numbers. Four generated alternatives
-      live under `app-store/screenshots/en-US/` for comparison.
+- [ ] **iPad screenshots (2064×2752) — blocker.** The app ships
+      `TARGETED_DEVICE_FAMILY = "1,2"`, and ASC rejects an iPad-supporting
+      listing that carries only iPhone screenshots. Generate with
+      `python3 scripts/generate-store-screenshots.py --ipad`, or drop iPad
+      support and ship iPhone-only. Set type is `APP_IPAD_PRO_3GEN_129`.
+- [ ] Decide whether the generated composites replace the ASC device captures.
+      The **device capture** called `02-sphere.png` lives only in ASC, not in
+      this repo, and is the one that caught the HUD mid-render showing “left”
+      and “s” without their numbers. The repo's `02-sphere-ink.png` is a
+      different, captioned composite with no HUD and is unaffected.
 
 Export compliance is already answered: `ITSAppUsesNonExemptEncryption = false`.
 
