@@ -11,9 +11,13 @@ inside a game, not a peer of it, so it does not appear in the picker.
 
 | Mode | Board | Source |
 |---|---|---|
-| **Infinite** | Grows as you dig; Light/Dark keeps the run | `collection/theme-plate.html` |
-| **Bounded** | Fixed hex board, neumorph | `collection/skin-classic.html` |
-| **Sphere** | Closed Goldberg sphere, 3D | `sphere/` |
+| **Infinite** | Endless flat board; Light/Dark keeps the run | `collection/theme-plate.html` |
+| **Classic** | Fixed flat board, neumorph | `collection/skin-classic.html` |
+| **Sphere** | Closed 3D Goldberg sphere | `sphere/` |
+
+The picker reinforces those choices with the short qualifiers **Endless**, **Fixed**,
+and **3D**. Internal filenames keep `bounded` for compatibility; that is not a
+user-facing mode name.
 
 Web version: <https://dr.eamer.dev/games/hexsweeper/sphere/>
 

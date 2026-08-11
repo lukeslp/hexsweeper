@@ -1,10 +1,10 @@
-# Hexsweeper (iOS) — project plan
+# Hexsweeper (iOS + Android) — project plan
 
 ## Objective
 
-Ship hexsweeper's 3D sphere minesweeper as a native iOS app: a thin Capacitor
-shell around a sealed, offline Canvas game, reusing the App Store Connect record
-already held under `app.hexodus.ios`.
+Ship Hexsweeper's Infinite, Classic, and Sphere boards as native iOS and Android
+apps: a thin Capacitor shell around a sealed, offline Canvas payload, reusing
+the App Store Connect record already held under `app.hexodus.ios`.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
       `iris` antagonist, and the React/Radix/Tailwind toolchain all removed
 - [x] `FoundationModelsPlugin.swift` + `AppViewController.swift` deleted;
       `Main.storyboard` back to stock `CAPBridgeViewController`
-- [x] `www/` vendored from hexsweeper `a504d52`, provenance in `WWW_SOURCE.txt`
+- [x] `www/` vendored from hexsweeper `0db0f2b`, provenance in `WWW_SOURCE.txt`
 - [x] Display name / `PRODUCT_NAME` → Hexsweeper; bundle id retained
 - [x] `CURRENT_PROJECT_VERSION` 1 → 9 (ASC holds builds 1–6; build 7 was the
       first TestFlight binary, build 8 is attached to 1.0, and build 9 carries
@@ -46,8 +46,9 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
       alternatives and their reproducible pipeline are committed, but were not
       uploaded over the device captures
 - [x] **Release candidate attached: 1.0 (8), VALID**; nothing submitted for review
-- [x] **TestFlight build 1.0 (9), VALID**; centered logo unfolds into Infinite,
-      Bounded, and Sphere mode links
+- [x] **TestFlight build 1.0 (9), VALID**; first three-mode launcher uploaded
+- [x] Current launcher auto-digs a safe opening into clearly labeled Infinite,
+      Classic, and Sphere choices with Endless, Fixed, and 3D qualifiers
 - [ ] App Privacy nutrition labels — no API endpoint, must be clicked through
       in the ASC web UI. Answer is "Data Not Collected" throughout
 - [ ] Device verification (`docs/DEVICE_VERIFY.md`) — tap-target size at XL is
@@ -67,14 +68,15 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 
 ## Risks
 
-- The payload is a pinned copy. Sphere fixes do not reach players until someone
+- The payload is a pinned copy. Game fixes do not reach players until someone
   re-vendors; CI catches divergence but only once hexsweeper's change is pushed.
 - Bundle id and product name will never match. Documented in README and AGENTS;
   do not let a future cleanup "fix" it.
 
 ## Acceptance
 
-Game renders and is playable in the native shell with no network; dig, flag,
-chord, and camera drag all work by touch; safe-area insets respected on a
-notched device; launch screen hands off to the first painted frame without a
-blank gap; smoke gates green; build number exceeds 6.
+Picker and all three games render and are playable in the native shell with no
+network; dig, flag, chord, pan, and camera drag work by touch where applicable;
+safe-area insets are respected on a notched device; launch screen hands off to
+the first painted frame without a blank gap; smoke gates are green; build
+number exceeds the latest uploaded build.
