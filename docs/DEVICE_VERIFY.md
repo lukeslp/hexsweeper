@@ -47,5 +47,5 @@ XL is not, the fix is a per-device board cap in hexsweeper, not here.
 ## Sign-off
 
 - [ ] All gates pass, or failures are recorded with issue links
-- [ ] iOS build number exceeds the latest App Store Connect build (currently 28)
+- [ ] iOS build number exceeds the latest App Store Connect build (currently 32)
 - [ ] Android `versionCode` exceeds the latest Play build (currently no Play listing; project starts at 1)
