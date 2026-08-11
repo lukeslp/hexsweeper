@@ -12,9 +12,9 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 28 is the latest uploaded TestFlight build. The checked-in
+this same record. Build 29 is the latest uploaded TestFlight build. The checked-in
 Xcode project may lag that upload history, so set `CURRENT_PROJECT_VERSION` to
-**greater than 28** before the next archive.
+**greater than 29** before the next archive.
 
 ## Archive → TestFlight
 
@@ -93,8 +93,8 @@ Done (updated 2026-08-10, through the App Store Connect API):
       preserved rather than overwritten by the four generated alternatives
 - [x] Build 8 processed, validated, and attached to the 1.0 version. Nothing
       submitted for review
-- [x] Build 28 uploaded to TestFlight on 2026-08-10; confirm final processing
-      state in App Store Connect before distribution
+- [x] Build 29 uploaded to TestFlight on 2026-08-10 and processed as VALID;
+      confirm distribution state in App Store Connect before widening access
 
 Still owed:
 
