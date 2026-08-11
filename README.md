@@ -80,6 +80,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
 | `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
+| `collection/polyhedron.html` | Dodecahedron campaign — 12 connected panels with 19/37/61 cells per panel |
 | `collection/sphere-kimi.html` | Visual take: Moon Ink Orrery |
 | `collection/sphere-claude.html` | Visual take: Amber Codex |
 | `collection/sphere-muse.html` | Visual take: Starlit Void |
@@ -148,6 +149,18 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12).
 
 Flat game remains the default at `index.html`.
+
+## Dodecahedron campaign (experimental)
+
+Playable low-poly campaign at [`polyhedron/`](polyhedron/) — `https://dr.eamer.dev/games/hexsweeper/polyhedron/`
+
+- Twelve pentagonal macro-panels follow the exact dodecahedron graph: one start, five adjacent, five distance-two, one opposite.
+- Every panel is fully tessellated by a bounded hex-lattice Voronoi field; P19, P37, and P61 set cells per panel without changing the outer solid.
+- Clear one panel to unlock its five neighbors. Counts and floods stay panel-local; cross-panel clues are deliberately deferred.
+- A mine fails only the active panel. Undo, retry, or return preserves completed campaign progress.
+- Overview supports orbit and panel selection; the active panel rotates front and expands into a touch-sized play surface.
+
+Smoke: `node polyhedron/test-campaign.js` (coverage, planarity, adjacency, 1/5/5/1 unlock topology, local failure, persistence).
 
 ## Choices hub
 

@@ -134,6 +134,33 @@ EXPERIMENTS = [
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
+        "id": "polyhedron",
+        "title": "Hexsweeper · Dodecahedron",
+        "ogTitle": "Hexsweeper — Dodecahedron Campaign",
+        "ogDescription": "Twelve connected pentagonal panels, each covered by a playable Hexsweeper field.",
+        "tag": "Experiment · playable campaign",
+        "blurb": "A true dodecahedron becomes a 12-stage campaign: clear one tiled pentagonal panel to unlock its five neighbors.",
+        "filter": "dodecahedron polyhedron panels campaign pentagon tiled voronoi connected progression experiment",
+        "swatch": ("#ffffff", "#111111", "#d9d9d5", "#ffd000"),
+        "file": "polyhedron.html",
+        "href": "polyhedron.html",
+        "liveHref": "../polyhedron/",
+        "source": "polyhedron",
+        "css": ["dev-chrome.css", "hex-bloom.css"],
+        "scripts": [
+            "hexasphere.js",
+            "panel-board.js",
+            "dodeca-layout.js",
+            "campaign.js",
+            "polyhedron-renderer.js",
+            "main.js",
+            "hex-bloom.js",
+        ],
+        "boot": "initHexBloom",
+        "welcomeKey": "hexsweeper-dodeca-welcome-v1",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
         "id": "sphere-face-takeover",
         "title": "Sphere UX · Face Takeover",
         "ogTitle": "Hexsweeper 3D — Face Takeover",
@@ -830,6 +857,9 @@ def export_sphere(exp: dict) -> str:
     markup = markup.replace(
         'src="assets/classic-minesweeper.png"', f'src="{history_img}"'
     )
+    markup = markup.replace(
+        'src="../sphere/assets/classic-minesweeper.png"', f'src="{history_img}"'
+    )
 
     for css_name in css_names:
         css_path = source_dir / css_name
@@ -865,11 +895,12 @@ def export_sphere(exp: dict) -> str:
         if dock_mode
         else ""
     )
+    welcome_key = exp.get("welcomeKey") or "hexsweeper-sphere-welcome-v1"
     boot = (
         "<script>\n"
         "/* collection / CodePen boot */\n"
         "try {\n"
-        "  localStorage.setItem('hexsweeper-sphere-welcome-v1', '1');\n"
+        f"  localStorage.setItem({welcome_key!r}, '1');\n"
         "} catch (_) {}\n"
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;\n"
         f"{take_line}"
