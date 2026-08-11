@@ -80,6 +80,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
 | `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
+| `collection/sphere-reflection.html` | Obsidian Mirror — WebGL reflection beneath the playable Canvas 2D sphere |
 | `collection/sphere-kimi.html` | Visual take: Moon Ink Orrery |
 | `collection/sphere-claude.html` | Visual take: Amber Codex |
 | `collection/sphere-muse.html` | Visual take: Starlit Void |
@@ -148,6 +149,20 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12).
 
 Flat game remains the default at `index.html`.
+
+## Obsidian Mirror (experimental)
+
+[`sphere-reflection/`](sphere-reflection/) — https://dr.eamer.dev/games/hexsweeper/sphere-reflection/
+
+- Original sphere gameplay and center-bloom controls, isolated from the native app payload.
+- Pointer-inert WebGL2 reflection beneath the authoritative Canvas 2D mesh.
+- Covered faces retain the continuous mirror; cleared faces become matte wells; flags stay scarlet.
+- Analytic sphere normals replace a costly raymarch, with a capped backing buffer for mobile.
+- Procedural time freezes for reduced motion; forced colors uses the flat black/white renderer.
+- WebGL compile/context loss falls back to a static reflective field without blocking play.
+- Share cards composite the reflection and game layers.
+
+The material study credits Matthias Hurrle (`@atzedent`) for the supplied reflection premise; its shader implementation is original to this experiment.
 
 ## Water Wheel
 

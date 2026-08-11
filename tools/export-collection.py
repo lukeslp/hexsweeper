@@ -116,6 +116,31 @@ EXPERIMENTS = [
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
+        "id": "sphere-reflection",
+        "title": "Hexsweeper 3D · Obsidian Mirror",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror",
+        "ogDescription": "A mirrored Hexsweeper sphere whose covered faces reflect a procedural sky, then turn matte as they clear.",
+        "tag": "Experiment · reflective material",
+        "blurb": "One continuous stormglass reflection lives beneath the playable hex shell: mirror means covered, matte means cleared, scarlet means flagged.",
+        "filter": "sphere reflection mirror stormglass webgl shader material hexsweeper experiment",
+        "swatch": ("#071017", "#d9965b", "#8ab6c9", "#e5222a"),
+        "file": "sphere-reflection.html",
+        "href": "sphere-reflection.html",
+        "liveHref": "../sphere-reflection/",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": [
+            "../sphere/hexasphere.js",
+            "sphere.js",
+            "mirror-material.js",
+            "../sphere/hex-bloom.js",
+        ],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
         "id": "sphere-ux",
         "title": "Hexsweeper 3D · Bloom UX",
         "ogTitle": "Hexsweeper 3D — Bloom UX",
@@ -710,11 +735,15 @@ def sphere_banner(exp: dict) -> str:
         live_url = live
     else:
         live_url = f"https://dr.eamer.dev/games/hexsweeper/{live.lstrip('/')}"
+    stack = exp.get(
+        "stack",
+        "Vanilla HTML, CSS, and JavaScript; Canvas 2D; no frameworks.",
+    )
     return "\n".join(
         (
             "<!--",
             f"  Quick Take: {exp['ogTitle']} — {exp['blurb']}",
-            "  Stack: Vanilla HTML, CSS, and JavaScript; Canvas 2D; no frameworks.",
+            f"  Stack: {stack}",
             f"  Source: {PUBLIC_BASE}/{exp['file']}",
             f"  Live: {live_url}",
             "  License: MIT · Author: Luke Steuber",
@@ -865,11 +894,17 @@ def export_sphere(exp: dict) -> str:
         if dock_mode
         else ""
     )
+    welcome_key = exp.get("welcomeKey", "hexsweeper-sphere-welcome-v1")
+    welcome_literal = (
+        "'hexsweeper-sphere-welcome-v1'"
+        if welcome_key == "hexsweeper-sphere-welcome-v1"
+        else json.dumps(welcome_key)
+    )
     boot = (
         "<script>\n"
         "/* collection / CodePen boot */\n"
         "try {\n"
-        "  localStorage.setItem('hexsweeper-sphere-welcome-v1', '1');\n"
+        f"  localStorage.setItem({welcome_literal}, '1');\n"
         "} catch (_) {}\n"
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;\n"
         f"{take_line}"
