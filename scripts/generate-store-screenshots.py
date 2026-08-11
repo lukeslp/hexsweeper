@@ -54,9 +54,13 @@ RENDER_SIZE = 1200
 
 PLAY_HARNESS = """
 <style>
-  /* The help affordances are IDs, not classes; the original class selectors
-     here never matched, which is why a faint "?" survived into every sphere
-     shot. Keep both forms in case a future re-vendor swaps them. */
+  /* The help affordances are IDs, not classes, so the class selectors below
+     never matched them — both forms are listed now. Note this still does not
+     fully suppress #help-btn: a faint "?" survives into the sphere renders and
+     crop_to_sphere widens the crop box to include it. Removing the nodes in JS
+     instead *does* clear it but stops the page settling under virtual time, so
+     the render times out — strictly worse than the blemish. Left as-is
+     deliberately; see PROJECT_PLAN. */
   .hud-stats,.hud-actions,.hud-cluster,.legacy-hud,.customize-panel,
   .help-overlay,.help-panel,.sphere-banner,.count-style-toast,.lightbox,
   .app-back,

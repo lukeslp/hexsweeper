@@ -65,6 +65,30 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 - [ ] Capacitor 8.3.1 → 8.5.0 available (splash-screen 8.0.1 → 8.0.2). Minor
       bump; regenerates native projects, so it wants its own build + smoke run
 
+### Screenshot pipeline: what it can and cannot do
+
+Verified 2026-08-11. Every render is a ~2-minute headless-Chrome gamble against
+a fixed `--virtual-time-budget`, with no signal that the page has actually
+settled. Consequences, all reproduced:
+
+- **Sphere shots render reliably.** Both iPhone and iPad sets come from these.
+- **`infinite.html` now times out** (120s × 2 attempts) under payload
+  `466709c`. The committed phone shots were rendered 2026-08-10 against
+  `0db0f2b`, so this is a regression in renderability, not a config problem.
+  `bounded.html` is untested since the run never reaches it.
+- **`05-picker` has never rendered at all** — the opening auto-dig never
+  settles.
+- **A faint `?` (`#help-btn`) survives into every sphere shot.** CSS
+  `display:none !important` does not suppress it, and `crop_to_sphere` then
+  widens the crop box to include it. Removing the node in JS *does* clear it
+  but stops the page settling, so the render times out — strictly worse. Left
+  in deliberately; a slightly blemished screenshot beats none.
+
+The real fix is settle-detection — wait on a concrete DOM or canvas signal
+instead of a fixed time budget — which would likely unblock the flat games and
+the picker together. Until then, treat asset regeneration as unreliable and
+never delete a good screenshot before its replacement exists.
+
 ### Screenshot naming, clarified
 
 The repo holds **generated marketing shots** — `01-sphere-shell`,
