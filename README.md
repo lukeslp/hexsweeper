@@ -149,6 +149,15 @@ Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at sub
 
 Flat game remains the default at `index.html`.
 
+## Water Wheel
+
+[`wheel/`](wheel/) is the gameplay cut of the former water-theme experiment.
+Clicking a mine starts a short fuse; rotate that face beneath the fixed,
+wavy waterline to quench it. Quenched mines stay inert across refresh, while
+ordinary flags wash off without revealing whether they were correct. The
+water renderer uses the existing Canvas 2D/offscreen-buffer path and keeps
+refraction concentrated near the surface so the rescue face remains readable.
+
 ## Choices hub
 
 [`choices.html`](choices.html) — https://dr.eamer.dev/games/hexsweeper/choices.html

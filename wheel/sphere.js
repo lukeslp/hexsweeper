@@ -16,7 +16,8 @@
  * Idle: ambient yaw until first canvas interaction (off under reduced motion).
  * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
- * Persist: autosave mid-run (localStorage + sessionStorage `hexsweeper-sphere-run-v2`).
+ * Wheel: click a mine to arm its fuse; spin it under the fixed trough to quench it.
+ * Persist: autosave mid-run (localStorage + sessionStorage `hexwheel-run-v3`).
  * Soft/hard browser reload restores; only UX Reset (or size change) clears the run.
  * No window.confirm dialogs — Reset/size are deliberate. Welcome help only once, not over a restored run.
  * Flags: pure red fill only (no glyph); stand proud of the shell as pins.
@@ -567,8 +568,9 @@
   const COUNT_STYLE_STORAGE_KEY = "hexwheel-countstyle-v1";
   const INVERT_STORAGE_KEY = "hexwheel-invert-v1";
   const WELCOME_KEY = "hexwheel-welcome-v1";
-  const RUN_STORAGE_KEY = "hexwheel-run-v2";
-  const RUN_STORAGE_KEY_LEGACY = "hexwheel-run-v1";
+  const RUN_STORAGE_KEY = "hexwheel-run-v3";
+  const RUN_STORAGE_KEY_LEGACY = "hexwheel-run-v2";
+  const RUN_STORAGE_KEY_LEGACY_V1 = "hexwheel-run-v1";
   /** History-tile accent — mark only, never well fill. */
   const YELLOW_COUNT = "#facc15";
   const COUNT_STYLES = [
@@ -701,7 +703,7 @@
       } catch (_) {}
     }
 
-    // Wheel proto: water IS the mechanic — always boot into it.
+    // Wheel: water IS the mechanic — always boot into it.
     let themeIndex = THEMES.findIndex((t) => t.id === "water");
     if (themeIndex < 0) themeIndex = 0;
 
@@ -711,13 +713,19 @@
       canvas,
       ctx,
       theme: themePalette(THEMES[themeIndex]),
-      waterLevel: 0.5,
       difficulty: readStoredSize(),
       tiles: [],
       cells: [],
       sphere: null,
       mineCount: 0,
       flagsPlaced: 0,
+      rescueCount: 0,
+      armedMineIdx: -1,
+      fuseStartedAt: 0,
+      fuseDeadline: 0,
+      fuseDurationMs: 0,
+      fusePausedAt: 0,
+      waterRetreatVisual: 0,
       isFirstClick: true,
       isGameOver: false,
       won: false,
@@ -795,6 +803,10 @@
         isMine: false,
         revealed: false,
         flagged: false,
+        doused: false,
+        _wetMs: 0,
+        _dousedAt: 0,
+        _washedAt: 0,
         neighborMines: 0,
         animReveal: 0,
         visualDue: 0,
@@ -857,8 +869,10 @@
     const helpBtn = document.getElementById("help-btn");
     const helpCloseBtn = document.getElementById("help-close-btn");
     const helpDoneBtn = document.getElementById("help-done-btn");
+    const wheelAlert = document.getElementById("wheel-alert");
     let helpFocusReturn = null;
     let shareBusy = false;
+    let wheelAlertTimer = null;
     /*
      * The share File is built when the win banner appears, not when the button
      * is tapped. iOS Safari only honours navigator.share() while the user
@@ -880,14 +894,18 @@
       const n = state.cells.length;
       const revealed = new Uint8Array(n);
       const flagged = new Uint8Array(n);
+      const doused = new Uint8Array(n);
       for (let i = 0; i < n; i++) {
         revealed[i] = state.cells[i].revealed ? 1 : 0;
         flagged[i] = state.cells[i].flagged ? 1 : 0;
+        doused[i] = state.cells[i].doused ? 1 : 0;
       }
       undoSnapshot = {
         revealed,
         flagged,
+        doused,
         flagsPlaced: state.flagsPlaced,
+        rescueCount: state.rescueCount,
         isFirstClick: state.isFirstClick,
         timeElapsed: state.timeElapsed,
       };
@@ -901,12 +919,22 @@
         const c = state.cells[i];
         c.revealed = !!snap.revealed[i];
         c.flagged = !!snap.flagged[i];
+        c.doused = !!snap.doused[i];
+        c._wetMs = 0;
+        c._dousedAt = 0;
+        c._washedAt = 0;
         // Revealed cells keep their finished animation; undone ones reset so
         // a re-dig animates again instead of popping in.
         c.animReveal = c.revealed ? 1 : 0;
         c.visualDue = 0;
       }
       state.flagsPlaced = snap.flagsPlaced;
+      state.rescueCount = snap.rescueCount;
+      state.armedMineIdx = -1;
+      state.fuseStartedAt = 0;
+      state.fuseDeadline = 0;
+      state.fuseDurationMs = 0;
+      state.fusePausedAt = 0;
       state.isFirstClick = snap.isFirstClick;
       state.timeElapsed = snap.timeElapsed;
       state.isGameOver = false;
@@ -918,6 +946,54 @@
       draw();
       persistNow();
       return true;
+    }
+
+    function setWheelAlert(message, mode, holdMs) {
+      if (!wheelAlert) return;
+      clearTimeout(wheelAlertTimer);
+      wheelAlert.textContent = message;
+      wheelAlert.dataset.mode = mode || "info";
+      wheelAlert.hidden = false;
+      wheelAlert.classList.add("visible");
+      if (holdMs > 0) {
+        wheelAlertTimer = setTimeout(() => {
+          wheelAlert.classList.remove("visible");
+          setTimeout(() => {
+            if (!wheelAlert.classList.contains("visible")) wheelAlert.hidden = true;
+          }, state.reduceMotion ? 0 : 180);
+        }, holdMs);
+      }
+    }
+
+    const wheelPauseReasons = new Set();
+
+    function pauseWheel(reason) {
+      wheelPauseReasons.add(reason || "manual");
+      if (state.armedMineIdx < 0 || state.fusePausedAt) return;
+      state.fusePausedAt = performance.now();
+      schedulePersist();
+    }
+
+    function resumeWheel(reason) {
+      wheelPauseReasons.delete(reason || "manual");
+      if (
+        wheelPauseReasons.size > 0 ||
+        state.armedMineIdx < 0 ||
+        !state.fusePausedAt
+      ) return;
+      const now = performance.now();
+      const pausedFor = Math.max(0, now - state.fusePausedAt);
+      state.fuseStartedAt += pausedFor;
+      state.fuseDeadline += pausedFor;
+      state.fusePausedAt = 0;
+      const remaining = Math.max(0, state.fuseDeadline - now);
+      setWheelAlert(
+        `MINE ARMED · DROWN IT · ${(remaining / 1000).toFixed(1)}s`,
+        "danger",
+        0
+      );
+      scheduleFrame();
+      schedulePersist();
     }
 
     function hudClick(fn) {
@@ -1224,6 +1300,7 @@
 
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
+      pauseWheel("help");
       if (fromWelcome) markWelcomeSeen = true;
       helpFocusReturn =
         document.activeElement && document.activeElement !== document.body
@@ -1260,32 +1337,7 @@
         helpFocusReturn.focus();
       }
       helpFocusReturn = null;
-    }
-
-    /** 0 = globe fully above the surface, 1 = fully under. 0.5 = half. */
-    function readWaterLevel() {
-      try {
-        const raw = new URLSearchParams(location.search).get("water");
-        if (raw != null) {
-          const v = parseFloat(raw);
-          if (Number.isFinite(v)) return Math.max(0, Math.min(1, v > 1 ? v / 100 : v));
-        }
-      } catch (_) {}
-      return 0.5;
-    }
-
-    function setWaterLevel(v) {
-      state.waterLevel = Math.max(0, Math.min(1, v));
-      scheduleFrame();
-    }
-
-    function bindWaterLevel() {
-      const el = document.getElementById("water-level");
-      if (!el) return;
-      el.value = String(Math.round(state.waterLevel * 100));
-      el.addEventListener("input", () => {
-        setWaterLevel(parseFloat(el.value) / 100);
-      });
+      resumeWheel("help");
     }
 
     function resize() {
@@ -1541,10 +1593,14 @@
         // "Left" is live from the first paint (not a dead 00).
         const faceN =
           state.cells.length || SIZE_FACES[state.difficulty] || 362;
+        const dousedMines = state.cells.reduce(
+          (sum, cell) => sum + (cell.doused && cell.isMine ? 1 : 0),
+          0
+        );
         const left =
           state.isFirstClick && state.mineCount === 0
             ? mineTargetForDifficulty(faceN)
-            : Math.max(0, state.mineCount - state.flagsPlaced);
+            : Math.max(0, state.mineCount - state.flagsPlaced - dousedMines);
         statsMines.textContent = String(left).padStart(2, "0");
       }
       if (statsTime) {
@@ -1593,10 +1649,23 @@
       state.won = false;
       state.detonatorIdx = -1;
       state.flagsPlaced = 0;
+      state.rescueCount = 0;
+      state.armedMineIdx = -1;
+      state.fuseStartedAt = 0;
+      state.fuseDeadline = 0;
+      state.fuseDurationMs = 0;
+      state.fusePausedAt = 0;
+      wheelPauseReasons.clear();
+      state.waterRetreatVisual = 0;
       state.timeElapsed = 0;
       state.hovered = -1;
       state.pressed = -1;
       state.camShake = 0;
+      if (wheelAlert) {
+        clearTimeout(wheelAlertTimer);
+        wheelAlert.classList.remove("visible");
+        wheelAlert.hidden = true;
+      }
       // Fresh board: resume idle spin until the player touches the canvas again.
       state.ambientSpin = !state.reduceMotion;
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
@@ -1727,16 +1796,26 @@
       const mines = [];
       const revealed = [];
       const flagged = [];
+      const doused = [];
       for (let i = 0; i < state.cells.length; i++) {
         const c = state.cells[i];
         if (c.isMine) mines.push(i);
         if (c.revealed) revealed.push(i);
         else if (state.isGameOver && !state.won && c.isMine) revealed.push(i);
         if (c.flagged) flagged.push(i);
+        if (c.doused) doused.push(i);
       }
+      const now = state.fusePausedAt || performance.now();
+      const armed = state.armedMineIdx >= 0
+        ? {
+            idx: state.armedMineIdx,
+            duration: Math.max(0, state.fuseDurationMs | 0),
+            remaining: Math.max(0, Math.round(state.fuseDeadline - now)),
+          }
+        : null;
       // Pre-first-dig with only flags: still persist flags + camera.
       return {
-        v: 2,
+        v: 3,
         kind: "sphere",
         difficulty: state.difficulty,
         tileCount: state.cells.length,
@@ -1752,6 +1831,9 @@
         mines,
         revealed,
         flagged,
+        doused,
+        rescues: state.rescueCount | 0,
+        armed,
         savedAt: Date.now(),
       };
     }
@@ -1760,8 +1842,10 @@
     function clearPersist() {
       storageRemove(localStorage, RUN_STORAGE_KEY);
       storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
+      storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY_V1);
       storageRemove(sessionStorage, RUN_STORAGE_KEY);
       storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+      storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY_V1);
     }
 
     function writePersistPayload(json) {
@@ -1798,7 +1882,7 @@
 
     function applyRunState(data) {
       if (!data || data.kind !== "sphere") return false;
-      if (data.v !== 1 && data.v !== 2) return false;
+      if (data.v !== 1 && data.v !== 2 && data.v !== 3) return false;
       if (!SIZE_ORDER.includes(data.difficulty)) return false;
       if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
         return false;
@@ -1825,13 +1909,14 @@
       const mineList = Array.isArray(data.mines) ? data.mines : [];
       const revealedList = Array.isArray(data.revealed) ? data.revealed : [];
       const flaggedList = Array.isArray(data.flagged) ? data.flagged : [];
+      const dousedList = Array.isArray(data.doused) ? data.doused : [];
 
       // Size ladder changes (or corrupt saves) must not clip indices onto a smaller board.
       if (Number.isFinite(data.tileCount) && (data.tileCount | 0) !== n) {
         persistSuspended = false;
         return false;
       }
-      const listsOutOfRange = [mineList, revealedList, flaggedList].some((list) =>
+      const listsOutOfRange = [mineList, revealedList, flaggedList, dousedList].some((list) =>
         list.some((idx) => (idx | 0) === idx && idx >= n)
       );
       if (listsOutOfRange) {
@@ -1856,11 +1941,22 @@
         c.visualDue = 0;
         c.pulseAt = 0;
       }
+      let actualDoused = 0;
+      for (const idx of dousedList) {
+        if ((idx | 0) !== idx || idx < 0 || idx >= n) continue;
+        const c = state.cells[idx];
+        if (!c.isMine || c.doused) continue;
+        c.doused = true;
+        c.revealed = true;
+        c.animReveal = 1;
+        c.visualDue = 0;
+        actualDoused++;
+      }
       let flags = 0;
       for (const idx of flaggedList) {
         if ((idx | 0) !== idx || idx < 0 || idx >= n) continue;
         const c = state.cells[idx];
-        if (c.revealed) continue;
+        if (c.revealed || c.doused || c.flagged) continue;
         c.flagged = true;
         flags++;
       }
@@ -1870,8 +1966,15 @@
       state.isGameOver = !!data.over;
       state.won = !!data.won;
       state.detonatorIdx = -1;
-      state.flagsPlaced =
-        Number.isFinite(data.flags) ? data.flags | 0 : flags;
+      state.flagsPlaced = flags;
+      state.rescueCount = actualDoused;
+      state.armedMineIdx = -1;
+      state.fuseStartedAt = 0;
+      state.fuseDeadline = 0;
+      state.fuseDurationMs = 0;
+      state.fusePausedAt = 0;
+      wheelPauseReasons.clear();
+      state.waterRetreatVisual = 0;
       state.mineCount = Number.isFinite(data.mineCount)
         ? data.mineCount | 0
         : mineList.length || mineTargetForDifficulty(n);
@@ -1881,6 +1984,25 @@
       state.camShake = 0;
       // Fresh-ish (flags only, no dig yet): allow ambient spin again.
       state.ambientSpin = !!data.first && !state.reduceMotion && flags === 0;
+
+      if (!state.isGameOver && data.v >= 3 && data.armed) {
+        const idx = data.armed.idx | 0;
+        const c = state.cells[idx];
+        if (idx >= 0 && idx < n && c && c.isMine && !c.doused) {
+          const duration = Math.max(900, Number(data.armed.duration) || 3000);
+          const remaining = Math.max(250, Math.min(duration, Number(data.armed.remaining) || 0));
+          const now = performance.now();
+          state.armedMineIdx = idx;
+          state.fuseDurationMs = duration;
+          state.fuseStartedAt = now - (duration - remaining);
+          state.fuseDeadline = now + remaining;
+          state.fusePausedAt = now;
+          wheelPauseReasons.add("restore");
+          c.revealed = true;
+          c.animReveal = 1;
+          setWheelAlert("MINE ARMED · ROTATE TO RESUME", "danger", 0);
+        }
+      }
 
       if (Number.isFinite(data.rotY)) {
         state.rotY = data.rotY;
@@ -1915,13 +2037,13 @@
       }
 
       persistSuspended = false;
-      // Re-write under v2 key so legacy saves migrate.
+      // Re-write under v3 key so legacy saves migrate.
       flushPersist();
       return true;
     }
 
     function readStoredRun() {
-      const keys = [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY];
+      const keys = [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY, RUN_STORAGE_KEY_LEGACY_V1];
       const stores = [sessionStorage, localStorage];
       let best = null;
       let bestAt = -1;
@@ -2038,7 +2160,7 @@
 
       for (let i = 0; i < state.cells.length; i++) {
         const c = state.cells[i];
-        if (!c.isMine) continue;
+        if (!c.isMine || c.doused) continue;
         if (i === detonatorIdx) {
           c.revealed = true;
           c.animReveal = 1;
@@ -2082,7 +2204,7 @@
       } else {
         for (let i = 0; i < state.cells.length; i++) {
           const c = state.cells[i];
-          if (c.isMine) {
+          if (c.isMine && !c.doused) {
             c.revealed = true;
             c.animReveal = 1;
           }
@@ -2267,9 +2389,52 @@
       return opened;
     }
 
+    function clearArmedMine() {
+      state.armedMineIdx = -1;
+      state.fuseStartedAt = 0;
+      state.fuseDeadline = 0;
+      state.fuseDurationMs = 0;
+      state.fusePausedAt = 0;
+      wheelPauseReasons.clear();
+    }
+
+    function armMine(idx) {
+      const now = performance.now();
+      const duration = wheelFuseDuration(state.rescueCount, state.reduceMotion);
+      state.armedMineIdx = idx;
+      state.fuseStartedAt = now;
+      state.fuseDeadline = now + duration;
+      state.fuseDurationMs = duration;
+      state.fusePausedAt = 0;
+      const seconds = (duration / 1000).toFixed(duration % 1000 ? 1 : 0);
+      setWheelAlert(`MINE ARMED · DROWN IT · ${seconds}s`, "danger", 0);
+      scheduleFrame();
+      persistNow();
+    }
+
+    function detonateArmedMine() {
+      const idx = state.armedMineIdx;
+      if (idx < 0 || state.isGameOver) return;
+      clearArmedMine();
+      state.detonatorIdx = idx;
+      if (wheelAlert) {
+        clearTimeout(wheelAlertTimer);
+        wheelAlert.classList.remove("visible");
+        wheelAlert.hidden = true;
+      }
+      gameOver(false);
+    }
+
     function reveal(idx) {
       const cell = state.cells[idx];
-      if (!cell || cell.revealed || cell.flagged || state.isGameOver) return;
+      if (
+        !cell ||
+        cell.revealed ||
+        cell.flagged ||
+        cell.doused ||
+        state.isGameOver ||
+        state.armedMineIdx >= 0
+      ) return;
       if (state.isFirstClick) {
         placeMines(idx);
         state.isFirstClick = false;
@@ -2279,15 +2444,8 @@
       cell.revealed = true;
       scheduleRevealVisual(idx, 0);
       if (cell.isMine) {
-        // Wheel proto: a doused mine is spent ordnance — digging it does
-        // nothing, even after the flag comes off.
-        if (cell.doused) {
-          cell.revealed = false;
-          return;
-        }
         cell.animReveal = 1;
-        state.detonatorIdx = idx;
-        gameOver(false);
+        armMine(idx);
         return;
       }
       if (cell.neighborMines === 0) floodFrom(idx);
@@ -2326,7 +2484,13 @@
 
     function toggleFlag(idx) {
       const cell = state.cells[idx];
-      if (!cell || cell.revealed || state.isGameOver) return;
+      if (
+        !cell ||
+        cell.revealed ||
+        cell.doused ||
+        state.isGameOver ||
+        state.armedMineIdx >= 0
+      ) return;
       cell.flagged = !cell.flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
@@ -2346,6 +2510,7 @@
     }
 
     function gameOver(won) {
+      clearArmedMine();
       state.isGameOver = true;
       state.won = won;
       stopTimer();
@@ -3515,75 +3680,126 @@
     // the displacement amount. Slices keep picking exact.
     const WATER = { buf: null, bctx: null };
 
-    /** Three octaves standing in for feTurbulence fractalNoise. ~[-1,1]. */
-    function waterWave(y, t) {
+    /** Three restrained octaves: broad swell, mid ripple, surface chop. */
+    function waterWave(axis, t) {
       return (
-        (Math.sin(y * 0.021 + t * 1.9) +
-          Math.sin(y * 0.052 - t * 2.7) * 0.42 +
-          Math.sin(y * 0.009 + t * 1.1) * 0.72) /
-        2.14
+        Math.sin(axis * 0.010 + t * 0.74) * 0.55 +
+        Math.sin(axis * 0.027 - t * 1.31 + 1.2) * 0.3 +
+        Math.sin(axis * 0.071 + t * 2.17 + 2.6) * 0.15
       );
     }
 
+    function fuseNow(now) {
+      return state.fusePausedAt || now || performance.now();
+    }
+
+    function fuseUrgency(now) {
+      if (state.armedMineIdx < 0 || state.fuseDurationMs <= 0) return 0;
+      const at = fuseNow(now);
+      return Math.max(
+        0,
+        Math.min(1, (at - state.fuseStartedAt) / state.fuseDurationMs)
+      );
+    }
+
+    function surfaceYAt(x, surf, now) {
+      if (state.reduceMotion) return surf;
+      const urgency = fuseUrgency(now);
+      const amp = 2.4 + urgency * 2.2;
+      const speed = 1 + urgency * 0.35;
+      return surf + waterWave(x, now * 0.001 * speed) * amp;
+    }
+
+    function traceWaterSurface(w, h, surf, now, closeBottom) {
+      const step = Math.max(8, Math.round(w / 90));
+      ctx.beginPath();
+      ctx.moveTo(0, surfaceYAt(0, surf, now));
+      for (let x = step; x < w; x += step) {
+        ctx.lineTo(x, surfaceYAt(x, surf, now));
+      }
+      ctx.lineTo(w, surfaceYAt(w, surf, now));
+      if (closeBottom) {
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
+        ctx.closePath();
+      }
+    }
+
     /**
-     * Waterline in CSS px. Anchored to the sphere, not the viewport, so the
-     * horizon keeps the same bite out of the globe at any zoom or window size.
-     * level 0.5 puts it exactly on the equator — half under.
+     * Fixed trough in CSS px. Each successful rescue makes the sea retreat a
+     * little; the player must rotate farther on the next save.
      */
     function waterLineY(h) {
-      const level = state.waterLevel != null ? state.waterLevel : 0.5;
       const r = state.scale * 1.15;
-      const tide =
-        state.reduceMotion ? 0 : Math.sin(performance.now() * 0.00011) * r * 0.02;
+      const targetRetreat = Math.min(4, state.rescueCount) * r * 0.04;
+      if (state.reduceMotion) state.waterRetreatVisual = targetRetreat;
+      else {
+        state.waterRetreatVisual +=
+          (targetRetreat - state.waterRetreatVisual) * 0.075;
+      }
+      const tide = state.reduceMotion
+        ? 0
+        : Math.sin(performance.now() * 0.00011) * Math.min(3, r * 0.009);
       return Math.round(
-        Math.max(-40, Math.min(h + 40, state.centerY + r - level * r * 2 + tide))
+        Math.max(
+          -40,
+          Math.min(h + 40, state.centerY + state.waterRetreatVisual + tide)
+        )
       );
     }
 
     /** Sky above, sea below — painted over the flat backdrop before the globe. */
     function drawWaterField(w, h, surf) {
-      const t = performance.now();
+      const now = performance.now();
       ctx.save();
 
-      if (surf > 0) {
-        const sky = ctx.createLinearGradient(0, 0, 0, surf);
-        sky.addColorStop(0, "#0b2438");
-        sky.addColorStop(0.55, "#14415c");
-        sky.addColorStop(1, "#2d7b96");
-        ctx.fillStyle = sky;
-        ctx.fillRect(0, 0, w, surf);
+      const sky = ctx.createLinearGradient(0, 0, 0, Math.max(1, surf));
+      sky.addColorStop(0, "#0b2438");
+      sky.addColorStop(0.55, "#14415c");
+      sky.addColorStop(1, "#2d7b96");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, w, h);
 
-        const sunY = surf - h * 0.08;
-        const sun = ctx.createRadialGradient(w / 2, sunY, 0, w / 2, sunY, Math.max(w, h) * 0.45);
-        sun.addColorStop(0, "rgba(190,240,255,0.24)");
-        sun.addColorStop(0.4, "rgba(120,200,225,0.1)");
-        sun.addColorStop(1, "transparent");
-        ctx.fillStyle = sun;
-        ctx.fillRect(0, 0, w, surf);
-      }
+      const sunY = surf - h * 0.08;
+      const sun = ctx.createRadialGradient(
+        w / 2,
+        sunY,
+        0,
+        w / 2,
+        sunY,
+        Math.max(w, h) * 0.45
+      );
+      sun.addColorStop(0, "rgba(190,240,255,0.24)");
+      sun.addColorStop(0.4, "rgba(120,200,225,0.1)");
+      sun.addColorStop(1, "transparent");
+      ctx.fillStyle = sun;
+      ctx.fillRect(0, 0, w, h);
 
-      if (surf < h) {
-        const sea = ctx.createLinearGradient(0, surf, 0, h);
-        sea.addColorStop(0, "#12617d");
-        sea.addColorStop(0.35, "#0a3f57");
-        sea.addColorStop(1, "#04202f");
-        ctx.fillStyle = sea;
-        ctx.fillRect(0, surf, w, h - surf);
+      traceWaterSurface(w, h, surf, now, true);
+      ctx.clip();
+      const sea = ctx.createLinearGradient(0, surf, 0, h);
+      sea.addColorStop(0, "#12617d");
+      sea.addColorStop(0.35, "#0a3f57");
+      sea.addColorStop(1, "#04202f");
+      ctx.fillStyle = sea;
+      ctx.fillRect(0, surf - 8, w, h - surf + 8);
 
-        // Caustics — light sheets bending through the surface.
-        const bands = state.reduceMotion ? 4 : 9;
-        ctx.globalCompositeOperation = "lighter";
-        for (let i = 0; i < bands; i++) {
-          const phase = state.reduceMotion ? i * 0.7 : t * 0.00016 + i * 0.7;
-          const cx = w * (0.5 + Math.sin(phase) * 0.42);
-          const spread = w * (0.05 + 0.035 * Math.sin(phase * 1.7 + i));
-          const g = ctx.createLinearGradient(cx - spread, 0, cx + spread, 0);
-          g.addColorStop(0, "transparent");
-          g.addColorStop(0.5, `rgba(150,230,240,${0.05 + 0.03 * Math.sin(phase * 2.3)})`);
-          g.addColorStop(1, "transparent");
-          ctx.fillStyle = g;
-          ctx.fillRect(cx - spread, surf, spread * 2, h - surf);
-        }
+      // Caustics — light sheets bending through the surface.
+      const bands = state.reduceMotion ? 3 : 7;
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < bands; i++) {
+        const phase = state.reduceMotion ? i * 0.7 : now * 0.00016 + i * 0.7;
+        const cx = w * (0.5 + Math.sin(phase) * 0.42);
+        const spread = w * (0.05 + 0.035 * Math.sin(phase * 1.7 + i));
+        const g = ctx.createLinearGradient(cx - spread, 0, cx + spread, 0);
+        g.addColorStop(0, "transparent");
+        g.addColorStop(
+          0.5,
+          `rgba(150,230,240,${0.04 + 0.025 * Math.sin(phase * 2.3)})`
+        );
+        g.addColorStop(1, "transparent");
+        ctx.fillStyle = g;
+        ctx.fillRect(cx - spread, surf, spread * 2, h - surf);
       }
       ctx.restore();
     }
@@ -3592,7 +3808,8 @@
     function drawWaterPass(w, h, surf) {
       const depth = h - surf;
       if (depth < 4 || surf < -h) return;
-      const t = performance.now() * 0.001;
+      const now = performance.now();
+      const t = now * 0.001;
 
       // The context carries a dpr transform, so source rects are in device px
       // while destination rects stay in CSS px.
@@ -3612,14 +3829,15 @@
       WATER.bctx.clearRect(0, 0, bw, bh);
       WATER.bctx.drawImage(canvas, 0, 0);
 
-      const amp = Math.max(2.5, state.scale * 0.03);
-      const slice = 2;
+      const urgency = fuseUrgency(now);
+      const amp = Math.max(2.5, state.scale * 0.018) * (1 + urgency * 0.35);
+      const slice = state.reduceMotion ? 6 : 3;
       const squeeze = 0.78;
       const top = Math.max(0, surf);
+      const nearBand = Math.max(64, Math.min(150, state.scale * 0.42));
 
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, top, w, h - top);
+      traceWaterSurface(w, h, surf, now, true);
       ctx.clip();
 
       // Deep water first, so the strip a slice vacates as it shifts sideways
@@ -3628,50 +3846,56 @@
       fill.addColorStop(0, "#0d4d67");
       fill.addColorStop(1, "#04202f");
       ctx.fillStyle = fill;
-      ctx.fillRect(0, top, w, h - top);
+      ctx.fillRect(0, top - 8, w, h - top + 8);
 
-      // 1 · Refraction — the submerged cap, wobbling where it sits. Stops at the
-      // bottom of the globe: past it the frame is flat sea, and refracting sea
-      // onto identical sea is hundreds of copies for no visible pixel.
-      const stop = Math.min(h, state.centerY + state.scale * 1.15);
+      // 1 · Refraction — a narrow, trackable rescue zone. Deep water is allowed
+      // to become unreadable instead of spending hundreds of copies preserving it.
+      const stop = Math.min(
+        h,
+        surf + nearBand,
+        state.centerY + state.scale * 1.15
+      );
       for (let y = top; y < stop; y += slice) {
-        const d = (y - surf) / depth;
-        const dx = waterWave(y, t) * amp * (0.35 + d * 1.15);
+        const d = Math.max(0, (y - surf) / nearBand);
+        const dx = waterWave(y, t * 1.35) * amp * (0.28 + d * 0.9);
         ctx.drawImage(buf, 0, y * dpr, bw, slice * dpr, dx, y, w, slice);
       }
 
-      // 2 · Reflection — the dry cap mirrored down, fading with distance.
-      for (let y = top; y < h; y += slice) {
-        const d = (y - surf) / depth;
+      // 2 · Reflection — shallow, then gone. Deep reflection costs frames and
+      // competes with the face the player is trying to drown.
+      const reflectionStop = Math.min(h, surf + nearBand * 0.72);
+      for (let y = top; y < reflectionStop; y += slice) {
+        const d = Math.max(0, (y - surf) / (nearBand * 0.72));
         const srcY = surf - (y - surf) * squeeze;
         if (srcY < 0) break;
-        const dx = waterWave(y * 1.7 + 40, t * 1.25) * amp * (0.6 + d * 1.7);
-        ctx.globalAlpha = 0.34 * Math.max(0, 1 - d * 1.05);
+        const dx = waterWave(y * 1.7 + 40, t * 1.55) * amp * (0.5 + d * 1.1);
+        ctx.globalAlpha = 0.3 * Math.max(0, 1 - d);
         ctx.drawImage(buf, 0, srcY * dpr, bw, slice * dpr, dx, y, w, slice);
       }
       ctx.globalAlpha = 1;
 
       // 3 · Depth haze.
       const haze = ctx.createLinearGradient(0, top, 0, h);
-      haze.addColorStop(0, "rgba(20,110,140,0.08)");
-      haze.addColorStop(0.45, "rgba(10,70,100,0.3)");
-      haze.addColorStop(1, "rgba(3,26,40,0.64)");
+      haze.addColorStop(0, "rgba(20,110,140,0.06)");
+      haze.addColorStop(0.18, "rgba(10,70,100,0.2)");
+      haze.addColorStop(0.48, "rgba(5,43,65,0.58)");
+      haze.addColorStop(1, "rgba(3,26,40,0.86)");
       ctx.fillStyle = haze;
       ctx.fillRect(0, top, w, h - top);
       ctx.restore();
 
       if (surf < 0 || surf > h) return;
 
-      // 4 · Meniscus — bright rim where air meets sea.
+      // 4 · Meniscus — the same surface geometry used for quenching.
       ctx.save();
-      const band = Math.max(2.5, state.scale * 0.012);
-      const glow = ctx.createLinearGradient(0, surf - band * 5, 0, surf + band * 5);
-      glow.addColorStop(0, "rgba(190,240,255,0)");
-      glow.addColorStop(0.5, "rgba(200,245,255,0.24)");
-      glow.addColorStop(0.62, "rgba(255,255,255,0.42)");
-      glow.addColorStop(1, "rgba(120,200,230,0)");
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, surf - band * 5, w, band * 10);
+      traceWaterSurface(w, h, surf, now, false);
+      ctx.strokeStyle = "rgba(110,205,232,0.34)";
+      ctx.lineWidth = Math.max(5, state.scale * 0.018);
+      ctx.stroke();
+      traceWaterSurface(w, h, surf, now, false);
+      ctx.strokeStyle = "rgba(226,250,255,0.82)";
+      ctx.lineWidth = 1.35;
+      ctx.stroke();
 
       // Broken specular chop — jittered, or the highlights land on an even
       // pitch and the horizon reads as a dashed rule.
@@ -3687,7 +3911,7 @@
         ctx.globalAlpha = Math.min(0.6, a * 0.55);
         ctx.fillRect(
           x + jj * step * 0.6,
-          surf - 1 + Math.sin(ph * 1.3) * 1.6,
+          surfaceYAt(x, surf, now) - 1 + Math.sin(ph * 1.3) * 1.2,
           step * (0.3 + jj * 0.5),
           1.5
         );
@@ -3695,16 +3919,30 @@
       ctx.restore();
     }
 
-    // —— Water wheel (proto) ——————————————————————————————————————————
+    // —— Water wheel ——————————————————————————————————————————————————
     //
-    // The sphere is the wheel; the waterline is the trough. Hold a flagged
-    // face under the surface for DWELL_MS and the water settles it:
-    //   · correctly flagged mine → DOUSED — confirmed and permanently inert
-    //   · wrong flag → WASHED AWAY — the sea strips a false marker
-    // Either way the player buys information with rotation effort, bounded
-    // by how much of the sphere the waterline can reach (the level slider
-    // is the difficulty knob). Doused state is session-only for now.
-    const WHEEL = { DWELL_MS: 1100, lastTs: 0 };
+    // The sphere is the wheel and the fixed waterline is its trough:
+    //   · click a mine → a fuse starts; drown the armed face to quench it
+    //   · submerge any ordinary flag → the chalk mark washes off
+    // Flags never reveal whether they were right. Every rescue shortens the
+    // next fuse and makes the sea retreat, so water is mercy rather than an
+    // unlimited mine detector.
+    const WHEEL = {
+      FUSE_MS: [3000, 2200, 1600],
+      ASSIST_FUSE_MS: 5000,
+      QUENCH_DWELL_MS: 220,
+      WASH_DWELL_MS: 700,
+      lastTs: 0,
+    };
+
+    function wheelFuseDuration(rescues, assist) {
+      if (assist) return WHEEL.ASSIST_FUSE_MS;
+      const rung = Math.min(
+        WHEEL.FUSE_MS.length - 1,
+        Math.max(0, rescues | 0)
+      );
+      return WHEEL.FUSE_MS[rung];
+    }
 
     function wheelFaceRadius(proj) {
       const b = proj.boundary && proj.boundary[0];
@@ -3721,22 +3959,63 @@
       ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.stroke();
-      // bubbles ride up as it charges
-      const t = performance.now() * 0.003;
-      for (let i = 0; i < 3; i++) {
-        const ph = (t + i * 0.37 + proj.index * 0.11) % 1;
-        ctx.globalAlpha = (1 - ph) * 0.7 * frac;
-        ctx.beginPath();
-        ctx.arc(
-          proj.center.x + Math.sin((ph + i) * 9) * r * 0.4,
-          proj.center.y - ph * r * 1.8,
-          1.6 + i * 0.7,
-          0, Math.PI * 2
-        );
-        ctx.strokeStyle = "rgba(220,248,255,0.9)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
+      // Bubbles ride up as it charges; the ring alone carries reduced motion.
+      if (!state.reduceMotion) {
+        const t = performance.now() * 0.003;
+        for (let i = 0; i < 3; i++) {
+          const ph = (t + i * 0.37 + proj.index * 0.11) % 1;
+          ctx.globalAlpha = (1 - ph) * 0.7 * frac;
+          ctx.beginPath();
+          ctx.arc(
+            proj.center.x + Math.sin((ph + i) * 9) * r * 0.4,
+            proj.center.y - ph * r * 1.8,
+            1.6 + i * 0.7,
+            0, Math.PI * 2
+          );
+          ctx.strokeStyle = "rgba(220,248,255,0.9)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
       }
+      ctx.restore();
+    }
+
+    function drawFuseMarker(proj, now, surf) {
+      const at = fuseNow(now);
+      const remaining = Math.max(0, state.fuseDeadline - at);
+      const frac = state.fuseDurationMs > 0
+        ? Math.max(0, Math.min(1, remaining / state.fuseDurationMs))
+        : 0;
+      const r = wheelFaceRadius(proj) * 0.82;
+      const under = proj.center.y > surfaceYAt(proj.center.x, surf, now);
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.setLineDash([Math.max(3, r * 0.22), Math.max(2, r * 0.12)]);
+      ctx.beginPath();
+      ctx.arc(proj.center.x, proj.center.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(38,15,8,0.7)";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(
+        proj.center.x,
+        proj.center.y,
+        r,
+        -Math.PI / 2,
+        -Math.PI / 2 + frac * Math.PI * 2
+      );
+      ctx.strokeStyle = under ? "#9ff5ef" : "#ffb35b";
+      ctx.lineWidth = 3.4;
+      ctx.stroke();
+      ctx.font = `700 ${Math.max(10, Math.min(16, r * 0.72))}px "IBM Plex Mono", monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(2,16,24,0.92)";
+      ctx.strokeText((remaining / 1000).toFixed(1), proj.center.x, proj.center.y);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText((remaining / 1000).toFixed(1), proj.center.x, proj.center.y);
       ctx.restore();
     }
 
@@ -3772,46 +4051,97 @@
       ctx.restore();
     }
 
+    function quenchArmedMine(cell, now) {
+      cell.doused = true;
+      cell.flagged = false;
+      cell.revealed = true;
+      cell.animReveal = 1;
+      cell._wetMs = 0;
+      cell._dousedAt = now;
+      state.rescueCount += 1;
+      clearArmedMine();
+      setWheelAlert("MINE QUENCHED · THE SEA RETREATS", "safe", 1700);
+      updateUI();
+      checkWin();
+      persistNow();
+    }
+
     function stepWaterWheel(projected, now, surf) {
       const dt = WHEEL.lastTs ? Math.min(120, now - WHEEL.lastTs) : 16;
       WHEEL.lastTs = now;
+
+      if (
+        state.armedMineIdx >= 0 &&
+        !state.fusePausedAt &&
+        now >= state.fuseDeadline
+      ) {
+        detonateArmedMine();
+        return;
+      }
+
       for (const proj of projected) {
         const cell = state.cells[proj.index];
         if (!cell) continue;
+        const isFront = proj.z > 0.02;
+        const submerged =
+          proj.center.y > surfaceYAt(proj.center.x, surf, now) +
+            wheelFaceRadius(proj) * 0.2;
 
-        if (cell._dousedAt && now - cell._dousedAt < 700) {
+        if (isFront && cell._dousedAt && now - cell._dousedAt < 700) {
           drawQuenchFx(proj, (now - cell._dousedAt) / 700, true);
         }
-        if (cell._washedAt && now - cell._washedAt < 700) {
+        if (isFront && cell._washedAt && now - cell._washedAt < 700) {
           drawQuenchFx(proj, (now - cell._washedAt) / 700, false);
         }
-        if (cell.doused) drawDousedBadge(proj, now);
+        if (isFront && cell.doused) drawDousedBadge(proj, now);
 
-        if (!cell.flagged || cell.revealed || cell.doused || state.isGameOver) {
+        if (proj.index === state.armedMineIdx) {
+          if (!state.fusePausedAt && isFront && submerged) {
+            cell._wetMs = (cell._wetMs || 0) + dt;
+          } else if (!state.fusePausedAt) {
+            cell._wetMs = 0;
+          }
+          if (isFront) {
+            drawFuseMarker(proj, now, surf);
+            if (cell._wetMs > 0) {
+              drawDwellRing(
+                proj,
+                Math.min(1, cell._wetMs / WHEEL.QUENCH_DWELL_MS)
+              );
+            }
+          }
+          if (cell._wetMs >= WHEEL.QUENCH_DWELL_MS) {
+            quenchArmedMine(cell, now);
+            return;
+          }
+          continue;
+        }
+
+        if (
+          !cell.flagged ||
+          cell.revealed ||
+          cell.doused ||
+          state.isGameOver ||
+          state.armedMineIdx >= 0 ||
+          state.fusePausedAt
+        ) {
           cell._wetMs = 0;
           continue;
         }
-        // Submerged = projected below the surface row. Front or back face —
-        // underwater is underwater.
-        if (proj.center.y <= surf + 4) {
+        if (!submerged) {
           cell._wetMs = 0;
           continue;
         }
         cell._wetMs = (cell._wetMs || 0) + dt;
-        const frac = Math.min(1, cell._wetMs / WHEEL.DWELL_MS);
-        drawDwellRing(proj, frac);
+        const frac = Math.min(1, cell._wetMs / WHEEL.WASH_DWELL_MS);
+        if (isFront) drawDwellRing(proj, frac);
         if (frac >= 1) {
           cell._wetMs = 0;
-          if (cell.isMine) {
-            cell.doused = true;
-            cell._dousedAt = now;
-          } else {
-            cell.flagged = false;
-            state.flagsPlaced -= 1;
-            cell._washedAt = now;
-            updateUI();
-            persistNow();
-          }
+          cell.flagged = false;
+          state.flagsPlaced = Math.max(0, state.flagsPlaced - 1);
+          cell._washedAt = now;
+          updateUI();
+          persistNow();
         }
       }
     }
@@ -4103,7 +4433,7 @@
       // Screen space, after the shake transform is released — otherwise
       // the waterline shudders loose from the horizon on a detonation.
       if (state.theme.waterScene) drawWaterPass(w, h, waterY);
-      // Wheel proto: dwell, douse and wash — screen-space, above the water.
+      // Wheel rescue, douse and wash — screen-space, above the water.
       if (state.theme.waterScene) stepWaterWheel(projected, now, waterY);
     }
 
@@ -4111,6 +4441,7 @@
       if (state.ambientSpin && !state.reduceMotion) return true;
       // Ripple, tide and caustics are all time-driven; keep the loop alive.
       if (state.theme && state.theme.waterScene && !state.reduceMotion) return true;
+      if (state.armedMineIdx >= 0 && !state.fusePausedAt) return true;
       // Earth/Moon magma core animates (boil + motes); keep the loop alive.
       if (state.theme && state.theme.magmaCore && !state.reduceMotion) return true;
       if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
@@ -4158,6 +4489,7 @@
     let pinchStartZoom = 1;
 
     function onPointerDown(e) {
+      resumeWheel("restore");
       stopAmbientSpin();
       // Block iOS/Android long-press selection / callout on the canvas.
       if (e.type === "touchstart") {
@@ -4362,6 +4694,23 @@
         if (helpOverlay?.classList.contains("open")) closeHelp();
         return;
       }
+      if (/^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
+        if (helpOverlay?.classList.contains("open")) return;
+        e.preventDefault();
+        resumeWheel("restore");
+        stopAmbientSpin();
+        const step = e.shiftKey ? 0.24 : 0.13;
+        if (e.key === "ArrowLeft") state.rotY -= step;
+        if (e.key === "ArrowRight") state.rotY += step;
+        if (e.key === "ArrowUp") state.rotX -= step;
+        if (e.key === "ArrowDown") state.rotX += step;
+        state.targetRotY = state.rotY;
+        state.targetRotX = state.rotX;
+        invalidateProjection();
+        scheduleFrame();
+        schedulePersist();
+        return;
+      }
       if (e.key === "f" || e.key === "F") {
         state.flagMode = !state.flagMode;
         if (flagToggle) {
@@ -4399,15 +4748,22 @@
 
     window.addEventListener("resize", resize);
     // Flush on every leave path so F5 / mobile background never loses a dig.
-    window.addEventListener("pagehide", () => persistNow());
+    window.addEventListener("pagehide", () => {
+      pauseWheel("pagehide");
+      persistNow();
+    });
+    window.addEventListener("pageshow", () => resumeWheel("pagehide"));
     window.addEventListener("beforeunload", () => persistNow());
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") persistNow();
+      if (document.visibilityState === "hidden") {
+        pauseWheel("visibility");
+        persistNow();
+      } else {
+        resumeWheel("visibility");
+      }
     });
     resize();
 
-    state.waterLevel = readWaterLevel();
-    bindWaterLevel();
     bindHelpPacks();
 
     // Deep-link theme: ?theme=earth|moon|light|…
@@ -4559,6 +4915,8 @@
         relief: state.relief,
         seams: !!state.seams,
       }),
+      pauseWheel,
+      resumeWheel,
       setFlagMode: (on) => {
         state.flagMode = !!on;
         if (flagToggle) {

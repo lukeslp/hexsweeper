@@ -13,22 +13,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hexsweeper 3D — Water Wheel (proto)</title>
-<meta name="description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
+<title>Hexsweeper 3D — Water Wheel</title>
+<meta name="description" content="Spin a spherical Hexsweeper board through the water and drown a mine before its fuse expires.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Hexsweeper 3D">
-<meta property="og:description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
-<meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/sphere/">
+<meta property="og:title" content="Hexsweeper 3D — Water Wheel">
+<meta property="og:description" content="Spin a spherical Hexsweeper board through the water and drown a mine before its fuse expires.">
+<meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/wheel/">
 <meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Hexsweeper 3D">
-<meta name="twitter:description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
+<meta name="twitter:title" content="Hexsweeper 3D — Water Wheel">
+<meta name="twitter:description" content="Spin the sphere and drown an armed mine before its fuse expires.">
 <meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
-<link rel="stylesheet" href="dev-chrome.css?v=wheel1">
 <link rel="stylesheet" href="hex-bloom.css?v=wheel1">
 <style>
 /* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
@@ -669,50 +668,32 @@ body[data-sphere-chrome="dark"] .help-overlay {
   .lightbox,
   .count-style-toast { transition: none; }
 }
-/* Water · level — only present while the water theme is live. The globe's
-   waterline is the whole point of the theme, so it gets a real control. */
-.water-level {
+/* Mine rescue state: terse, high-contrast, and outside the moving canvas. */
+.wheel-alert {
   position: fixed;
-  left: max(14px, env(safe-area-inset-left, 0px));
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 30;
-  width: 3px;
-  height: min(46vh, 340px);
-  margin: 0;
-  padding: 0;
-  writing-mode: vertical-lr;
-  direction: rtl;
-  -webkit-appearance: none;
-  appearance: none;
-  background: rgba(200, 245, 255, 0.28);
-  border: 0;
-  border-radius: 4px;
-  outline: none;
-  cursor: ns-resize;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 46;
+  max-width: calc(100vw - 32px);
+  padding: 7px 12px;
+  transform: translate(-50%, -8px);
+  border: 1px solid rgba(230, 249, 255, 0.62);
+  border-radius: 999px;
+  background: rgba(3, 24, 35, 0.86);
+  color: #ffffff;
+  box-shadow: 0 5px 24px rgba(0, 12, 20, 0.3);
+  font: 700 11px/1.2 "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
 }
-body:not([data-sphere-theme="water"]) .water-level { display: none; }
-.water-level::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #eafbff;
-  border: 2px solid rgba(10, 40, 56, 0.55);
-  box-shadow: 0 2px 10px rgba(0, 18, 28, 0.5);
-}
-.water-level::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #eafbff;
-  border: 2px solid rgba(10, 40, 56, 0.55);
-  box-shadow: 0 2px 10px rgba(0, 18, 28, 0.5);
-}
-.water-level::-moz-range-track { background: rgba(200, 245, 255, 0.28); border: 0; }
-.water-level:focus-visible { outline: 2px solid #7fe0e8; outline-offset: 4px; }
-@media (max-width: 560px) { .water-level { height: min(34vh, 220px); } }
+.wheel-alert.visible { opacity: 1; transform: translate(-50%, 0); }
+.wheel-alert[data-mode="danger"] { border-color: #ffb35b; color: #fff4e5; }
+.wheel-alert[data-mode="safe"] { border-color: #8be8e5; color: #eaffff; }
+@media (prefers-reduced-motion: reduce) { .wheel-alert { transition: none; } }
 /* Surface curiosities in the ? modal — quiet by design; these are asides,
    not a feature block. Swatch colour rides on --sw per button. */
 .help-packs {
@@ -765,10 +746,10 @@ button, a, input[type="range"] { touch-action: manipulation; }
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
 <div class="canvas-container">
-  <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
+  <canvas id="gameCanvas" tabindex="0" aria-label="Hex sphere minesweeper board" aria-describedby="wheel-instructions"></canvas>
 </div>
-<input type="range" class="water-level" id="water-level" min="0" max="100" step="0.5"
-       value="50" aria-label="Water level">
+<p class="sr-only" id="wheel-instructions">Drag or use the arrow keys to rotate. If a mine is armed, move it beneath the waterline before its timer expires.</p>
+<div class="wheel-alert" id="wheel-alert" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
 <div id="sphere-banner" class="sphere-banner" role="status" hidden>
   <div class="banner-msg" id="banner-msg"></div>
@@ -858,17 +839,18 @@ button, a, input[type="range"] { touch-action: manipulation; }
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hexsweeper 3D</h2>
     <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
-    <p class="help-lede"><strong>Water Wheel proto:</strong> the sphere is the wheel, the waterline is the trough. Rotate a <em>flagged</em> face under the surface and hold it there — a ring charges. A correctly flagged mine gets <strong>doused</strong> (confirmed, permanently inert); a wrong flag gets <strong>washed away</strong>. The level slider on the left sets how deep the trough runs.</p>
+    <p class="help-lede"><strong>Water Wheel:</strong> clicking a mine lights its fuse instead of ending the game immediately. Rotate that face beneath the fixed waterline to quench it before time runs out. Every ordinary flag washes off underwater, whether it was right or wrong.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Dig a face</span></li>
       <li><span class="act">Hold</span><span>Flag a face (mobile)</span></li>
       <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
+      <li><span class="act">Arrows</span><span>Rotate with the keyboard</span></li>
       <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Bottom bar: reset, board size (XS–XL), and Look — background, shell and dug colours, plus indicators. Surface packs are just below. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+      <p>Quenched mines stay inert and survive refresh. Each rescue shortens the next fuse and makes the sea retreat. Progress autosaves. Reset or size change starts a new sphere (no confirm).</p>
     </div>
     <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -902,10 +884,11 @@ button, a, input[type="range"] { touch-action: manipulation; }
 </div>
 
 <script src="hexasphere.js?v=wheel3"></script>
-<script src="sphere.js?v=wheel3"></script>
-<script src="hex-bloom.js?v=wheel1"></script>
+<script src="sphere.js?v=wheel4"></script>
+<script src="hex-bloom.js?v=wheel2"></script>
 <script>
-initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));
+const wheelGame = SphereSweeper.boot({ canvasId: "gameCanvas" });
+initHexBloom(wheelGame);
 (function () {
   const lb = document.getElementById("history-lightbox");
   const openBtn = document.getElementById("help-history-btn");

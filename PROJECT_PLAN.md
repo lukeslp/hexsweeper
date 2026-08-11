@@ -124,27 +124,29 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [ ] Optional: browser probes (desktop/mobile) in CI — sphere neighbor test is covered; visual/interaction smoke still manual
 - [ ] Phase next: full / comprehensive / impressive cut beyond the collection scaffold
 
-### Concept shelf — water as a mechanic, not a theme (Luke, 2026-08-10)
+### Water Wheel — water as a mechanic, not a theme (Luke, 2026-08-10)
 
-The Water theme was demoted as decoration, but the original intent was
-gameplay: **the sphere as a water wheel**. A fixed waterline crosses the
-globe; rotating the sphere carries faces down through the fluid and out
-again. Flagged mines that pass through (or dwell under) the water get
-"extinguished" for some benefit — defusal, score, or, maybe strongest,
-*information*: dousing confirms whether the flag was right, paying the
-player in certainty for rotation effort, bounded by how much of the sphere
-the waterline can reach. Other fluids could carry other effects (magma,
-etc. — one fluid per effect).
+The Water theme was demoted as decoration, but its original intent is now
+gameplay at **`wheel/`**: the sphere is a water wheel and the equatorial
+waterline is its fixed trough. Clicking a mine arms it instead of ending the
+run immediately. Rotate the armed face below the rendered surface and hold it
+there briefly to quench it before the fuse expires. Quenched mines remain
+revealed, inert, and persisted; they do not participate in the later loss
+cascade.
 
-Everything needed already exists in sphere-ux: the waterline + level slider
-(`waterLineY`, `?water=`), per-face screen positions (`projectTile`), and
-the flag state. **Prototyped 2026-08-10 at `wheel/`** (fully separate build,
-isolated `hexwheel-*` saves): hold a flagged face submerged for ~1.1s —
-correct flag → mine doused (confirmed, inert even if later unflagged and
-dug); wrong flag → washed away. Open questions: the cost (dousing is
-currently pure upside), whether doused should count toward win, and
-persistence of doused state across reloads. Archived theme:
-`collection/theme-water.html`, `?theme=water` on the sphere.
+The mechanic deliberately avoids turning flags into a mine oracle. Any normal
+flag that dwells below the surface washes away identically, whether it was
+right or wrong. Each rescue shortens the next fuse (3.0s → 2.2s → 1.6s) and
+makes the sea retreat, adding rotation cost. Help, the hex menu, and app
+backgrounding pause an active fuse; keyboard arrows rotate the wheel. Reduced
+motion uses a static surface and a 5s assist fuse.
+
+The renderer shares one wavy surface function between painting and gameplay.
+Refraction and reflection are limited to the shallow rescue band; depth haze
+intentionally obscures the submerged back half. The implementation stays on
+the existing Canvas 2D/offscreen-buffer path with no new runtime dependency.
+The archived decorative theme remains at `collection/theme-water.html` and
+`?theme=water` on the sphere.
 
 ## Risks
 

@@ -1366,6 +1366,7 @@
 
     function expand() {
       if (state.phase !== "closed") return;
+      if (typeof game.pauseWheel === "function") game.pauseWheel("menu");
       clearTimeout(phaseTimer);
       lastFocus = document.activeElement;
       root.dataset.sphereBusy = "false";
@@ -1436,6 +1437,7 @@
         hub.dataset.open = "false";
         hub.hidden = true;
         setCanvasInert(false);
+        if (typeof game.resumeWheel === "function") game.resumeWheel("menu");
         announce("Menu closed");
         if (dockBtn) dockBtn.focus({ preventScroll: true });
         else if (lastFocus && lastFocus.focus) {
