@@ -10,7 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` is 9 and exceeds the inherited builds 1–6
+- [ ] `CURRENT_PROJECT_VERSION` is greater than the latest uploaded build 28
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [x] Archive signs cleanly under team `596T7J7FB6`
@@ -32,8 +32,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Support, marketing and privacy policy URLs set
 - [x] Age rating answered — every category NONE/false
 - [x] Export compliance: `ITSAppUsesNonExemptEncryption` is `false`
-- [x] Build 8 remains attached to version 1.0; build 9 is `VALID` in TestFlight;
-      nothing submitted for review
+- [x] Build 28 uploaded to TestFlight; verify processing/distribution status before widening access
+- [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
       requests at all and the export guard enforces that at build time.

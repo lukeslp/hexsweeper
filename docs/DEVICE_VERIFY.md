@@ -1,14 +1,14 @@
 # Device verification
 
-Run on real hardware before any TestFlight or App Store build. The simulator
-does not reproduce touch precision, thermal behaviour, or true safe-area geometry.
+Run on real hardware before any TestFlight, App Store, or Play release. Simulators
+do not reproduce touch precision, thermal behaviour, or true safe-area geometry.
 
 Record one row per device. Attach to the build notes.
 
 | Field | Value |
 |---|---|
-| Device / iOS | |
-| Build number | |
+| Platform / device / OS | |
+| iOS build or Android version code | |
 | Tester / date | |
 
 ## Gates
@@ -35,6 +35,8 @@ and any network dependency is a defect.
 | 15 | Reduced Motion | With the OS setting on, endgame effects become instant states | |
 | 16 | Outbound links | Credits open in Safari and return cleanly; game is never replaced in-place | |
 | 17 | Rotation | Portrait ↔ landscape reflows without losing the run | |
+| 18 | Android Back | From a game, the in-app **‹ Games** control returns to the picker; system Back exits or follows the documented platform behaviour without losing state | |
+| 19 | Android system bars | Content clears status/navigation/gesture insets in both orientations | |
 
 ## Known open question
 
@@ -45,4 +47,5 @@ XL is not, the fix is a per-device board cap in hexsweeper, not here.
 ## Sign-off
 
 - [ ] All gates pass, or failures are recorded with issue links
-- [ ] Build number exceeds every build already in App Store Connect (currently ≥7)
+- [ ] iOS build number exceeds the latest App Store Connect build (currently 28)
+- [ ] Android `versionCode` exceeds the latest Play build (currently no Play listing; project starts at 1)

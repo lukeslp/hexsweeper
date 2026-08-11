@@ -1,7 +1,7 @@
-# Hexsweeper (iOS) — agent notes
+# Hexsweeper (native) — agent notes
 
 Capacitor shell around three of hexsweeper's games — infinite, bounded, sphere —
-behind a picker. Read `README.md` first; it
+behind a picker on iOS and Android. Read `README.md` first; it
 explains why the bundle id says `hexodus` and why the build number starts at 7.
 
 ## The one rule
@@ -16,8 +16,8 @@ then re-vendored. Nothing about the game is authored in this repo.
 
 ## What this repo owns
 
-Native shell only: Xcode project, signing, Info.plist, launch screen, icon and
-splash assets, Capacitor config, and the release process. If a change is not
+Native shell only: Xcode/Gradle projects, signing metadata, platform manifests,
+launch screens, icon and splash assets, Capacitor config, and release process. If a change is not
 about one of those, it probably belongs in hexsweeper.
 
 ## Re-vendoring
@@ -37,8 +37,9 @@ hexsweeper change that never gets re-vendored — fails the build.
 ## Build numbers
 
 App Store Connect already holds builds 1–6 under this bundle id from the retired
-app. `CURRENT_PROJECT_VERSION` is 9; increment it for every upload. A number ≤6
-is rejected as a duplicate.
+app and has received builds through 28. Set `CURRENT_PROJECT_VERSION` above the
+latest uploaded build for every iOS upload. Android starts at `versionCode 1`
+and increments independently for every Play upload.
 
 ## Deliberately absent
 
@@ -55,4 +56,4 @@ abandoned product that merely shared this bundle id.
 ## Safety
 
 No secrets in this tree. Signing is automatic under team `596T7J7FB6`.
-Uploads to App Store Connect are Luke's to trigger, never automated from here.
+Uploads to App Store Connect or Google Play are Luke's to trigger, never automated from here.

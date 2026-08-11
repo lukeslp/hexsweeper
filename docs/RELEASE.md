@@ -6,14 +6,15 @@
 |---|---|
 | App Store name | **Hexsweeper 3D** (`Hexsweeper` and `Hexsweep` are both taken) |
 | Home-screen name | **Hexsweeper** (`CFBundleDisplayName` — independent of the listing) |
-| Bundle id | `app.hexodus.ios` (inherited; do not "fix") |
+| iOS bundle id | `app.hexodus.ios` (inherited; do not "fix") |
+| Android application id | `app.hexodus.ios` (shared Capacitor id; unusual but valid) |
 | ASC app id | `6768871973` |
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 9 is the current TestFlight build; build 8 remains
-attached to the 1.0 App Store version. Increment `CURRENT_PROJECT_VERSION` for
-every upload.
+this same record. Build 28 is the latest uploaded TestFlight build. The checked-in
+Xcode project may lag that upload history, so set `CURRENT_PROJECT_VERSION` to
+**greater than 28** before the next archive.
 
 ## Archive → TestFlight
 
@@ -46,6 +47,32 @@ dSYM copy fails and export dies with a bare "Copy failed" — the error names no
 cause, so it costs an hour if you have not seen it before. Crash reports lose
 symbolication as a result; upload dSYMs separately if that matters.
 
+## Android builds
+
+Capacitor 8 supports API 24+. Install Node 22+, Android Studio 2025.2.1+, and
+an Android SDK. The build wrapper selects JDK 21 on macOS and syncs the sealed
+payload before Gradle runs:
+
+```bash
+pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.apk
+pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Current Android identity is `versionCode 1`, `versionName 1.0`, targeting API
+36 with minimum API 24. The release AAB is deliberately unsigned. Create and
+retain the Play signing key outside this repository, then use Android Studio's
+**Build → Generate Signed App Bundle** for the first store upload. Do not commit
+keystores, passwords, `local.properties`, APKs, or AABs.
+
+Before Google Play staging:
+
+- Complete the Android rows in `docs/DEVICE_VERIFY.md`, including TalkBack,
+  system Back, gesture insets, rotation, and process-restart persistence.
+- Run the whole app in airplane mode; any in-app network request is a defect.
+- Increment `versionCode` for every upload.
+- Create the Play listing and complete Data safety as **no data collected**.
+- Keep login, signing, upload, pricing, testing-track selection, and publication manual.
+
 ## Listing
 
 The record was inherited but turned out to be **empty**, not wrong — every
@@ -66,8 +93,8 @@ Done (updated 2026-08-10, through the App Store Connect API):
       preserved rather than overwritten by the four generated alternatives
 - [x] Build 8 processed, validated, and attached to the 1.0 version. Nothing
       submitted for review
-- [x] Build 9 uploaded and processed as `VALID` for TestFlight on 2026-08-10;
-      delivery `1993371e-0f97-4f66-b2de-3de65b8dc49e`
+- [x] Build 28 uploaded to TestFlight on 2026-08-10; confirm final processing
+      state in App Store Connect before distribution
 
 Still owed:
 

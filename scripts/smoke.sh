@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Hexsweeper pre-commit / pre-TestFlight smoke
+# Hexsweeper pre-commit / native-build smoke
 #
-# This repo builds nothing: www/ is a prebuilt payload vendored from
-# lukeslp/hexsweeper. So the only two things that can rot are the payload
-# drifting from its source, and the Capacitor/Xcode wiring breaking.
+# www/ is a prebuilt payload vendored from lukeslp/hexsweeper. The lightweight
+# smoke checks source integrity and both Capacitor shells; Gradle/Xcode builds
+# remain separate release gates.
 #
 # Usage:
 #   scripts/smoke.sh              # payload integrity + cap sync
@@ -26,8 +26,8 @@ red()   { printf '\033[31m%s\033[0m\n' "$*" >&2; }
 green() { printf '\033[32m%s\033[0m\n'  "$*"; }
 gold()  { printf '\033[33m%s\033[0m\n'  "$*"; }
 
-TOTAL=2
-[ -n "$SOURCE_CHECKOUT" ] && TOTAL=3
+TOTAL=3
+[ -n "$SOURCE_CHECKOUT" ] && TOTAL=4
 gold "── smoke: $(basename "$REPO_ROOT") at $(git rev-parse --short HEAD 2>/dev/null || echo 'no-git') ──"
 
 # 1. The vendored payload matches the checksums recorded when it was vendored.
@@ -55,7 +55,7 @@ if [ "$RECORDED_FILES" != "$ACTUAL_FILES" ]; then
 fi
 green "  ✓ payload matches WWW_SOURCE.txt ($ACTUAL_FILES files)"
 
-# 2. Capacitor can still assemble the iOS project from www/.
+# 2. Capacitor can still stage the iOS project from www/.
 gold "[2/$TOTAL] npx cap sync ios…"
 if ! npx cap sync ios >/tmp/hexsweeper-capsync.log 2>&1; then
     red "  ✘ cap sync failed"
@@ -68,11 +68,29 @@ if [ ! -f ios/App/App/public/index.html ]; then
 fi
 green "  ✓ cap sync; payload staged into the iOS project"
 
-# 3. Optional: regenerate from a hexsweeper checkout and confirm the vendored
+# 3. Capacitor can stage the same sealed payload into Android without adding
+#    network permission to this intentionally offline app.
+gold "[3/$TOTAL] npx cap sync android…"
+if ! npx cap sync android >/tmp/hexsweeper-capsync-android.log 2>&1; then
+    red "  ✘ Android cap sync failed"
+    tail -20 /tmp/hexsweeper-capsync-android.log >&2
+    exit 1
+fi
+if [ ! -f android/app/src/main/assets/public/index.html ]; then
+    red "  ✘ cap sync reported success but Android public/index.html is missing"
+    exit 1
+fi
+if grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml; then
+    red "  ✘ offline Android shell unexpectedly requests INTERNET permission"
+    exit 1
+fi
+green "  ✓ cap sync; offline payload staged into the Android project"
+
+# 4. Optional: regenerate from a hexsweeper checkout and confirm the vendored
 #    payload is still what that source produces. This is the gate that catches
 #    hexsweeper moving on without a re-vendor here.
 if [ -n "$SOURCE_CHECKOUT" ]; then
-    gold "[3/$TOTAL] payload matches hexsweeper source…"
+    gold "[4/$TOTAL] payload matches hexsweeper source…"
     if [ ! -x "$SOURCE_CHECKOUT/tools/export-collection.py" ] && [ ! -f "$SOURCE_CHECKOUT/tools/export-collection.py" ]; then
         red "  ✘ no tools/export-collection.py under $SOURCE_CHECKOUT"
         exit 1

@@ -1,9 +1,9 @@
-# Hexsweeper (iOS)
+# Hexsweeper (iOS + Android)
 
-Native iOS shell for **Hexsweeper** — hex minesweeper in three shapes. The games
+Native Capacitor shell for **Hexsweeper** — hex minesweeper in three shapes. The games
 are Canvas/vanilla-JS builds from
 [lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps them
-in Capacitor and ships them to the App Store.
+for iOS and Android from the same sealed offline payload.
 
 The app opens on a picker offering the three choices that are actually
 structural. Everything else — theme, board size, count style — is a setting
@@ -24,7 +24,7 @@ Web version: <https://dr.eamer.dev/games/hexsweeper/sphere/>
 | Product / display name | **Hexsweeper** |
 | This repo | `lukeslp/hexsweeper-app` |
 | Game source | `lukeslp/hexsweeper` (`sphere/`) |
-| Bundle id | `app.hexodus.ios` |
+| iOS bundle id / Android application id | `app.hexodus.ios` |
 | App Store Connect record | app id `6768871973` |
 
 The bundle id is inherited. It was minted for "Hexodus", an unrelated hex
@@ -45,9 +45,11 @@ App Store Connect app and abandoning this one.
 | `WWW_SOURCE.txt` | Which hexsweeper commit `www/` came from, plus checksums |
 | `capacitor.config.js` | Capacitor config (`.js`, not `.ts` — see below) |
 | `ios/` | Xcode project, team `596T7J7FB6`, automatic signing |
+| `android/` | Generated Capacitor Android project, API 24–36 |
 | `scripts/smoke.sh` | Payload integrity + cap sync gates |
+| `scripts/android-build.sh` | JDK-21 Gradle wrapper for APK/AAB builds |
 
-There is no bundler, no TypeScript, and no test suite here. `www/index.html` is
+There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
 the picker and each `www/games/*.html` is one self-contained file with fonts,
 CSS, and all JS already inlined; the only shared asset is the sphere help
 screen's history image under `www/assets/`. Navigation between them is plain
@@ -77,8 +79,23 @@ regenerates the payload, so a stale `www/` fails the build.
 pnpm install
 pnpm smoke                                          # integrity + cap sync
 scripts/smoke.sh --with-source ../hexsweeper        # + matches source
-pnpm cap:open                                       # Xcode
+pnpm cap:open:ios                                   # Xcode
+pnpm cap:open:android                               # Android Studio
+pnpm android:build:debug                            # debug APK
+pnpm android:bundle:release                         # unsigned release AAB
 ```
+
+[Capacitor 8](https://capacitorjs.com/docs/android) requires Node 22+, Android
+Studio 2025.2.1+, an Android SDK, and API 24 or newer. Local Android builds
+select JDK 21 automatically on macOS.
+Generated artifacts live under `android/app/build/outputs/` and remain
+gitignored. The shell requests no sensitive permissions and deliberately omits
+`android.permission.INTERNET`; outbound credits open in the system browser.
+
+The Android AAB is intentionally unsigned until a Play signing key is created
+and stored outside this repository. Google Play listing creation, signing,
+upload, pricing, and publication remain manual release steps. See
+[`docs/RELEASE.md`](docs/RELEASE.md).
 
 ## Not in this build
 
