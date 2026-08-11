@@ -1014,8 +1014,27 @@ def export_flat_app(collection_file: str, label: str) -> str:
     if not src.is_file():
         raise SystemExit(f"export_flat_app: {collection_file} not built yet — run without --app first")
     markup = src.read_text(encoding="utf-8")
+    display_name = {"infinite": "Infinite", "bounded": "Classic"}.get(label, label.title())
+    markup = re.sub(
+        r"<title>.*?</title>",
+        f"<title>Hexsweeper · {display_name}</title>",
+        markup,
+        count=1,
+        flags=re.S,
+    )
     # The desk pens link back to the collection index, which the app has no copy of.
     markup = re.sub(r'\s*<a class="back"[^>]*>.*?</a>', "", markup, flags=re.S)
+    # The shared help modal advertises Fire and Plague. They are valid links in
+    # the web collection but not games in this sealed three-mode binary.
+    markup = re.sub(
+        r'\s*<p class="help-more" id="help-modes"[^>]*>.*?</p>',
+        "",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    if 'id="help-modes"' in markup:
+        raise SystemExit(f"export_flat_app({label}): unshipped mode links survived")
     return appify(markup, label=label)
 
 
@@ -1035,6 +1054,13 @@ def export_sphere_app(exp: dict) -> str:
        WebView away from the game with no way back.
     """
     markup = export_sphere(exp)
+    markup = re.sub(
+        r"<title>.*?</title>",
+        "<title>Hexsweeper · Sphere</title>",
+        markup,
+        count=1,
+        flags=re.S,
+    )
 
     markup = markup.replace(
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;",
@@ -1063,7 +1089,7 @@ def export_sphere_app(exp: dict) -> str:
 
 
 def export_app_launcher() -> str:
-    """The picker: three structural choices — infinite, bounded, sphere.
+    """The picker: three structural choices — infinite, classic, sphere.
 
     Theme, board size and count style are settings inside each game, not peers
     of it, so they deliberately do not appear here.
