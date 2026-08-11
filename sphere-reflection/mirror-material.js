@@ -64,6 +64,66 @@
     revealGlow: "#9ee8ff",
   };
 
+  const MATERIAL_STORAGE_KEY = "hexsweeper-reflection-material-v1";
+  const MATERIAL_PRESETS = [
+    {
+      id: "stormglass",
+      label: "Stormglass",
+      shortLabel: "Storm",
+      fallback: ["#070d12", "#53646c", "#d99358", "#00101e"],
+    },
+    {
+      id: "studio",
+      label: "Softbox Orbit",
+      shortLabel: "Studio",
+      fallback: ["#05080a", "#65747a", "#dca465", "#10181c"],
+    },
+    {
+      id: "mercury",
+      label: "Smoked Mercury",
+      shortLabel: "Mercury",
+      fallback: ["#050708", "#738084", "#b8c7ca", "#101719"],
+    },
+    {
+      id: "aurora",
+      label: "Aurora Vault",
+      shortLabel: "Aurora",
+      fallback: ["#02070d", "#2e7f83", "#88d2d0", "#141329"],
+    },
+    {
+      id: "atrium",
+      label: "Checker Atrium",
+      shortLabel: "Atrium",
+      fallback: ["#111416", "#777a77", "#d8d4c9", "#202326"],
+    },
+  ];
+  const MATERIAL_INDEX = new Map(
+    MATERIAL_PRESETS.map((preset, index) => [preset.id, index])
+  );
+
+  function materialIndex(value) {
+    if (Number.isFinite(value)) {
+      return Math.max(0, Math.min(MATERIAL_PRESETS.length - 1, value | 0));
+    }
+    return MATERIAL_INDEX.has(value) ? MATERIAL_INDEX.get(value) : 0;
+  }
+
+  function initialMaterial(options) {
+    if (options && MATERIAL_INDEX.has(options.material)) return options.material;
+    try {
+      const query = new URLSearchParams(location.search).get("material");
+      if (MATERIAL_INDEX.has(query)) return query;
+    } catch (_) {}
+    if (MATERIAL_INDEX.has(global.HEXSWEEPER_REFLECTION_MATERIAL)) {
+      return global.HEXSWEEPER_REFLECTION_MATERIAL;
+    }
+    try {
+      const stored = localStorage.getItem(MATERIAL_STORAGE_KEY);
+      if (MATERIAL_INDEX.has(stored)) return stored;
+    } catch (_) {}
+    return MATERIAL_PRESETS[0].id;
+  }
+
   const VERTEX_SOURCE = `#version 300 es
 precision highp float;
 in vec2 position;
@@ -79,6 +139,7 @@ out vec4 outColor;
 
 uniform float uTime;
 uniform float uAppearance;
+uniform float uMaterial;
 uniform vec2 uResolution;
 uniform vec2 uCenter;
 uniform vec2 uPointer;
@@ -120,10 +181,12 @@ mat2 rotate2(float a) {
   return mat2(c, -s, s, c);
 }
 
-vec3 environment(vec3 ray) {
-  ray.yz = rotate2(uRotation.y * 0.035 + uPointer.y * 0.055) * ray.yz;
-  ray.xz = rotate2(-uRotation.x * 0.028 - uPointer.x * 0.07) * ray.xz;
+float softRect(vec2 point, vec2 center, vec2 halfSize, float feather) {
+  vec2 outside = abs(point - center) - halfSize;
+  return 1.0 - smoothstep(0.0, feather, max(outside.x, outside.y));
+}
 
+vec3 stormglassEnvironment(vec3 ray) {
   float longitude = atan(ray.z, ray.x);
   float latitude = asin(clamp(ray.y, -1.0, 1.0));
   vec2 weatherUv = vec2(longitude * 0.85, latitude * 3.2 - uTime * 0.018);
@@ -151,13 +214,103 @@ vec3 environment(vec3 ray) {
   return color;
 }
 
+vec3 studioEnvironment(vec3 ray) {
+  ray.xz = rotate2(uTime * 0.055) * ray.xz;
+  vec2 uv = vec2(atan(ray.z, ray.x) / 3.14159265, asin(clamp(ray.y, -1.0, 1.0)));
+  vec3 low = mix(vec3(0.006, 0.010, 0.012), vec3(0.22, 0.245, 0.25), uAppearance);
+  vec3 pearl = mix(vec3(0.58, 0.64, 0.66), vec3(0.96, 0.98, 0.97), uAppearance);
+  vec3 warm = mix(vec3(0.82, 0.48, 0.22), vec3(1.0, 0.75, 0.42), uAppearance);
+  float key = softRect(uv, vec2(-0.30, 0.40), vec2(0.24, 0.20), 0.13);
+  float fill = softRect(uv, vec2(0.52, 0.03), vec2(0.18, 0.34), 0.16);
+  float rim = softRect(uv, vec2(-0.76, -0.30), vec2(0.10, 0.27), 0.12);
+  float sweep = exp(-pow((uv.y + 0.50) * 5.0, 2.0));
+  vec3 color = low;
+  color += pearl * (key * 0.82 + fill * 0.45 + rim * 0.22);
+  color += warm * key * 0.34;
+  color += mix(vec3(0.05, 0.08, 0.09), vec3(0.35), uAppearance) * sweep * 0.4;
+  return color;
+}
+
+vec3 mercuryEnvironment(vec3 ray) {
+  float latitude = asin(clamp(ray.y, -1.0, 1.0));
+  float longitude = atan(ray.z, ray.x);
+  float broad = 0.5 + 0.5 * sin(latitude * 5.2 + sin(longitude * 1.5) * 0.8);
+  float shoulder = pow(max(dot(ray, normalize(vec3(-0.64, 0.42, 0.64))), 0.0), 4.5);
+  float edge = pow(max(dot(ray, normalize(vec3(0.72, -0.12, 0.68))), 0.0), 7.0);
+  vec3 charcoal = mix(vec3(0.008, 0.012, 0.014), vec3(0.28, 0.30, 0.30), uAppearance);
+  vec3 nickel = mix(vec3(0.30, 0.36, 0.37), vec3(0.75, 0.79, 0.78), uAppearance);
+  vec3 silver = mix(vec3(0.66, 0.75, 0.76), vec3(0.97), uAppearance);
+  vec3 color = mix(charcoal, nickel, smoothstep(0.18, 0.82, broad) * 0.72);
+  color += silver * shoulder * 0.52;
+  color += vec3(0.72, 0.84, 0.86) * edge * 0.2;
+  return color;
+}
+
+vec3 auroraEnvironment(vec3 ray) {
+  float longitude = atan(ray.z, ray.x);
+  float latitude = asin(clamp(ray.y, -1.0, 1.0));
+  float fold = fbm(vec2(longitude * 0.72 - uTime * 0.018, latitude * 1.8 + uTime * 0.012));
+  float ribbonCenter = 0.18 * sin(longitude * 1.35 - uTime * 0.08) + (fold - 0.5) * 0.34;
+  float ribbon = exp(-pow((latitude - ribbonCenter) * 2.9, 2.0));
+  float echo = exp(-pow((latitude + 0.62 + 0.08 * sin(longitude * 2.0)) * 6.5, 2.0));
+  float phase = 0.5 + 0.5 * sin(longitude * 1.7 + uTime * 0.04);
+  vec3 midnight = mix(vec3(0.003, 0.012, 0.022), vec3(0.18, 0.23, 0.28), uAppearance);
+  vec3 cyan = mix(vec3(0.08, 0.62, 0.62), vec3(0.32, 0.82, 0.79), uAppearance);
+  vec3 violet = mix(vec3(0.24, 0.10, 0.38), vec3(0.43, 0.28, 0.58), uAppearance);
+  vec3 color = midnight;
+  color += mix(cyan, violet, phase) * ribbon * (0.76 + fold * 0.38);
+  color += cyan * echo * 0.18;
+  return color;
+}
+
+vec3 atriumEnvironment(vec3 ray) {
+  float longitude = atan(ray.z, ray.x) / 3.14159265;
+  float latitude = asin(clamp(ray.y, -1.0, 1.0)) / 1.57079633;
+  vec2 gridUv = vec2(longitude * 4.0, latitude * 3.0);
+  vec2 cell = floor(gridUv);
+  vec2 within = abs(fract(gridUv) - 0.5);
+  float mortar = 1.0 - smoothstep(0.38, 0.47, max(within.x, within.y));
+  float checker = mod(cell.x + cell.y, 2.0);
+  vec3 darkStone = mix(vec3(0.025, 0.03, 0.032), vec3(0.34, 0.35, 0.34), uAppearance);
+  vec3 paleStone = mix(vec3(0.34, 0.35, 0.33), vec3(0.79, 0.77, 0.71), uAppearance);
+  vec3 color = mix(darkStone, paleStone, checker * 0.72 + 0.12);
+  color = mix(vec3(0.005, 0.008, 0.009), color, mortar);
+  float skylight = pow(max(dot(ray, normalize(vec3(-0.1, 0.92, 0.36))), 0.0), 8.0);
+  color += mix(vec3(0.42, 0.48, 0.48), vec3(0.95, 0.91, 0.82), uAppearance) * skylight * 0.42;
+  return color;
+}
+
+vec3 environment(vec3 ray) {
+  ray.yz = rotate2(uRotation.y * 0.035 + uPointer.y * 0.055) * ray.yz;
+  ray.xz = rotate2(-uRotation.x * 0.028 - uPointer.x * 0.07) * ray.xz;
+  if (uMaterial < 0.5) return stormglassEnvironment(ray);
+  if (uMaterial < 1.5) return studioEnvironment(ray);
+  if (uMaterial < 2.5) return mercuryEnvironment(ray);
+  if (uMaterial < 3.5) return auroraEnvironment(ray);
+  return atriumEnvironment(ray);
+}
+
+vec3 materialField() {
+  if (uMaterial < 0.5) return mix(vec3(0.012, 0.019, 0.024), vec3(0.72, 0.76, 0.77), uAppearance);
+  if (uMaterial < 1.5) return mix(vec3(0.008, 0.012, 0.014), vec3(0.67, 0.69, 0.68), uAppearance);
+  if (uMaterial < 2.5) return mix(vec3(0.014, 0.017, 0.018), vec3(0.60, 0.62, 0.61), uAppearance);
+  if (uMaterial < 3.5) return mix(vec3(0.004, 0.011, 0.019), vec3(0.48, 0.55, 0.59), uAppearance);
+  return mix(vec3(0.018, 0.021, 0.022), vec3(0.70, 0.69, 0.65), uAppearance);
+}
+
+vec3 materialAccent() {
+  if (uMaterial < 0.5) return vec3(1.0, 0.72, 0.42);
+  if (uMaterial < 1.5) return vec3(1.0, 0.77, 0.48);
+  if (uMaterial < 2.5) return vec3(0.72, 0.84, 0.86);
+  if (uMaterial < 3.5) return vec3(0.22, 0.82, 0.79);
+  return vec3(0.92, 0.88, 0.76);
+}
+
 void main() {
   vec2 screen = (gl_FragCoord.xy - 0.5 * uResolution) / min(uResolution.x, uResolution.y);
   vec3 backgroundRay = normalize(vec3(screen.x * 0.82, screen.y * 0.82, 1.0));
   vec3 weather = environment(backgroundRay);
-  vec3 nightField = vec3(0.012, 0.019, 0.024);
-  vec3 dayField = vec3(0.72, 0.76, 0.77);
-  vec3 field = mix(nightField, dayField, uAppearance);
+  vec3 field = materialField();
   float backdropCloud = 0.12 + uAppearance * 0.12;
   vec3 color = mix(field, weather, backdropCloud);
 
@@ -178,12 +331,19 @@ void main() {
   if (radius2 < 1.035) {
     float z = sqrt(max(0.0, 1.0 - min(radius2, 1.0)));
     vec3 normal = normalize(vec3(orb, z));
+    if (uMaterial > 1.5 && uMaterial < 2.5) {
+      vec2 liquid = vec2(
+        sin(orb.y * 11.0 + uTime * 0.72),
+        cos(orb.x * 9.0 - uTime * 0.58)
+      ) * 0.012 * normal.z;
+      normal = normalize(vec3(normal.xy + liquid, normal.z));
+    }
     vec3 reflected = reflect(vec3(0.0, 0.0, -1.0), normal);
     vec3 mirror = environment(reflected);
     float fresnel = pow(1.0 - max(normal.z, 0.0), 2.35);
     float crown = pow(max(dot(normal, normalize(vec3(-0.2, 0.8, 0.56))), 0.0), 12.0);
     mirror *= 0.64 + normal.z * 0.24;
-    mirror += vec3(1.0, 0.72, 0.42) * crown * 0.3;
+    mirror += materialAccent() * crown * 0.3;
     mirror = mix(mirror, vec3(0.44, 0.58, 0.64), fresnel * 0.46);
     mirror += vec3(0.72, 0.88, 0.95) * pow(fresnel, 2.0) * 0.2;
 
@@ -228,13 +388,14 @@ void main() {
   }
 
   class MaterialRenderer {
-    constructor(canvas) {
+    constructor(canvas, options) {
       this.canvas = canvas;
       this.game = null;
       this.gl = null;
       this.program = null;
       this.buffer = null;
       this.uniforms = {};
+      this.materialIndex = materialIndex(initialMaterial(options));
       this.appearance = 0;
       this.axes = { field: "dark", shell: "dark", well: "light" };
       this.pointer = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -246,6 +407,7 @@ void main() {
       this.failed = false;
       this.reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
       this.mobile = matchMedia("(max-width: 700px), (pointer: coarse)").matches;
+      document.body.dataset.reflectionMaterial = this.getMaterial().id;
       this.canvas.setAttribute("aria-hidden", "true");
       this.canvas.tabIndex = -1;
       this.bindEvents();
@@ -280,6 +442,7 @@ void main() {
         [
           "uTime",
           "uAppearance",
+          "uMaterial",
           "uResolution",
           "uCenter",
           "uPointer",
@@ -301,7 +464,7 @@ void main() {
     bindEvents() {
       this.onResize = () => this.resize();
       this.onPointerMove = (event) => {
-        if (this.reduceMotion) return;
+        if (this.isMotionReduced()) return;
         this.pointer.tx = (event.clientX / Math.max(1, innerWidth)) * 2 - 1;
         this.pointer.ty = (event.clientY / Math.max(1, innerHeight)) * 2 - 1;
       };
@@ -322,6 +485,60 @@ void main() {
         this.program = null;
         this.initialize();
       });
+    }
+
+    isMotionReduced() {
+      return this.reduceMotion || document.documentElement.dataset.effects === "reduced";
+    }
+
+    getMaterial() {
+      return MATERIAL_PRESETS[this.materialIndex] || MATERIAL_PRESETS[0];
+    }
+
+    getMaterials() {
+      return MATERIAL_PRESETS.map((preset) => Object.assign({}, preset));
+    }
+
+    announce(message) {
+      const toast = document.getElementById("count-style-toast");
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(this.toastTimer);
+      this.toastTimer = setTimeout(() => toast.classList.remove("show"), 1200);
+    }
+
+    setMaterial(value, options) {
+      options = options || {};
+      this.materialIndex = materialIndex(value);
+      const preset = this.getMaterial();
+      document.body.dataset.reflectionMaterial = preset.id;
+      if (options.persist !== false) {
+        try { localStorage.setItem(MATERIAL_STORAGE_KEY, preset.id); } catch (_) {}
+      }
+      if (options.updateURL) {
+        try {
+          const next = new URL(location.href);
+          next.searchParams.set("material", preset.id);
+          history.replaceState(history.state, "", next);
+        } catch (_) {}
+      }
+      if (this.failed) this.paintFallback();
+      else this.render(performance.now(), true);
+      document.dispatchEvent(new CustomEvent("hexsweeper:reflection-material", {
+        detail: { id: preset.id, label: preset.label },
+      }));
+      if (options.announce) this.announce(`Surface · ${preset.label}`);
+      return preset;
+    }
+
+    cycleMaterial(options) {
+      const next = (this.materialIndex + 1) % MATERIAL_PRESETS.length;
+      return this.setMaterial(next, Object.assign({
+        persist: true,
+        updateURL: true,
+        announce: true,
+      }, options));
     }
 
     attach(game) {
@@ -362,13 +579,7 @@ void main() {
 
     cycleAppearance() {
       this.setAppearance(this.appearance > 0.5 ? "dark" : "light");
-      const toast = document.getElementById("count-style-toast");
-      if (toast) {
-        toast.textContent = this.appearance > 0.5 ? "Reflection · Light" : "Reflection · Dark";
-        toast.classList.add("show");
-        clearTimeout(this.toastTimer);
-        this.toastTimer = setTimeout(() => toast.classList.remove("show"), 1200);
-      }
+      this.announce(this.appearance > 0.5 ? "Reflection · Light" : "Reflection · Dark");
     }
 
     resize() {
@@ -401,10 +612,11 @@ void main() {
       if (!this.game) return;
       const disk = this.game.getSphereScreen();
       const light = this.appearance > 0.5;
-      const field = light ? "#bcc4c7" : "#070d12";
-      const rim = light ? "#d9e0e1" : "#53646c";
-      const crown = light ? "#ffd9a4" : "#d99358";
-      const abyss = light ? "#263746" : "#00101e";
+      const fallback = this.getMaterial().fallback;
+      const field = light ? "#bcc4c7" : fallback[0];
+      const rim = light ? "#d9e0e1" : fallback[1];
+      const crown = light ? "#ffd9a4" : fallback[2];
+      const abyss = light ? "#263746" : fallback[3];
       this.canvas.style.background =
         `radial-gradient(circle ${disk.r}px at ${disk.cx}px ${disk.cy}px, ` +
         `${crown} 0%, ${rim} 25%, ${abyss} 72%, #020609 98%, transparent 100%), ` +
@@ -441,9 +653,14 @@ void main() {
       const gl = this.gl;
       if (!gl || !this.program || !this.game) return;
       const menuOpen = document.body.classList.contains("hex-bloom-open");
+      const motionReduced = this.isMotionReduced();
       const dt = Math.min(50, Math.max(0, time - this.lastTimeAt));
       this.lastTimeAt = time;
-      if (!this.reduceMotion && !menuOpen) this.materialTime += dt * 0.001;
+      if (!motionReduced && !menuOpen) this.materialTime += dt * 0.001;
+      if (motionReduced) {
+        this.pointer.tx = 0;
+        this.pointer.ty = 0;
+      }
       this.pointer.x += (this.pointer.tx - this.pointer.x) * 0.08;
       this.pointer.y += (this.pointer.ty - this.pointer.y) * 0.08;
 
@@ -456,6 +673,7 @@ void main() {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.uniform1f(this.uniforms.uTime, this.materialTime);
       gl.uniform1f(this.uniforms.uAppearance, this.appearance);
+      gl.uniform1f(this.uniforms.uMaterial, this.materialIndex);
       gl.uniform2f(this.uniforms.uResolution, this.canvas.width, this.canvas.height);
       gl.uniform2f(
         this.uniforms.uCenter,
@@ -476,13 +694,14 @@ void main() {
     options = options || {};
     const canvas = document.getElementById(options.canvasId || "reflectionCanvas");
     if (!canvas) throw new Error("MirrorMaterial: canvas not found");
-    const material = new MaterialRenderer(canvas);
+    const material = new MaterialRenderer(canvas, options);
     material.setAppearance(options.appearance || "dark");
     return material;
   }
 
   global.MirrorMaterial = {
     boot,
+    MATERIALS: MATERIAL_PRESETS.map((preset) => Object.assign({}, preset)),
     THEME: REFLECTION_THEME,
   };
 })(typeof window !== "undefined" ? window : globalThis);

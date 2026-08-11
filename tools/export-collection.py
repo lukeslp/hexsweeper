@@ -117,8 +117,8 @@ EXPERIMENTS = [
     },
     {
         "id": "sphere-reflection",
-        "title": "Hexsweeper 3D · Obsidian Mirror",
-        "ogTitle": "Hexsweeper 3D — Obsidian Mirror",
+        "title": "Obsidian Mirror · Stormglass",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Stormglass",
         "ogDescription": "A mirrored Hexsweeper sphere whose covered faces reflect a procedural sky, then turn matte as they clear.",
         "tag": "Experiment · reflective material",
         "blurb": "One continuous stormglass reflection lives beneath the playable hex shell: mirror means covered, matte means cleared, scarlet means flagged.",
@@ -126,7 +126,7 @@ EXPERIMENTS = [
         "swatch": ("#071017", "#d9965b", "#8ab6c9", "#e5222a"),
         "file": "sphere-reflection.html",
         "href": "sphere-reflection.html",
-        "liveHref": "../sphere-reflection/",
+        "liveHref": "../sphere-reflection/?material=stormglass",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
         "scripts": [
@@ -138,6 +138,91 @@ EXPERIMENTS = [
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "stormglass",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-reflection-studio",
+        "title": "Obsidian Mirror · Softbox Orbit",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Softbox Orbit",
+        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting a slowly orbiting studio-light rig.",
+        "tag": "Material study · moving light",
+        "blurb": "Broad pearl and amber softboxes orbit the shell, giving the reflection legible motion without disturbing the board.",
+        "filter": "sphere reflection mirror studio softbox orbit light shader material hexsweeper experiment",
+        "swatch": ("#05080a", "#dca465", "#65747a", "#e5222a"),
+        "file": "sphere-reflection-studio.html",
+        "href": "sphere-reflection-studio.html",
+        "liveHref": "../sphere-reflection/?material=studio",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "studio",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-reflection-mercury",
+        "title": "Obsidian Mirror · Smoked Mercury",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Smoked Mercury",
+        "ogDescription": "A playable mirrored Hexsweeper sphere with a restrained liquid-metal surface.",
+        "tag": "Material study · liquid metal",
+        "blurb": "Nickel bands move through a subtly breathing normal field; the silhouette stays rigid while the metal feels alive.",
+        "filter": "sphere reflection mirror smoked mercury liquid metal shader material hexsweeper experiment",
+        "swatch": ("#050708", "#b8c7ca", "#738084", "#e5222a"),
+        "file": "sphere-reflection-mercury.html",
+        "href": "sphere-reflection-mercury.html",
+        "liveHref": "../sphere-reflection/?material=mercury",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "mercury",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-reflection-aurora",
+        "title": "Obsidian Mirror · Aurora Vault",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Aurora Vault",
+        "ogDescription": "A playable mirrored Hexsweeper sphere carrying a slow cyan-violet aurora ribbon.",
+        "tag": "Material study · atmospheric",
+        "blurb": "One broad cyan-violet ribbon folds across the reflection, atmospheric but quiet enough to preserve every seam and count.",
+        "filter": "sphere reflection mirror aurora vault cyan violet ribbon shader material hexsweeper experiment",
+        "swatch": ("#02070d", "#2e7f83", "#88d2d0", "#e5222a"),
+        "file": "sphere-reflection-aurora.html",
+        "href": "sphere-reflection-aurora.html",
+        "liveHref": "../sphere-reflection/?material=aurora",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "aurora",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-reflection-atrium",
+        "title": "Obsidian Mirror · Checker Atrium",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Checker Atrium",
+        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting a coarse architectural checker room.",
+        "tag": "Material study · architectural",
+        "blurb": "A static coarse checker room bends over the sphere, making curvature and reflection direction immediately readable.",
+        "filter": "sphere reflection mirror checker atrium architectural room shader material hexsweeper experiment",
+        "swatch": ("#111416", "#d8d4c9", "#777a77", "#e5222a"),
+        "file": "sphere-reflection-atrium.html",
+        "href": "sphere-reflection-atrium.html",
+        "liveHref": "../sphere-reflection/?material=atrium",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "atrium",
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
@@ -894,6 +979,13 @@ def export_sphere(exp: dict) -> str:
         if dock_mode
         else ""
     )
+    reflection_material = exp.get("reflectionMaterial")
+    reflection_material_line = (
+        "window.HEXSWEEPER_REFLECTION_MATERIAL = "
+        f"{json.dumps(reflection_material)};\n"
+        if reflection_material
+        else ""
+    )
     welcome_key = exp.get("welcomeKey", "hexsweeper-sphere-welcome-v1")
     welcome_literal = (
         "'hexsweeper-sphere-welcome-v1'"
@@ -909,6 +1001,7 @@ def export_sphere(exp: dict) -> str:
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;\n"
         f"{take_line}"
         f"{dock_line}"
+        f"{reflection_material_line}"
         "</script>\n"
     )
     # Do not use re.sub with JS source as the replacement — backslashes break the template.

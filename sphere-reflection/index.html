@@ -334,7 +334,9 @@ body.help-open { overflow: hidden; }
 }
 .help-overlay.open { opacity: 1; pointer-events: auto; }
 .help-panel {
-  width: min(268px, 100%);
+  width: min(340px, 100%);
+  max-height: calc(100svh - 2.5rem);
+  overflow: auto;
   background: var(--bg-color);
   color: var(--text-main);
   border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
@@ -377,6 +379,60 @@ body.help-open { overflow: hidden; }
   font-size: 0.78rem;
   line-height: 1.4;
   color: var(--text-sub);
+}
+.reflection-surface-picker {
+  margin: 0 0 0.85rem;
+}
+.reflection-surface-caption {
+  display: block;
+  margin: 0 0 0.42rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+.reflection-surface-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.32rem;
+}
+.reflection-surface-button {
+  appearance: none;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0.34rem 0.18rem 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-sub);
+  font: inherit;
+  font-size: 0.56rem;
+  line-height: 1.1;
+  cursor: pointer;
+}
+.reflection-surface-button::before {
+  content: "";
+  display: block;
+  width: 23px;
+  height: 23px;
+  margin: 0 auto 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 24%, transparent);
+  border-radius: 50%;
+  background: var(--surface-swatch);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.reflection-surface-button:hover,
+.reflection-surface-button:focus-visible {
+  color: var(--text-main);
+  border-color: color-mix(in srgb, var(--text-main) 34%, transparent);
+  outline: none;
+}
+.reflection-surface-button[aria-pressed="true"] {
+  color: var(--text-main);
+  border-color: var(--text-main);
+  box-shadow: inset 0 0 0 1px var(--text-main);
 }
 .help-controls {
   list-style: none;
@@ -643,6 +699,16 @@ body.help-open { overflow: hidden; }
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Obsidian Mirror</h2>
     <p class="help-lede">A mirrored Hexsweeper sphere — six neighbors, first dig always safe. Covered faces hold the reflection; cleared faces become matte wells.</p>
+    <div class="reflection-surface-picker" id="reflection-surface-picker" role="group" aria-label="Reflected environment">
+      <span class="reflection-surface-caption">Reflected surface</span>
+      <div class="reflection-surface-options">
+        <button type="button" class="reflection-surface-button" data-reflection-material="stormglass" aria-label="Stormglass reflected surface" aria-pressed="false" style="--surface-swatch: radial-gradient(circle at 58% 24%, #d99358 0 10%, #53646c 32%, #070d12 72%)">Storm</button>
+        <button type="button" class="reflection-surface-button" data-reflection-material="studio" aria-label="Softbox Orbit reflected surface" aria-pressed="false" style="--surface-swatch: linear-gradient(135deg, #05080a 20%, #dca465 42%, #65747a 58%, #10181c 80%)">Studio</button>
+        <button type="button" class="reflection-surface-button" data-reflection-material="mercury" aria-label="Smoked Mercury reflected surface" aria-pressed="false" style="--surface-swatch: linear-gradient(165deg, #050708 10%, #b8c7ca 44%, #3d484b 62%, #101719 88%)">Mercury</button>
+        <button type="button" class="reflection-surface-button" data-reflection-material="aurora" aria-label="Aurora Vault reflected surface" aria-pressed="false" style="--surface-swatch: linear-gradient(145deg, #02070d 22%, #2e7f83 43%, #88d2d0 51%, #141329 68%)">Aurora</button>
+        <button type="button" class="reflection-surface-button" data-reflection-material="atrium" aria-label="Checker Atrium reflected surface" aria-pressed="false" style="--surface-swatch: conic-gradient(#111416 0 25%, #d8d4c9 0 50%, #202326 0 75%, #777a77 0)">Atrium</button>
+      </div>
+    </div>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Dig a face</span></li>
       <li><span class="act">Hold</span><span>Flag a face (mobile)</span></li>
@@ -654,7 +720,7 @@ body.help-open { overflow: hidden; }
       <p>Clear every safe face. Mirror means covered; matte means cleared; scarlet means flagged. Numbers count mines among the six touching neighbors.</p>
       <p>Tap outside the sphere to open the center menu: reset, undo, flag mode, board size, light or dark, warning style, and drag inversion. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
     </div>
-    <p class="help-keys"><kbd>C</kbd> menu · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
+    <p class="help-keys"><kbd>C</kbd> menu · <kbd>M</kbd> surface · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
       <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic square-grid Minesweeper screenshot">
         <img src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png" alt="Classic Windows Minesweeper (square grid)" width="44" height="33" loading="lazy">
@@ -685,7 +751,7 @@ body.help-open { overflow: hidden; }
 
 <script src="../sphere/hexasphere.js?v=20260810z11"></script>
 <script src="sphere.js?v=20260810z11"></script>
-<script src="mirror-material.js?v=20260811a1"></script>
+<script src="mirror-material.js?v=20260811b1"></script>
 <script src="../sphere/hex-bloom.js?v=20260810z11"></script>
 <script>
 const reflectionForcedColors = matchMedia("(forced-colors: active)").matches;
@@ -701,13 +767,40 @@ const reflectionGame = reflectionMaterial
   : reflectionBaseGame;
 const sphereMenu = initHexBloom(reflectionGame);
 if (reflectionMaterial) {
+  const surfaceButtons = Array.from(document.querySelectorAll("[data-reflection-material]"));
+  const helpTitle = document.getElementById("help-title");
+  function syncReflectionSurface() {
+    const active = reflectionMaterial.getMaterial();
+    surfaceButtons.forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.reflectionMaterial === active.id));
+    });
+    if (helpTitle) helpTitle.textContent = `Obsidian Mirror · ${active.label}`;
+    document.title = `Hexsweeper 3D — Obsidian Mirror · ${active.label}`;
+  }
+  surfaceButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      reflectionMaterial.setMaterial(button.dataset.reflectionMaterial, {
+        persist: true,
+        updateURL: true,
+        announce: true,
+      });
+    });
+  });
+  document.addEventListener("hexsweeper:reflection-material", syncReflectionSurface);
+  syncReflectionSurface();
   document.addEventListener("keydown", (event) => {
     if ((event.key === "t" || event.key === "T") && !event.metaKey && !event.ctrlKey) {
       event.preventDefault();
       event.stopImmediatePropagation();
       reflectionMaterial.cycleAppearance();
+    } else if ((event.key === "m" || event.key === "M") && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      reflectionMaterial.cycleMaterial();
     }
   }, true);
+} else {
+  document.getElementById("reflection-surface-picker")?.setAttribute("hidden", "");
 }
 document.getElementById("open-menu-a11y")?.addEventListener("click", () => sphereMenu?.open());
 (function () {
