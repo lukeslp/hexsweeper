@@ -23,6 +23,9 @@ jobs:
       - name: Sphere neighbor + flood closure smoke
         run: node sphere/test-neighbors.js
 
+      - name: Dodecahedron panel campaign smoke
+        run: node polyhedron/test-campaign.js
+
       - name: Collection export drift guard
         run: python3 tools/export-collection.py --check
 
