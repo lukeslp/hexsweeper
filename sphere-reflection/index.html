@@ -17,15 +17,15 @@
      status bar in the native shell. Harmless in desktop browsers. -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Hexsweeper 3D — Obsidian Mirror</title>
-<meta name="description" content="A playable mirrored Hexsweeper sphere: covered faces reflect a procedural sky, then turn matte as they clear.">
+<meta name="description" content="A playable mirrored Hexsweeper sphere with procedural and image-backed reflected environments.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hexsweeper 3D — Obsidian Mirror">
-<meta property="og:description" content="A playable mirrored Hexsweeper sphere: covered faces reflect a procedural sky, then turn matte as they clear.">
+<meta property="og:description" content="A playable mirrored Hexsweeper sphere with procedural and image-backed reflected environments.">
 <meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/sphere-reflection/">
 <meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Hexsweeper 3D — Obsidian Mirror">
-<meta name="twitter:description" content="A playable mirrored Hexsweeper sphere: covered faces reflect a procedural sky, then turn matte as they clear.">
+<meta name="twitter:description" content="A playable mirrored Hexsweeper sphere with procedural and image-backed reflected environments.">
 <meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -701,13 +701,7 @@ body.help-open { overflow: hidden; }
     <p class="help-lede">A mirrored Hexsweeper sphere — six neighbors, first dig always safe. Covered faces hold the reflection; cleared faces become matte wells.</p>
     <div class="reflection-surface-picker" id="reflection-surface-picker" role="group" aria-label="Reflected environment">
       <span class="reflection-surface-caption">Reflected surface</span>
-      <div class="reflection-surface-options">
-        <button type="button" class="reflection-surface-button" data-reflection-material="stormglass" aria-label="Stormglass reflected surface" aria-pressed="false" style="--surface-swatch: radial-gradient(circle at 58% 24%, #d99358 0 10%, #53646c 32%, #070d12 72%)">Storm</button>
-        <button type="button" class="reflection-surface-button" data-reflection-material="studio" aria-label="Softbox Orbit reflected surface" aria-pressed="false" style="--surface-swatch: linear-gradient(135deg, #05080a 20%, #dca465 42%, #65747a 58%, #10181c 80%)">Studio</button>
-        <button type="button" class="reflection-surface-button" data-reflection-material="mercury" aria-label="Smoked Mercury reflected surface" aria-pressed="false" style="--surface-swatch: linear-gradient(165deg, #050708 10%, #b8c7ca 44%, #3d484b 62%, #101719 88%)">Mercury</button>
-        <button type="button" class="reflection-surface-button" data-reflection-material="aurora" aria-label="Aurora Vault reflected surface" aria-pressed="false" style="--surface-swatch: linear-gradient(145deg, #02070d 22%, #2e7f83 43%, #88d2d0 51%, #141329 68%)">Aurora</button>
-        <button type="button" class="reflection-surface-button" data-reflection-material="atrium" aria-label="Checker Atrium reflected surface" aria-pressed="false" style="--surface-swatch: conic-gradient(#111416 0 25%, #d8d4c9 0 50%, #202326 0 75%, #777a77 0)">Atrium</button>
-      </div>
+      <div class="reflection-surface-options" id="reflection-surface-options"></div>
     </div>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Dig a face</span></li>
@@ -751,7 +745,7 @@ body.help-open { overflow: hidden; }
 
 <script src="../sphere/hexasphere.js?v=20260810z11"></script>
 <script src="sphere.js?v=20260810z11"></script>
-<script src="mirror-material.js?v=20260811b1"></script>
+<script src="mirror-material.js?v=20260811c1"></script>
 <script src="../sphere/hex-bloom.js?v=20260810z11"></script>
 <script>
 const reflectionForcedColors = matchMedia("(forced-colors: active)").matches;
@@ -767,7 +761,19 @@ const reflectionGame = reflectionMaterial
   : reflectionBaseGame;
 const sphereMenu = initHexBloom(reflectionGame);
 if (reflectionMaterial) {
-  const surfaceButtons = Array.from(document.querySelectorAll("[data-reflection-material]"));
+  const surfaceOptions = document.getElementById("reflection-surface-options");
+  MirrorMaterial.MATERIALS.forEach((material) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "reflection-surface-button";
+    button.dataset.reflectionMaterial = material.id;
+    button.setAttribute("aria-label", `${material.label} reflected surface`);
+    button.setAttribute("aria-pressed", "false");
+    button.style.setProperty("--surface-swatch", material.swatch);
+    button.textContent = material.shortLabel;
+    surfaceOptions?.appendChild(button);
+  });
+  const surfaceButtons = Array.from(surfaceOptions?.querySelectorAll("[data-reflection-material]") || []);
   const helpTitle = document.getElementById("help-title");
   function syncReflectionSurface() {
     const active = reflectionMaterial.getMaterial();

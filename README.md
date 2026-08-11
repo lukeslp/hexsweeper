@@ -80,7 +80,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
 | `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
-| `collection/sphere-reflection*.html` | Obsidian Mirror material studies — Stormglass, Softbox Orbit, Smoked Mercury, Aurora Vault, and Checker Atrium |
+| `collection/sphere-reflection*.html` | Obsidian Mirror material studies — five procedural environments plus Verdant Canopy, Gallery Bokeh, Midnight Paisley, Portoro Marble, and Deco Lacquer |
 | `collection/sphere-kimi.html` | Visual take: Moon Ink Orrery |
 | `collection/sphere-claude.html` | Visual take: Amber Codex |
 | `collection/sphere-muse.html` | Visual take: Starlit Void |
@@ -156,10 +156,11 @@ Flat game remains the default at `index.html`.
 
 - Original sphere gameplay and center-bloom controls, isolated from the native app payload.
 - Pointer-inert WebGL2 reflection beneath the authoritative Canvas 2D mesh.
-- Five reflected environments share one renderer and one game state: `?material=stormglass|studio|mercury|aurora|atrium`. Press **M** to cycle or choose one in Help.
+- Ten reflected environments share one renderer and one game state: `?material=stormglass|studio|mercury|aurora|atrium|canopy|salon|paisley|portoro|deco`. Press **M** to cycle or choose one in Help.
+- The five image-backed environments use responsive, same-origin WebP plates (2K desktop, 1K mobile) under `sphere-reflection/assets/reflections/`; collection one-pagers embed both sizes so every surface remains self-contained.
 - Covered faces retain the continuous mirror; cleared faces become matte wells; flags stay scarlet.
 - Analytic sphere normals replace a costly raymarch, with a capped backing buffer for mobile.
-- Procedural time freezes for either operating-system reduced motion or the in-game reduced-effects setting; forced colors uses the flat black/white renderer.
+- Environmental drift freezes for either operating-system reduced motion or the in-game reduced-effects setting; forced colors uses the flat black/white renderer.
 - WebGL compile/context loss falls back to a static reflective field without blocking play.
 - Share cards composite the reflection and game layers.
 

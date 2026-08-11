@@ -226,6 +226,111 @@ EXPERIMENTS = [
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
+        "id": "sphere-reflection-canopy",
+        "title": "Obsidian Mirror · Verdant Canopy",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Verdant Canopy",
+        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting a misted old-growth forest canopy.",
+        "tag": "Material study · photographic",
+        "blurb": "Moss, mist, and filtered canopy light drift across the shell as one continuous old-growth reflection.",
+        "filter": "sphere reflection mirror verdant canopy forest moss mist photographic texture material hexsweeper experiment",
+        "swatch": ("#07100b", "#34563a", "#9ab18d", "#e5222a"),
+        "file": "sphere-reflection-canopy.html",
+        "href": "sphere-reflection-canopy.html",
+        "liveHref": "../sphere-reflection/?material=canopy",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "canopy",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-reflection-salon",
+        "title": "Obsidian Mirror · Gallery Bokeh",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Gallery Bokeh",
+        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting a softly defocused amber salon.",
+        "tag": "Material study · blurred light",
+        "blurb": "Oversized amber bokeh and charcoal architecture give the mirror warmth without competing with the board.",
+        "filter": "sphere reflection mirror gallery bokeh salon amber blurred background texture material hexsweeper experiment",
+        "swatch": ("#100b08", "#7c5835", "#d7a45f", "#e5222a"),
+        "file": "sphere-reflection-salon.html",
+        "href": "sphere-reflection-salon.html",
+        "liveHref": "../sphere-reflection/?material=salon",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "salon",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-reflection-paisley",
+        "title": "Obsidian Mirror · Midnight Paisley",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Midnight Paisley",
+        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting tone-on-tone black paisley jacquard.",
+        "tag": "Material study · textile",
+        "blurb": "Black jacquard ornament appears only when grazing light catches it—a quiet, formal surface with depth.",
+        "filter": "sphere reflection mirror midnight black paisley jacquard textile classy texture material hexsweeper experiment",
+        "swatch": ("#030303", "#242424", "#767676", "#e5222a"),
+        "file": "sphere-reflection-paisley.html",
+        "href": "sphere-reflection-paisley.html",
+        "liveHref": "../sphere-reflection/?material=paisley",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "paisley",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-reflection-portoro",
+        "title": "Obsidian Mirror · Portoro Marble",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Portoro Marble",
+        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting black Portoro marble with broad champagne veins.",
+        "tag": "Material study · stone",
+        "blurb": "Broad champagne and ivory veins travel through polished black stone, kept coarse enough not to impersonate seams.",
+        "filter": "sphere reflection mirror portoro black marble stone champagne ivory vein texture material hexsweeper experiment",
+        "swatch": ("#050403", "#604c2c", "#d4b26f", "#e5222a"),
+        "file": "sphere-reflection-portoro.html",
+        "href": "sphere-reflection-portoro.html",
+        "liveHref": "../sphere-reflection/?material=portoro",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "portoro",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
+        "id": "sphere-reflection-deco",
+        "title": "Obsidian Mirror · Deco Lacquer",
+        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Deco Lacquer",
+        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting black lacquer and restrained aged-brass Deco inlay.",
+        "tag": "Material study · decorative",
+        "blurb": "Sparse fan and step geometry in aged brass moves over piano-black lacquer like a formal night interior.",
+        "filter": "sphere reflection mirror deco lacquer brass fan step classy decorative texture material hexsweeper experiment",
+        "swatch": ("#030303", "#5b492d", "#c4a26b", "#e5222a"),
+        "file": "sphere-reflection-deco.html",
+        "href": "sphere-reflection-deco.html",
+        "liveHref": "../sphere-reflection/?material=deco",
+        "source": "sphere-reflection",
+        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "boot": "initHexBloom",
+        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
+        "welcomeKey": "hexsweeper-reflection-welcome-v1",
+        "reflectionMaterial": "deco",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
         "id": "sphere-ux",
         "title": "Hexsweeper 3D · Bloom UX",
         "ogTitle": "Hexsweeper 3D — Bloom UX",
@@ -449,11 +554,86 @@ EXPERIMENTS = [
 
 DEFAULT_LAB_SWATCH = ("#080a0f", "#7eb8ff", "#34d399", "#fbbf24")
 
+REFLECTION_TEXTURES = {
+    "canopy": {
+        "desktop": "sphere-reflection/assets/reflections/canopy-2048.webp",
+        "mobile": "sphere-reflection/assets/reflections/canopy-1024.webp",
+    },
+    "salon": {
+        "desktop": "sphere-reflection/assets/reflections/salon-2048.webp",
+        "mobile": "sphere-reflection/assets/reflections/salon-1024.webp",
+    },
+    "paisley": {
+        "desktop": "sphere-reflection/assets/reflections/paisley-2048.webp",
+        "mobile": "sphere-reflection/assets/reflections/paisley-1024.webp",
+    },
+    "portoro": {
+        "desktop": "sphere-reflection/assets/reflections/portoro-2048.webp",
+        "mobile": "sphere-reflection/assets/reflections/portoro-1024.webp",
+    },
+    "deco": {
+        "desktop": "sphere-reflection/assets/reflections/deco-2048.webp",
+        "mobile": "sphere-reflection/assets/reflections/deco-1024.webp",
+    },
+}
+
 
 def data_uri(path: Path) -> str:
     mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     payload = base64.b64encode(path.read_bytes()).decode("ascii")
     return f"data:{mime};base64,{payload}"
+
+
+def reflection_texture_boot() -> str:
+    payload = {
+        material_id: {
+            size: data_uri(ROOT / relative_path)
+            for size, relative_path in sizes.items()
+        }
+        for material_id, sizes in REFLECTION_TEXTURES.items()
+    }
+    return "window.HEXSWEEPER_REFLECTION_TEXTURES = " + json.dumps(payload) + ";\n"
+
+
+def reflection_registry_errors() -> list[str]:
+    """Keep renderer, live URLs, exports, picker, and texture files in one closed set."""
+    renderer = (ROOT / "sphere-reflection" / "mirror-material.js").read_text(encoding="utf-8")
+    match = re.search(r"const MATERIAL_PRESETS = \[(.*?)\n  \];", renderer, flags=re.S)
+    if not match:
+        return ["mirror-material.js: MATERIAL_PRESETS registry not found"]
+    ids = re.findall(r'\bid:\s*"([a-z0-9-]+)"', match.group(1))
+    errors: list[str] = []
+    if len(ids) != len(set(ids)):
+        errors.append("mirror-material.js: duplicate reflection material id")
+
+    experiments = [exp for exp in EXPERIMENTS if exp.get("reflectionMaterial")]
+    experiment_ids = [exp["reflectionMaterial"] for exp in experiments]
+    missing_exports = sorted(set(ids) - set(experiment_ids))
+    stale_exports = sorted(set(experiment_ids) - set(ids))
+    if missing_exports:
+        errors.append("reflection materials missing collection exports: " + ", ".join(missing_exports))
+    if stale_exports:
+        errors.append("collection exports reference unknown materials: " + ", ".join(stale_exports))
+    if len(experiment_ids) != len(set(experiment_ids)):
+        errors.append("collection exports contain duplicate reflection materials")
+
+    for exp in experiments:
+        expected_query = f"?material={exp['reflectionMaterial']}"
+        if expected_query not in exp.get("liveHref", ""):
+            errors.append(f"{exp['id']}: liveHref does not select {exp['reflectionMaterial']}")
+
+    unknown_textures = sorted(set(REFLECTION_TEXTURES) - set(ids))
+    if unknown_textures:
+        errors.append("texture assets reference unknown materials: " + ", ".join(unknown_textures))
+    for material_id, sizes in REFLECTION_TEXTURES.items():
+        for size, relative_path in sizes.items():
+            if not (ROOT / relative_path).is_file():
+                errors.append(f"{material_id}: missing {size} texture {relative_path}")
+
+    page = (ROOT / "sphere-reflection" / "index.html").read_text(encoding="utf-8")
+    if "MirrorMaterial.MATERIALS.forEach" not in page:
+        errors.append("sphere-reflection/index.html: Help picker is not generated from MATERIALS")
+    return errors
 
 
 def inline_css_urls(css: str, base: Path) -> str:
@@ -986,6 +1166,9 @@ def export_sphere(exp: dict) -> str:
         if reflection_material
         else ""
     )
+    reflection_texture_line = (
+        reflection_texture_boot() if source_name == "sphere-reflection" else ""
+    )
     welcome_key = exp.get("welcomeKey", "hexsweeper-sphere-welcome-v1")
     welcome_literal = (
         "'hexsweeper-sphere-welcome-v1'"
@@ -1001,6 +1184,7 @@ def export_sphere(exp: dict) -> str:
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;\n"
         f"{take_line}"
         f"{dock_line}"
+        f"{reflection_texture_line}"
         f"{reflection_material_line}"
         "</script>\n"
     )
@@ -1408,6 +1592,12 @@ def main() -> int:
     source = (ROOT / "index.html").read_text(encoding="utf-8")
     if "allowModes" not in source or "ONEPAGER_MODES" not in source:
         print("error: index.html missing HEXSWEEPER_ONEPAGER allowModes support", file=sys.stderr)
+        return 2
+
+    registry_errors = reflection_registry_errors()
+    if registry_errors:
+        for message in registry_errors:
+            print(f"error: {message}", file=sys.stderr)
         return 2
 
     skins = load_skins()

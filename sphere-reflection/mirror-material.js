@@ -1,5 +1,5 @@
 /**
- * File Purpose: Procedural reflection field beneath the Canvas 2D Hexsweeper sphere.
+ * File Purpose: Procedural and image-backed reflection fields beneath the Canvas 2D Hexsweeper sphere.
  * Primary Functions/Classes: MirrorMaterial.boot, WebGL reflection renderer, appearance facade.
  * Inputs: reflection canvas + SphereSweeper public API. Outputs: pointer-inert visual material.
  *
@@ -71,30 +71,75 @@
       label: "Stormglass",
       shortLabel: "Storm",
       fallback: ["#070d12", "#53646c", "#d99358", "#00101e"],
+      swatch: "radial-gradient(circle at 58% 24%, #d99358 0 10%, #53646c 32%, #070d12 72%)",
     },
     {
       id: "studio",
       label: "Softbox Orbit",
       shortLabel: "Studio",
       fallback: ["#05080a", "#65747a", "#dca465", "#10181c"],
+      swatch: "linear-gradient(135deg, #05080a 20%, #dca465 42%, #65747a 58%, #10181c 80%)",
     },
     {
       id: "mercury",
       label: "Smoked Mercury",
       shortLabel: "Mercury",
       fallback: ["#050708", "#738084", "#b8c7ca", "#101719"],
+      swatch: "linear-gradient(165deg, #050708 10%, #b8c7ca 44%, #3d484b 62%, #101719 88%)",
     },
     {
       id: "aurora",
       label: "Aurora Vault",
       shortLabel: "Aurora",
       fallback: ["#02070d", "#2e7f83", "#88d2d0", "#141329"],
+      swatch: "linear-gradient(145deg, #02070d 22%, #2e7f83 43%, #88d2d0 51%, #141329 68%)",
     },
     {
       id: "atrium",
       label: "Checker Atrium",
       shortLabel: "Atrium",
       fallback: ["#111416", "#777a77", "#d8d4c9", "#202326"],
+      swatch: "conic-gradient(#111416 0 25%, #d8d4c9 0 50%, #202326 0 75%, #777a77 0)",
+    },
+    {
+      id: "canopy",
+      label: "Verdant Canopy",
+      shortLabel: "Canopy",
+      fallback: ["#07100b", "#34563a", "#9ab18d", "#101a13"],
+      swatch: "radial-gradient(circle at 62% 24%, #b9c99e 0 8%, #34563a 35%, #07100b 76%)",
+      texture: { desktop: "assets/reflections/canopy-2048.webp", mobile: "assets/reflections/canopy-1024.webp", speed: 0.0012, exposure: 0.74, saturation: 0.86, backdrop: 0.46 },
+    },
+    {
+      id: "salon",
+      label: "Gallery Bokeh",
+      shortLabel: "Bokeh",
+      fallback: ["#100b08", "#7c5835", "#d7a45f", "#211610"],
+      swatch: "radial-gradient(circle at 32% 42%, #e3b267 0 11%, transparent 12%), radial-gradient(circle at 72% 28%, #ac7744 0 15%, #150d09 42%)",
+      texture: { desktop: "assets/reflections/salon-2048.webp", mobile: "assets/reflections/salon-1024.webp", speed: 0.0018, exposure: 0.82, saturation: 0.88, backdrop: 0.56 },
+    },
+    {
+      id: "paisley",
+      label: "Midnight Paisley",
+      shortLabel: "Paisley",
+      fallback: ["#030303", "#242424", "#767676", "#0c0c0c"],
+      swatch: "radial-gradient(ellipse at 35% 38%, transparent 0 18%, #505050 19% 23%, transparent 24%), repeating-radial-gradient(ellipse at 70% 60%, #090909 0 6px, #292929 7px 9px, #050505 10px 15px)",
+      texture: { desktop: "assets/reflections/paisley-2048.webp", mobile: "assets/reflections/paisley-1024.webp", speed: 0.0007, exposure: 0.70, saturation: 0.42, backdrop: 0.40 },
+    },
+    {
+      id: "portoro",
+      label: "Portoro Marble",
+      shortLabel: "Portoro",
+      fallback: ["#050403", "#604c2c", "#d4b26f", "#15110a"],
+      swatch: "linear-gradient(118deg, #030303 0 34%, #ba9656 35% 38%, #f0dfb2 39%, #090807 41% 68%, #745b35 69% 72%, #020202 73%)",
+      texture: { desktop: "assets/reflections/portoro-2048.webp", mobile: "assets/reflections/portoro-1024.webp", speed: 0.0005, exposure: 0.76, saturation: 0.76, backdrop: 0.44 },
+    },
+    {
+      id: "deco",
+      label: "Deco Lacquer",
+      shortLabel: "Deco",
+      fallback: ["#030303", "#5b492d", "#c4a26b", "#100e0b"],
+      swatch: "repeating-conic-gradient(from 315deg at 50% 100%, #080808 0 7deg, #b28d55 8deg 9deg, #080808 10deg 16deg)",
+      texture: { desktop: "assets/reflections/deco-2048.webp", mobile: "assets/reflections/deco-1024.webp", speed: 0.0009, exposure: 0.78, saturation: 0.74, backdrop: 0.44 },
     },
   ];
   const MATERIAL_INDEX = new Map(
@@ -145,6 +190,9 @@ uniform vec2 uCenter;
 uniform vec2 uPointer;
 uniform vec2 uRotation;
 uniform float uRadius;
+uniform sampler2D uEnvironmentMap;
+uniform float uTextureReady;
+uniform vec4 uTextureParams;
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -280,14 +328,27 @@ vec3 atriumEnvironment(vec3 ray) {
   return color;
 }
 
-vec3 environment(vec3 ray) {
+vec3 imageEnvironment(vec3 ray, float lod) {
+  float longitude = atan(ray.z, ray.x) / 6.28318531 + 0.5;
+  float latitude = asin(clamp(ray.y, -1.0, 1.0)) / 3.14159265 + 0.5;
+  vec2 uv = vec2(fract(longitude + uTime * uTextureParams.x), clamp(latitude, 0.002, 0.998));
+  vec3 sampleColor = textureLod(uEnvironmentMap, uv, lod).rgb;
+  float luma = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
+  sampleColor = mix(vec3(luma), sampleColor, uTextureParams.z) * uTextureParams.y;
+  sampleColor = mix(sampleColor, vec3(luma * 0.72 + 0.26), uAppearance * 0.24);
+  return sampleColor;
+}
+
+vec3 environment(vec3 ray, float lod) {
   ray.yz = rotate2(uRotation.y * 0.035 + uPointer.y * 0.055) * ray.yz;
   ray.xz = rotate2(-uRotation.x * 0.028 - uPointer.x * 0.07) * ray.xz;
   if (uMaterial < 0.5) return stormglassEnvironment(ray);
   if (uMaterial < 1.5) return studioEnvironment(ray);
   if (uMaterial < 2.5) return mercuryEnvironment(ray);
   if (uMaterial < 3.5) return auroraEnvironment(ray);
-  return atriumEnvironment(ray);
+  if (uMaterial < 4.5) return atriumEnvironment(ray);
+  if (uTextureReady > 0.5) return imageEnvironment(ray, lod);
+  return mix(vec3(0.015, 0.018, 0.017), vec3(0.58, 0.60, 0.57), uAppearance);
 }
 
 vec3 materialField() {
@@ -295,7 +356,8 @@ vec3 materialField() {
   if (uMaterial < 1.5) return mix(vec3(0.008, 0.012, 0.014), vec3(0.67, 0.69, 0.68), uAppearance);
   if (uMaterial < 2.5) return mix(vec3(0.014, 0.017, 0.018), vec3(0.60, 0.62, 0.61), uAppearance);
   if (uMaterial < 3.5) return mix(vec3(0.004, 0.011, 0.019), vec3(0.48, 0.55, 0.59), uAppearance);
-  return mix(vec3(0.018, 0.021, 0.022), vec3(0.70, 0.69, 0.65), uAppearance);
+  if (uMaterial < 4.5) return mix(vec3(0.018, 0.021, 0.022), vec3(0.70, 0.69, 0.65), uAppearance);
+  return mix(vec3(0.008, 0.010, 0.009), vec3(0.64, 0.65, 0.62), uAppearance);
 }
 
 vec3 materialAccent() {
@@ -303,15 +365,21 @@ vec3 materialAccent() {
   if (uMaterial < 1.5) return vec3(1.0, 0.77, 0.48);
   if (uMaterial < 2.5) return vec3(0.72, 0.84, 0.86);
   if (uMaterial < 3.5) return vec3(0.22, 0.82, 0.79);
-  return vec3(0.92, 0.88, 0.76);
+  if (uMaterial < 4.5) return vec3(0.92, 0.88, 0.76);
+  if (uMaterial < 5.5) return vec3(0.67, 0.79, 0.59);
+  if (uMaterial < 6.5) return vec3(0.96, 0.72, 0.39);
+  if (uMaterial < 7.5) return vec3(0.72, 0.72, 0.70);
+  return vec3(0.86, 0.70, 0.42);
 }
 
 void main() {
   vec2 screen = (gl_FragCoord.xy - 0.5 * uResolution) / min(uResolution.x, uResolution.y);
   vec3 backgroundRay = normalize(vec3(screen.x * 0.82, screen.y * 0.82, 1.0));
-  vec3 weather = environment(backgroundRay);
+  vec3 weather = environment(backgroundRay, 5.0);
   vec3 field = materialField();
-  float backdropCloud = 0.12 + uAppearance * 0.12;
+  float backdropCloud = uMaterial > 4.5
+    ? uTextureParams.w
+    : 0.12 + uAppearance * 0.12;
   vec3 color = mix(field, weather, backdropCloud);
 
   float vignette = smoothstep(0.82, 0.08, length(screen));
@@ -339,7 +407,7 @@ void main() {
       normal = normalize(vec3(normal.xy + liquid, normal.z));
     }
     vec3 reflected = reflect(vec3(0.0, 0.0, -1.0), normal);
-    vec3 mirror = environment(reflected);
+    vec3 mirror = environment(reflected, 0.65);
     float fresnel = pow(1.0 - max(normal.z, 0.0), 2.35);
     float crown = pow(max(dot(normal, normalize(vec3(-0.2, 0.8, 0.56))), 0.0), 12.0);
     mirror *= 0.64 + normal.z * 0.24;
@@ -394,6 +462,9 @@ void main() {
       this.gl = null;
       this.program = null;
       this.buffer = null;
+      this.texture = null;
+      this.textureReady = 0;
+      this.textureLoadToken = 0;
       this.uniforms = {};
       this.materialIndex = materialIndex(initialMaterial(options));
       this.appearance = 0;
@@ -448,13 +519,37 @@ void main() {
           "uPointer",
           "uRotation",
           "uRadius",
+          "uEnvironmentMap",
+          "uTextureReady",
+          "uTextureParams",
         ].forEach((name) => {
           this.uniforms[name] = gl.getUniformLocation(this.program, name);
         });
+        this.texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA,
+          1,
+          1,
+          0,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          new Uint8Array([8, 10, 9, 255])
+        );
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.uniform1i(this.uniforms.uEnvironmentMap, 0);
         this.failed = false;
         document.body.classList.remove("reflection-fallback");
         this.resize();
         this.start();
+        this.loadSelectedTexture();
       } catch (error) {
         console.warn("Reflection material fallback:", error);
         this.useFallback();
@@ -499,6 +594,52 @@ void main() {
       return MATERIAL_PRESETS.map((preset) => Object.assign({}, preset));
     }
 
+    textureURL(preset) {
+      if (!preset.texture) return null;
+      const embedded = global.HEXSWEEPER_REFLECTION_TEXTURES &&
+        global.HEXSWEEPER_REFLECTION_TEXTURES[preset.id];
+      const source = embedded || preset.texture;
+      return this.mobile ? source.mobile : source.desktop;
+    }
+
+    loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.decoding = "async";
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error(`Unable to load reflection texture: ${url}`));
+        image.src = url;
+      });
+    }
+
+    async loadSelectedTexture() {
+      const token = ++this.textureLoadToken;
+      const preset = this.getMaterial();
+      const url = this.textureURL(preset);
+      this.textureReady = 0;
+      if (!url || !this.gl || !this.texture) {
+        this.render(performance.now(), true);
+        return;
+      }
+      try {
+        const image = await this.loadImage(url);
+        if (token !== this.textureLoadToken || !this.gl || !this.texture) return;
+        const gl = this.gl;
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        this.textureReady = 1;
+        this.render(performance.now(), true);
+      } catch (error) {
+        if (token !== this.textureLoadToken) return;
+        console.warn(`Reflection texture fallback (${preset.id}):`, error);
+        this.textureReady = 0;
+        this.render(performance.now(), true);
+      }
+    }
+
     announce(message) {
       const toast = document.getElementById("count-style-toast");
       if (!toast) return;
@@ -523,6 +664,7 @@ void main() {
           history.replaceState(history.state, "", next);
         } catch (_) {}
       }
+      this.loadSelectedTexture();
       if (this.failed) this.paintFallback();
       else this.render(performance.now(), true);
       document.dispatchEvent(new CustomEvent("hexsweeper:reflection-material", {
@@ -674,6 +816,15 @@ void main() {
       gl.uniform1f(this.uniforms.uTime, this.materialTime);
       gl.uniform1f(this.uniforms.uAppearance, this.appearance);
       gl.uniform1f(this.uniforms.uMaterial, this.materialIndex);
+      const texture = this.getMaterial().texture || {};
+      gl.uniform1f(this.uniforms.uTextureReady, this.textureReady);
+      gl.uniform4f(
+        this.uniforms.uTextureParams,
+        texture.speed || 0,
+        texture.exposure || 1,
+        texture.saturation == null ? 1 : texture.saturation,
+        texture.backdrop || 0.2
+      );
       gl.uniform2f(this.uniforms.uResolution, this.canvas.width, this.canvas.height);
       gl.uniform2f(
         this.uniforms.uCenter,
@@ -683,6 +834,8 @@ void main() {
       gl.uniform2f(this.uniforms.uPointer, this.pointer.x, -this.pointer.y);
       gl.uniform2f(this.uniforms.uRotation, state.rotY || 0, state.rotX || 0);
       gl.uniform1f(this.uniforms.uRadius, disk.r * radiusScale * 0.945);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.texture);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       this.canvas.style.opacity = menuOpen ? "0.64" : "1";
       this.canvas.style.filter = menuOpen ? "blur(3px) saturate(.72)" : "none";
