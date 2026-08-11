@@ -82,6 +82,8 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | 2026-08-10 | Base center flower gains a restrained whole-cluster pointer tilt and shared lift shadow; dome keeps its stronger oblique camera. The corner `?` moves onto a 10–14px safe inset after its stroked circle clipped at a 2px bottom offset. | **Keep** — depth without reopening seams; reference control stays reachable |
 | 2026-08-10 | `?dock=faces` turns a centered seven-face patch of the rendered sphere into the control surface itself. The buttons inherit the exact projected polygons, skew, and seams of those live board faces. | **Trial** — the strongest integration concept; deliberately compact at dense sizes |
 | 2026-08-10 | `?dock=equator` places Reset plus the six outcome controls on a draggable geodesic belt. Front controls grow and sharpen while the back arc recedes, fades, and stops intercepting input. | **Trial** — spatial browsing with no flower laid over the sphere |
+| 2026-08-10 | `?dock=eggshell` freezes the rendered globe into two coherent hemispheres, cracks it across a jagged equator, and hinges the halves apart around the existing seven-control flower. | **Trial** — literal shell opening without touching gameplay projection or saves |
+| 2026-08-10 | `?dock=chamber` interpolates the live sphere from convex to concave perspective and grows its rim beyond the viewport, turning the board into a tiled room around a quiet central aperture. | **Trial** — the sphere passes around the player instead of merely opening in front of them |
 
 ### What Luke is asking for (intent thread, in his words + readings)
 

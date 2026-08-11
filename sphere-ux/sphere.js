@@ -740,6 +740,12 @@
       centerY: 0,
       projectedCache: null,
       rotCacheKey: "",
+      // Modal-only projection study. Never persisted and never active during
+      // play; sphere-ux chrome may temporarily turn the globe into a concave
+      // chamber while its controls own input.
+      chromeProjectionMode: null,
+      chromeProjectionProgress: 0,
+      chromeProjectionScale: 1.48,
       rafScheduled: false,
       detonatorIdx: -1,
       endFx: null,
@@ -1431,7 +1437,18 @@
 
     function projectRotated(r) {
       const fov = 2.8;
-      const depth = fov / (fov - r.z);
+      const convex = fov / (fov - r.z);
+      let depth = convex;
+      if (
+        state.chromeProjectionMode === "chamber" &&
+        state.chromeProjectionProgress > 0
+      ) {
+        const raw = Math.max(0, Math.min(1, state.chromeProjectionProgress));
+        const eased = raw * raw * (3 - 2 * raw);
+        const concave =
+          (fov / (fov + r.z)) * state.chromeProjectionScale;
+        depth = convex + (concave - convex) * eased;
+      }
       return {
         x: state.centerX + r.x * state.scale * depth,
         y: state.centerY - r.y * state.scale * depth,
@@ -1492,7 +1509,7 @@
     }
 
     function rotKey() {
-      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}`;
+      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}|${state.chromeProjectionMode || "none"}|${state.chromeProjectionProgress.toFixed(4)}|${state.chromeProjectionScale.toFixed(3)}`;
     }
 
     /** Project all tiles once per frame; cull back hemisphere for pick + draw. */
@@ -1503,7 +1520,11 @@
       }
       const all = state.tiles.map((t) => projectTile(t, state.rotY, state.rotX));
       const front = all.filter((p) => p.z > -0.05);
-      front.sort((a, b) => a.z - b.z);
+      // center.depth preserves ordinary back-to-front order in the convex
+      // projection and naturally reverses it as Chamber becomes concave.
+      front.sort(
+        (a, b) => a.center.depth - b.center.depth || a.z - b.z
+      );
       state.projectedCache = front;
       state.rotCacheKey = key;
       return front;
@@ -1511,6 +1532,30 @@
 
     function invalidateProjection() {
       state.projectedCache = null;
+    }
+
+    function setChromeProjection(mode, progress) {
+      const nextMode = mode === "chamber" ? "chamber" : null;
+      const nextProgress = nextMode
+        ? Math.max(0, Math.min(1, Number(progress) || 0))
+        : 0;
+      state.chromeProjectionMode = nextMode;
+      state.chromeProjectionProgress = nextProgress;
+      if (nextMode) {
+        const w = canvas.clientWidth || window.innerWidth;
+        const h = canvas.clientHeight || window.innerHeight;
+        const farX = Math.max(state.centerX, w - state.centerX);
+        const farY = Math.max(state.centerY, h - state.centerY);
+        const baseR = Math.max(1, state.scale);
+        state.chromeProjectionScale = Math.min(
+          3.8,
+          Math.max(1.48, farX / baseR, farY / baseR) * 1.08
+        );
+      } else {
+        state.chromeProjectionScale = 1.48;
+      }
+      invalidateProjection();
+      scheduleFrame();
     }
 
     /**
@@ -3869,32 +3914,41 @@
       const coreFill = state.theme.core || state.theme.backface || "#000000";
       const coreR = Math.max(12, state.scale * 1.02);
       const coreNow = performance.now();
-      if (state.theme.magmaCore) {
-        drawMagmaCore(state.centerX, state.centerY, coreR, coreNow);
-      } else if (state.theme.wellGlow && state.theme.coreGlow) {
-        const cg = ctx.createRadialGradient(
-          state.centerX,
-          state.centerY,
-          coreR * 0.08,
-          state.centerX,
-          state.centerY,
-          coreR
-        );
-        const hot = parseCssColor(state.theme.wellGlowHot || "#ffffff");
-        const mid = parseCssColor(state.theme.coreGlow);
-        cg.addColorStop(0, `rgba(${hot[0]},${hot[1]},${hot[2]},0.55)`);
-        cg.addColorStop(0.35, `rgba(${mid[0]},${mid[1]},${mid[2]},0.35)`);
-        cg.addColorStop(0.75, coreFill);
-        cg.addColorStop(1, coreFill);
-        ctx.beginPath();
-        ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
-        ctx.fillStyle = cg;
-        ctx.fill();
-      } else {
-        ctx.beginPath();
-        ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
-        ctx.fillStyle = coreFill;
-        ctx.fill();
+      const chamberCoreAlpha =
+        state.chromeProjectionMode === "chamber"
+          ? Math.max(0, Math.min(1, 1 - state.chromeProjectionProgress * 1.65))
+          : 1;
+      if (chamberCoreAlpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha *= chamberCoreAlpha;
+        if (state.theme.magmaCore) {
+          drawMagmaCore(state.centerX, state.centerY, coreR, coreNow);
+        } else if (state.theme.wellGlow && state.theme.coreGlow) {
+          const cg = ctx.createRadialGradient(
+            state.centerX,
+            state.centerY,
+            coreR * 0.08,
+            state.centerX,
+            state.centerY,
+            coreR
+          );
+          const hot = parseCssColor(state.theme.wellGlowHot || "#ffffff");
+          const mid = parseCssColor(state.theme.coreGlow);
+          cg.addColorStop(0, `rgba(${hot[0]},${hot[1]},${hot[2]},0.55)`);
+          cg.addColorStop(0.35, `rgba(${mid[0]},${mid[1]},${mid[2]},0.35)`);
+          cg.addColorStop(0.75, coreFill);
+          cg.addColorStop(1, coreFill);
+          ctx.beginPath();
+          ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
+          ctx.fillStyle = cg;
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
+          ctx.fillStyle = coreFill;
+          ctx.fill();
+        }
+        ctx.restore();
       }
 
       if (!state.reduceMotion) {
@@ -4545,6 +4599,7 @@
         r: state.scale * 1.15,
       }),
       getMenuPatch,
+      setChromeProjection,
       setCountStyle: (id, opts) => setCountStyle(id, opts),
       setRelief: (mode) => setRelief(mode),
       setSeams: (on) => setSeams(on),

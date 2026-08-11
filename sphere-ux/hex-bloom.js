@@ -151,8 +151,14 @@
   const DOCK_CONTEXT = DOCK_MODE === "context";
   const FACE_TAKEOVER = DOCK_MODE === "faces";
   const EQUATOR_RIBBON = DOCK_MODE === "equator";
+  const EGG_SHELL = DOCK_MODE === "eggshell" || DOCK_MODE === "egg";
+  const INNER_CHAMBER = DOCK_MODE === "chamber";
+  const SPATIAL_SHELL = EGG_SHELL || INNER_CHAMBER;
   const FIXED_CENTER =
-    DOCK_MODE === "center" || FACE_TAKEOVER || EQUATOR_RIBBON;
+    DOCK_MODE === "center" ||
+    FACE_TAKEOVER ||
+    EQUATOR_RIBBON ||
+    SPATIAL_SHELL;
   const DEFAULT_BLOOM = DOCK_MODE === "default";
   const DOCK_CENTER = FIXED_CENTER || DOCK_CONTEXT;
   const SHARED_MENU = FIXED_CENTER || DEFAULT_BLOOM;
@@ -447,6 +453,8 @@
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
+    if (EGG_SHELL) return 420;
+    if (INNER_CHAMBER) return 340;
     return DOCK_CONTEXT ? 140 : 180;
   }
 
@@ -471,6 +479,13 @@
     scrim.className = "hex-bloom-scrim";
     scrim.setAttribute("aria-hidden", "true");
     root.appendChild(scrim);
+
+    const shellScene = SPATIAL_SHELL ? document.createElement("div") : null;
+    if (shellScene) {
+      shellScene.className = "hb-shell-scene";
+      shellScene.setAttribute("aria-hidden", "true");
+      root.appendChild(shellScene);
+    }
 
     const stage = document.createElement("div");
     stage.className = "hex-bloom-stage";
@@ -1214,6 +1229,7 @@
         const b = document.getElementById("reset-btn");
         if (b) b.click();
       }
+      if (EGG_SHELL) refreshEggShellSnapshot();
       announce("Board reset");
       if (state.phase === "open" || state.phase === "rising") collapse();
     }
@@ -1417,6 +1433,9 @@
     let ribbonAngle = Math.PI / 2;
     let ribbonActions = [];
     let ribbonSuppressClickUntil = 0;
+    let eggSnapshotCanvases = [];
+    let chamberProgress = 0;
+    let chamberRaf = 0;
 
     function announce(msg) {
       live.textContent = msg || "";
@@ -1525,6 +1544,190 @@
       stage.querySelectorAll(".hb-hex").forEach((n) => n.remove());
       centerActionBtn = null;
       ribbonActions = [];
+    }
+
+    function shellGeometry() {
+      const canvas = document.getElementById("gameCanvas");
+      const disk =
+        typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
+      if (!canvas || !disk || !disk.r) return null;
+      const rect = canvas.getBoundingClientRect();
+      const diameter = disk.r * 2;
+      return {
+        canvas,
+        disk,
+        rect,
+        diameter,
+        left: rect.left + disk.cx - disk.r,
+        top: rect.top + disk.cy - disk.r,
+        scaleX: canvas.width / Math.max(1, rect.width),
+        scaleY: canvas.height / Math.max(1, rect.height),
+      };
+    }
+
+    function paintSphereCrop(target, geometry) {
+      if (!target || !geometry) return;
+      const width = Math.max(1, Math.round(geometry.diameter * geometry.scaleX));
+      const height = Math.max(1, Math.round(geometry.diameter * geometry.scaleY));
+      if (target.width !== width) target.width = width;
+      if (target.height !== height) target.height = height;
+      const targetContext = target.getContext("2d");
+      if (!targetContext) return;
+      targetContext.clearRect(0, 0, width, height);
+      targetContext.drawImage(
+        geometry.canvas,
+        (geometry.disk.cx - geometry.disk.r) * geometry.scaleX,
+        (geometry.disk.cy - geometry.disk.r) * geometry.scaleY,
+        geometry.diameter * geometry.scaleX,
+        geometry.diameter * geometry.scaleY,
+        0,
+        0,
+        width,
+        height
+      );
+    }
+
+    function positionEggFrame(frame, geometry) {
+      frame.style.left = geometry.left.toFixed(1) + "px";
+      frame.style.top = geometry.top.toFixed(1) + "px";
+      frame.style.width = geometry.diameter.toFixed(1) + "px";
+      frame.style.height = geometry.diameter.toFixed(1) + "px";
+      frame.style.setProperty("--egg-r", geometry.disk.r.toFixed(1) + "px");
+    }
+
+    function buildEggShellScene() {
+      if (!shellScene) return false;
+      const geometry = shellGeometry();
+      if (!geometry) return false;
+      shellScene.textContent = "";
+      shellScene.dataset.kind = "eggshell";
+      const frame = document.createElement("div");
+      frame.className = "hb-egg-frame";
+      positionEggFrame(frame, geometry);
+
+      const core = document.createElement("div");
+      core.className = "hb-egg-core";
+      frame.appendChild(core);
+
+      eggSnapshotCanvases = [];
+      ["upper", "lower"].forEach((side) => {
+        const piece = document.createElement("div");
+        piece.className = "hb-egg-piece hb-egg-piece--" + side;
+        const snapshot = document.createElement("canvas");
+        snapshot.className = "hb-egg-snapshot";
+        snapshot.setAttribute("aria-hidden", "true");
+        paintSphereCrop(snapshot, geometry);
+        eggSnapshotCanvases.push(snapshot);
+        piece.appendChild(snapshot);
+        frame.appendChild(piece);
+      });
+      shellScene.appendChild(frame);
+      document.body.classList.add("hex-bloom-eggshell-active");
+      void shellScene.offsetHeight;
+      return true;
+    }
+
+    function refreshEggShellSnapshot() {
+      if (!EGG_SHELL || !shellScene || !eggSnapshotCanvases.length) return;
+      const geometry = shellGeometry();
+      if (!geometry) return;
+      const frame = shellScene.querySelector(".hb-egg-frame");
+      if (frame) positionEggFrame(frame, geometry);
+      eggSnapshotCanvases.forEach((snapshot) =>
+        paintSphereCrop(snapshot, geometry)
+      );
+    }
+
+    function buildChamberScene() {
+      if (!shellScene) return false;
+      const geometry = shellGeometry();
+      if (!geometry) return false;
+      shellScene.textContent = "";
+      shellScene.dataset.kind = "chamber";
+      shellScene.style.setProperty(
+        "--chamber-cx",
+        (geometry.rect.left + geometry.disk.cx).toFixed(1) + "px"
+      );
+      shellScene.style.setProperty(
+        "--chamber-cy",
+        (geometry.rect.top + geometry.disk.cy).toFixed(1) + "px"
+      );
+      shellScene.style.setProperty(
+        "--chamber-r",
+        geometry.disk.r.toFixed(1) + "px"
+      );
+      const veil = document.createElement("div");
+      veil.className = "hb-chamber-veil";
+      const rim = document.createElement("div");
+      rim.className = "hb-chamber-rim";
+      shellScene.appendChild(veil);
+      shellScene.appendChild(rim);
+      document.body.classList.add("hex-bloom-chamber-active");
+      if (typeof game.setChromeProjection === "function") {
+        game.setChromeProjection("chamber", chamberProgress);
+      }
+      return true;
+    }
+
+    function clearSpatialScene() {
+      cancelAnimationFrame(chamberRaf);
+      chamberRaf = 0;
+      chamberProgress = 0;
+      if (typeof game.setChromeProjection === "function") {
+        game.setChromeProjection(null, 0);
+      }
+      eggSnapshotCanvases = [];
+      if (shellScene) {
+        shellScene.textContent = "";
+        delete shellScene.dataset.kind;
+      }
+      document.body.classList.remove(
+        "hex-bloom-eggshell-active",
+        "hex-bloom-chamber-active"
+      );
+    }
+
+    function animateChamber(target, duration) {
+      if (!INNER_CHAMBER || typeof game.setChromeProjection !== "function") return;
+      cancelAnimationFrame(chamberRaf);
+      chamberRaf = 0;
+      const to = Math.max(0, Math.min(1, target));
+      const from = chamberProgress;
+      if (prefersReducedMotion() || !duration) {
+        chamberProgress = to;
+        game.setChromeProjection(to > 0 ? "chamber" : null, to);
+        return;
+      }
+      const started = performance.now();
+      const tick = (now) => {
+        const raw = Math.max(0, Math.min(1, (now - started) / duration));
+        const eased =
+          raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
+        chamberProgress = from + (to - from) * eased;
+        game.setChromeProjection("chamber", chamberProgress);
+        if (raw < 1) chamberRaf = requestAnimationFrame(tick);
+        else {
+          chamberRaf = 0;
+          chamberProgress = to;
+          game.setChromeProjection(to > 0 ? "chamber" : null, to);
+        }
+      };
+      chamberRaf = requestAnimationFrame(tick);
+    }
+
+    function prepareSpatialScene() {
+      if (EGG_SHELL) return buildEggShellScene();
+      if (INNER_CHAMBER) return buildChamberScene();
+      return false;
+    }
+
+    function refreshSpatialSceneSoon() {
+      if (!EGG_SHELL) return;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (state.phase === "open") refreshEggShellSnapshot();
+        });
+      });
     }
 
     function removeSubmenu() {
@@ -1783,6 +1986,20 @@
         clearActive();
         cat.cycle();
         refreshPrimaryLabels();
+        if (SPATIAL_SHELL && id === "size") {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (state.phase !== "open") return;
+              sizeCenterFlower();
+              renderBloom({ petals: true });
+              bloomPetals();
+              if (EGG_SHELL) refreshEggShellSnapshot();
+              if (INNER_CHAMBER) buildChamberScene();
+            });
+          });
+        } else {
+          refreshSpatialSceneSoon();
+        }
         return;
       }
 
@@ -2269,12 +2486,13 @@
             ((stage.clientHeight || global.innerHeight) - 28) / 5
           )
         : 90;
+      const spatialFit = EGG_SHELL ? 0.5 : INNER_CHAMBER ? 0.46 : FLOWER_FIT;
       const hex = Math.max(
         DOCK_CONTEXT ? (narrowContext ? 36 : 25) : 30,
         Math.min(
           DOCK_CONTEXT ? (narrowContext ? 52 : 66) : 90,
           viewportCap,
-          ((disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX) *
+          ((disk.r * spatialFit) / FLOWER_OUTER_HEX) *
             (DOCK_CONTEXT ? (narrowContext ? 0.94 : 0.72) : 1)
         )
       );
@@ -2297,11 +2515,13 @@
       setCanvasInert(true);
       // Menu open = time out. The hub keeps painting the frozen value.
       if (typeof game.pauseTimer === "function") game.pauseTimer();
+      prepareSpatialScene();
 
       // Dock grows + lifts (CSS). Petals use *final* open geometry from CSS
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
       setPhase("open");
+      if (INNER_CHAMBER) animateChamber(1, 420);
       root.dataset.dock = "ready";
       paintDock();
       // Place on the next frame so data-phase=open has applied open CSS vars
@@ -2344,6 +2564,8 @@
         el.style.pointerEvents = "none";
       });
 
+      if (EGG_SHELL) refreshEggShellSnapshot();
+      if (INNER_CHAMBER) animateChamber(0, foldMs());
       setPhase("falling");
       // Ride the petal layer back down with the dock while the petals fold —
       // one coherent settle instead of fold-then-drop. (No dock in center mode.)
@@ -2358,6 +2580,7 @@
         statsTimer = null;
         hub.dataset.open = "false";
         hub.hidden = true;
+        if (SPATIAL_SHELL) clearSpatialScene();
         setCanvasInert(false);
         if (typeof game.resumeTimer === "function") game.resumeTimer();
         announce("Menu closed");
@@ -2381,7 +2604,7 @@
     // Dome gets the full oblique camera; the base flower moves as one nearly
     // flat plate, just enough to separate it from the sphere without opening
     // seams between tiles. rAF-lerped so repeated interaction cannot drift.
-    if (DOCK_CENTER && !FACE_TAKEOVER && !EQUATOR_RIBBON) {
+    if (DOCK_CENTER && !FACE_TAKEOVER && !EQUATOR_RIBBON && !SPATIAL_SHELL) {
       const BASE_RX = DOME ? 9 : 0.8;
       const BASE_RY = DOME ? -6 : -0.6;
       const PARALLAX_DEG = DOME ? 5 : 2.1;
@@ -2441,6 +2664,8 @@
       if (DOCK_CONTEXT) root.dataset.contextMenu = "true";
       if (FACE_TAKEOVER) root.dataset.faceTakeover = "true";
       if (EQUATOR_RIBBON) root.dataset.equatorRibbon = "true";
+      if (EGG_SHELL) root.dataset.eggShell = "true";
+      if (INNER_CHAMBER) root.dataset.innerChamber = "true";
       // The background is the menu activator: a quick tap that lands off the
       // sphere's disk (game.getSphereScreen) opens the flower. In contextual
       // mode the flower follows that canvas point, then centerXY clamps its
@@ -2679,10 +2904,16 @@
         const heightChanged = Math.abs(h - lastStageH) > 1;
         lastStageW = w;
         lastStageH = h;
-        if (!widthChanged && !(DOCK_CONTEXT && heightChanged)) return;
+        if (
+          !widthChanged &&
+          !((DOCK_CONTEXT || SPATIAL_SHELL) && heightChanged)
+        )
+          return;
         if (state.phase === "open") {
           // rebuild petal positions without losing open state
           sizeCenterFlower();
+          if (EGG_SHELL) refreshEggShellSnapshot();
+          if (INNER_CHAMBER) buildChamberScene();
           const active = state.active;
           renderBloom({ petals: true });
           state.active = active;

@@ -1716,6 +1716,203 @@ body[data-sphere-chrome="dark"] .cz-dot {
   transition: none;
 }
 
+/* ---- Spatial shell studies -------------------------------------------------
+   Both modes borrow the semantic seven-control flower. Eggshell uses two
+   cropped copies of the current canvas so the live projection remains wholly
+   untouched; Chamber warps the live projection and uses only a quiet central
+   veil here. Decorative layers never receive input. */
+.hex-bloom[data-egg-shell="true"] .hex-bloom-scrim,
+.hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.hex-bloom[data-egg-shell="true"] .hex-bloom-scrim {
+  background: color-mix(in srgb, var(--hb-paper) 96%, transparent);
+}
+.hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
+  background: color-mix(in srgb, var(--hb-paper) 5%, transparent);
+}
+
+.hb-shell-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  perspective: 700px;
+  perspective-origin: 50% 50%;
+  transition: opacity 90ms ease, visibility 90ms ease;
+}
+.hex-bloom[data-open="true"] .hb-shell-scene,
+.hex-bloom[data-phase="falling"] .hb-shell-scene {
+  opacity: 1;
+  visibility: visible;
+}
+
+body.hex-bloom-eggshell-active #gameCanvas {
+  opacity: 0;
+}
+#gameCanvas {
+  transition: opacity 90ms ease;
+}
+
+.hb-egg-frame {
+  position: absolute;
+  transform-style: preserve-3d;
+  isolation: isolate;
+}
+.hb-egg-core,
+.hb-egg-piece {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.hb-egg-core {
+  z-index: 0;
+  background:
+    radial-gradient(
+      circle at 50% 48%,
+      color-mix(in srgb, var(--hb-paper) 92%, var(--hb-ink)) 0 17%,
+      color-mix(in srgb, var(--hb-ink) 88%, var(--hb-paper)) 46%,
+      var(--hb-ink) 74%
+    );
+  box-shadow:
+    inset 0 0 calc(var(--egg-r) * 0.16) color-mix(in srgb, var(--hb-paper) 30%, transparent),
+    0 0 calc(var(--egg-r) * 0.12) color-mix(in srgb, var(--hb-ink) 28%, transparent);
+  opacity: 0;
+  transform: scale(0.86);
+  transition:
+    opacity 160ms ease 40ms,
+    transform 360ms cubic-bezier(0.22, 1, 0.3, 1);
+}
+.hb-egg-piece {
+  z-index: 1;
+  overflow: hidden;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  transition:
+    transform 360ms cubic-bezier(0.22, 1, 0.3, 1),
+    filter 220ms ease;
+  will-change: transform;
+}
+.hb-egg-piece::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hb-ink) 35%, transparent);
+}
+.hb-egg-piece--upper {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 49%,
+    78% 47%,
+    65% 54%,
+    52% 48%,
+    39% 55%,
+    24% 47%,
+    0 51%
+  );
+  transform-origin: 50% 51%;
+}
+.hb-egg-piece--lower {
+  clip-path: polygon(
+    0 51%,
+    24% 47%,
+    39% 55%,
+    52% 48%,
+    65% 54%,
+    78% 47%,
+    100% 49%,
+    100% 100%,
+    0 100%
+  );
+  transform-origin: 50% 49%;
+}
+.hb-egg-snapshot {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hex-bloom[data-open="true"] .hb-egg-core {
+  opacity: 1;
+  transform: scale(1);
+}
+.hex-bloom[data-open="true"] .hb-egg-piece--upper {
+  transform: translate(-2.5%, -14%) rotateX(-14deg) rotateZ(-2deg) scale(0.97);
+  filter: drop-shadow(0 10px 10px color-mix(in srgb, var(--hb-ink) 38%, transparent));
+}
+.hex-bloom[data-open="true"] .hb-egg-piece--lower {
+  transform: translate(2.5%, 14%) rotateX(14deg) rotateZ(2deg) scale(0.97);
+  filter: drop-shadow(0 -10px 10px color-mix(in srgb, var(--hb-ink) 34%, transparent));
+}
+.hex-bloom[data-egg-shell="true"] .hex-bloom-stage {
+  perspective: 820px;
+}
+.hex-bloom[data-egg-shell="true"] .hb-hex.shown {
+  filter:
+    drop-shadow(0 4px 8px color-mix(in srgb, var(--hb-ink) 30%, transparent))
+    drop-shadow(0 0 2px var(--hb-paper));
+}
+
+.hb-chamber-veil,
+.hb-chamber-rim {
+  position: absolute;
+  left: var(--chamber-cx, 50%);
+  top: var(--chamber-cy, 50%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.72);
+  opacity: 0;
+  transition:
+    transform 420ms cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 260ms ease 90ms;
+}
+.hb-chamber-veil {
+  width: calc(var(--chamber-r, 220px) * 1.2);
+  height: calc(var(--chamber-r, 220px) * 1.2);
+  background: radial-gradient(
+    circle,
+    var(--hb-paper) 0 58%,
+    color-mix(in srgb, var(--hb-paper) 92%, transparent) 70%,
+    transparent 100%
+  );
+  filter: drop-shadow(0 0 20px color-mix(in srgb, var(--hb-paper) 72%, transparent));
+}
+.hb-chamber-rim {
+  width: calc(var(--chamber-r, 220px) * 1.06);
+  height: calc(var(--chamber-r, 220px) * 1.06);
+  border: 1px solid color-mix(in srgb, var(--hb-ink) 40%, transparent);
+  box-shadow:
+    inset 0 0 26px color-mix(in srgb, var(--hb-ink) 18%, transparent),
+    0 0 10px var(--hb-paper);
+}
+.hex-bloom[data-open="true"] .hb-chamber-veil,
+.hex-bloom[data-open="true"] .hb-chamber-rim {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+.hex-bloom[data-inner-chamber="true"] .hex-bloom-stage {
+  perspective: none;
+}
+.hex-bloom[data-inner-chamber="true"] .hb-hex.shown {
+  filter:
+    drop-shadow(0 5px 11px color-mix(in srgb, var(--hb-ink) 42%, transparent))
+    drop-shadow(0 0 4px var(--hb-paper));
+}
+
+@media (max-width: 520px) {
+  .hex-bloom[data-open="true"] .hb-egg-piece--upper {
+    transform: translate(-1.5%, -11%) rotateX(-11deg) rotateZ(-1.5deg) scale(0.98);
+  }
+  .hex-bloom[data-open="true"] .hb-egg-piece--lower {
+    transform: translate(1.5%, 11%) rotateX(11deg) rotateZ(1.5deg) scale(0.98);
+  }
+}
+
 
 
 /* Stats hub */
@@ -1816,7 +2013,13 @@ body.hex-bloom-open .canvas-container {
   .hb-hex,
   .hex-bloom-scrim,
   .hex-bloom-stage,
-  .hex-bloom-hub {
+  .hex-bloom-hub,
+  .hb-shell-scene,
+  .hb-egg-core,
+  .hb-egg-piece,
+  .hb-chamber-veil,
+  .hb-chamber-rim,
+  #gameCanvas {
     transition: none !important;
     transition-delay: 0ms !important;
   }
@@ -3735,6 +3938,12 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       centerY: 0,
       projectedCache: null,
       rotCacheKey: "",
+      // Modal-only projection study. Never persisted and never active during
+      // play; sphere-ux chrome may temporarily turn the globe into a concave
+      // chamber while its controls own input.
+      chromeProjectionMode: null,
+      chromeProjectionProgress: 0,
+      chromeProjectionScale: 1.48,
       rafScheduled: false,
       detonatorIdx: -1,
       endFx: null,
@@ -4426,7 +4635,18 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 
     function projectRotated(r) {
       const fov = 2.8;
-      const depth = fov / (fov - r.z);
+      const convex = fov / (fov - r.z);
+      let depth = convex;
+      if (
+        state.chromeProjectionMode === "chamber" &&
+        state.chromeProjectionProgress > 0
+      ) {
+        const raw = Math.max(0, Math.min(1, state.chromeProjectionProgress));
+        const eased = raw * raw * (3 - 2 * raw);
+        const concave =
+          (fov / (fov + r.z)) * state.chromeProjectionScale;
+        depth = convex + (concave - convex) * eased;
+      }
       return {
         x: state.centerX + r.x * state.scale * depth,
         y: state.centerY - r.y * state.scale * depth,
@@ -4487,7 +4707,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     }
 
     function rotKey() {
-      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}`;
+      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}|${state.chromeProjectionMode || "none"}|${state.chromeProjectionProgress.toFixed(4)}|${state.chromeProjectionScale.toFixed(3)}`;
     }
 
     /** Project all tiles once per frame; cull back hemisphere for pick + draw. */
@@ -4498,7 +4718,11 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       }
       const all = state.tiles.map((t) => projectTile(t, state.rotY, state.rotX));
       const front = all.filter((p) => p.z > -0.05);
-      front.sort((a, b) => a.z - b.z);
+      // center.depth preserves ordinary back-to-front order in the convex
+      // projection and naturally reverses it as Chamber becomes concave.
+      front.sort(
+        (a, b) => a.center.depth - b.center.depth || a.z - b.z
+      );
       state.projectedCache = front;
       state.rotCacheKey = key;
       return front;
@@ -4506,6 +4730,30 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 
     function invalidateProjection() {
       state.projectedCache = null;
+    }
+
+    function setChromeProjection(mode, progress) {
+      const nextMode = mode === "chamber" ? "chamber" : null;
+      const nextProgress = nextMode
+        ? Math.max(0, Math.min(1, Number(progress) || 0))
+        : 0;
+      state.chromeProjectionMode = nextMode;
+      state.chromeProjectionProgress = nextProgress;
+      if (nextMode) {
+        const w = canvas.clientWidth || window.innerWidth;
+        const h = canvas.clientHeight || window.innerHeight;
+        const farX = Math.max(state.centerX, w - state.centerX);
+        const farY = Math.max(state.centerY, h - state.centerY);
+        const baseR = Math.max(1, state.scale);
+        state.chromeProjectionScale = Math.min(
+          3.8,
+          Math.max(1.48, farX / baseR, farY / baseR) * 1.08
+        );
+      } else {
+        state.chromeProjectionScale = 1.48;
+      }
+      invalidateProjection();
+      scheduleFrame();
     }
 
     /**
@@ -6864,32 +7112,41 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const coreFill = state.theme.core || state.theme.backface || "#000000";
       const coreR = Math.max(12, state.scale * 1.02);
       const coreNow = performance.now();
-      if (state.theme.magmaCore) {
-        drawMagmaCore(state.centerX, state.centerY, coreR, coreNow);
-      } else if (state.theme.wellGlow && state.theme.coreGlow) {
-        const cg = ctx.createRadialGradient(
-          state.centerX,
-          state.centerY,
-          coreR * 0.08,
-          state.centerX,
-          state.centerY,
-          coreR
-        );
-        const hot = parseCssColor(state.theme.wellGlowHot || "#ffffff");
-        const mid = parseCssColor(state.theme.coreGlow);
-        cg.addColorStop(0, `rgba(${hot[0]},${hot[1]},${hot[2]},0.55)`);
-        cg.addColorStop(0.35, `rgba(${mid[0]},${mid[1]},${mid[2]},0.35)`);
-        cg.addColorStop(0.75, coreFill);
-        cg.addColorStop(1, coreFill);
-        ctx.beginPath();
-        ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
-        ctx.fillStyle = cg;
-        ctx.fill();
-      } else {
-        ctx.beginPath();
-        ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
-        ctx.fillStyle = coreFill;
-        ctx.fill();
+      const chamberCoreAlpha =
+        state.chromeProjectionMode === "chamber"
+          ? Math.max(0, Math.min(1, 1 - state.chromeProjectionProgress * 1.65))
+          : 1;
+      if (chamberCoreAlpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha *= chamberCoreAlpha;
+        if (state.theme.magmaCore) {
+          drawMagmaCore(state.centerX, state.centerY, coreR, coreNow);
+        } else if (state.theme.wellGlow && state.theme.coreGlow) {
+          const cg = ctx.createRadialGradient(
+            state.centerX,
+            state.centerY,
+            coreR * 0.08,
+            state.centerX,
+            state.centerY,
+            coreR
+          );
+          const hot = parseCssColor(state.theme.wellGlowHot || "#ffffff");
+          const mid = parseCssColor(state.theme.coreGlow);
+          cg.addColorStop(0, `rgba(${hot[0]},${hot[1]},${hot[2]},0.55)`);
+          cg.addColorStop(0.35, `rgba(${mid[0]},${mid[1]},${mid[2]},0.35)`);
+          cg.addColorStop(0.75, coreFill);
+          cg.addColorStop(1, coreFill);
+          ctx.beginPath();
+          ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
+          ctx.fillStyle = cg;
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
+          ctx.fillStyle = coreFill;
+          ctx.fill();
+        }
+        ctx.restore();
       }
 
       if (!state.reduceMotion) {
@@ -7540,6 +7797,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         r: state.scale * 1.15,
       }),
       getMenuPatch,
+      setChromeProjection,
       setCountStyle: (id, opts) => setCountStyle(id, opts),
       setRelief: (mode) => setRelief(mode),
       setSeams: (on) => setSeams(on),
@@ -7737,8 +7995,14 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   const DOCK_CONTEXT = DOCK_MODE === "context";
   const FACE_TAKEOVER = DOCK_MODE === "faces";
   const EQUATOR_RIBBON = DOCK_MODE === "equator";
+  const EGG_SHELL = DOCK_MODE === "eggshell" || DOCK_MODE === "egg";
+  const INNER_CHAMBER = DOCK_MODE === "chamber";
+  const SPATIAL_SHELL = EGG_SHELL || INNER_CHAMBER;
   const FIXED_CENTER =
-    DOCK_MODE === "center" || FACE_TAKEOVER || EQUATOR_RIBBON;
+    DOCK_MODE === "center" ||
+    FACE_TAKEOVER ||
+    EQUATOR_RIBBON ||
+    SPATIAL_SHELL;
   const DEFAULT_BLOOM = DOCK_MODE === "default";
   const DOCK_CENTER = FIXED_CENTER || DOCK_CONTEXT;
   const SHARED_MENU = FIXED_CENTER || DEFAULT_BLOOM;
@@ -8033,6 +8297,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
+    if (EGG_SHELL) return 420;
+    if (INNER_CHAMBER) return 340;
     return DOCK_CONTEXT ? 140 : 180;
   }
 
@@ -8057,6 +8323,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     scrim.className = "hex-bloom-scrim";
     scrim.setAttribute("aria-hidden", "true");
     root.appendChild(scrim);
+
+    const shellScene = SPATIAL_SHELL ? document.createElement("div") : null;
+    if (shellScene) {
+      shellScene.className = "hb-shell-scene";
+      shellScene.setAttribute("aria-hidden", "true");
+      root.appendChild(shellScene);
+    }
 
     const stage = document.createElement("div");
     stage.className = "hex-bloom-stage";
@@ -8800,6 +9073,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         const b = document.getElementById("reset-btn");
         if (b) b.click();
       }
+      if (EGG_SHELL) refreshEggShellSnapshot();
       announce("Board reset");
       if (state.phase === "open" || state.phase === "rising") collapse();
     }
@@ -9003,6 +9277,9 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     let ribbonAngle = Math.PI / 2;
     let ribbonActions = [];
     let ribbonSuppressClickUntil = 0;
+    let eggSnapshotCanvases = [];
+    let chamberProgress = 0;
+    let chamberRaf = 0;
 
     function announce(msg) {
       live.textContent = msg || "";
@@ -9111,6 +9388,190 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       stage.querySelectorAll(".hb-hex").forEach((n) => n.remove());
       centerActionBtn = null;
       ribbonActions = [];
+    }
+
+    function shellGeometry() {
+      const canvas = document.getElementById("gameCanvas");
+      const disk =
+        typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
+      if (!canvas || !disk || !disk.r) return null;
+      const rect = canvas.getBoundingClientRect();
+      const diameter = disk.r * 2;
+      return {
+        canvas,
+        disk,
+        rect,
+        diameter,
+        left: rect.left + disk.cx - disk.r,
+        top: rect.top + disk.cy - disk.r,
+        scaleX: canvas.width / Math.max(1, rect.width),
+        scaleY: canvas.height / Math.max(1, rect.height),
+      };
+    }
+
+    function paintSphereCrop(target, geometry) {
+      if (!target || !geometry) return;
+      const width = Math.max(1, Math.round(geometry.diameter * geometry.scaleX));
+      const height = Math.max(1, Math.round(geometry.diameter * geometry.scaleY));
+      if (target.width !== width) target.width = width;
+      if (target.height !== height) target.height = height;
+      const targetContext = target.getContext("2d");
+      if (!targetContext) return;
+      targetContext.clearRect(0, 0, width, height);
+      targetContext.drawImage(
+        geometry.canvas,
+        (geometry.disk.cx - geometry.disk.r) * geometry.scaleX,
+        (geometry.disk.cy - geometry.disk.r) * geometry.scaleY,
+        geometry.diameter * geometry.scaleX,
+        geometry.diameter * geometry.scaleY,
+        0,
+        0,
+        width,
+        height
+      );
+    }
+
+    function positionEggFrame(frame, geometry) {
+      frame.style.left = geometry.left.toFixed(1) + "px";
+      frame.style.top = geometry.top.toFixed(1) + "px";
+      frame.style.width = geometry.diameter.toFixed(1) + "px";
+      frame.style.height = geometry.diameter.toFixed(1) + "px";
+      frame.style.setProperty("--egg-r", geometry.disk.r.toFixed(1) + "px");
+    }
+
+    function buildEggShellScene() {
+      if (!shellScene) return false;
+      const geometry = shellGeometry();
+      if (!geometry) return false;
+      shellScene.textContent = "";
+      shellScene.dataset.kind = "eggshell";
+      const frame = document.createElement("div");
+      frame.className = "hb-egg-frame";
+      positionEggFrame(frame, geometry);
+
+      const core = document.createElement("div");
+      core.className = "hb-egg-core";
+      frame.appendChild(core);
+
+      eggSnapshotCanvases = [];
+      ["upper", "lower"].forEach((side) => {
+        const piece = document.createElement("div");
+        piece.className = "hb-egg-piece hb-egg-piece--" + side;
+        const snapshot = document.createElement("canvas");
+        snapshot.className = "hb-egg-snapshot";
+        snapshot.setAttribute("aria-hidden", "true");
+        paintSphereCrop(snapshot, geometry);
+        eggSnapshotCanvases.push(snapshot);
+        piece.appendChild(snapshot);
+        frame.appendChild(piece);
+      });
+      shellScene.appendChild(frame);
+      document.body.classList.add("hex-bloom-eggshell-active");
+      void shellScene.offsetHeight;
+      return true;
+    }
+
+    function refreshEggShellSnapshot() {
+      if (!EGG_SHELL || !shellScene || !eggSnapshotCanvases.length) return;
+      const geometry = shellGeometry();
+      if (!geometry) return;
+      const frame = shellScene.querySelector(".hb-egg-frame");
+      if (frame) positionEggFrame(frame, geometry);
+      eggSnapshotCanvases.forEach((snapshot) =>
+        paintSphereCrop(snapshot, geometry)
+      );
+    }
+
+    function buildChamberScene() {
+      if (!shellScene) return false;
+      const geometry = shellGeometry();
+      if (!geometry) return false;
+      shellScene.textContent = "";
+      shellScene.dataset.kind = "chamber";
+      shellScene.style.setProperty(
+        "--chamber-cx",
+        (geometry.rect.left + geometry.disk.cx).toFixed(1) + "px"
+      );
+      shellScene.style.setProperty(
+        "--chamber-cy",
+        (geometry.rect.top + geometry.disk.cy).toFixed(1) + "px"
+      );
+      shellScene.style.setProperty(
+        "--chamber-r",
+        geometry.disk.r.toFixed(1) + "px"
+      );
+      const veil = document.createElement("div");
+      veil.className = "hb-chamber-veil";
+      const rim = document.createElement("div");
+      rim.className = "hb-chamber-rim";
+      shellScene.appendChild(veil);
+      shellScene.appendChild(rim);
+      document.body.classList.add("hex-bloom-chamber-active");
+      if (typeof game.setChromeProjection === "function") {
+        game.setChromeProjection("chamber", chamberProgress);
+      }
+      return true;
+    }
+
+    function clearSpatialScene() {
+      cancelAnimationFrame(chamberRaf);
+      chamberRaf = 0;
+      chamberProgress = 0;
+      if (typeof game.setChromeProjection === "function") {
+        game.setChromeProjection(null, 0);
+      }
+      eggSnapshotCanvases = [];
+      if (shellScene) {
+        shellScene.textContent = "";
+        delete shellScene.dataset.kind;
+      }
+      document.body.classList.remove(
+        "hex-bloom-eggshell-active",
+        "hex-bloom-chamber-active"
+      );
+    }
+
+    function animateChamber(target, duration) {
+      if (!INNER_CHAMBER || typeof game.setChromeProjection !== "function") return;
+      cancelAnimationFrame(chamberRaf);
+      chamberRaf = 0;
+      const to = Math.max(0, Math.min(1, target));
+      const from = chamberProgress;
+      if (prefersReducedMotion() || !duration) {
+        chamberProgress = to;
+        game.setChromeProjection(to > 0 ? "chamber" : null, to);
+        return;
+      }
+      const started = performance.now();
+      const tick = (now) => {
+        const raw = Math.max(0, Math.min(1, (now - started) / duration));
+        const eased =
+          raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
+        chamberProgress = from + (to - from) * eased;
+        game.setChromeProjection("chamber", chamberProgress);
+        if (raw < 1) chamberRaf = requestAnimationFrame(tick);
+        else {
+          chamberRaf = 0;
+          chamberProgress = to;
+          game.setChromeProjection(to > 0 ? "chamber" : null, to);
+        }
+      };
+      chamberRaf = requestAnimationFrame(tick);
+    }
+
+    function prepareSpatialScene() {
+      if (EGG_SHELL) return buildEggShellScene();
+      if (INNER_CHAMBER) return buildChamberScene();
+      return false;
+    }
+
+    function refreshSpatialSceneSoon() {
+      if (!EGG_SHELL) return;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (state.phase === "open") refreshEggShellSnapshot();
+        });
+      });
     }
 
     function removeSubmenu() {
@@ -9369,6 +9830,20 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         clearActive();
         cat.cycle();
         refreshPrimaryLabels();
+        if (SPATIAL_SHELL && id === "size") {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (state.phase !== "open") return;
+              sizeCenterFlower();
+              renderBloom({ petals: true });
+              bloomPetals();
+              if (EGG_SHELL) refreshEggShellSnapshot();
+              if (INNER_CHAMBER) buildChamberScene();
+            });
+          });
+        } else {
+          refreshSpatialSceneSoon();
+        }
         return;
       }
 
@@ -9855,12 +10330,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
             ((stage.clientHeight || global.innerHeight) - 28) / 5
           )
         : 90;
+      const spatialFit = EGG_SHELL ? 0.5 : INNER_CHAMBER ? 0.46 : FLOWER_FIT;
       const hex = Math.max(
         DOCK_CONTEXT ? (narrowContext ? 36 : 25) : 30,
         Math.min(
           DOCK_CONTEXT ? (narrowContext ? 52 : 66) : 90,
           viewportCap,
-          ((disk.r * FLOWER_FIT) / FLOWER_OUTER_HEX) *
+          ((disk.r * spatialFit) / FLOWER_OUTER_HEX) *
             (DOCK_CONTEXT ? (narrowContext ? 0.94 : 0.72) : 1)
         )
       );
@@ -9883,11 +10359,13 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       setCanvasInert(true);
       // Menu open = time out. The hub keeps painting the frozen value.
       if (typeof game.pauseTimer === "function") game.pauseTimer();
+      prepareSpatialScene();
 
       // Dock grows + lifts (CSS). Petals use *final* open geometry from CSS
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
       setPhase("open");
+      if (INNER_CHAMBER) animateChamber(1, 420);
       root.dataset.dock = "ready";
       paintDock();
       // Place on the next frame so data-phase=open has applied open CSS vars
@@ -9930,6 +10408,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         el.style.pointerEvents = "none";
       });
 
+      if (EGG_SHELL) refreshEggShellSnapshot();
+      if (INNER_CHAMBER) animateChamber(0, foldMs());
       setPhase("falling");
       // Ride the petal layer back down with the dock while the petals fold —
       // one coherent settle instead of fold-then-drop. (No dock in center mode.)
@@ -9944,6 +10424,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         statsTimer = null;
         hub.dataset.open = "false";
         hub.hidden = true;
+        if (SPATIAL_SHELL) clearSpatialScene();
         setCanvasInert(false);
         if (typeof game.resumeTimer === "function") game.resumeTimer();
         announce("Menu closed");
@@ -9967,7 +10448,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     // Dome gets the full oblique camera; the base flower moves as one nearly
     // flat plate, just enough to separate it from the sphere without opening
     // seams between tiles. rAF-lerped so repeated interaction cannot drift.
-    if (DOCK_CENTER && !FACE_TAKEOVER && !EQUATOR_RIBBON) {
+    if (DOCK_CENTER && !FACE_TAKEOVER && !EQUATOR_RIBBON && !SPATIAL_SHELL) {
       const BASE_RX = DOME ? 9 : 0.8;
       const BASE_RY = DOME ? -6 : -0.6;
       const PARALLAX_DEG = DOME ? 5 : 2.1;
@@ -10027,6 +10508,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       if (DOCK_CONTEXT) root.dataset.contextMenu = "true";
       if (FACE_TAKEOVER) root.dataset.faceTakeover = "true";
       if (EQUATOR_RIBBON) root.dataset.equatorRibbon = "true";
+      if (EGG_SHELL) root.dataset.eggShell = "true";
+      if (INNER_CHAMBER) root.dataset.innerChamber = "true";
       // The background is the menu activator: a quick tap that lands off the
       // sphere's disk (game.getSphereScreen) opens the flower. In contextual
       // mode the flower follows that canvas point, then centerXY clamps its
@@ -10265,10 +10748,16 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         const heightChanged = Math.abs(h - lastStageH) > 1;
         lastStageW = w;
         lastStageH = h;
-        if (!widthChanged && !(DOCK_CONTEXT && heightChanged)) return;
+        if (
+          !widthChanged &&
+          !((DOCK_CONTEXT || SPATIAL_SHELL) && heightChanged)
+        )
+          return;
         if (state.phase === "open") {
           // rebuild petal positions without losing open state
           sizeCenterFlower();
+          if (EGG_SHELL) refreshEggShellSnapshot();
+          if (INNER_CHAMBER) buildChamberScene();
           const active = state.active;
           renderBloom({ petals: true });
           state.active = active;
