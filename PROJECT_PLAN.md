@@ -150,6 +150,12 @@ composes wakes, bubbles, pigment wash, caustics, fuse atmosphere, underwater
 detonation, and win ripples; `calm` preserves the base renderer. Effects remain
 independent channels so later skins can recombine them without changing game
 state or picking.
+Menu presentation follows the same separation: `wheel/menu-variants.js`
+selects only chrome treatment. The default dock bloom remains production-safe;
+`?menu=takeover` maps the six settings plus Close onto a fixed seven-face
+projected patch, while `?menu=underwater` chooses that patch below the shared
+water surface and adds depth material. Both use a transient, non-persisted
+camera zoom and leave gameplay, saves, effects, and the action inventory alone.
 The archived decorative theme remains at `collection/theme-water.html` and
 `?theme=water` on the sphere.
 

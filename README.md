@@ -147,7 +147,8 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 
 Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at
 subdivisions 6, 10, 12) and `node wheel/test-effects.js` (profile/event
-contract plus drawing-surface smoke).
+contract plus drawing-surface smoke). `node wheel/test-menu-variants.js`
+guards the Water Wheel menu-profile aliases and projected patch selection.
 
 Flat game remains the default at `index.html`.
 
@@ -162,7 +163,11 @@ refraction concentrated near the surface so the rescue face remains readable.
 Its event effects are isolated in [`wheel/effects.js`](wheel/effects.js) and
 catalogued in [`wheel/EFFECTS.md`](wheel/EFFECTS.md). `?fx=kinetic` is the
 composed default; `?fx=calm` preserves the base treatment for comparison and
-reuse.
+reuse. Its one action inventory also has three documented presentations in
+[`wheel/MENUS.md`](wheel/MENUS.md): the default bottom bloom, a seven-face
+sphere takeover (`?menu=takeover`), and the same real-face patch selected and
+styled below the waterline (`?menu=underwater`). The face variants use a
+temporary camera zoom and restore the player's exact saved zoom when closed.
 
 ## Choices hub
 

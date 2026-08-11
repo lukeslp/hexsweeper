@@ -746,9 +746,14 @@
       radius: 1,
       baseScale: 200,
       zoomFactor: INITIAL_ZOOM,
+      // Menu focus is transient chrome, never part of saved player camera.
+      menuZoomFactor: 1,
+      menuZoomAnimation: null,
+      menuAmbientSpin: null,
       scale: 200,
       centerX: 0,
       centerY: 0,
+      lastWaterSurfaceY: null,
       projectedCache: null,
       rotCacheKey: "",
       rafScheduled: false,
@@ -1349,6 +1354,11 @@
       resumeWheel("help");
     }
 
+    function syncScale() {
+      state.scale =
+        state.baseScale * state.zoomFactor * state.menuZoomFactor;
+    }
+
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = canvas.clientWidth || window.innerWidth;
@@ -1359,16 +1369,73 @@
       state.centerX = w / 2;
       state.centerY = h / 2;
       state.baseScale = Math.min(w, h) * BASE_SCALE_FRAC;
-      state.scale = state.baseScale * state.zoomFactor;
+      syncScale();
       state.projectedCache = null;
     }
 
     function setZoomFactor(factor) {
       state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, factor));
-      state.scale = state.baseScale * state.zoomFactor;
+      syncScale();
       invalidateProjection();
       scheduleFrame();
       schedulePersist();
+    }
+
+    function easeMenuZoom(t) {
+      const x = Math.max(0, Math.min(1, t));
+      return 1 - Math.pow(1 - x, 3);
+    }
+
+    function restoreMenuAmbientSpin() {
+      if (state.menuAmbientSpin == null) return;
+      state.ambientSpin = !!state.menuAmbientSpin && !state.reduceMotion;
+      state.menuAmbientSpin = null;
+    }
+
+    function tickMenuZoom(now) {
+      const anim = state.menuZoomAnimation;
+      if (!anim) return;
+      const t = anim.duration <= 0 ? 1 : (now - anim.startedAt) / anim.duration;
+      const eased = easeMenuZoom(t);
+      state.menuZoomFactor = anim.from + (anim.to - anim.from) * eased;
+      if (t >= 1) {
+        state.menuZoomFactor = anim.to;
+        state.menuZoomAnimation = null;
+        if (anim.restoreAmbient) restoreMenuAmbientSpin();
+      }
+      syncScale();
+      invalidateProjection();
+    }
+
+    /**
+     * Move the sphere for takeover chrome without touching saved zoomFactor.
+     * A later call replaces an in-flight move, so rapid open/close cannot
+     * strand the camera between scales.
+     */
+    function setMenuFocus(active, options) {
+      const opts = options || {};
+      const target = active
+        ? Math.max(1, Math.min(1.4, Number(opts.zoomScale) || 1.2))
+        : 1;
+      const duration = state.reduceMotion
+        ? 0
+        : Math.max(0, Number(opts.duration) || 0);
+      if (active) {
+        if (state.menuAmbientSpin == null) {
+          state.menuAmbientSpin = !!state.ambientSpin;
+        }
+        state.ambientSpin = false;
+      }
+      state.menuZoomAnimation = {
+        from: state.menuZoomFactor,
+        to: target,
+        startedAt: performance.now(),
+        duration,
+        restoreAmbient: !active,
+      };
+      if (duration === 0) tickMenuZoom(performance.now());
+      invalidateProjection();
+      scheduleFrame();
     }
 
     function touchDistance(touches) {
@@ -1498,6 +1565,99 @@
       state.projectedCache = front;
       state.rotCacheKey = key;
       return front;
+    }
+
+    function getWaterScreen() {
+      const baseline = Number.isFinite(state.lastWaterSurfaceY)
+        ? state.lastWaterSurfaceY
+        : state.centerY;
+      const now = performance.now();
+      return {
+        y: baseline,
+        surfaceAt: (x) => surfaceYAt(Number(x) || 0, baseline, now),
+      };
+    }
+
+    function copyMenuFace(face) {
+      const water = getWaterScreen();
+      const surface = water.surfaceAt(face.center.x);
+      return {
+        index: face.index,
+        z: face.z,
+        center: { x: face.center.x, y: face.center.y },
+        boundary: face.boundary.map((point) => ({ x: point.x, y: point.y })),
+        waterDepth: Math.max(0, face.center.y - surface),
+      };
+    }
+
+    /**
+     * Return one real front-facing hex and its six projected neighbours.
+     * Fixed indices keep DOM controls attached to the same faces while the
+     * transient menu zoom moves the Canvas projection beneath them.
+     */
+    function getMenuPatch(options) {
+      const opts = options || {};
+      const projected = getProjected().filter((face) => face.z > 0.08);
+      const byIndex = new Map(projected.map((face) => [face.index, face]));
+
+      if (Array.isArray(opts.indices) && opts.indices.length === 7) {
+        const center = byIndex.get(opts.indices[0]);
+        const ring = opts.indices.slice(1).map((index) => byIndex.get(index));
+        if (center && ring.every(Boolean)) {
+          return {
+            center: copyMenuFace(center),
+            ring: ring.map(copyMenuFace),
+            indices: opts.indices.slice(),
+          };
+        }
+      }
+
+      const candidates = projected
+        .filter((face) => {
+          const tile = state.tiles[face.index];
+          return (
+            tile &&
+            tile.neighborIndices &&
+            tile.neighborIndices.length === 6 &&
+            tile.neighborIndices.every((index) => byIndex.has(index))
+          );
+        })
+        .map((center) => ({
+          center,
+          ring: state.tiles[center.index].neighborIndices.map((index) =>
+            byIndex.get(index)
+          ),
+        }));
+
+      const target = {
+        x: Number.isFinite(opts.targetX) ? opts.targetX : state.centerX,
+        y: Number.isFinite(opts.targetY) ? opts.targetY : state.centerY,
+        belowY: Number.isFinite(opts.belowY) ? opts.belowY : undefined,
+      };
+      const chosen =
+        global.WheelMenuVariants &&
+        typeof global.WheelMenuVariants.choosePatch === "function"
+          ? global.WheelMenuVariants.choosePatch(candidates, target)
+          : candidates.sort(
+              (a, b) =>
+                Math.hypot(
+                  a.center.center.x - target.x,
+                  a.center.center.y - target.y
+                ) -
+                Math.hypot(
+                  b.center.center.x - target.x,
+                  b.center.center.y - target.y
+                )
+            )[0];
+      if (!chosen) return null;
+      const indices = [chosen.center.index].concat(
+        chosen.ring.map((face) => face.index)
+      );
+      return {
+        center: copyMenuFace(chosen.center),
+        ring: chosen.ring.map(copyMenuFace),
+        indices,
+      };
     }
 
     function invalidateProjection() {
@@ -2025,7 +2185,7 @@
       }
       if (Number.isFinite(data.zoom)) {
         state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, data.zoom));
-        state.scale = state.baseScale * state.zoomFactor;
+        syncScale();
       }
 
       invalidateProjection();
@@ -4290,6 +4450,7 @@
       // cap of the globe is painted into sea rather than onto it. One waterline
       // per frame, handed to both passes — nothing to fall out of sync.
       const waterY = state.theme.waterScene ? waterLineY(h) : 0;
+      state.lastWaterSurfaceY = state.theme.waterScene ? waterY : null;
       if (state.theme.waterScene) drawWaterField(w, h, waterY);
 
       // Float themes: soft contact shadow under the sphere (light-field lift).
@@ -4556,6 +4717,7 @@
     }
 
     function frameNeedsPaint(now) {
+      if (state.menuZoomAnimation) return true;
       if (state.ambientSpin && !state.reduceMotion) return true;
       // Ripple, tide and caustics are all time-driven; keep the loop alive.
       if (state.theme && state.theme.waterScene && !state.reduceMotion) return true;
@@ -4586,6 +4748,7 @@
     function loop(ts) {
       state.rafScheduled = false;
       const now = ts || performance.now();
+      tickMenuZoom(now);
       tickAmbientSpin(now);
       tickRevealAnim(now);
       tickEndFx(now);
@@ -4925,7 +5088,7 @@
           ZOOM_MIN,
           Math.min(ZOOM_MAX, activeTake.defaultZoom)
         );
-        state.scale = state.baseScale * state.zoomFactor;
+        syncScale();
       }
       if (typeof activeTake.ambientSpin === "boolean") {
         state.ambientSpin = activeTake.ambientSpin && !state.reduceMotion;
@@ -4977,7 +5140,7 @@
       state.targetRotY = state.rotY;
       state.targetRotX = state.rotX;
       state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, 0.88));
-      state.scale = state.baseScale * state.zoomFactor;
+      syncScale();
       invalidateProjection();
       dealOpeningDig();
     } else {
@@ -5023,6 +5186,9 @@
         cy: state.centerY,
         r: state.scale * 1.15,
       }),
+      getWaterScreen,
+      getMenuPatch,
+      setMenuFocus,
       setCountStyle: (id, opts) => setCountStyle(id, opts),
       setRelief: (mode) => setRelief(mode),
       setSeams: (on) => setSeams(on),

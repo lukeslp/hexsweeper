@@ -68,6 +68,22 @@
     { q: 2, r: -2 }, // Indicators
   ];
 
+  const MENU_PROFILE = global.WheelMenuVariants
+    ? global.WheelMenuVariants.resolve(
+        global.location ? global.location.search : "",
+        global.HEXSWEEPER_WHEEL_MENU
+      )
+    : {
+        id: "base",
+        renderer: "bloom",
+        anchor: "dock",
+        zoomScale: 1,
+        openMs: 220,
+        closeMs: 180,
+      };
+  const FACE_TAKEOVER = MENU_PROFILE.renderer === "faces";
+  const UNDERWATER_TAKEOVER = MENU_PROFILE.id === "underwater";
+
   /**
    * ?dock=center — the original clex axial ring, back for a trial now that the
    * menu is small enough to sit over the board: the bloom opens at viewport
@@ -81,6 +97,7 @@
    *    [Seams]  [Off]           SW · SE
    */
   const DOCK_CENTER = (() => {
+    if (FACE_TAKEOVER) return false;
     try {
       return new URLSearchParams(location.search).get("dock") === "center";
     } catch (_) {
@@ -97,6 +114,14 @@
     { q: 2, r: -2 }, // Indicators — top-right shoulder
     { q: -1, r: 0 }, // Reset — W
     { q: 1, r: 0 }, // Dig / Flag — E
+  ];
+  const FACE_SLOTS = [
+    { q: 0, r: -1 },
+    { q: 1, r: -1 },
+    { q: 1, r: 0 },
+    { q: 0, r: 1 },
+    { q: -1, r: 1 },
+    { q: -1, r: 0 },
   ];
 
   /**
@@ -223,11 +248,13 @@
 
   function riseMs() {
     if (prefersReducedMotion()) return 0;
+    if (FACE_TAKEOVER) return MENU_PROFILE.openMs;
     return 220; // keep in sync with --rise-ms in hex-bloom.css
   }
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
+    if (FACE_TAKEOVER) return MENU_PROFILE.closeMs;
     return 180; // petal fold / close settle — snappier than the rise
   }
 
@@ -247,6 +274,11 @@
     } else {
       root.textContent = "";
     }
+    root.dataset.menuVariant = MENU_PROFILE.id;
+    if (FACE_TAKEOVER) root.dataset.faceTakeover = "true";
+    else delete root.dataset.faceTakeover;
+    if (UNDERWATER_TAKEOVER) root.dataset.underwaterTakeover = "true";
+    else delete root.dataset.underwaterTakeover;
 
     const scrim = document.createElement("div");
     scrim.className = "hex-bloom-scrim";
@@ -877,6 +909,10 @@
     let dockFlagBtn = null;
     let dockHelpBtn = null; // corner seat, lower right
     let lastFocus = null;
+    let centerActionBtn = null;
+    let facePatchIndices = null;
+    let faceActions = [];
+    let faceLayoutRaf = 0;
 
     function announce(msg) {
       live.textContent = msg || "";
@@ -978,6 +1014,10 @@
     }
 
     function clearStage() {
+      cancelAnimationFrame(faceLayoutRaf);
+      faceLayoutRaf = 0;
+      centerActionBtn = null;
+      faceActions = [];
       stage.querySelectorAll(".hb-hex").forEach((n) => n.remove());
     }
 
@@ -1260,6 +1300,224 @@
       paintDock();
     }
 
+    function makePrimaryAction(cat, index, extraClass) {
+      const lab = typeof cat.label === "function" ? cat.label() : cat.label;
+      const iconName =
+        typeof cat.icon === "function" ? cat.icon() : cat.icon;
+      const swatch =
+        typeof cat.swatch === "function" ? cat.swatch() : cat.swatch;
+      const el = makeHex({
+        cls:
+          "is-primary cat-" +
+          cat.id +
+          (extraClass ? " " + extraClass : "") +
+          (state.active === cat.id ? " is-active" : "") +
+          (cat.badge ? " has-badge" : "") +
+          (iconName === "flag" ? " is-flag-icon" : "") +
+          (iconName === "dig" ? " is-dig-icon" : "") +
+          (iconName === "theme" ? " is-theme-icon" : "") +
+          (swatch ? " is-theme-swatch" : ""),
+        label: lab,
+        labelSize: cat.labelSize,
+        ariaLabel: typeof cat.aria === "function" ? cat.aria() : lab,
+        icon: swatch ? null : iconName,
+        iconOnly: swatch ? true : !!cat.iconOnly && !cat.badge,
+      });
+      if (swatch) applyPrimarySwatch(el, swatch);
+      if (cat.badge && el._labelEl) {
+        el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
+      }
+      el.dataset.cat = cat.id;
+      el.dataset.index = String(index);
+      if (cat.sub) {
+        el.setAttribute("aria-haspopup", "true");
+        el.setAttribute("aria-expanded", String(state.active === cat.id));
+      } else {
+        el.removeAttribute("aria-haspopup");
+        el.setAttribute("aria-expanded", "false");
+      }
+      el.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        ignoreOutsideUntil = Date.now() + 200;
+        toggleCategory(cat.id, index);
+      });
+      return el;
+    }
+
+    function orderProjectedRing(patch) {
+      const available = patch.ring.slice();
+      return FACE_SLOTS.map((slot) => {
+        const target = hexToPixel(slot.q, slot.r, 1);
+        const targetAngle = Math.atan2(target.y, target.x);
+        let bestIndex = 0;
+        let bestDelta = Infinity;
+        available.forEach((face, index) => {
+          const angle = Math.atan2(
+            face.center.y - patch.center.center.y,
+            face.center.x - patch.center.center.x
+          );
+          const delta = Math.abs(
+            Math.atan2(
+              Math.sin(angle - targetAngle),
+              Math.cos(angle - targetAngle)
+            )
+          );
+          if (delta < bestDelta) {
+            bestDelta = delta;
+            bestIndex = index;
+          }
+        });
+        return available.splice(bestIndex, 1)[0];
+      });
+    }
+
+    function placeProjectedFace(el, face, canvasRect) {
+      const points = face.boundary.map((point) => ({
+        x: canvasRect.left + point.x,
+        y: canvasRect.top + point.y,
+      }));
+      const minX = Math.min(...points.map((point) => point.x));
+      const maxX = Math.max(...points.map((point) => point.x));
+      const minY = Math.min(...points.map((point) => point.y));
+      const maxY = Math.max(...points.map((point) => point.y));
+      const width = Math.max(1, maxX - minX);
+      const height = Math.max(1, maxY - minY);
+      const polygon = points
+        .map(
+          (point) =>
+            (((point.x - minX) / width) * 100).toFixed(2) +
+            "% " +
+            (((point.y - minY) / height) * 100).toFixed(2) +
+            "%"
+        )
+        .join(",");
+      const disk =
+        typeof game.getSphereScreen === "function"
+          ? game.getSphereScreen()
+          : null;
+      const depth = Math.max(0, Number(face.waterDepth) || 0);
+      const normalizedDepth = disk && disk.r ? Math.min(1, depth / (disk.r * 0.7)) : 0;
+      el.style.left = minX.toFixed(1) + "px";
+      el.style.top = minY.toFixed(1) + "px";
+      el.style.bottom = "auto";
+      el.style.width = width.toFixed(1) + "px";
+      el.style.height = height.toFixed(1) + "px";
+      el.style.setProperty("--face-poly", "polygon(" + polygon + ")");
+      el.style.setProperty(
+        "--face-icon",
+        Math.max(22, Math.min(46, height * 0.5)).toFixed(1) + "px"
+      );
+      el.style.setProperty("--water-depth", normalizedDepth.toFixed(3));
+      el.style.setProperty(
+        "--wet-alpha",
+        (0.18 + normalizedDepth * 0.24).toFixed(3)
+      );
+    }
+
+    function facePatchTarget() {
+      const disk =
+        typeof game.getSphereScreen === "function"
+          ? game.getSphereScreen()
+          : {
+              cx: (stage.clientWidth || global.innerWidth) / 2,
+              cy: (stage.clientHeight || global.innerHeight) / 2,
+              r: Math.min(global.innerWidth, global.innerHeight) * 0.4,
+            };
+      if (!UNDERWATER_TAKEOVER) {
+        return { targetX: disk.cx, targetY: disk.cy };
+      }
+      const water =
+        typeof game.getWaterScreen === "function"
+          ? game.getWaterScreen()
+          : { y: disk.cy, surfaceAt: () => disk.cy };
+      const surface =
+        typeof water.surfaceAt === "function"
+          ? water.surfaceAt(disk.cx)
+          : water.y;
+      const viewportH = stage.clientHeight || global.innerHeight;
+      return {
+        targetX: disk.cx,
+        targetY: Math.min(viewportH - 96, surface + disk.r * 0.25),
+        belowY: surface + 8,
+      };
+    }
+
+    function currentFacePatch() {
+      if (typeof game.getMenuPatch !== "function") return null;
+      if (facePatchIndices) return game.getMenuPatch({ indices: facePatchIndices });
+      return game.getMenuPatch(facePatchTarget());
+    }
+
+    function layoutFaceTakeover() {
+      if (!FACE_TAKEOVER || !facePatchIndices || !faceActions.length) return;
+      const patch = currentFacePatch();
+      const canvas = document.getElementById("gameCanvas");
+      if (!patch || !canvas) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      const faces = new Map(
+        [patch.center].concat(patch.ring).map((face) => [face.index, face])
+      );
+      faceActions.forEach((action) => {
+        const face = faces.get(action.faceIndex);
+        if (face) placeProjectedFace(action.el, face, canvasRect);
+      });
+    }
+
+    function startFaceLayout(duration) {
+      if (!FACE_TAKEOVER) return;
+      cancelAnimationFrame(faceLayoutRaf);
+      const endAt = performance.now() + Math.max(0, duration || 0) + 48;
+      const tick = (now) => {
+        layoutFaceTakeover();
+        if (
+          (state.phase === "open" || state.phase === "falling") &&
+          now < endAt
+        ) {
+          faceLayoutRaf = requestAnimationFrame(tick);
+        } else {
+          faceLayoutRaf = 0;
+        }
+      };
+      faceLayoutRaf = requestAnimationFrame(tick);
+    }
+
+    function renderFaceTakeover(cats) {
+      const patch = currentFacePatch();
+      const canvas = document.getElementById("gameCanvas");
+      if (!patch || !canvas) return false;
+      facePatchIndices = patch.indices.slice();
+      const canvasRect = canvas.getBoundingClientRect();
+      const ring = orderProjectedRing(patch);
+      ring.forEach((face, index) => {
+        const el = makePrimaryAction(cats[index], index, "hb-face-action");
+        el.dataset.faceIndex = String(face.index);
+        placeProjectedFace(el, face, canvasRect);
+        el.classList.add("folded");
+        el.dataset.delay = String(24 + index * 28);
+        faceActions.push({ el, faceIndex: face.index });
+        stage.appendChild(el);
+      });
+      const closeEl = makeHex({
+        cls: "is-primary is-center-close hb-face-action hb-face-center",
+        label: "×",
+        ariaLabel: "Close menu",
+      });
+      closeEl.dataset.faceIndex = String(patch.center.index);
+      closeEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        collapse();
+      });
+      placeProjectedFace(closeEl, patch.center, canvasRect);
+      closeEl.classList.add("folded");
+      closeEl.dataset.delay = "90";
+      centerActionBtn = closeEl;
+      faceActions.push({ el: closeEl, faceIndex: patch.center.index });
+      stage.appendChild(closeEl);
+      return true;
+    }
+
     function renderBloom(options) {
       const withPetals = !options || options.petals !== false;
       clearStage();
@@ -1272,52 +1530,15 @@
       // close control — no separate traveler hex (avoids double × and rise).
       if (!withPetals) return;
 
+      if (FACE_TAKEOVER && renderFaceTakeover(cats)) return;
+
       cats.forEach((cat, i) => {
         const d = (DOCK_CENTER ? CENTER_SLOTS[i] : PRIMARY_SLOTS[i]) || DIRECTIONS[i];
         const p = hexToPixel(d.q, d.r, HEX);
-        const lab = typeof cat.label === "function" ? cat.label() : cat.label;
-        const iconName =
-          typeof cat.icon === "function" ? cat.icon() : cat.icon;
-        const swatch =
-          typeof cat.swatch === "function" ? cat.swatch() : cat.swatch;
-        const el = makeHex({
-          cls:
-            "is-primary cat-" +
-            cat.id +
-            (state.active === cat.id ? " is-active" : "") +
-            (cat.badge ? " has-badge" : "") +
-            (iconName === "flag" ? " is-flag-icon" : "") +
-            (iconName === "dig" ? " is-dig-icon" : "") +
-            (iconName === "theme" ? " is-theme-icon" : "") +
-            (swatch ? " is-theme-swatch" : ""),
-          label: lab,
-          labelSize: cat.labelSize,
-          ariaLabel: typeof cat.aria === "function" ? cat.aria() : lab,
-          icon: swatch ? null : iconName,
-          iconOnly: swatch ? true : !!cat.iconOnly && !cat.badge,
-        });
-        if (swatch) applyPrimarySwatch(el, swatch);
-        if (cat.badge && el._labelEl) {
-          el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
-        }
-        el.dataset.cat = cat.id;
-        el.dataset.index = String(i);
-        if (cat.sub) {
-          el.setAttribute("aria-haspopup", "true");
-          el.setAttribute("aria-expanded", String(state.active === cat.id));
-        } else {
-          el.removeAttribute("aria-haspopup");
-          el.setAttribute("aria-expanded", "false");
-        }
+        const el = makePrimaryAction(cat, i, "");
         place(el, cx + p.x, cy + p.y, cx, cy);
         el.classList.add("folded");
         el.dataset.delay = String(i * 26);
-        el.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          ignoreOutsideUntil = Date.now() + 200;
-          toggleCategory(cat.id, i);
-        });
         stage.appendChild(el);
       });
 
@@ -1352,8 +1573,12 @@
           root.dataset.branch = state.active;
         }
       }
-      // focus the close dock — menu is the active surface
-      if (dockBtn) dockBtn.focus({ preventScroll: true });
+      // Focus the control that visibly closes the active surface.
+      if (FACE_TAKEOVER && centerActionBtn) {
+        centerActionBtn.focus({ preventScroll: true });
+      } else if (dockBtn) {
+        dockBtn.focus({ preventScroll: true });
+      }
     }
 
     function setCanvasInert(on) {
@@ -1377,6 +1602,12 @@
       statsTimer = setInterval(paintStats, 250);
       paintStats();
       setCanvasInert(true);
+      if (FACE_TAKEOVER && typeof game.setMenuFocus === "function") {
+        game.setMenuFocus(true, {
+          zoomScale: MENU_PROFILE.zoomScale,
+          duration: riseMs(),
+        });
+      }
 
       // Dock grows + lifts (CSS). Petals use *final* open geometry from CSS
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
@@ -1394,9 +1625,13 @@
         // hovering at their final seats while the dock catches up.
         // (Center mode has no dock to grow out of: the flower just unfolds.)
         stage.style.transition = "none";
-        root.style.setProperty("--rise-y", DOCK_CENTER ? "0px" : dockRiseDelta() + "px");
+        root.style.setProperty(
+          "--rise-y",
+          FACE_TAKEOVER || DOCK_CENTER ? "0px" : dockRiseDelta() + "px"
+        );
         renderBloom({ petals: true });
         refreshPrimaryLabels();
+        if (FACE_TAKEOVER) startFaceLayout(riseMs());
         void stage.offsetHeight; // commit the pre-rise transform
         stage.style.transition = "";
         requestAnimationFrame(() => {
@@ -1423,13 +1658,19 @@
       });
 
       setPhase("falling");
+      if (FACE_TAKEOVER && typeof game.setMenuFocus === "function") {
+        game.setMenuFocus(false, { duration: foldMs() });
+        startFaceLayout(foldMs());
+      }
       // Ride the petal layer back down with the dock while the petals fold —
       // one coherent settle instead of fold-then-drop. (No dock in center mode.)
-      if (!DOCK_CENTER) root.style.setProperty("--rise-y", dockRiseDelta() + "px");
+      if (!FACE_TAKEOVER && !DOCK_CENTER)
+        root.style.setProperty("--rise-y", dockRiseDelta() + "px");
 
       const finish = () => {
         if (state.phase !== "falling") return;
         clearStage();
+        facePatchIndices = null;
         setPhase("closed");
         setRiseVar();
         clearInterval(statsTimer);
@@ -1506,7 +1747,9 @@
           if (state.active && state.phase === "open") {
             clearActive();
             announce("Menu open");
-            if (dockBtn) dockBtn.focus({ preventScroll: true });
+            if (FACE_TAKEOVER && centerActionBtn)
+              centerActionBtn.focus({ preventScroll: true });
+            else if (dockBtn) dockBtn.focus({ preventScroll: true });
           } else {
             collapse();
           }
@@ -1514,14 +1757,19 @@
         }
 
         if (e.key === "Tab") {
-          const focusables = [
-            dockResetBtn,
-            dockBtn,
-            dockHelpBtn,
+          const stageActions = [
             ...stage.querySelectorAll(
               ".hb-hex.is-primary.shown, .hb-hex.is-sub.shown"
             ),
-          ].filter(Boolean);
+          ];
+          const focusables = FACE_TAKEOVER
+            ? [
+                centerActionBtn,
+                ...stageActions.filter((el) => el !== centerActionBtn),
+              ].filter(Boolean)
+            : [dockResetBtn, dockBtn, dockHelpBtn, ...stageActions].filter(
+                Boolean
+              );
           if (!focusables.length) return;
           const i = focusables.indexOf(document.activeElement);
           e.preventDefault();
@@ -1567,6 +1815,13 @@
         // Mid-descent the stage is deliberately translated; zeroing it here
         // would snap the folding petals upward.
         if (state.phase !== "falling") setRiseVar();
+        if (
+          FACE_TAKEOVER &&
+          (state.phase === "open" || state.phase === "falling")
+        ) {
+          layoutFaceTakeover();
+          return;
+        }
         // Height-only changes are the mobile URL bar showing/hiding — petals
         // are bottom-anchored, so they already rode along with the dock.
         // Rebuilding on those is what made the open bloom jitter and resettle.
