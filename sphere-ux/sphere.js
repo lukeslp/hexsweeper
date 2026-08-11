@@ -746,6 +746,8 @@
       chromeProjectionMode: null,
       chromeProjectionProgress: 0,
       chromeProjectionScale: 1.48,
+      chromeChamberAperture: null,
+      chromeChamberTileCount: 0,
       // Eggshell is a renderer-native split of whole faces. Membership is
       // frozen when the menu starts opening so the interlocking seam cannot
       // crawl across the globe while the two shell halves travel apart.
@@ -1442,6 +1444,31 @@
       return { x: x1, y: y2, z: z2 };
     }
 
+    function clampUnit(value) {
+      return Math.max(0, Math.min(1, value));
+    }
+
+    function smoothUnit(value) {
+      const t = clampUnit(value);
+      return t * t * (3 - 2 * t);
+    }
+
+    /**
+     * Chamber turns from the screen centre outward. The radius term is based
+     * only on a shared rotated vertex, so adjacent faces always project their
+     * common edge through the same fold and cannot tear apart mid-animation.
+     */
+    function chamberFoldAtRotated(r) {
+      if (
+        state.chromeProjectionMode !== "chamber" ||
+        state.chromeProjectionProgress <= 0
+      ) {
+        return 0;
+      }
+      const radius = clampUnit(Math.hypot(r.x, r.y));
+      return smoothUnit(state.chromeProjectionProgress * 1.7 - radius * 0.7);
+    }
+
     function projectRotated(r) {
       const fov = 2.8;
       const convex = fov / (fov - r.z);
@@ -1450,11 +1477,9 @@
         state.chromeProjectionMode === "chamber" &&
         state.chromeProjectionProgress > 0
       ) {
-        const raw = Math.max(0, Math.min(1, state.chromeProjectionProgress));
-        const eased = raw * raw * (3 - 2 * raw);
-        const concave =
-          (fov / (fov + r.z)) * state.chromeProjectionScale;
-        depth = convex + (concave - convex) * eased;
+        const fold = chamberFoldAtRotated(r);
+        const concave = (fov / (fov + r.z)) * state.chromeProjectionScale;
+        depth = convex + (concave - convex) * fold;
       }
       return {
         x: state.centerX + r.x * state.scale * depth,
@@ -1551,15 +1576,46 @@
         return state.projectedCache;
       }
       const all = state.tiles.map((t) => projectTile(t, state.rotY, state.rotX));
-      const front = all.filter((p) => p.z > -0.05);
-      // center.depth preserves ordinary back-to-front order in the convex
-      // projection and naturally reverses it as Chamber becomes concave.
-      front.sort(
-        (a, b) => a.center.depth - b.center.depth || a.z - b.z
-      );
+      const front =
+        state.chromeProjectionMode === "chamber"
+          ? all
+          : all.filter((p) => p.z > -0.05);
+      // Chamber keeps one stable far-to-near geometric order while the back
+      // hemisphere becomes the wall seen through its central aperture. A
+      // depth-derived sort changes direction halfway through the projection
+      // and reads as a second, unrelated animation step.
+      if (state.chromeProjectionMode === "chamber") {
+        front.sort((a, b) => a.z - b.z || a.index - b.index);
+      } else {
+        front.sort(
+          (a, b) => a.center.depth - b.center.depth || a.z - b.z
+        );
+      }
       state.projectedCache = front;
       state.rotCacheKey = key;
       return front;
+    }
+
+    /**
+     * Draw-only view of the inside of Eggshell's lower half. Gameplay still
+     * sees the ordinary culled front list; this second pass only exposes the
+     * real rear-facing mesh through the opening, with no labels or hit area.
+     */
+    function getEggshellInteriorProjected() {
+      if (
+        state.chromeShellMode !== "eggshell" ||
+        state.chromeShellProgress <= 0.03 ||
+        !state.chromeShellGroups
+      ) {
+        return [];
+      }
+      return state.tiles
+        .filter((tile) => state.chromeShellGroups[tile.index] === -1)
+        .map((tile) => projectTile(tile, state.rotY, state.rotX))
+        .filter((proj) => proj.z <= -0.05)
+        .sort(
+          (a, b) => a.center.depth - b.center.depth || a.z - b.z
+        );
     }
 
     function invalidateProjection() {
@@ -1574,6 +1630,25 @@
       state.chromeProjectionMode = nextMode;
       state.chromeProjectionProgress = nextProgress;
       if (nextMode) {
+        if (
+          !state.chromeChamberAperture ||
+          state.chromeChamberTileCount !== state.tiles.length
+        ) {
+          const centerTile = state.tiles
+            .filter(
+              (tile) =>
+                tile.neighborIndices && tile.neighborIndices.length === 6
+            )
+            .sort((a, b) => {
+              const az = rotatePoint(a.centerPoint, state.rotY, state.rotX).z;
+              const bz = rotatePoint(b.centerPoint, state.rotY, state.rotX).z;
+              return bz - az;
+            })[0];
+          state.chromeChamberAperture = centerTile
+            ? new Set([centerTile.index, ...centerTile.neighborIndices])
+            : null;
+          state.chromeChamberTileCount = state.tiles.length;
+        }
         const w = canvas.clientWidth || window.innerWidth;
         const h = canvas.clientHeight || window.innerHeight;
         const baseR = Math.max(1, state.scale);
@@ -1588,6 +1663,8 @@
         );
       } else {
         state.chromeProjectionScale = 1.48;
+        state.chromeChamberAperture = null;
+        state.chromeChamberTileCount = 0;
       }
       invalidateProjection();
       scheduleFrame();
@@ -1786,7 +1863,8 @@
         !state.ambientSpin ||
         state.reduceMotion ||
         state.dragging ||
-        state.chromeShellMode
+        state.chromeShellMode ||
+        state.chromeProjectionMode
       ) return false;
       const prev = state.lastFrameAt || now;
       const dt = Math.min(48, Math.max(0, now - prev));
@@ -3485,7 +3563,11 @@
 
       // Dark mono: unrevealed hexes are always pure white — including the rim.
       // Must run before isBack: the old backface pass painted them near-black.
-      if (darkMono && !cell.revealed) {
+      if (
+        darkMono &&
+        !cell.revealed &&
+        !(state.chromeProjectionMode === "chamber" && isBack)
+      ) {
         return {
           fill: T.covered || "#ffffff",
           stroke: isBack ? T.backfaceEdge : T.coveredEdge,
@@ -3495,6 +3577,20 @@
       }
 
       if (isBack) {
+        if (state.chromeProjectionMode === "chamber") {
+          const wall = smoothUnit(state.chromeProjectionProgress);
+          const rim = clampUnit(1 - Math.abs(proj.normalZ));
+          return {
+            fill: colorMix(
+              T.backface,
+              T.coveredEdge,
+              wall * (0.05 + rim * 0.13)
+            ),
+            stroke: T.backfaceEdge,
+            lineWidth: tile.isPentagon ? 1.4 : 1.05,
+            showLabel: false,
+          };
+        }
         return {
           fill: lit(T.backface, proj.normalZ, 0.12),
           stroke: T.backfaceEdge,
@@ -3984,11 +4080,11 @@
       const coreNow = performance.now();
       const chamberCoreAlpha =
         state.chromeProjectionMode === "chamber"
-          ? Math.max(0, Math.min(1, 1 - state.chromeProjectionProgress * 1.65))
+          ? Math.max(0, Math.min(1, 1 - state.chromeProjectionProgress * 5))
           : 1;
       const shellCoreAlpha =
         state.chromeShellMode === "eggshell"
-          ? Math.max(0, Math.min(1, 1 - state.chromeShellProgress * 1.8))
+          ? Math.max(0, Math.min(1, 1 - state.chromeShellProgress * 5))
           : 1;
       const chromeCoreAlpha = chamberCoreAlpha * shellCoreAlpha;
       if (chromeCoreAlpha > 0.001) {
@@ -4041,6 +4137,56 @@
       const darkMono =
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
+
+      // The lower shell is still one rigid group, but opening it reveals the
+      // same mesh from behind. Paint that real tessellation before the outer
+      // faces so the bowl has an inside surface instead of a flat CSS disk.
+      const eggInteriorAlpha = smoothUnit(
+        (state.chromeShellProgress - 0.06) / 0.3
+      );
+      if (eggInteriorAlpha > 0.001) {
+        const T = state.theme;
+        ctx.save();
+        ctx.globalAlpha *= eggInteriorAlpha;
+        for (const proj of getEggshellInteriorProjected()) {
+          const tile = state.tiles[proj.index];
+          const shellFill = tile.isPentagon ? T.pentagon : T.covered;
+          const inward = clampUnit(-proj.normalZ);
+          const fill = colorMix(
+            shellFill,
+            T.backface || T.core || "#777777",
+            0.14 + (1 - inward) * 0.14
+          );
+          drawHex(
+            proj,
+            fill,
+            T.backfaceEdge || T.coveredEdge,
+            tile.isPentagon ? 1.4 : 1.05
+          );
+        }
+        ctx.restore();
+      }
+
+      function chamberFaceAlpha(idx) {
+        if (
+          state.chromeProjectionMode !== "chamber" ||
+          !state.chromeChamberAperture ||
+          !state.chromeChamberAperture.has(idx)
+        ) {
+          return 1;
+        }
+        return 1 - smoothUnit((state.chromeProjectionProgress - 0.04) / 0.3);
+      }
+
+      function chamberBackAlpha(proj) {
+        if (
+          state.chromeProjectionMode !== "chamber" ||
+          proj.z > -0.05
+        ) {
+          return 1;
+        }
+        return smoothUnit((state.chromeProjectionProgress - 0.08) / 0.42);
+      }
 
       // Per-tile permanent heights (hover is a temporary fifth offset).
       const heights = new Float32Array(state.cells.length);
@@ -4149,6 +4295,20 @@
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
+      function drawChromeTile(proj) {
+        const alpha =
+          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj);
+        if (alpha <= 0.001) return;
+        if (alpha >= 0.999) {
+          drawTile(proj);
+          return;
+        }
+        ctx.save();
+        ctx.globalAlpha *= alpha;
+        drawTile(proj);
+        ctx.restore();
+      }
+
       // Flags stand above the shell, so they paint after their neighbors
       // (still back-to-front among themselves) or the shell clips their skirts.
       const proudFlags = [];
@@ -4167,9 +4327,9 @@
           proudFlags.push(proj);
           continue;
         }
-        drawTile(proj);
+        drawChromeTile(proj);
       }
-      for (const proj of proudFlags) drawTile(proj);
+      for (const proj of proudFlags) drawChromeTile(proj);
 
       // Raised pass: hover/press on covered or flagged, lifted over its tier.
       if (
@@ -4178,7 +4338,10 @@
       ) {
         const idx = highlightIdx;
         const base = projected.find((p) => p.index === idx && p.z > 0.02);
-        if (base) {
+        const faceAlpha = base ? chamberFaceAlpha(base.index) : 0;
+        if (base && faceAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= faceAlpha;
           const tile = state.tiles[idx];
           const cell = state.cells[idx];
           let colors = drawColorsForStyle(
@@ -4207,6 +4370,7 @@
           const edgeW = Math.max(colors.lineWidth || 1.5, 1.8);
           drawHex(raised, fill, colors.stroke, edgeW);
           paintCountMark(tile, raised, cell, colors, lift);
+          ctx.restore();
         }
       }
 

@@ -1717,10 +1717,8 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 
 /* ---- Spatial shell studies -------------------------------------------------
-   Both modes borrow the semantic seven-control flower. Eggshell separates
-   whole faces in the live renderer; this layer supplies only the aperture.
-   Chamber warps the live projection and adds a quiet central veil. Decorative
-   layers never receive input. */
+   Both modes borrow the semantic seven-control flower, while every shell and
+   interior surface now comes from the live sphere renderer itself. */
 .hex-bloom[data-egg-shell="true"] .hex-bloom-scrim,
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
   -webkit-backdrop-filter: none;
@@ -1731,6 +1729,12 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
   background: color-mix(in srgb, var(--hb-paper) 5%, transparent);
+}
+.hex-bloom[data-egg-shell="true"] {
+  --fold-ms: 220ms;
+}
+.hex-bloom[data-inner-chamber="true"] {
+  --fold-ms: 420ms;
 }
 
 .hb-shell-scene {
@@ -1751,29 +1755,6 @@ body[data-sphere-chrome="dark"] .cz-dot {
   visibility: visible;
 }
 
-.hb-egg-interior {
-  position: absolute;
-  left: var(--egg-cx, 50%);
-  top: var(--egg-cy, 50%);
-  width: calc(var(--egg-r, 220px) * 0.9);
-  height: calc(var(--egg-r, 220px) * 0.9);
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--hb-paper) 97%, transparent) 0 48%,
-    color-mix(in srgb, var(--hb-paper) 78%, transparent) 68%,
-    transparent 100%
-  );
-  border: 1px solid color-mix(in srgb, var(--hb-ink) 22%, transparent);
-  box-shadow:
-    inset 0 0 calc(var(--egg-r, 220px) * 0.16)
-      color-mix(in srgb, var(--hb-ink) 10%, transparent),
-    0 0 calc(var(--egg-r, 220px) * 0.08)
-      color-mix(in srgb, var(--hb-paper) 82%, transparent);
-  opacity: var(--egg-p, 0);
-  transform: translate(-50%, -50%) scale(var(--egg-scale, 0.72));
-  will-change: transform, opacity;
-}
 .hex-bloom[data-egg-shell="true"] .hex-bloom-stage {
   perspective: 820px;
 }
@@ -1783,42 +1764,6 @@ body[data-sphere-chrome="dark"] .cz-dot {
     drop-shadow(0 0 2px var(--hb-paper));
 }
 
-.hb-chamber-veil,
-.hb-chamber-rim {
-  position: absolute;
-  left: var(--chamber-cx, 50%);
-  top: var(--chamber-cy, 50%);
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(var(--chamber-scale, 0.72));
-  opacity: var(--chamber-p, 0);
-  will-change: transform, opacity;
-}
-.hb-chamber-veil {
-  width: calc(var(--chamber-r, 220px) * 0.46);
-  height: calc(var(--chamber-r, 220px) * 0.46);
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--hb-paper) 96%, transparent) 0 55%,
-    color-mix(in srgb, var(--hb-paper) 74%, transparent) 72%,
-    transparent 100%
-  );
-  filter: none;
-}
-.hb-chamber-rim {
-  width: calc(var(--chamber-r, 220px) * 2);
-  height: calc(var(--chamber-r, 220px) * 2);
-  border: 1px solid color-mix(in srgb, var(--hb-ink) 40%, transparent);
-  background: radial-gradient(
-    circle,
-    transparent 0 16%,
-    color-mix(in srgb, var(--hb-paper) 22%, transparent) 18%,
-    color-mix(in srgb, var(--hb-ink) 11%, transparent) 38%,
-    transparent 76%
-  );
-  box-shadow:
-    inset 0 0 calc(var(--chamber-r, 220px) * 0.34) color-mix(in srgb, var(--hb-ink) 18%, transparent),
-    inset 0 0 0 5px color-mix(in srgb, var(--hb-paper) 36%, transparent);
-}
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-stage {
   perspective: none;
 }
@@ -2125,9 +2070,6 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom-stage,
   .hex-bloom-hub,
   .hb-shell-scene,
-  .hb-egg-interior,
-  .hb-chamber-veil,
-  .hb-chamber-rim,
   #gameCanvas {
     transition: none !important;
     transition-delay: 0ms !important;
@@ -4054,6 +3996,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       chromeProjectionMode: null,
       chromeProjectionProgress: 0,
       chromeProjectionScale: 1.48,
+      chromeChamberAperture: null,
+      chromeChamberTileCount: 0,
       // Eggshell is a renderer-native split of whole faces. Membership is
       // frozen when the menu starts opening so the interlocking seam cannot
       // crawl across the globe while the two shell halves travel apart.
@@ -4750,6 +4694,31 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       return { x: x1, y: y2, z: z2 };
     }
 
+    function clampUnit(value) {
+      return Math.max(0, Math.min(1, value));
+    }
+
+    function smoothUnit(value) {
+      const t = clampUnit(value);
+      return t * t * (3 - 2 * t);
+    }
+
+    /**
+     * Chamber turns from the screen centre outward. The radius term is based
+     * only on a shared rotated vertex, so adjacent faces always project their
+     * common edge through the same fold and cannot tear apart mid-animation.
+     */
+    function chamberFoldAtRotated(r) {
+      if (
+        state.chromeProjectionMode !== "chamber" ||
+        state.chromeProjectionProgress <= 0
+      ) {
+        return 0;
+      }
+      const radius = clampUnit(Math.hypot(r.x, r.y));
+      return smoothUnit(state.chromeProjectionProgress * 1.7 - radius * 0.7);
+    }
+
     function projectRotated(r) {
       const fov = 2.8;
       const convex = fov / (fov - r.z);
@@ -4758,11 +4727,9 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
         state.chromeProjectionMode === "chamber" &&
         state.chromeProjectionProgress > 0
       ) {
-        const raw = Math.max(0, Math.min(1, state.chromeProjectionProgress));
-        const eased = raw * raw * (3 - 2 * raw);
-        const concave =
-          (fov / (fov + r.z)) * state.chromeProjectionScale;
-        depth = convex + (concave - convex) * eased;
+        const fold = chamberFoldAtRotated(r);
+        const concave = (fov / (fov + r.z)) * state.chromeProjectionScale;
+        depth = convex + (concave - convex) * fold;
       }
       return {
         x: state.centerX + r.x * state.scale * depth,
@@ -4859,15 +4826,46 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
         return state.projectedCache;
       }
       const all = state.tiles.map((t) => projectTile(t, state.rotY, state.rotX));
-      const front = all.filter((p) => p.z > -0.05);
-      // center.depth preserves ordinary back-to-front order in the convex
-      // projection and naturally reverses it as Chamber becomes concave.
-      front.sort(
-        (a, b) => a.center.depth - b.center.depth || a.z - b.z
-      );
+      const front =
+        state.chromeProjectionMode === "chamber"
+          ? all
+          : all.filter((p) => p.z > -0.05);
+      // Chamber keeps one stable far-to-near geometric order while the back
+      // hemisphere becomes the wall seen through its central aperture. A
+      // depth-derived sort changes direction halfway through the projection
+      // and reads as a second, unrelated animation step.
+      if (state.chromeProjectionMode === "chamber") {
+        front.sort((a, b) => a.z - b.z || a.index - b.index);
+      } else {
+        front.sort(
+          (a, b) => a.center.depth - b.center.depth || a.z - b.z
+        );
+      }
       state.projectedCache = front;
       state.rotCacheKey = key;
       return front;
+    }
+
+    /**
+     * Draw-only view of the inside of Eggshell's lower half. Gameplay still
+     * sees the ordinary culled front list; this second pass only exposes the
+     * real rear-facing mesh through the opening, with no labels or hit area.
+     */
+    function getEggshellInteriorProjected() {
+      if (
+        state.chromeShellMode !== "eggshell" ||
+        state.chromeShellProgress <= 0.03 ||
+        !state.chromeShellGroups
+      ) {
+        return [];
+      }
+      return state.tiles
+        .filter((tile) => state.chromeShellGroups[tile.index] === -1)
+        .map((tile) => projectTile(tile, state.rotY, state.rotX))
+        .filter((proj) => proj.z <= -0.05)
+        .sort(
+          (a, b) => a.center.depth - b.center.depth || a.z - b.z
+        );
     }
 
     function invalidateProjection() {
@@ -4882,6 +4880,25 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       state.chromeProjectionMode = nextMode;
       state.chromeProjectionProgress = nextProgress;
       if (nextMode) {
+        if (
+          !state.chromeChamberAperture ||
+          state.chromeChamberTileCount !== state.tiles.length
+        ) {
+          const centerTile = state.tiles
+            .filter(
+              (tile) =>
+                tile.neighborIndices && tile.neighborIndices.length === 6
+            )
+            .sort((a, b) => {
+              const az = rotatePoint(a.centerPoint, state.rotY, state.rotX).z;
+              const bz = rotatePoint(b.centerPoint, state.rotY, state.rotX).z;
+              return bz - az;
+            })[0];
+          state.chromeChamberAperture = centerTile
+            ? new Set([centerTile.index, ...centerTile.neighborIndices])
+            : null;
+          state.chromeChamberTileCount = state.tiles.length;
+        }
         const w = canvas.clientWidth || window.innerWidth;
         const h = canvas.clientHeight || window.innerHeight;
         const baseR = Math.max(1, state.scale);
@@ -4896,6 +4913,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
         );
       } else {
         state.chromeProjectionScale = 1.48;
+        state.chromeChamberAperture = null;
+        state.chromeChamberTileCount = 0;
       }
       invalidateProjection();
       scheduleFrame();
@@ -5094,7 +5113,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
         !state.ambientSpin ||
         state.reduceMotion ||
         state.dragging ||
-        state.chromeShellMode
+        state.chromeShellMode ||
+        state.chromeProjectionMode
       ) return false;
       const prev = state.lastFrameAt || now;
       const dt = Math.min(48, Math.max(0, now - prev));
@@ -6793,7 +6813,11 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
 
       // Dark mono: unrevealed hexes are always pure white — including the rim.
       // Must run before isBack: the old backface pass painted them near-black.
-      if (darkMono && !cell.revealed) {
+      if (
+        darkMono &&
+        !cell.revealed &&
+        !(state.chromeProjectionMode === "chamber" && isBack)
+      ) {
         return {
           fill: T.covered || "#ffffff",
           stroke: isBack ? T.backfaceEdge : T.coveredEdge,
@@ -6803,6 +6827,20 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       }
 
       if (isBack) {
+        if (state.chromeProjectionMode === "chamber") {
+          const wall = smoothUnit(state.chromeProjectionProgress);
+          const rim = clampUnit(1 - Math.abs(proj.normalZ));
+          return {
+            fill: colorMix(
+              T.backface,
+              T.coveredEdge,
+              wall * (0.05 + rim * 0.13)
+            ),
+            stroke: T.backfaceEdge,
+            lineWidth: tile.isPentagon ? 1.4 : 1.05,
+            showLabel: false,
+          };
+        }
         return {
           fill: lit(T.backface, proj.normalZ, 0.12),
           stroke: T.backfaceEdge,
@@ -7292,11 +7330,11 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       const coreNow = performance.now();
       const chamberCoreAlpha =
         state.chromeProjectionMode === "chamber"
-          ? Math.max(0, Math.min(1, 1 - state.chromeProjectionProgress * 1.65))
+          ? Math.max(0, Math.min(1, 1 - state.chromeProjectionProgress * 5))
           : 1;
       const shellCoreAlpha =
         state.chromeShellMode === "eggshell"
-          ? Math.max(0, Math.min(1, 1 - state.chromeShellProgress * 1.8))
+          ? Math.max(0, Math.min(1, 1 - state.chromeShellProgress * 5))
           : 1;
       const chromeCoreAlpha = chamberCoreAlpha * shellCoreAlpha;
       if (chromeCoreAlpha > 0.001) {
@@ -7349,6 +7387,56 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       const darkMono =
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
+
+      // The lower shell is still one rigid group, but opening it reveals the
+      // same mesh from behind. Paint that real tessellation before the outer
+      // faces so the bowl has an inside surface instead of a flat CSS disk.
+      const eggInteriorAlpha = smoothUnit(
+        (state.chromeShellProgress - 0.06) / 0.3
+      );
+      if (eggInteriorAlpha > 0.001) {
+        const T = state.theme;
+        ctx.save();
+        ctx.globalAlpha *= eggInteriorAlpha;
+        for (const proj of getEggshellInteriorProjected()) {
+          const tile = state.tiles[proj.index];
+          const shellFill = tile.isPentagon ? T.pentagon : T.covered;
+          const inward = clampUnit(-proj.normalZ);
+          const fill = colorMix(
+            shellFill,
+            T.backface || T.core || "#777777",
+            0.14 + (1 - inward) * 0.14
+          );
+          drawHex(
+            proj,
+            fill,
+            T.backfaceEdge || T.coveredEdge,
+            tile.isPentagon ? 1.4 : 1.05
+          );
+        }
+        ctx.restore();
+      }
+
+      function chamberFaceAlpha(idx) {
+        if (
+          state.chromeProjectionMode !== "chamber" ||
+          !state.chromeChamberAperture ||
+          !state.chromeChamberAperture.has(idx)
+        ) {
+          return 1;
+        }
+        return 1 - smoothUnit((state.chromeProjectionProgress - 0.04) / 0.3);
+      }
+
+      function chamberBackAlpha(proj) {
+        if (
+          state.chromeProjectionMode !== "chamber" ||
+          proj.z > -0.05
+        ) {
+          return 1;
+        }
+        return smoothUnit((state.chromeProjectionProgress - 0.08) / 0.42);
+      }
 
       // Per-tile permanent heights (hover is a temporary fifth offset).
       const heights = new Float32Array(state.cells.length);
@@ -7457,6 +7545,20 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
+      function drawChromeTile(proj) {
+        const alpha =
+          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj);
+        if (alpha <= 0.001) return;
+        if (alpha >= 0.999) {
+          drawTile(proj);
+          return;
+        }
+        ctx.save();
+        ctx.globalAlpha *= alpha;
+        drawTile(proj);
+        ctx.restore();
+      }
+
       // Flags stand above the shell, so they paint after their neighbors
       // (still back-to-front among themselves) or the shell clips their skirts.
       const proudFlags = [];
@@ -7475,9 +7577,9 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
           proudFlags.push(proj);
           continue;
         }
-        drawTile(proj);
+        drawChromeTile(proj);
       }
-      for (const proj of proudFlags) drawTile(proj);
+      for (const proj of proudFlags) drawChromeTile(proj);
 
       // Raised pass: hover/press on covered or flagged, lifted over its tier.
       if (
@@ -7486,7 +7588,10 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       ) {
         const idx = highlightIdx;
         const base = projected.find((p) => p.index === idx && p.z > 0.02);
-        if (base) {
+        const faceAlpha = base ? chamberFaceAlpha(base.index) : 0;
+        if (base && faceAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= faceAlpha;
           const tile = state.tiles[idx];
           const cell = state.cells[idx];
           let colors = drawColorsForStyle(
@@ -7515,6 +7620,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
           const edgeW = Math.max(colors.lineWidth || 1.5, 1.8);
           drawHex(raised, fill, colors.stroke, edgeW);
           paintCountMark(tile, raised, cell, colors, lift);
+          ctx.restore();
         }
       }
 
@@ -8485,8 +8591,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
-    if (EGG_SHELL) return 500;
-    if (INNER_CHAMBER) return 680;
+    if (EGG_SHELL) return 220;
+    if (INNER_CHAMBER) return 460;
     if (POLAR_STUDY) return POLAR_TAKE === "lid" ? 420 : 300;
     return DOCK_CONTEXT ? 140 : 180;
   }
@@ -9597,48 +9703,10 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       ribbonActions = [];
     }
 
-    function shellGeometry() {
-      const canvas = document.getElementById("gameCanvas");
-      const disk =
-        typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
-      if (!canvas || !disk || !disk.r) return null;
-      const rect = canvas.getBoundingClientRect();
-      const diameter = disk.r * 2;
-      return {
-        canvas,
-        disk,
-        rect,
-        diameter,
-        left: rect.left + disk.cx - disk.r,
-        top: rect.top + disk.cy - disk.r,
-        scaleX: canvas.width / Math.max(1, rect.width),
-        scaleY: canvas.height / Math.max(1, rect.height),
-      };
-    }
-
     function buildEggShellScene() {
       if (!shellScene) return false;
-      const geometry = shellGeometry();
-      if (!geometry) return false;
       shellScene.textContent = "";
       shellScene.dataset.kind = "eggshell";
-      shellScene.style.setProperty(
-        "--egg-cx",
-        (geometry.rect.left + geometry.disk.cx).toFixed(1) + "px"
-      );
-      shellScene.style.setProperty(
-        "--egg-cy",
-        (geometry.rect.top + geometry.disk.cy).toFixed(1) + "px"
-      );
-      shellScene.style.setProperty("--egg-r", geometry.disk.r.toFixed(1) + "px");
-      shellScene.style.setProperty("--egg-p", eggProgress.toFixed(4));
-      shellScene.style.setProperty(
-        "--egg-scale",
-        (0.72 + eggProgress * 0.28).toFixed(4)
-      );
-      const interior = document.createElement("div");
-      interior.className = "hb-egg-interior";
-      shellScene.appendChild(interior);
       document.body.classList.add("hex-bloom-eggshell-active");
       if (typeof game.setChromeShell === "function") {
         game.setChromeShell("eggshell", eggProgress);
@@ -9648,33 +9716,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
 
     function buildChamberScene() {
       if (!shellScene) return false;
-      const geometry = shellGeometry();
-      if (!geometry) return false;
       shellScene.textContent = "";
       shellScene.dataset.kind = "chamber";
-      shellScene.style.setProperty(
-        "--chamber-cx",
-        (geometry.rect.left + geometry.disk.cx).toFixed(1) + "px"
-      );
-      shellScene.style.setProperty(
-        "--chamber-cy",
-        (geometry.rect.top + geometry.disk.cy).toFixed(1) + "px"
-      );
-      shellScene.style.setProperty(
-        "--chamber-r",
-        geometry.disk.r.toFixed(1) + "px"
-      );
-      shellScene.style.setProperty("--chamber-p", chamberProgress.toFixed(4));
-      shellScene.style.setProperty(
-        "--chamber-scale",
-        (0.72 + chamberProgress * 0.28).toFixed(4)
-      );
-      const veil = document.createElement("div");
-      veil.className = "hb-chamber-veil";
-      const rim = document.createElement("div");
-      rim.className = "hb-chamber-rim";
-      shellScene.appendChild(veil);
-      shellScene.appendChild(rim);
       document.body.classList.add("hex-bloom-chamber-active");
       if (typeof game.setChromeProjection === "function") {
         game.setChromeProjection("chamber", chamberProgress);
@@ -9765,13 +9808,6 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       const from = eggProgress;
       const paint = (progress) => {
         eggProgress = progress;
-        if (shellScene) {
-          shellScene.style.setProperty("--egg-p", progress.toFixed(4));
-          shellScene.style.setProperty(
-            "--egg-scale",
-            (0.72 + progress * 0.28).toFixed(4)
-          );
-        }
         game.setChromeShell(progress > 0 || to > 0 ? "eggshell" : null, progress);
       };
       if (prefersReducedMotion() || !duration || from === to) {
@@ -9800,13 +9836,6 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       const from = chamberProgress;
       const paint = (progress) => {
         chamberProgress = progress;
-        if (shellScene) {
-          shellScene.style.setProperty("--chamber-p", progress.toFixed(4));
-          shellScene.style.setProperty(
-            "--chamber-scale",
-            (0.72 + progress * 0.28).toFixed(4)
-          );
-        }
         game.setChromeProjection(
           progress > 0 || to > 0 ? "chamber" : null,
           progress
@@ -10584,14 +10613,17 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
         // Center mode blooms petal-by-petal: the delay sweeps around the ring
         // by seat angle, so the flower visibly opens clockwise from the top
         // instead of in DOM order.
+        const ringPhase =
+          (Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI);
         el.dataset.delay = DOCK_CENTER
-          ? String(
-              (DOCK_CONTEXT ? 18 : 110) +
-                Math.round(
-                  (DOCK_CONTEXT ? 72 : 260) *
-                    ((Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI))
+          ? EGG_SHELL
+            ? String(12 + Math.round(34 * ringPhase))
+            : INNER_CHAMBER
+              ? String(24 + Math.round(60 * ringPhase))
+              : String(
+                  (DOCK_CONTEXT ? 18 : 110) +
+                    Math.round((DOCK_CONTEXT ? 72 : 260) * ringPhase)
                 )
-            )
           : String(i * 26);
         el.addEventListener("click", (e) => {
           e.preventDefault();
@@ -10734,8 +10766,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
       setPhase("open");
-      if (EGG_SHELL) animateEggShell(1, 620);
-      if (INNER_CHAMBER) animateChamber(1, 920);
+      if (EGG_SHELL) animateEggShell(1, 260);
+      if (INNER_CHAMBER) animateChamber(1, 560);
       root.dataset.dock = "ready";
       paintDock();
       // Place on the next frame so data-phase=open has applied open CSS vars

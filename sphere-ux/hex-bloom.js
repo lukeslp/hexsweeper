@@ -457,8 +457,8 @@
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
-    if (EGG_SHELL) return 500;
-    if (INNER_CHAMBER) return 680;
+    if (EGG_SHELL) return 220;
+    if (INNER_CHAMBER) return 460;
     if (POLAR_STUDY) return POLAR_TAKE === "lid" ? 420 : 300;
     return DOCK_CONTEXT ? 140 : 180;
   }
@@ -1569,48 +1569,10 @@
       ribbonActions = [];
     }
 
-    function shellGeometry() {
-      const canvas = document.getElementById("gameCanvas");
-      const disk =
-        typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
-      if (!canvas || !disk || !disk.r) return null;
-      const rect = canvas.getBoundingClientRect();
-      const diameter = disk.r * 2;
-      return {
-        canvas,
-        disk,
-        rect,
-        diameter,
-        left: rect.left + disk.cx - disk.r,
-        top: rect.top + disk.cy - disk.r,
-        scaleX: canvas.width / Math.max(1, rect.width),
-        scaleY: canvas.height / Math.max(1, rect.height),
-      };
-    }
-
     function buildEggShellScene() {
       if (!shellScene) return false;
-      const geometry = shellGeometry();
-      if (!geometry) return false;
       shellScene.textContent = "";
       shellScene.dataset.kind = "eggshell";
-      shellScene.style.setProperty(
-        "--egg-cx",
-        (geometry.rect.left + geometry.disk.cx).toFixed(1) + "px"
-      );
-      shellScene.style.setProperty(
-        "--egg-cy",
-        (geometry.rect.top + geometry.disk.cy).toFixed(1) + "px"
-      );
-      shellScene.style.setProperty("--egg-r", geometry.disk.r.toFixed(1) + "px");
-      shellScene.style.setProperty("--egg-p", eggProgress.toFixed(4));
-      shellScene.style.setProperty(
-        "--egg-scale",
-        (0.72 + eggProgress * 0.28).toFixed(4)
-      );
-      const interior = document.createElement("div");
-      interior.className = "hb-egg-interior";
-      shellScene.appendChild(interior);
       document.body.classList.add("hex-bloom-eggshell-active");
       if (typeof game.setChromeShell === "function") {
         game.setChromeShell("eggshell", eggProgress);
@@ -1620,33 +1582,8 @@
 
     function buildChamberScene() {
       if (!shellScene) return false;
-      const geometry = shellGeometry();
-      if (!geometry) return false;
       shellScene.textContent = "";
       shellScene.dataset.kind = "chamber";
-      shellScene.style.setProperty(
-        "--chamber-cx",
-        (geometry.rect.left + geometry.disk.cx).toFixed(1) + "px"
-      );
-      shellScene.style.setProperty(
-        "--chamber-cy",
-        (geometry.rect.top + geometry.disk.cy).toFixed(1) + "px"
-      );
-      shellScene.style.setProperty(
-        "--chamber-r",
-        geometry.disk.r.toFixed(1) + "px"
-      );
-      shellScene.style.setProperty("--chamber-p", chamberProgress.toFixed(4));
-      shellScene.style.setProperty(
-        "--chamber-scale",
-        (0.72 + chamberProgress * 0.28).toFixed(4)
-      );
-      const veil = document.createElement("div");
-      veil.className = "hb-chamber-veil";
-      const rim = document.createElement("div");
-      rim.className = "hb-chamber-rim";
-      shellScene.appendChild(veil);
-      shellScene.appendChild(rim);
       document.body.classList.add("hex-bloom-chamber-active");
       if (typeof game.setChromeProjection === "function") {
         game.setChromeProjection("chamber", chamberProgress);
@@ -1737,13 +1674,6 @@
       const from = eggProgress;
       const paint = (progress) => {
         eggProgress = progress;
-        if (shellScene) {
-          shellScene.style.setProperty("--egg-p", progress.toFixed(4));
-          shellScene.style.setProperty(
-            "--egg-scale",
-            (0.72 + progress * 0.28).toFixed(4)
-          );
-        }
         game.setChromeShell(progress > 0 || to > 0 ? "eggshell" : null, progress);
       };
       if (prefersReducedMotion() || !duration || from === to) {
@@ -1772,13 +1702,6 @@
       const from = chamberProgress;
       const paint = (progress) => {
         chamberProgress = progress;
-        if (shellScene) {
-          shellScene.style.setProperty("--chamber-p", progress.toFixed(4));
-          shellScene.style.setProperty(
-            "--chamber-scale",
-            (0.72 + progress * 0.28).toFixed(4)
-          );
-        }
         game.setChromeProjection(
           progress > 0 || to > 0 ? "chamber" : null,
           progress
@@ -2556,14 +2479,17 @@
         // Center mode blooms petal-by-petal: the delay sweeps around the ring
         // by seat angle, so the flower visibly opens clockwise from the top
         // instead of in DOM order.
+        const ringPhase =
+          (Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI);
         el.dataset.delay = DOCK_CENTER
-          ? String(
-              (DOCK_CONTEXT ? 18 : 110) +
-                Math.round(
-                  (DOCK_CONTEXT ? 72 : 260) *
-                    ((Math.atan2(p.y, p.x) + Math.PI) / (2 * Math.PI))
+          ? EGG_SHELL
+            ? String(12 + Math.round(34 * ringPhase))
+            : INNER_CHAMBER
+              ? String(24 + Math.round(60 * ringPhase))
+              : String(
+                  (DOCK_CONTEXT ? 18 : 110) +
+                    Math.round((DOCK_CONTEXT ? 72 : 260) * ringPhase)
                 )
-            )
           : String(i * 26);
         el.addEventListener("click", (e) => {
           e.preventDefault();
@@ -2706,8 +2632,8 @@
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
       setPhase("open");
-      if (EGG_SHELL) animateEggShell(1, 620);
-      if (INNER_CHAMBER) animateChamber(1, 920);
+      if (EGG_SHELL) animateEggShell(1, 260);
+      if (INNER_CHAMBER) animateChamber(1, 560);
       root.dataset.dock = "ready";
       paintDock();
       // Place on the next frame so data-phase=open has applied open CSS vars

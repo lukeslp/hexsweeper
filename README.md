@@ -85,8 +85,8 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/sphere-muse.html` | Visual take: Starlit Void |
 | `collection/sphere-face-takeover.html` | Control study: seven real sphere faces become the menu |
 | `collection/sphere-equator-ribbon.html` | Archived V1: draggable depth-sorted equator ribbon |
-| `collection/sphere-eggshell.html` | Spatial study V3: whole live faces split along one interlocking seam |
-| `collection/sphere-chamber.html` | Spatial study V3: long single-eased turn into a bounded concave annulus |
+| `collection/sphere-eggshell.html` | Spatial study V4: fast interlocking split with a renderer-native inner shell |
+| `collection/sphere-chamber.html` | Spatial study V4: continuous center-out fold into a tessellated inner chamber |
 | `collection/sphere-polar-capstan.html` | Rejected archive: faceted control spindle |
 | `collection/sphere-polar-crown.html` | Captured prior art: reset hub with six promising geodesic petals |
 | `collection/sphere-polar-drill.html` | Rejected archive: telescoping concentric controls |

@@ -981,10 +981,8 @@
 }
 
 /* ---- Spatial shell studies -------------------------------------------------
-   Both modes borrow the semantic seven-control flower. Eggshell separates
-   whole faces in the live renderer; this layer supplies only the aperture.
-   Chamber warps the live projection and adds a quiet central veil. Decorative
-   layers never receive input. */
+   Both modes borrow the semantic seven-control flower, while every shell and
+   interior surface now comes from the live sphere renderer itself. */
 .hex-bloom[data-egg-shell="true"] .hex-bloom-scrim,
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
   -webkit-backdrop-filter: none;
@@ -995,6 +993,12 @@
 }
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
   background: color-mix(in srgb, var(--hb-paper) 5%, transparent);
+}
+.hex-bloom[data-egg-shell="true"] {
+  --fold-ms: 220ms;
+}
+.hex-bloom[data-inner-chamber="true"] {
+  --fold-ms: 420ms;
 }
 
 .hb-shell-scene {
@@ -1015,29 +1019,6 @@
   visibility: visible;
 }
 
-.hb-egg-interior {
-  position: absolute;
-  left: var(--egg-cx, 50%);
-  top: var(--egg-cy, 50%);
-  width: calc(var(--egg-r, 220px) * 0.9);
-  height: calc(var(--egg-r, 220px) * 0.9);
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--hb-paper) 97%, transparent) 0 48%,
-    color-mix(in srgb, var(--hb-paper) 78%, transparent) 68%,
-    transparent 100%
-  );
-  border: 1px solid color-mix(in srgb, var(--hb-ink) 22%, transparent);
-  box-shadow:
-    inset 0 0 calc(var(--egg-r, 220px) * 0.16)
-      color-mix(in srgb, var(--hb-ink) 10%, transparent),
-    0 0 calc(var(--egg-r, 220px) * 0.08)
-      color-mix(in srgb, var(--hb-paper) 82%, transparent);
-  opacity: var(--egg-p, 0);
-  transform: translate(-50%, -50%) scale(var(--egg-scale, 0.72));
-  will-change: transform, opacity;
-}
 .hex-bloom[data-egg-shell="true"] .hex-bloom-stage {
   perspective: 820px;
 }
@@ -1047,42 +1028,6 @@
     drop-shadow(0 0 2px var(--hb-paper));
 }
 
-.hb-chamber-veil,
-.hb-chamber-rim {
-  position: absolute;
-  left: var(--chamber-cx, 50%);
-  top: var(--chamber-cy, 50%);
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(var(--chamber-scale, 0.72));
-  opacity: var(--chamber-p, 0);
-  will-change: transform, opacity;
-}
-.hb-chamber-veil {
-  width: calc(var(--chamber-r, 220px) * 0.46);
-  height: calc(var(--chamber-r, 220px) * 0.46);
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--hb-paper) 96%, transparent) 0 55%,
-    color-mix(in srgb, var(--hb-paper) 74%, transparent) 72%,
-    transparent 100%
-  );
-  filter: none;
-}
-.hb-chamber-rim {
-  width: calc(var(--chamber-r, 220px) * 2);
-  height: calc(var(--chamber-r, 220px) * 2);
-  border: 1px solid color-mix(in srgb, var(--hb-ink) 40%, transparent);
-  background: radial-gradient(
-    circle,
-    transparent 0 16%,
-    color-mix(in srgb, var(--hb-paper) 22%, transparent) 18%,
-    color-mix(in srgb, var(--hb-ink) 11%, transparent) 38%,
-    transparent 76%
-  );
-  box-shadow:
-    inset 0 0 calc(var(--chamber-r, 220px) * 0.34) color-mix(in srgb, var(--hb-ink) 18%, transparent),
-    inset 0 0 0 5px color-mix(in srgb, var(--hb-paper) 36%, transparent);
-}
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-stage {
   perspective: none;
 }
@@ -1389,9 +1334,6 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom-stage,
   .hex-bloom-hub,
   .hb-shell-scene,
-  .hb-egg-interior,
-  .hb-chamber-veil,
-  .hb-chamber-rim,
   #gameCanvas {
     transition: none !important;
     transition-delay: 0ms !important;
