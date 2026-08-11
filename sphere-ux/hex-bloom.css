@@ -60,6 +60,15 @@
   visibility: visible;
   pointer-events: auto;
 }
+.hex-bloom[data-egg-shell="true"] .hex-bloom-scrim,
+.hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
+  cursor: grab;
+  touch-action: none;
+}
+.hex-bloom[data-egg-shell="true"] .hex-bloom-scrim:active,
+.hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim:active {
+  cursor: grabbing;
+}
 
 /* Stage fills viewport; origin is the dock menu (bottom). */
 .hex-bloom-stage {

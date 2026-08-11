@@ -457,8 +457,8 @@
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
-    if (EGG_SHELL) return 220;
-    if (INNER_CHAMBER) return 460;
+    if (EGG_SHELL) return 500;
+    if (INNER_CHAMBER) return 680;
     if (POLAR_STUDY) return POLAR_TAKE === "lid" ? 420 : 300;
     return DOCK_CONTEXT ? 140 : 180;
   }
@@ -2632,8 +2632,8 @@
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
       setPhase("open");
-      if (EGG_SHELL) animateEggShell(1, 260);
-      if (INNER_CHAMBER) animateChamber(1, 560);
+      if (EGG_SHELL) animateEggShell(1, 620);
+      if (INNER_CHAMBER) animateChamber(1, 920);
       root.dataset.dock = "ready";
       paintDock();
       // Place on the next frame so data-phase=open has applied open CSS vars
@@ -2921,9 +2921,54 @@
       });
     }
 
-    // Scrim click closes
+    // Spatial studies keep gameplay inert while the modal is open, but the
+    // shell itself remains an object the player can turn. The scrim owns that
+    // orbit gesture; menu tiles stay fixed in screen space above it.
+    let spatialDrag = null;
+    let suppressScrimClick = false;
+    if (SPATIAL_SHELL && typeof game.orbitBy === "function") {
+      scrim.addEventListener("pointerdown", (event) => {
+        if (state.phase !== "open") return;
+        suppressScrimClick = false;
+        spatialDrag = {
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          distance: 0,
+        };
+        scrim.setPointerCapture(event.pointerId);
+      });
+      scrim.addEventListener("pointermove", (event) => {
+        if (!spatialDrag || spatialDrag.pointerId !== event.pointerId) return;
+        const dx = event.clientX - spatialDrag.x;
+        const dy = event.clientY - spatialDrag.y;
+        spatialDrag.x = event.clientX;
+        spatialDrag.y = event.clientY;
+        spatialDrag.distance += Math.hypot(dx, dy);
+        if (spatialDrag.distance > 6) {
+          suppressScrimClick = true;
+          game.orbitBy(dx, dy);
+          event.preventDefault();
+        }
+      });
+      const finishSpatialDrag = (event) => {
+        if (!spatialDrag || spatialDrag.pointerId !== event.pointerId) return;
+        try {
+          scrim.releasePointerCapture(event.pointerId);
+        } catch (_) {}
+        spatialDrag = null;
+      };
+      scrim.addEventListener("pointerup", finishSpatialDrag);
+      scrim.addEventListener("pointercancel", finishSpatialDrag);
+    }
+
+    // Scrim tap closes; the synthetic click after an orbit drag does not.
     scrim.addEventListener("click", (e) => {
       e.preventDefault();
+      if (suppressScrimClick) {
+        suppressScrimClick = false;
+        return;
+      }
       if (state.phase === "open") collapse();
     });
 

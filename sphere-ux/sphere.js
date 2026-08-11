@@ -1597,7 +1597,7 @@
     }
 
     /**
-     * Draw-only view of the inside of Eggshell's lower half. Gameplay still
+     * Draw-only view of the inside of both Eggshell halves. Gameplay still
      * sees the ordinary culled front list; this second pass only exposes the
      * real rear-facing mesh through the opening, with no labels or hit area.
      */
@@ -1610,7 +1610,6 @@
         return [];
       }
       return state.tiles
-        .filter((tile) => state.chromeShellGroups[tile.index] === -1)
         .map((tile) => projectTile(tile, state.rotY, state.rotX))
         .filter((proj) => proj.z <= -0.05)
         .sort(
@@ -4138,9 +4137,9 @@
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
 
-      // The lower shell is still one rigid group, but opening it reveals the
+      // Both shell halves remain rigid groups, but opening them reveals the
       // same mesh from behind. Paint that real tessellation before the outer
-      // faces so the bowl has an inside surface instead of a flat CSS disk.
+      // faces so each cap has an inside surface instead of a flat CSS disk.
       const eggInteriorAlpha = smoothUnit(
         (state.chromeShellProgress - 0.06) / 0.3
       );
@@ -4400,12 +4399,30 @@
       );
     }
 
+    let idleFrameTimer = 0;
+
     function scheduleFrame(delay) {
+      const wait = delay != null ? delay : 0;
+      if (wait > 0) {
+        if (state.rafScheduled || idleFrameTimer) return;
+        idleFrameTimer = setTimeout(() => {
+          idleFrameTimer = 0;
+          if (state.rafScheduled) return;
+          state.rafScheduled = true;
+          requestAnimationFrame(loop);
+        }, wait);
+        return;
+      }
+      // Renderer state can change while the low-power idle timer is waiting.
+      // Promote that request to the very next frame instead of letting an
+      // animation inherit the idle loop's 200 ms cadence.
+      if (idleFrameTimer) {
+        clearTimeout(idleFrameTimer);
+        idleFrameTimer = 0;
+      }
       if (state.rafScheduled) return;
       state.rafScheduled = true;
-      const wait = delay != null ? delay : 0;
-      if (wait > 0) setTimeout(() => requestAnimationFrame(loop), wait);
-      else requestAnimationFrame(loop);
+      requestAnimationFrame(loop);
     }
 
     function loop(ts) {
@@ -4838,6 +4855,18 @@
       getMenuPatch,
       setChromeProjection,
       setChromeShell,
+      orbitBy: (dx, dy) => {
+        const sx = state.invertDragX ? -1 : 1;
+        const sy = state.invertDragY ? -1 : 1;
+        const nextY = state.rotY + (Number(dx) || 0) * 0.0105 * sx;
+        const nextX = state.rotX + (Number(dy) || 0) * 0.0105 * sy;
+        state.rotY = nextY;
+        state.rotX = nextX;
+        state.targetRotY = nextY;
+        state.targetRotX = nextX;
+        invalidateProjection();
+        scheduleFrame();
+      },
       setCountStyle: (id, opts) => setCountStyle(id, opts),
       setRelief: (mode) => setRelief(mode),
       setSeams: (on) => setSeams(on),
