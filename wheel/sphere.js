@@ -3831,7 +3831,7 @@
 
       const urgency = fuseUrgency(now);
       const amp = Math.max(2.5, state.scale * 0.018) * (1 + urgency * 0.35);
-      const slice = state.reduceMotion ? 6 : 3;
+      const slice = state.reduceMotion ? 8 : 5;
       const squeeze = 0.78;
       const top = Math.max(0, surf);
       const nearBand = Math.max(64, Math.min(150, state.scale * 0.42));
@@ -3840,26 +3840,30 @@
       traceWaterSurface(w, h, surf, now, true);
       ctx.clip();
 
-      // Deep water first, so the strip a slice vacates as it shifts sideways
-      // resolves to sea rather than a smear of its own edge pixels.
-      const fill = ctx.createLinearGradient(0, top, 0, h);
-      fill.addColorStop(0, "#0d4d67");
-      fill.addColorStop(1, "#04202f");
-      ctx.fillStyle = fill;
-      ctx.fillRect(0, top - 8, w, h - top + 8);
+      // Keep the original submerged frame as the baseline. Earlier versions
+      // replaced everything below the rescue band with opaque sea, producing
+      // a conspicuous rectangular cutoff through the sphere.
 
-      // 1 · Refraction — a narrow, trackable rescue zone. Deep water is allowed
-      // to become unreadable instead of spending hundreds of copies preserving it.
+      // 1 · Refraction — strongest at the surface, then eased continuously
+      // back into the undistorted deep silhouette. Five-pixel slices keep the
+      // larger band affordable while avoiding a visible terminal row.
+      const distortBand = Math.max(
+        nearBand,
+        Math.min(360, state.scale * 0.72)
+      );
       const stop = Math.min(
         h,
-        surf + nearBand,
+        surf + distortBand,
         state.centerY + state.scale * 1.15
       );
       for (let y = top; y < stop; y += slice) {
-        const d = Math.max(0, (y - surf) / nearBand);
-        const dx = waterWave(y, t * 1.35) * amp * (0.28 + d * 0.9);
+        const d = Math.max(0, Math.min(1, (y - surf) / distortBand));
+        const eased = d * d * (3 - 2 * d);
+        const dx = waterWave(y, t * 1.35) * amp * (0.32 + d * 1.05);
+        ctx.globalAlpha = 0.82 * (1 - eased);
         ctx.drawImage(buf, 0, y * dpr, bw, slice * dpr, dx, y, w, slice);
       }
+      ctx.globalAlpha = 1;
 
       // 2 · Reflection — shallow, then gone. Deep reflection costs frames and
       // competes with the face the player is trying to drown.
@@ -3874,12 +3878,18 @@
       }
       ctx.globalAlpha = 1;
 
-      // 3 · Depth haze.
-      const haze = ctx.createLinearGradient(0, top, 0, h);
-      haze.addColorStop(0, "rgba(20,110,140,0.06)");
-      haze.addColorStop(0.18, "rgba(10,70,100,0.2)");
-      haze.addColorStop(0.48, "rgba(5,43,65,0.58)");
-      haze.addColorStop(1, "rgba(3,26,40,0.86)");
+      // 3 · Depth haze. Anchor the fade to the globe, not the viewport: tall
+      // screens otherwise turn the lower hemisphere into a flat rectangular
+      // patch long before the sphere itself ends.
+      const globeBottom = Math.max(
+        top + 1,
+        Math.min(h, state.centerY + state.scale * 1.15)
+      );
+      const haze = ctx.createLinearGradient(0, top, 0, globeBottom);
+      haze.addColorStop(0, "rgba(20,110,140,0.08)");
+      haze.addColorStop(0.22, "rgba(10,76,104,0.22)");
+      haze.addColorStop(0.58, "rgba(5,47,69,0.48)");
+      haze.addColorStop(1, "rgba(3,28,42,0.82)");
       ctx.fillStyle = haze;
       ctx.fillRect(0, top, w, h - top);
       ctx.restore();
