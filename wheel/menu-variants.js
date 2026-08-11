@@ -8,11 +8,23 @@
 (function (global) {
   "use strict";
 
+  const ARRANGEMENT = "sphere-center-v1";
+  const RING_ACTIONS = Object.freeze([
+    "lightdark",
+    "warnings",
+    "undo",
+    "flagmode",
+    "invert",
+    "size",
+  ]);
+  const CENTER_ACTION = "reset";
+
   const PROFILES = Object.freeze({
     base: Object.freeze({
       id: "base",
-      renderer: "bloom",
-      anchor: "dock",
+      renderer: "flower",
+      anchor: "center",
+      arrangement: ARRANGEMENT,
       zoomScale: 1,
       openMs: 220,
       closeMs: 180,
@@ -21,6 +33,7 @@
       id: "takeover",
       renderer: "faces",
       anchor: "center",
+      arrangement: ARRANGEMENT,
       zoomScale: 1.22,
       openMs: 300,
       closeMs: 300,
@@ -29,6 +42,7 @@
       id: "underwater",
       renderer: "faces",
       anchor: "underwater",
+      arrangement: ARRANGEMENT,
       zoomScale: 1.34,
       openMs: 300,
       closeMs: 300,
@@ -124,7 +138,15 @@
       )[0];
   }
 
-  const api = Object.freeze({ PROFILES, normalize, resolve, choosePatch });
+  const api = Object.freeze({
+    PROFILES,
+    ARRANGEMENT,
+    RING_ACTIONS,
+    CENTER_ACTION,
+    normalize,
+    resolve,
+    choosePatch,
+  });
   global.WheelMenuVariants = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

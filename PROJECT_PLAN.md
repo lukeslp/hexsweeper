@@ -151,11 +151,15 @@ detonation, and win ripples; `calm` preserves the base renderer. Effects remain
 independent channels so later skins can recombine them without changing game
 state or picking.
 Menu presentation follows the same separation: `wheel/menu-variants.js`
-selects only chrome treatment. The default dock bloom remains production-safe;
-`?menu=takeover` maps the six settings plus Close onto a fixed seven-face
-projected patch, while `?menu=underwater` chooses that patch below the shared
-water surface and adds depth material. Both use a transient, non-persisted
-camera zoom and leave gameplay, saves, effects, and the action inventory alone.
+selects only chrome treatment. Every profile now uses the production Sphere's
+seven-action arrangement — Reset centered inside Appearance / Warning,
+Undo / Flag, and Invert / Size — and a short tap outside the sphere exposes it.
+`?menu=base` renders the exact centered flower; `?menu=takeover` maps that
+arrangement onto a fixed real-face patch; `?menu=underwater` chooses the patch
+below the shared water surface and adds depth material. The face profiles use
+a transient, non-persisted camera zoom and leave gameplay, saves, effects, and
+the action inventory alone. A three-step illustrated Dig / Menu / Quench tour
+replaces the old introductory modal without hiding the surface-pack choice.
 The archived decorative theme remains at `collection/theme-water.html` and
 `?theme=water` on the sphere.
 

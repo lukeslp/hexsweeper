@@ -4,10 +4,22 @@ The menu is one shared interaction and action inventory with three presentation 
 
 | Profile | URL | Treatment |
 | --- | --- | --- |
-| Base | `?menu=base` | Existing bottom-seed bloom. This remains the default. |
-| Takeover | `?menu=takeover` | A real seven-face projected patch takes over as the menu while the sphere moves closer. |
-| Underwater | `?menu=underwater` | The same patch is selected below the waterline and rendered with submerged material styling. |
+| Base | `?menu=base` | The production Sphere's centered seven-tile flower. This remains the default. |
+| Takeover | `?menu=takeover` | The same action arrangement takes over a real seven-face projected patch while the sphere moves closer. |
+| Underwater | `?menu=underwater` | The same arrangement is selected below the waterline and rendered with submerged material styling. |
 
 Legacy study aliases remain available: `?dock=faces` selects Takeover and `?dock=faces-water` selects Underwater.
 
-The face variants use a temporary renderer-only zoom. Closing returns to the player's exact prior zoom before gameplay and an armed fuse resume. Reduced motion snaps the camera and disables face stagger and caustic drift.
+All profiles use Reset in the center, with Appearance / Warning, Undo / Flag,
+and Invert / Size around it in the production Sphere order. There is no bottom
+menu dock. A short tap outside the sphere exposes the menu; tapping the scrim,
+pressing Escape, or pressing C closes it. The Help tile remains in the lower
+corner.
+
+The face variants use a temporary renderer-only zoom. Closing returns to the
+player's exact prior zoom before gameplay and an armed fuse resume. Reduced
+motion snaps the camera and disables face stagger and caustic drift.
+
+First launch uses a three-step illustrated tour — Dig, Menu, Quench — in place
+of the former introductory modal. Help replays the tour, and its last step
+retains the surface-pack selector.

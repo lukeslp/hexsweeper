@@ -164,10 +164,13 @@ Its event effects are isolated in [`wheel/effects.js`](wheel/effects.js) and
 catalogued in [`wheel/EFFECTS.md`](wheel/EFFECTS.md). `?fx=kinetic` is the
 composed default; `?fx=calm` preserves the base treatment for comparison and
 reuse. Its one action inventory also has three documented presentations in
-[`wheel/MENUS.md`](wheel/MENUS.md): the default bottom bloom, a seven-face
-sphere takeover (`?menu=takeover`), and the same real-face patch selected and
-styled below the waterline (`?menu=underwater`). The face variants use a
-temporary camera zoom and restore the player's exact saved zoom when closed.
+[`wheel/MENUS.md`](wheel/MENUS.md): the production Sphere's centered
+seven-tile flower, a real-face takeover (`?menu=takeover`), and the same
+real-face arrangement selected and styled below the waterline
+(`?menu=underwater`). A short tap outside the sphere exposes the menu in all
+three; the face variants use a temporary camera zoom and restore the player's
+exact saved zoom when closed. A three-step illustrated Dig / Menu / Quench
+tour replaces the former introductory modal.
 
 ## Choices hub
 

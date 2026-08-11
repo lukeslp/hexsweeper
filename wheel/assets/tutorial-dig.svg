@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 280" role="img" aria-labelledby="title desc">
+  <title id="title">Dig a safe opening</title>
+  <desc id="desc">A hand taps a white hex and reveals numbered blue-gray faces.</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#12384c"/><stop offset="1" stop-color="#071d2b"/></linearGradient>
+    <filter id="lift"><feDropShadow dx="0" dy="5" stdDeviation="4" flood-opacity=".35"/></filter>
+  </defs>
+  <rect width="480" height="280" rx="22" fill="url(#sky)"/>
+  <g transform="translate(240 140)" stroke="#bfeeff" stroke-width="3" stroke-linejoin="round">
+    <path d="m0-48 42-24 42 24v48L42 24 0 0z" fill="#f7fbfd" filter="url(#lift)"/>
+    <path d="m-84-48 42-24L0-48v48l-42 24-42-24z" fill="#31576a"/>
+    <path d="m84-48 42-24 42 24v48l-42 24L84 0z" fill="#31576a"/>
+    <path d="m-42 24 42-24 42 24v48L0 96l-42-24z" fill="#31576a"/>
+    <path d="m-126 24 42-24 42 24v48l-42 24-42-24z" fill="#31576a"/>
+    <path d="m42 24 42-24 42 24v48L84 96 42 72z" fill="#31576a"/>
+    <path d="m-42-120 42-24 42 24v48L0-48l-42-24z" fill="#f7fbfd"/>
+    <g fill="#88eaff" stroke="#062437" stroke-width="2" font-family="system-ui,sans-serif" font-size="34" font-weight="800" text-anchor="middle">
+      <text x="-42" y="4">1</text><text x="126" y="4">1</text><text x="0" y="59">2</text><text x="-84" y="59">1</text><text x="84" y="59">1</text>
+    </g>
+  </g>
+  <g transform="translate(294 44)" fill="none" stroke="#ffd543" stroke-width="6" stroke-linecap="round">
+    <circle cx="0" cy="0" r="21" opacity=".8"/><circle cx="0" cy="0" r="34" opacity=".35"/><path d="M23-30 4-10"/>
+  </g>
+</svg>

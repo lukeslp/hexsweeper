@@ -28,7 +28,7 @@
 <meta property="og:image:height" content="630">
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
-<link rel="stylesheet" href="hex-bloom.css?v=wheel2">
+<link rel="stylesheet" href="hex-bloom.css?v=wheel3">
 <style>
 /* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
 :root,
@@ -739,6 +739,128 @@ body[data-sphere-chrome="dark"] .help-overlay {
   border-color: color-mix(in srgb, var(--help-ink) 55%, transparent);
 }
 .help-pack:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* Three-step tutorial: one visual and one idea at a time. The sphere remains
+   visible around the card, so onboarding feels connected to the live board. */
+.tutorial-overlay {
+  background: color-mix(in srgb, var(--bg-color) 28%, transparent);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+.tutorial-panel {
+  width: min(31rem, 100%);
+  max-height: min(94dvh, 46rem);
+  overflow: hidden;
+  padding: 0.85rem;
+  border-radius: 18px;
+  border-color: color-mix(in srgb, var(--help-ink) 42%, transparent);
+  box-shadow: 0 20px 60px color-mix(in srgb, #000000 26%, transparent);
+}
+.tutorial-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+.tutorial-head h2 {
+  margin: 0;
+  font-size: clamp(1.05rem, 3.4vw, 1.35rem);
+  letter-spacing: -0.035em;
+}
+.tutorial-kicker {
+  margin: 0 0 0.14rem;
+  font: 650 0.65rem/1.2 "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.62;
+}
+.tutorial-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 0 0 auto;
+}
+.tutorial-progress {
+  font: 650 0.7rem/1 "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+}
+.tutorial-skip,
+.tutorial-button {
+  appearance: none;
+  min-height: 44px;
+  border: 1px solid var(--help-ink);
+  border-radius: 999px;
+  background: var(--help-ink);
+  color: var(--help-paper);
+  padding: 0.55rem 0.95rem;
+  font: 650 0.78rem/1 "IBM Plex Sans", system-ui, sans-serif;
+  cursor: pointer;
+}
+.tutorial-skip {
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--help-ink);
+  padding-inline: 0.45rem;
+}
+.tutorial-button.secondary {
+  background: transparent;
+  color: var(--help-ink);
+}
+.tutorial-skip:hover,
+.tutorial-skip:focus-visible,
+.tutorial-button:hover,
+.tutorial-button:focus-visible {
+  outline: 2px solid var(--help-ink);
+  outline-offset: 2px;
+}
+.tutorial-step[hidden] { display: none !important; }
+.tutorial-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 12 / 7;
+  object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--help-ink) 28%, transparent);
+  border-radius: 13px;
+  background: #092536;
+  cursor: pointer;
+}
+.tutorial-step h3 {
+  margin: 0.72rem 0 0.22rem;
+  font-size: clamp(1rem, 3.6vw, 1.22rem);
+  letter-spacing: -0.025em;
+}
+.tutorial-step > p {
+  margin: 0;
+  min-height: 2.8em;
+  font-size: clamp(0.78rem, 2.8vw, 0.9rem);
+  line-height: 1.42;
+}
+.tutorial-step .help-packs {
+  margin: 0.62rem 0 0;
+}
+.tutorial-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+.tutorial-spacer { flex: 1 1 auto; }
+.tutorial-button[hidden] { display: none !important; }
+@media (max-height: 650px) {
+  .tutorial-panel { width: min(27rem, 100%); padding: 0.65rem; }
+  .tutorial-head { margin-bottom: 0.42rem; }
+  .tutorial-image { max-height: 43dvh; }
+  .tutorial-step h3 { margin-top: 0.42rem; }
+  .tutorial-footer { margin-top: 0.45rem; }
+  .tutorial-step .help-packs { margin-top: 0.35rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-overlay { transition: none; }
+}
 /* Double-tap on any chrome control must never become Safari smart-zoom.
    Declared on the elements: iOS skips body-level touch-action for this. */
 button, a, input[type="range"] { touch-action: manipulation; }
@@ -749,6 +871,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
   <canvas id="gameCanvas" tabindex="0" aria-label="Hex sphere minesweeper board" aria-describedby="wheel-instructions"></canvas>
 </div>
 <p class="sr-only" id="wheel-instructions">Drag or use the arrow keys to rotate. If a mine is armed, move it beneath the waterline before its timer expires.</p>
+<button type="button" id="open-menu-a11y" class="sr-only" aria-controls="hex-bloom-stage">Open game menu</button>
 <div class="wheel-alert" id="wheel-alert" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
 <div id="sphere-banner" class="sphere-banner" role="status" hidden>
@@ -834,88 +957,65 @@ button, a, input[type="range"] { touch-action: manipulation; }
 
 <div id="count-style-toast" class="count-style-toast" role="status" aria-live="polite"></div>
 
-<div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
-  <div class="help-panel" id="help-panel" tabindex="-1">
-    <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
-    <h2 id="help-title">Hexsweeper 3D</h2>
-    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
-    <p class="help-lede"><strong>Water Wheel:</strong> clicking a mine lights its fuse instead of ending the game immediately. Rotate that face beneath the fixed waterline to quench it before time runs out. Every ordinary flag washes off underwater, whether it was right or wrong.</p>
-    <ul class="help-controls" aria-label="Controls">
-      <li><span class="act">Tap</span><span>Dig a face</span></li>
-      <li><span class="act">Hold</span><span>Flag a face (mobile)</span></li>
-      <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
-      <li><span class="act">Drag</span><span>Spin the sphere</span></li>
-      <li><span class="act">Arrows</span><span>Rotate with the keyboard</span></li>
-      <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
-    </ul>
-    <div class="help-body">
-      <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Quenched mines stay inert and survive refresh. Each rescue shortens the next fuse and makes the sea retreat. Progress autosaves. Reset or size change starts a new sphere (no confirm).</p>
-    </div>
-    <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
-    <div class="help-history-row">
-      <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic square-grid Minesweeper screenshot">
-        <img src="../sphere-ux/assets/classic-minesweeper.png" alt="Classic Windows Minesweeper (square grid)" width="44" height="33" loading="lazy">
-      </button>
-      <p class="help-history-cap">
-        Riding on the original — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
-      </p>
-    </div>
-    <div class="help-packs" id="help-packs" role="group" aria-label="Surface">
-      <span class="help-packs-cap">Surface</span>
-      <button type="button" class="help-pack" data-pack="classic" style="--sw:linear-gradient(90deg,#fff 50%,#111 50%)" aria-pressed="true">Classic</button>
-      <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
-      <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
-      <button type="button" class="help-pack" data-pack="water" style="--sw:#12617d" aria-pressed="false">Water</button>
-    </div>
-    <p class="help-more">Also <a href="../">flat Hexsweeper</a> · <a href="../?mode=fire">Fire</a> · <a href="../?mode=plague">Plague</a></p>
-    <button type="button" class="help-done" id="help-done-btn">Done</button>
-    <nav class="menu-links" aria-label="Elsewhere">
-      <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
-      <span class="menu-links-sep" aria-hidden="true">·</span>
-      <a href="https://datapoems.io" rel="noopener noreferrer">datapoems.io</a>
-    </nav>
-  </div>
-</div>
+<div id="help-overlay" class="help-overlay tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+  <div class="help-panel tutorial-panel" id="help-panel" tabindex="-1">
+    <header class="tutorial-head">
+      <div>
+        <p class="tutorial-kicker">Water Wheel</p>
+        <h2 id="help-title" tabindex="-1">Three moves to play</h2>
+      </div>
+      <div class="tutorial-head-actions">
+        <span class="tutorial-progress" id="tutorial-progress" aria-hidden="true">1 / 3</span>
+        <button type="button" class="tutorial-skip" id="help-close-btn" aria-label="Skip tutorial">Skip</button>
+      </div>
+    </header>
 
-<div id="history-lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Classic Minesweeper" hidden>
-  <button type="button" class="lightbox-close" id="lightbox-close-btn" aria-label="Close">×</button>
-  <img src="../sphere-ux/assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
+    <div class="tutorial-steps">
+      <section class="tutorial-step" data-step="0">
+        <img class="tutorial-image" src="assets/tutorial-dig.svg" alt="A tap opens a safe hex and reveals numbered neighboring faces." width="480" height="280">
+        <h3>Dig the shell</h3>
+        <p>Tap a face to clear it. Numbers count mines in the six touching faces, and your first dig is always safe.</p>
+      </section>
+      <section class="tutorial-step" data-step="1" hidden>
+        <img class="tutorial-image" src="assets/tutorial-menu.svg" alt="The seven-hex control flower appears at the center of the sphere." width="480" height="280">
+        <h3>Tap outside for controls</h3>
+        <p>Tap the open space outside the sphere to reveal the menu. Drag the sphere to rotate; hold a face to flag it.</p>
+      </section>
+      <section class="tutorial-step" data-step="2" hidden>
+        <img class="tutorial-image" src="assets/tutorial-quench.svg" alt="An armed mine rotates below the waterline and becomes safely quenched." width="480" height="280">
+        <h3>Douse the mine</h3>
+        <p>Hit a mine? Rotate its lit face below the waterline before the fuse ring runs out. Ordinary flags wash off underwater.</p>
+        <div class="help-packs" id="help-packs" role="group" aria-label="Surface">
+          <span class="help-packs-cap">Surface</span>
+          <button type="button" class="help-pack" data-pack="classic" style="--sw:linear-gradient(90deg,#fff 50%,#111 50%)" aria-pressed="true">Classic</button>
+          <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
+          <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
+          <button type="button" class="help-pack" data-pack="water" style="--sw:#12617d" aria-pressed="false">Water</button>
+        </div>
+      </section>
+    </div>
+
+    <p class="sr-only" id="tutorial-status" role="status" aria-live="polite"></p>
+    <footer class="tutorial-footer">
+      <button type="button" class="tutorial-button secondary" id="tutorial-back" hidden>Back</button>
+      <span class="tutorial-spacer" aria-hidden="true"></span>
+      <button type="button" class="tutorial-button" id="tutorial-next">Next</button>
+      <button type="button" class="tutorial-button" id="help-done-btn" hidden>Play</button>
+    </footer>
+  </div>
 </div>
 
 <script src="hexasphere.js?v=wheel3"></script>
 <script src="effects.js?v=wheel1"></script>
-<script src="menu-variants.js?v=wheel2"></script>
-<script src="sphere.js?v=wheel7"></script>
-<script src="hex-bloom.js?v=wheel3"></script>
+<script src="menu-variants.js?v=wheel3"></script>
+<script src="tutorial.js?v=wheel1"></script>
+<script src="sphere.js?v=wheel8"></script>
+<script src="hex-bloom.js?v=wheel4"></script>
 <script>
 const wheelGame = SphereSweeper.boot({ canvasId: "gameCanvas" });
-initHexBloom(wheelGame);
-(function () {
-  const lb = document.getElementById("history-lightbox");
-  const openBtn = document.getElementById("help-history-btn");
-  const closeBtn = document.getElementById("lightbox-close-btn");
-  if (!lb || !openBtn) return;
-  function openLb() {
-    lb.hidden = false;
-    requestAnimationFrame(() => lb.classList.add("open"));
-    closeBtn && closeBtn.focus();
-  }
-  function closeLb() {
-    lb.classList.remove("open");
-    setTimeout(() => { lb.hidden = true; }, 180);
-    openBtn.focus();
-  }
-  openBtn.addEventListener("click", openLb);
-  closeBtn && closeBtn.addEventListener("click", closeLb);
-  lb.addEventListener("click", (e) => { if (e.target === lb) closeLb(); });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && lb.classList.contains("open")) {
-      e.stopPropagation();
-      closeLb();
-    }
-  });
-})();
+const wheelMenu = initHexBloom(wheelGame);
+document.getElementById("open-menu-a11y")?.addEventListener("click", () => wheelMenu?.open());
+WheelTutorial.init();
 </script>
 <!-- GoatCounter Analytics -->
 <script data-goatcounter="https://stats.dr.eamer.dev/count"

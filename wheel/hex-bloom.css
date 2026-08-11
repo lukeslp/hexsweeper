@@ -1,7 +1,7 @@
 /*
  * Hex bloom chrome for sphere-ux.
- * Closed: three dock hexes at bottom (Restart · Menu · Help).
- * Open: bloom roots at the Menu tile and fans upward; Menu becomes Close.
+ * Closed: one black horizon seed at bottom.
+ * Open: bloom roots at the seed; Undo · Close · Flag form its keel.
  * Geometry + fold language from /uxperiments/clex.
  */
 
@@ -14,6 +14,7 @@
   --tile-w-dock: var(--tile-w-dock-idle);
   --tile-h-dock: var(--tile-h-dock-idle);
   --dock-rise: 0px;
+  --seed-sink: 44px;
   --border-w: 1.5px;
   --hex-clip: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   --hb-ink: var(--text-main, #000);
@@ -146,17 +147,102 @@
 .hex-bloom[data-dock-mode="center"] .hex-bloom-dock {
   display: none;
 }
-.hb-hex.is-center-close .hb-label {
-  font-size: 19px;
-  font-weight: 600;
+/* The flower earns bigger tiles (no dock to clear) and folds like origami:
+   deeper fold angle, harder scale-down, slower open. */
+.hex-bloom[data-dock-mode="center"] {
+  /* Modest fallback only — sizeCenterFlower() in JS overrides --tile-w/-h
+     inline against the ACTUAL rendered sphere radius (game.getSphereScreen)
+     the instant the menu opens, which is the only way "fits inside the
+     sphere" holds at every board size and zoom level. A fixed px guess
+     failed twice in testing (too small, then bigger than the sphere itself)
+     because the sphere's own on-screen size moves with board size and zoom
+     while a CSS constant does not. */
+  --tile-w: 84px;
+  --tile-h: 96px;
+  --fold: 104deg;
+  --fold-scale: 0.5;
+  --fold-ms: 340ms;
 }
-
+.hex-bloom[data-context-menu="true"] {
+  --fold: 88deg;
+  --fold-scale: 0.68;
+  --fold-ms: 140ms;
+}
+.hex-bloom[data-icon-menu="true"] {
+  --border-w: 1px;
+  --hb-fill: var(--hb-paper);
+  --hb-fill-hover: var(--hb-paper);
+  --hb-stroke: var(--hb-ink);
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex { filter: none; }
+.hex-bloom[data-icon-menu="true"] .hb-hex:hover::before,
+.hex-bloom[data-icon-menu="true"] .hb-hex:focus-visible::before {
+  inset: var(--border-w);
+  background: var(--hb-paper);
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-active::before {
+  background: var(--hb-ink);
+}
+/* Depth that reads at rest: a convex cap viewed slightly off-axis, with a
+   short perspective and z-graded shadows. The center rides forward while
+   the ring falls away, matching the sphere underneath instead of forming
+   the old inside-out bowl. */
+/* Spherical seating rotates tiles about their OWN centers (sphere faces
+   curve about their centroids, not their inner edges — edge-hinging is what
+   broke the tessellation). Overrides place()'s inline fold origin, so the
+   fold becomes a center flip; the radial stagger keeps the bloom feel. */
+.hex-bloom[data-dock-mode="center"] .hb-hex {
+  transform-origin: 50% 50% !important;
+}
+.hex-bloom[data-dock-mode="center"] .hex-bloom-stage {
+  /* Longer than the bottom-dock's 1100px default would be, but longer than
+     the earlier 700px here: bigger tiles at the old short distance was
+     over-foreshortening (the faceted/octagon look in Luke's screenshot). */
+  perspective: 620px;
+  perspective-origin: 50% 44%;
+  /* No baked tilt: pointer parallax owns the stage transform (JS), so the
+     flower sits perfectly aligned at rest and gains depth through motion.
+     Transform transition off — the rAF lerp is the damper. */
+  transition: opacity 0.12s ease, visibility 0.12s;
+  transform-origin: 50% 50%;
+}
+.hex-bloom[data-dome="true"] .hex-bloom-stage {
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+}
+.hex-bloom[data-dome="true"]:not([data-dock-mode="center"]) .hex-bloom-stage {
+  perspective: 760px;
+  perspective-origin: 50% 100%;
+}
+.hex-bloom[data-dock-mode="center"] .hb-hex.shown {
+  /* Subtle z-graded shadow; max() clamps the recessed center to zero so a
+     negative blur can never invalidate the whole filter. */
+  filter:
+    drop-shadow(
+      0
+      calc(max(var(--dz, 0px), 0px) * 0.07 + var(--hov, 0px) * 0.25)
+      calc(max(var(--dz, 0px), 0px) * 0.13 + 2px)
+      rgba(0, 0, 0, 0.26)
+    )
+    drop-shadow(0 0 2px var(--hb-paper));
+}
+.hex-bloom[data-icon-menu="true"]:not([data-dome="true"]) .hb-hex.shown {
+  /* The flat center flower is still one thin object hovering above the
+     sphere. A restrained shared shadow gives the pointer tilt something to
+     reveal without making seven independent cards. */
+  filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--hb-ink) 18%, transparent));
+}
+.hex-bloom[data-dome="true"] .hb-hex {
+  backface-visibility: hidden;
+}
 /* Help corner — its own seat, lower right, always idle-sized. It never
    grows with the bloom: it is reference chrome, not part of the flower. */
 .hex-bloom-corner {
   position: absolute;
-  right: max(10px, env(safe-area-inset-right, 0px));
-  bottom: max(2px, env(safe-area-inset-bottom, 0px));
+  /* Keep the bare glyph fully inside the visual viewport. Two pixels left
+     its stroked circle clipped by desktop browser chrome and mobile bars. */
+  right: max(14px, calc(env(safe-area-inset-right, 0px) + 10px));
+  bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px));
   z-index: 3;
   pointer-events: auto;
 }
@@ -207,14 +293,10 @@
   pointer-events: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
+  /* Stage / .hb-hex reduced-motion handling lives in the !important block
+     near the end of this file — only the dock's own fade is decided here. */
   .hex-bloom-dock {
     transition: opacity 0.12s ease;
-  }
-  .hex-bloom-stage {
-    transition: opacity 0.12s ease;
-  }
-  .hex-bloom-dock .hb-hex.is-dock {
-    transition: none;
   }
 }
 @media (max-width: 400px) {
@@ -303,6 +385,7 @@
   height: 28px;
   pointer-events: none;
   color: inherit;
+  transition: opacity 0.18s ease;
 }
 .hb-hex .hb-icon {
   display: block;
@@ -416,6 +499,45 @@
 .hb-hex.is-flag-icon.is-active .hb-icon,
 .hb-hex.is-flag-icon.is-chosen .hb-icon {
   color: #ff0000;
+}
+
+/* Contextual flower: Home and Reset share a warm navigation/action signal,
+   while Flag stays neutral until the mode is actually active. Tile materials
+   never change — state lives in the glyphs only. */
+.hex-bloom[data-icon-menu="true"] .cat-home .hb-glyph,
+.hex-bloom[data-icon-menu="true"] .is-center-reset .hb-glyph,
+.hex-bloom[data-icon-menu="true"] .cat-reset .hb-glyph {
+  color: #ffd400;
+}
+.hex-bloom[data-icon-menu="true"] .cat-undo .hb-glyph {
+  color: #18a64a;
+}
+.hex-bloom[data-icon-menu="true"] .is-flag-toggle .hb-glyph {
+  color: var(--hb-ink);
+}
+.hex-bloom[data-icon-menu="true"] .is-flag-toggle.is-mode-active .hb-glyph {
+  color: #ff2200;
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-glyph {
+  width: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
+  height: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-primary .hb-icon {
+  width: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
+  height: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
+}
+.hex-bloom[data-icon-menu="true"] .hb-icon-sizeXL {
+  overflow: visible;
+  transform: scale(1.18);
+  transform-origin: 50% 50%;
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-glyph {
+  width: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
+  height: clamp(44px, calc(var(--tile-h) * 0.36), 62px);
+}
+.hex-bloom[data-icon-menu="true"] .hb-hex.is-sub .hb-icon {
+  width: clamp(40px, calc(var(--tile-h) * 0.32), 56px);
+  height: clamp(40px, calc(var(--tile-h) * 0.32), 56px);
 }
 
 /* Theme primary = plain circle; tint from current theme when available */
@@ -536,12 +658,43 @@
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-side:focus-visible .hb-glyph {
   opacity: 1;
 }
+.hex-bloom .hb-hex.is-dock-reset .hb-glyph {
+  color: #18a64a;
+}
 /* Flag mode on: the dock flag turns red — full strength in every phase
    (the idle rule above otherwise pins side glyphs to ink at 0.72). */
 .hex-bloom .hb-hex.is-dock-flag.is-flag-icon .hb-glyph {
   color: #ff2200;
   opacity: 1;
 }
+/* ?seed=bare: idle seed is JUST the gear — hex face appears on activation,
+   exactly the treatment Reset and ? already get when closed. */
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hex-bloom-dock .hb-glyph {
+  width: 78%;
+  height: 78%;
+  max-width: 36px;
+  max-height: 36px;
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu {
+  background: transparent;
+  filter: none;
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu::before {
+  opacity: 0;
+  background: transparent;
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  color: var(--hb-ink);
+  opacity: 0.72;
+  filter:
+    drop-shadow(0 0 2px var(--hb-paper))
+    drop-shadow(0 0 1px var(--hb-paper));
+}
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu:hover .hb-glyph,
+.hex-bloom[data-seed="bare"][data-phase="closed"] .hb-hex.is-dock-menu:focus-visible .hb-glyph {
+  opacity: 1;
+}
+
 /* Menu: light outline + hollow-hex icon (reads as “open”) */
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu {
   background: var(--hb-stroke);
@@ -556,6 +709,43 @@
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
   opacity: 1;
+}
+
+/* Default and bottom-dome launch from one deliberate horizon tab. Its full
+   88px hex leaves a 44px exposed target; the other two actions retain their
+   seats invisibly so the seed never jumps sideways when it blooms. */
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hex-bloom-dock {
+  --dock-rise: var(--seed-sink);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-side {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.72);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu {
+  width: var(--tile-w);
+  height: var(--tile-h);
+  background: var(--hb-ink);
+  color: var(--hb-paper);
+  filter: none;
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu::before {
+  inset: 0;
+  opacity: 1;
+  background: var(--hb-ink);
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="closed"] .hb-hex.is-dock-menu .hb-glyph {
+  width: 36px;
+  height: 36px;
+  max-width: none;
+  max-height: none;
+  color: var(--hb-paper);
+  transform: translateY(calc(var(--seed-sink) * -0.48));
+}
+.hex-bloom[data-bottom-seed="true"][data-phase="open"] .hb-hex.is-dock-menu .hb-glyph,
+.hex-bloom[data-bottom-seed="true"][data-phase="falling"] .hb-hex.is-dock-menu .hb-glyph {
+  transform: translateY(0);
 }
 
 /* ---- Open: full bloom borders on all three; menu = solid × ---- */
@@ -579,6 +769,10 @@
   color: var(--hb-paper);
   z-index: 42;
 }
+.hex-bloom[data-phase="open"] .hb-hex.is-dock-menu .hb-glyph,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu .hb-glyph {
+  color: var(--hb-paper);
+}
 .hex-bloom[data-phase="open"] .hb-hex.is-dock-menu::before,
 .hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock-menu::before {
   background: var(--hb-ink);
@@ -591,6 +785,18 @@
   font-size: clamp(16px, 4vw, 22px);
   font-weight: 500;
   opacity: 1;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock .hb-glyph,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock .hb-glyph {
+  width: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
+  height: clamp(44px, calc(var(--tile-h) * 0.38), 66px);
+  max-width: none;
+  max-height: none;
+}
+.hex-bloom[data-phase="open"] .hb-hex.is-dock .hb-icon,
+.hex-bloom[data-phase="open"][data-dock="ready"] .hb-hex.is-dock .hb-icon {
+  width: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
+  height: clamp(40px, calc(var(--tile-h) * 0.34), 60px);
 }
 .hex-bloom[data-phase="closed"] .hb-hex.is-dock {
   pointer-events: auto;
@@ -615,7 +821,10 @@
 }
 
 .hex-bloom[data-branch] .hb-hex.is-primary:not(.is-active) {
-  opacity: 0.38;
+  opacity: 1;
+}
+.hex-bloom[data-branch] .hb-hex.is-primary:not(.is-active) .hb-glyph {
+  opacity: 0.42;
 }
 
 /* Sub / leaf ring */
@@ -647,31 +856,44 @@
   transform:
     translate(var(--tx, 0), var(--ty, 0))
     rotate3d(var(--ax, 0), var(--ay, 1), 0, var(--fold, 82deg))
-    scale(0.86);
+    scale(var(--fold-scale, 0.86));
 }
 .hb-hex.shown {
   opacity: 1;
+  /* --domeax/--domeay/--dome/--dz/--dscale: the ?dome=1 bowl (applyCenterDome)
+     — a single rotation around each tile's own tangent axis, the exact
+     "point this face at the sphere's center" transform (external review,
+     2026-08-10: a two-axis rotateX+rotateY split does not commute and only
+     half-shares an axis between neighbors — one rotation has no such flaw).
+     --hov: hover/select lift. Defaults keep everything flat. */
   transform:
     translate(var(--tx, 0), var(--ty, 0))
-    rotate3d(var(--ax, 0), var(--ay, 1), 0, 0deg)
-    scale(1);
+    translateZ(calc(var(--dz, 0px) + var(--hov, 0px)))
+    rotate3d(var(--domeax, 0), var(--domeay, 1), 0, var(--dome, 0deg))
+    scale(var(--dscale, 1));
+}
+/* Tiles flip up a touch toward the player on hover / keyboard focus.
+   Snappier than the fold: the lift must not ride --fold-ms (340ms in
+   center mode read as lag, not response). */
+.hex-bloom[data-dome="true"] .hb-hex.is-primary.shown:hover,
+.hex-bloom[data-dome="true"] .hb-hex.is-primary.shown:focus-visible {
+  --hov: 14px;
+  transition-duration: 130ms;
+}
+.hex-bloom[data-dome="true"] .hb-hex.is-primary.shown:active {
+  --hov: 7px;
 }
 
+
+
 /* ---- Sphere-face menu variants -----------------------------------------
-   The controls use the renderer's actual projected face polygons. They are
-   not a honeycomb over the sphere: they sit on seven real neighbouring tiles
-   and are reprojected while the camera eases in/out. */
+   The controls use the renderer's actual projected face polygons. They sit
+   on seven real neighbouring tiles and are reprojected while the camera
+   eases in and out. The center face is Reset, matching the base flower. */
 .hex-bloom[data-face-takeover="true"] .hex-bloom-scrim {
   background: color-mix(in srgb, var(--hb-paper) 7%, transparent);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-}
-.hex-bloom[data-face-takeover="true"][data-phase="open"] .hex-bloom-dock,
-.hex-bloom[data-face-takeover="true"][data-phase="falling"] .hex-bloom-dock,
-.hex-bloom[data-face-takeover="true"][data-phase="open"] .hex-bloom-corner,
-.hex-bloom[data-face-takeover="true"][data-phase="falling"] .hex-bloom-corner {
-  opacity: 0;
-  pointer-events: none;
 }
 .hex-bloom[data-face-takeover="true"] .hb-face-action {
   margin: 0;
@@ -786,15 +1008,9 @@
     drop-shadow(0 2px 5px rgb(0 15 30 / 0.5));
 }
 @keyframes hb-underwater-caustic {
-  from {
-    transform: translate3d(-10%, -5%, 0) scale(1.12);
-  }
-  to {
-    transform: translate3d(10%, 6%, 0) scale(1.22) rotate(3deg);
-  }
+  from { transform: translate3d(-10%, -5%, 0) scale(1.12); }
+  to { transform: translate3d(10%, 6%, 0) scale(1.22) rotate(3deg); }
 }
-
-
 
 /* Stats hub */
 .hex-bloom-hub {
@@ -831,6 +1047,27 @@ body[data-sphere-chrome="dark"] .hex-bloom-hub {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
+}
+
+.hex-bloom-tooltip {
+  position: fixed;
+  z-index: 90;
+  max-width: min(220px, calc(100vw - 16px));
+  padding: 5px 8px 6px;
+  border: 1px solid var(--hb-paper);
+  border-radius: 4px;
+  background: var(--hb-ink);
+  color: var(--hb-paper);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--hb-ink) 28%, transparent);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.hex-bloom-tooltip[hidden] {
+  display: none;
 }
 
 .hex-bloom-live {
@@ -893,5 +1130,23 @@ body.hex-bloom-open .canvas-container {
     --tile-w: 66px;
     --tile-h: 76px;
   }
+  .hex-bloom[data-icon-menu="true"]:not([data-dock-mode="center"]) {
+    --tile-w: 76px;
+    --tile-h: 88px;
+  }
+  .hex-bloom[data-bottom-seed="true"][data-icon-menu="true"]:not([data-dock-mode="center"]) {
+    --tile-w: 92px;
+    --tile-h: 106px;
+    --seed-sink: 53px;
+  }
   .hb-hex .hb-label { font-size: 10px; }
+}
+
+/* Hub glyphs: bomb by the mine count, clock by the time. */
+.hex-bloom-hub .hub-ico {
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
+  vertical-align: -2px;
+  margin-right: -3px;
 }

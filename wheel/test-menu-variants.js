@@ -14,6 +14,20 @@ assert.strictEqual(variants.resolve("?menu=nope").id, "base");
 assert.strictEqual(variants.resolve("?menu=base", "faces-water").id, "underwater");
 assert.ok(Object.isFrozen(variants.PROFILES));
 assert.ok(Object.isFrozen(variants.PROFILES.takeover));
+assert.strictEqual(variants.ARRANGEMENT, "sphere-center-v1");
+assert.deepStrictEqual(variants.RING_ACTIONS, [
+  "lightdark",
+  "warnings",
+  "undo",
+  "flagmode",
+  "invert",
+  "size",
+]);
+assert.strictEqual(variants.CENTER_ACTION, "reset");
+for (const profile of Object.values(variants.PROFILES)) {
+  assert.strictEqual(profile.arrangement, variants.ARRANGEMENT);
+  assert.strictEqual(profile.anchor === "dock", false);
+}
 
 function face(index, x, y, z = 1) {
   return { index, z, center: { x, y } };

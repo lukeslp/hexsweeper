@@ -567,7 +567,7 @@
   const NEST_STORAGE_KEY = "hexwheel-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexwheel-countstyle-v1";
   const INVERT_STORAGE_KEY = "hexwheel-invert-v1";
-  const WELCOME_KEY = "hexwheel-welcome-v1";
+  const WELCOME_KEY = "hexwheel-tutorial-v1";
   const RUN_STORAGE_KEY = "hexwheel-run-v3";
   const RUN_STORAGE_KEY_LEGACY = "hexwheel-run-v2";
   const RUN_STORAGE_KEY_LEGACY_V1 = "hexwheel-run-v1";
@@ -1316,6 +1316,8 @@
       if (!helpOverlay) return;
       pauseWheel("help");
       if (fromWelcome) markWelcomeSeen = true;
+      if (global.WheelTutorial && typeof global.WheelTutorial.reset === "function")
+        global.WheelTutorial.reset();
       helpFocusReturn =
         document.activeElement && document.activeElement !== document.body
           ? document.activeElement
@@ -1327,7 +1329,7 @@
       requestAnimationFrame(() => helpOverlay.classList.add("open"));
       if (releaseFocusTrap) releaseFocusTrap();
       releaseFocusTrap = trapFocus(helpOverlay);
-      (helpPanel || helpOverlay).focus?.();
+      (document.getElementById("help-title") || helpPanel || helpOverlay).focus?.();
     }
 
     function closeHelp() {
@@ -5150,9 +5152,9 @@
     }
 
     try {
-      const forceWelcome = /(?:\?|&)welcome=1(?:&|$)/.test(location.search);
+      const forceWelcome = /(?:\?|&)welcome=1[;,]?(?:&|$)/.test(location.search);
       const skipWelcome =
-        /(?:\?|&)welcome=0(?:&|$)/.test(location.search) ||
+        /(?:\?|&)welcome=0[;,]?(?:&|$)/.test(location.search) ||
         restored ||
         wantDeal ||
         !!activeTake;
@@ -5167,6 +5169,8 @@
 
     return {
       reset: () => requestReset({ force: true }),
+      undo: () => restoreUndo(),
+      canUndo: () => !!undoSnapshot,
       floodFrom,
       getState: () => state,
       pickTile,
