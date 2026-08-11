@@ -153,12 +153,16 @@
   const EQUATOR_RIBBON = DOCK_MODE === "equator";
   const EGG_SHELL = DOCK_MODE === "eggshell" || DOCK_MODE === "egg";
   const INNER_CHAMBER = DOCK_MODE === "chamber";
+  const POLAR_TAKES = ["capstan", "crown", "drill", "lid"];
+  const POLAR_TAKE = POLAR_TAKES.includes(DOCK_MODE) ? DOCK_MODE : null;
+  const POLAR_STUDY = !!POLAR_TAKE;
   const SPATIAL_SHELL = EGG_SHELL || INNER_CHAMBER;
+  const SCENE_STUDY = SPATIAL_SHELL || POLAR_STUDY;
   const FIXED_CENTER =
     DOCK_MODE === "center" ||
     FACE_TAKEOVER ||
     EQUATOR_RIBBON ||
-    SPATIAL_SHELL;
+    SCENE_STUDY;
   const DEFAULT_BLOOM = DOCK_MODE === "default";
   const DOCK_CENTER = FIXED_CENTER || DOCK_CONTEXT;
   const SHARED_MENU = FIXED_CENTER || DEFAULT_BLOOM;
@@ -455,6 +459,7 @@
     if (prefersReducedMotion()) return 0;
     if (EGG_SHELL) return 420;
     if (INNER_CHAMBER) return 340;
+    if (POLAR_STUDY) return POLAR_TAKE === "lid" ? 420 : 300;
     return DOCK_CONTEXT ? 140 : 180;
   }
 
@@ -480,7 +485,7 @@
     scrim.setAttribute("aria-hidden", "true");
     root.appendChild(scrim);
 
-    const shellScene = SPATIAL_SHELL ? document.createElement("div") : null;
+    const shellScene = SCENE_STUDY ? document.createElement("div") : null;
     if (shellScene) {
       shellScene.className = "hb-shell-scene";
       shellScene.setAttribute("aria-hidden", "true");
@@ -645,6 +650,24 @@
           cx: lowX <= highX ? Math.max(lowX, Math.min(highX, anchor.x)) : w / 2,
           cy: lowY <= highY ? Math.max(lowY, Math.min(highY, anchor.y)) : h / 2,
         };
+      }
+      if (POLAR_STUDY) {
+        const disk =
+          typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
+        const canvas = document.getElementById("gameCanvas");
+        const rect = canvas
+          ? canvas.getBoundingClientRect()
+          : { left: 0, top: 0 };
+        if (disk && disk.r) {
+          const targetY =
+            rect.top +
+            disk.cy -
+            disk.r * (POLAR_TAKE === "capstan" ? 0.32 : POLAR_TAKE === "lid" ? 0.28 : 0.34);
+          return {
+            cx: Math.max(90, Math.min(w - 90, rect.left + disk.cx)),
+            cy: Math.max(112, Math.min(h - 160, targetY)),
+          };
+        }
       }
       if (DOCK_CENTER) return { cx: w / 2, cy: h / 2 };
       const csRoot = getComputedStyle(root);
@@ -1669,6 +1692,58 @@
       return true;
     }
 
+    function buildPolarScene() {
+      if (!shellScene || !POLAR_STUDY) return false;
+      const disk =
+        typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
+      if (!disk || !disk.r) return false;
+      const { cx, cy } = centerXY();
+      const { HEX } = tileMetrics();
+      shellScene.textContent = "";
+      shellScene.dataset.kind = "polar-" + POLAR_TAKE;
+      shellScene.style.setProperty("--polar-cx", cx.toFixed(1) + "px");
+      shellScene.style.setProperty("--polar-cy", cy.toFixed(1) + "px");
+      shellScene.style.setProperty("--polar-r", disk.r.toFixed(1) + "px");
+      shellScene.style.setProperty("--polar-unit", HEX.toFixed(1) + "px");
+
+      const object = document.createElement("div");
+      object.className = "hb-polar-object hb-polar-object--" + POLAR_TAKE;
+      if (POLAR_TAKE === "capstan") {
+        ["collar", "shaft", "top", "seam-left", "seam-right"].forEach((part) => {
+          const node = document.createElement("div");
+          node.className = "hb-polar-" + part;
+          object.appendChild(node);
+        });
+      } else if (POLAR_TAKE === "crown") {
+        const collar = document.createElement("div");
+        collar.className = "hb-polar-collar";
+        object.appendChild(collar);
+        for (let i = 0; i < 6; i += 1) {
+          const petal = document.createElement("div");
+          petal.className = "hb-polar-petal";
+          petal.style.setProperty("--petal-i", String(i));
+          object.appendChild(petal);
+        }
+      } else if (POLAR_TAKE === "drill") {
+        for (let i = 0; i < 3; i += 1) {
+          const ring = document.createElement("div");
+          ring.className = "hb-polar-ring hb-polar-ring--" + (i + 1);
+          object.appendChild(ring);
+        }
+        const bore = document.createElement("div");
+        bore.className = "hb-polar-bore";
+        object.appendChild(bore);
+      } else if (POLAR_TAKE === "lid") {
+        ["hinge", "tether", "panel", "panel-rim"].forEach((part) => {
+          const node = document.createElement("div");
+          node.className = "hb-polar-" + part;
+          object.appendChild(node);
+        });
+      }
+      shellScene.appendChild(object);
+      return true;
+    }
+
     function clearSpatialScene() {
       cancelAnimationFrame(chamberRaf);
       chamberRaf = 0;
@@ -1718,6 +1793,7 @@
     function prepareSpatialScene() {
       if (EGG_SHELL) return buildEggShellScene();
       if (INNER_CHAMBER) return buildChamberScene();
+      if (POLAR_STUDY) return buildPolarScene();
       return false;
     }
 
@@ -2151,9 +2227,11 @@
         if (typeof cat.cycle === "function") cat.cycle();
         refreshPrimaryLabels();
         announce(typeof cat.aria === "function" ? cat.aria() : label);
-        if (cat.id === "size" && (FACE_TAKEOVER || EQUATOR_RIBBON)) {
+        if (cat.id === "size" && (FACE_TAKEOVER || EQUATOR_RIBBON || POLAR_STUDY)) {
           requestAnimationFrame(() => {
             if (state.phase !== "open") return;
+            sizeCenterFlower();
+            if (POLAR_STUDY) buildPolarScene();
             renderBloom({ petals: true });
             bloomPetals();
           });
@@ -2309,6 +2387,81 @@
       return true;
     }
 
+    function polarSeats(hex) {
+      if (POLAR_TAKE === "capstan") {
+        return {
+          reset: { x: 0, y: -1.02 * hex },
+          actions: [
+            { x: -0.92 * hex, y: 0.48 * hex },
+            { x: 0.92 * hex, y: 0.48 * hex },
+            { x: -0.92 * hex, y: 1.98 * hex },
+            { x: 0.92 * hex, y: 1.98 * hex },
+            { x: -0.92 * hex, y: 3.48 * hex },
+            { x: 0.92 * hex, y: 3.48 * hex },
+          ],
+        };
+      }
+      if (POLAR_TAKE === "drill") {
+        return {
+          reset: { x: 0, y: 0 },
+          actions: [
+            { x: 0, y: -2.05 * hex },
+            { x: 2.05 * hex, y: 0 },
+            { x: 0, y: 2.05 * hex },
+            { x: -2.05 * hex, y: 0 },
+            { x: -2.55 * hex, y: 2.45 * hex },
+            { x: 2.55 * hex, y: 2.45 * hex },
+          ],
+        };
+      }
+      if (POLAR_TAKE === "lid") {
+        return {
+          reset: { x: 0, y: 0 },
+          actions: [
+            { x: -0.88 * hex, y: -1.5 * hex },
+            { x: 0.88 * hex, y: -1.5 * hex },
+            { x: -1.76 * hex, y: 0 },
+            { x: 1.76 * hex, y: 0 },
+            { x: -0.88 * hex, y: 1.5 * hex },
+            { x: 0.88 * hex, y: 1.5 * hex },
+          ],
+        };
+      }
+      const ring = DIRECTIONS.map((direction) => {
+        const point = hexToPixel(direction.q, direction.r, hex);
+        return { x: point.x, y: point.y };
+      });
+      return { reset: { x: 0, y: 0 }, actions: ring };
+    }
+
+    function renderPolarStudy(cats) {
+      const { HEX } = tileMetrics();
+      const { cx, cy } = centerXY();
+      const seats = polarSeats(HEX);
+      cats.forEach((cat, index) => {
+        const el = makeExperimentAction(
+          cat,
+          index,
+          "hb-polar-action hb-polar-action--" + POLAR_TAKE
+        );
+        const seat = seats.actions[index];
+        place(el, cx + seat.x, cy + seat.y, cx, cy);
+        el.dataset.polarIndex = String(index);
+        el.dataset.delay = String(55 + index * 34);
+        el.classList.add("folded");
+        stage.appendChild(el);
+      });
+      const reset = makeExperimentReset(
+        "hb-polar-action hb-polar-reset hb-polar-action--" + POLAR_TAKE
+      );
+      place(reset, cx, cy + seats.reset.y, cx, cy);
+      reset.dataset.delay = "0";
+      reset.classList.add("folded");
+      stage.appendChild(reset);
+      centerActionBtn = reset;
+      return true;
+    }
+
     function renderBloom(options) {
       const withPetals = !options || options.petals !== false;
       clearStage();
@@ -2322,6 +2475,7 @@
       if (!withPetals) return;
       if (FACE_TAKEOVER && renderFaceTakeover(cats)) return;
       if (EQUATOR_RIBBON && renderEquatorRibbon(cats)) return;
+      if (POLAR_STUDY && renderPolarStudy(cats)) return;
 
       cats.forEach((cat, i) => {
         const d =
@@ -2479,6 +2633,21 @@
         typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
       if (!disk || !disk.r) return;
       const stageWidth = stage.clientWidth || global.innerWidth;
+      const stageHeight = stage.clientHeight || global.innerHeight;
+      if (POLAR_STUDY) {
+        const widthUnits = POLAR_TAKE === "drill" ? 7.1 : POLAR_TAKE === "crown" ? 5.5 : 4.6;
+        const heightUnits = POLAR_TAKE === "capstan" ? 5.6 : POLAR_TAKE === "drill" ? 6.4 : 4.8;
+        const desired =
+          disk.r *
+          (POLAR_TAKE === "capstan" ? 0.15 : POLAR_TAKE === "drill" ? 0.135 : 0.17);
+        const hex = Math.max(
+          29,
+          Math.min(66, desired, (stageWidth - 24) / widthUnits, (stageHeight - 104) / heightUnits)
+        );
+        root.style.setProperty("--tile-h", (hex * 2).toFixed(1) + "px");
+        root.style.setProperty("--tile-w", (hex * 1.746).toFixed(1) + "px");
+        return;
+      }
       const narrowContext = DOCK_CONTEXT && stageWidth <= 520;
       const viewportCap = DOCK_CONTEXT
         ? Math.min(
@@ -2486,7 +2655,7 @@
             ((stage.clientHeight || global.innerHeight) - 28) / 5
           )
         : 90;
-      const spatialFit = EGG_SHELL ? 0.5 : INNER_CHAMBER ? 0.46 : FLOWER_FIT;
+      const spatialFit = EGG_SHELL ? 0.43 : INNER_CHAMBER ? 0.42 : FLOWER_FIT;
       const hex = Math.max(
         DOCK_CONTEXT ? (narrowContext ? 36 : 25) : 30,
         Math.min(
@@ -2580,7 +2749,7 @@
         statsTimer = null;
         hub.dataset.open = "false";
         hub.hidden = true;
-        if (SPATIAL_SHELL) clearSpatialScene();
+        if (SCENE_STUDY) clearSpatialScene();
         setCanvasInert(false);
         if (typeof game.resumeTimer === "function") game.resumeTimer();
         announce("Menu closed");
@@ -2604,7 +2773,7 @@
     // Dome gets the full oblique camera; the base flower moves as one nearly
     // flat plate, just enough to separate it from the sphere without opening
     // seams between tiles. rAF-lerped so repeated interaction cannot drift.
-    if (DOCK_CENTER && !FACE_TAKEOVER && !EQUATOR_RIBBON && !SPATIAL_SHELL) {
+    if (DOCK_CENTER && !FACE_TAKEOVER && !EQUATOR_RIBBON && !SCENE_STUDY) {
       const BASE_RX = DOME ? 9 : 0.8;
       const BASE_RY = DOME ? -6 : -0.6;
       const PARALLAX_DEG = DOME ? 5 : 2.1;
@@ -2666,6 +2835,10 @@
       if (EQUATOR_RIBBON) root.dataset.equatorRibbon = "true";
       if (EGG_SHELL) root.dataset.eggShell = "true";
       if (INNER_CHAMBER) root.dataset.innerChamber = "true";
+      if (POLAR_STUDY) {
+        root.dataset.polarStudy = "true";
+        root.dataset.polarTake = POLAR_TAKE;
+      }
       // The background is the menu activator: a quick tap that lands off the
       // sphere's disk (game.getSphereScreen) opens the flower. In contextual
       // mode the flower follows that canvas point, then centerXY clamps its
@@ -2906,7 +3079,7 @@
         lastStageH = h;
         if (
           !widthChanged &&
-          !((DOCK_CONTEXT || SPATIAL_SHELL) && heightChanged)
+          !((DOCK_CONTEXT || SCENE_STUDY) && heightChanged)
         )
           return;
         if (state.phase === "open") {
@@ -2914,6 +3087,7 @@
           sizeCenterFlower();
           if (EGG_SHELL) refreshEggShellSnapshot();
           if (INNER_CHAMBER) buildChamberScene();
+          if (POLAR_STUDY) buildPolarScene();
           const active = state.active;
           renderBloom({ petals: true });
           state.active = active;

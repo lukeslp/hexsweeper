@@ -1544,12 +1544,15 @@
       if (nextMode) {
         const w = canvas.clientWidth || window.innerWidth;
         const h = canvas.clientHeight || window.innerHeight;
-        const farX = Math.max(state.centerX, w - state.centerX);
-        const farY = Math.max(state.centerY, h - state.centerY);
         const baseR = Math.max(1, state.scale);
+        // The chamber is still recognisably one complete globe: cap its
+        // outer annulus at 88% of the short viewport edge rather than scaling
+        // until it swallows every corner. The concave projection supplies the
+        // inside-out read; viewport overflow only made the controls feel tiny.
+        const targetR = Math.min(w, h) * 0.44;
         state.chromeProjectionScale = Math.min(
-          3.8,
-          Math.max(1.48, farX / baseR, farY / baseR) * 1.08
+          1.48,
+          Math.max(1.18, targetR / baseR)
         );
       } else {
         state.chromeProjectionScale = 1.48;

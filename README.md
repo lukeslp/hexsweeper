@@ -80,13 +80,17 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
 | `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
-| `collection/sphere-kimi.html` | Take: Moon Ink Orrery (Kimi) |
-| `collection/sphere-claude.html` | Take: Amber Codex (Claude) |
-| `collection/sphere-muse.html` | Take: Starlit Void (Muse) |
+| `collection/sphere-kimi.html` | Visual take: Moon Ink Orrery |
+| `collection/sphere-claude.html` | Visual take: Amber Codex |
+| `collection/sphere-muse.html` | Visual take: Starlit Void |
 | `collection/sphere-face-takeover.html` | Control study: seven real sphere faces become the menu |
-| `collection/sphere-equator-ribbon.html` | Control study: draggable depth-sorted equator ribbon |
-| `collection/sphere-eggshell.html` | Spatial study: sphere cracks and hinges open around the controls |
-| `collection/sphere-chamber.html` | Spatial study: sphere expands into a concave chamber around the player |
+| `collection/sphere-equator-ribbon.html` | Archived V1: draggable depth-sorted equator ribbon |
+| `collection/sphere-eggshell.html` | Spatial study V2: restrained sphere halves open around the controls |
+| `collection/sphere-chamber.html` | Spatial study V2: bounded concave annulus around the controls |
+| `collection/sphere-polar-capstan.html` | Polar study: faceted control spindle |
+| `collection/sphere-polar-crown.html` | Polar study: reset hub with six geodesic vanes |
+| `collection/sphere-polar-drill.html` | Polar study: telescoping concentric controls |
+| `collection/sphere-polar-lid.html` | Polar study: hinged 2–3–2 control panel |
 | `sphere/takes/*.json` | Model design specs for the three takes |
 | `sphere/assets/textures/` | Earth & Moon 2k daymaps for globe themes (`?theme=earth\|moon`) |
 | `collection/index.html` | Desk tile grid — sphere + takes under Experiments (Open + Copy HTML) |

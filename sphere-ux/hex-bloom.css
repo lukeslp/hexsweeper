@@ -1035,16 +1035,15 @@ body.hex-bloom-eggshell-active #gameCanvas {
 }
 .hb-egg-core {
   z-index: 0;
-  background:
-    radial-gradient(
-      circle at 50% 48%,
-      color-mix(in srgb, var(--hb-paper) 92%, var(--hb-ink)) 0 17%,
-      color-mix(in srgb, var(--hb-ink) 88%, var(--hb-paper)) 46%,
-      var(--hb-ink) 74%
-    );
+  background: radial-gradient(
+    circle,
+    transparent 0 39%,
+    color-mix(in srgb, var(--hb-ink) 18%, transparent) 40% 41%,
+    transparent 43%
+  );
   box-shadow:
-    inset 0 0 calc(var(--egg-r) * 0.16) color-mix(in srgb, var(--hb-paper) 30%, transparent),
-    0 0 calc(var(--egg-r) * 0.12) color-mix(in srgb, var(--hb-ink) 28%, transparent);
+    inset 0 0 0 1px color-mix(in srgb, var(--hb-ink) 18%, transparent),
+    0 0 calc(var(--egg-r) * 0.045) color-mix(in srgb, var(--hb-ink) 16%, transparent);
   opacity: 0;
   transform: scale(0.86);
   transition:
@@ -1107,11 +1106,11 @@ body.hex-bloom-eggshell-active #gameCanvas {
   transform: scale(1);
 }
 .hex-bloom[data-open="true"] .hb-egg-piece--upper {
-  transform: translate(-2.5%, -14%) rotateX(-14deg) rotateZ(-2deg) scale(0.97);
+  transform: translate(-2%, -19%) rotateX(-17deg) rotateZ(-1.5deg) scale(0.95);
   filter: drop-shadow(0 10px 10px color-mix(in srgb, var(--hb-ink) 38%, transparent));
 }
 .hex-bloom[data-open="true"] .hb-egg-piece--lower {
-  transform: translate(2.5%, 14%) rotateX(14deg) rotateZ(2deg) scale(0.97);
+  transform: translate(2%, 19%) rotateX(17deg) rotateZ(1.5deg) scale(0.95);
   filter: drop-shadow(0 -10px 10px color-mix(in srgb, var(--hb-ink) 34%, transparent));
 }
 .hex-bloom[data-egg-shell="true"] .hex-bloom-stage {
@@ -1136,23 +1135,30 @@ body.hex-bloom-eggshell-active #gameCanvas {
     opacity 260ms ease 90ms;
 }
 .hb-chamber-veil {
-  width: calc(var(--chamber-r, 220px) * 1.2);
-  height: calc(var(--chamber-r, 220px) * 1.2);
+  width: calc(var(--chamber-r, 220px) * 0.46);
+  height: calc(var(--chamber-r, 220px) * 0.46);
   background: radial-gradient(
     circle,
-    var(--hb-paper) 0 58%,
-    color-mix(in srgb, var(--hb-paper) 92%, transparent) 70%,
+    color-mix(in srgb, var(--hb-paper) 96%, transparent) 0 55%,
+    color-mix(in srgb, var(--hb-paper) 74%, transparent) 72%,
     transparent 100%
   );
-  filter: drop-shadow(0 0 20px color-mix(in srgb, var(--hb-paper) 72%, transparent));
+  filter: none;
 }
 .hb-chamber-rim {
-  width: calc(var(--chamber-r, 220px) * 1.06);
-  height: calc(var(--chamber-r, 220px) * 1.06);
+  width: calc(var(--chamber-r, 220px) * 2);
+  height: calc(var(--chamber-r, 220px) * 2);
   border: 1px solid color-mix(in srgb, var(--hb-ink) 40%, transparent);
+  background: radial-gradient(
+    circle,
+    transparent 0 16%,
+    color-mix(in srgb, var(--hb-paper) 22%, transparent) 18%,
+    color-mix(in srgb, var(--hb-ink) 11%, transparent) 38%,
+    transparent 76%
+  );
   box-shadow:
-    inset 0 0 26px color-mix(in srgb, var(--hb-ink) 18%, transparent),
-    0 0 10px var(--hb-paper);
+    inset 0 0 calc(var(--chamber-r, 220px) * 0.34) color-mix(in srgb, var(--hb-ink) 18%, transparent),
+    inset 0 0 0 5px color-mix(in srgb, var(--hb-paper) 36%, transparent);
 }
 .hex-bloom[data-open="true"] .hb-chamber-veil,
 .hex-bloom[data-open="true"] .hb-chamber-rim {
@@ -1170,10 +1176,205 @@ body.hex-bloom-eggshell-active #gameCanvas {
 
 @media (max-width: 520px) {
   .hex-bloom[data-open="true"] .hb-egg-piece--upper {
-    transform: translate(-1.5%, -11%) rotateX(-11deg) rotateZ(-1.5deg) scale(0.98);
+    transform: translate(-1.5%, -17%) rotateX(-14deg) rotateZ(-1deg) scale(0.96);
   }
   .hex-bloom[data-open="true"] .hb-egg-piece--lower {
-    transform: translate(1.5%, 11%) rotateX(11deg) rotateZ(1.5deg) scale(0.98);
+    transform: translate(1.5%, 17%) rotateX(14deg) rotateZ(1deg) scale(0.96);
+  }
+}
+
+/* ---- Polar control studies ------------------------------------------------
+   Four independent mechanisms share one stable landmark: the north pole.
+   The decorative object sits behind the real semantic buttons; it never
+   intercepts input and every action remains a normal labelled control. */
+.hex-bloom[data-polar-study="true"] .hex-bloom-scrim {
+  background: color-mix(in srgb, var(--hb-paper) 10%, transparent);
+  -webkit-backdrop-filter: blur(1.5px) saturate(0.94);
+  backdrop-filter: blur(1.5px) saturate(0.94);
+}
+.hb-polar-object {
+  position: absolute;
+  left: var(--polar-cx, 50%);
+  top: var(--polar-cy, 35%);
+  width: 1px;
+  height: 1px;
+  color: var(--hb-ink);
+  opacity: 0;
+  transform: translate(-50%, -50%) translateY(calc(var(--polar-unit) * 0.7)) scale(0.82);
+  transform-style: preserve-3d;
+  transition:
+    opacity 180ms ease,
+    transform 360ms cubic-bezier(0.22, 1, 0.3, 1);
+}
+.hex-bloom[data-open="true"] .hb-polar-object {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.hb-polar-object > div {
+  position: absolute;
+  box-sizing: border-box;
+}
+.hex-bloom[data-polar-study="true"] .hb-polar-action {
+  transform-origin: 50% 50% !important;
+  filter:
+    drop-shadow(0 4px 7px color-mix(in srgb, var(--hb-ink) 28%, transparent))
+    drop-shadow(0 0 2px var(--hb-paper));
+}
+.hex-bloom[data-polar-study="true"] .hb-polar-reset .hb-glyph {
+  color: #ffd400;
+}
+
+/* Capstan: a faceted spindle physically rises out of the polar collar. */
+.hb-polar-object--capstan {
+  perspective: 620px;
+}
+.hb-polar-object--capstan .hb-polar-collar {
+  left: calc(var(--polar-unit) * -2.35);
+  top: calc(var(--polar-unit) * -1.05);
+  width: calc(var(--polar-unit) * 4.7);
+  height: calc(var(--polar-unit) * 1.7);
+  border-radius: 50%;
+  background: var(--hb-paper);
+  border: 1.5px solid var(--hb-ink);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--hb-ink) 24%, transparent);
+}
+.hb-polar-object--capstan .hb-polar-shaft {
+  left: calc(var(--polar-unit) * -1.86);
+  top: calc(var(--polar-unit) * -0.35);
+  width: calc(var(--polar-unit) * 3.72);
+  height: calc(var(--polar-unit) * 4.75);
+  clip-path: polygon(0 0, 100% 0, 88% 100%, 12% 100%);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--hb-paper) 82%, var(--hb-ink)),
+    var(--hb-paper) 46%,
+    color-mix(in srgb, var(--hb-paper) 72%, var(--hb-ink))
+  );
+  border-bottom: 2px solid var(--hb-ink);
+}
+.hb-polar-object--capstan .hb-polar-top {
+  left: calc(var(--polar-unit) * -1.75);
+  top: calc(var(--polar-unit) * -1.4);
+  width: calc(var(--polar-unit) * 3.5);
+  height: calc(var(--polar-unit) * 1.7);
+  border-radius: 50%;
+  background: var(--hb-paper);
+  border: 2px solid var(--hb-ink);
+}
+.hb-polar-object--capstan .hb-polar-seam-left,
+.hb-polar-object--capstan .hb-polar-seam-right {
+  top: calc(var(--polar-unit) * -0.05);
+  height: calc(var(--polar-unit) * 4.05);
+  border-left: 1px solid color-mix(in srgb, var(--hb-ink) 34%, transparent);
+}
+.hb-polar-object--capstan .hb-polar-seam-left { left: calc(var(--polar-unit) * -0.7); }
+.hb-polar-object--capstan .hb-polar-seam-right { left: calc(var(--polar-unit) * 0.7); }
+.hex-bloom[data-polar-take="capstan"] .hb-polar-action.shown {
+  transform: translateZ(calc(var(--polar-unit) * 0.12));
+}
+
+/* Crown: six geodesic vanes lock around one reset hub. */
+.hb-polar-object--crown .hb-polar-collar {
+  left: calc(var(--polar-unit) * -2.55);
+  top: calc(var(--polar-unit) * -2.55);
+  width: calc(var(--polar-unit) * 5.1);
+  height: calc(var(--polar-unit) * 5.1);
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--hb-ink) 48%, transparent);
+  box-shadow:
+    inset 0 0 calc(var(--polar-unit) * 0.8) color-mix(in srgb, var(--hb-ink) 14%, transparent),
+    0 9px 18px color-mix(in srgb, var(--hb-ink) 20%, transparent);
+}
+.hb-polar-object--crown .hb-polar-petal {
+  left: calc(var(--polar-unit) * -0.68);
+  top: calc(var(--polar-unit) * -2.7);
+  width: calc(var(--polar-unit) * 1.36);
+  height: calc(var(--polar-unit) * 2.25);
+  transform-origin: 50% calc(var(--polar-unit) * 2.7);
+  transform: rotate(calc(var(--petal-i) * 60deg));
+  clip-path: polygon(50% 0, 100% 30%, 86% 100%, 14% 100%, 0 30%);
+  background: color-mix(in srgb, var(--hb-paper) 84%, var(--hb-ink));
+  border-top: 2px solid var(--hb-ink);
+}
+.hex-bloom[data-polar-take="crown"] .hb-polar-action.shown {
+  --dz: calc(var(--polar-unit) * 0.1);
+}
+
+/* Drill: nested annuli telescope toward a quiet polar aperture. */
+.hb-polar-object--drill .hb-polar-ring,
+.hb-polar-object--drill .hb-polar-bore {
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.hb-polar-object--drill .hb-polar-ring {
+  border: 1.5px solid var(--hb-ink);
+  background: color-mix(in srgb, var(--hb-paper) 80%, transparent);
+  box-shadow: inset 0 0 calc(var(--polar-unit) * 0.6) color-mix(in srgb, var(--hb-ink) 13%, transparent);
+}
+.hb-polar-object--drill .hb-polar-ring--1 { width: calc(var(--polar-unit) * 2.25); height: calc(var(--polar-unit) * 2.25); }
+.hb-polar-object--drill .hb-polar-ring--2 { width: calc(var(--polar-unit) * 4.25); height: calc(var(--polar-unit) * 4.25); }
+.hb-polar-object--drill .hb-polar-ring--3 { width: calc(var(--polar-unit) * 7); height: calc(var(--polar-unit) * 7); opacity: 0.62; }
+.hb-polar-object--drill .hb-polar-bore {
+  width: calc(var(--polar-unit) * 1.15);
+  height: calc(var(--polar-unit) * 1.15);
+  background: var(--hb-ink);
+  box-shadow: 0 0 calc(var(--polar-unit) * 0.45) color-mix(in srgb, var(--hb-ink) 35%, transparent);
+}
+.hex-bloom[data-polar-take="drill"] .hb-polar-action {
+  clip-path: circle(50%);
+}
+.hex-bloom[data-polar-take="drill"] .hb-polar-action::before {
+  clip-path: circle(50%);
+}
+
+/* Lid: one detached polar face becomes a shallow, screen-facing panel. */
+.hb-polar-object--lid {
+  perspective: 560px;
+}
+.hb-polar-object--lid .hb-polar-tether {
+  left: calc(var(--polar-unit) * -0.15);
+  top: calc(var(--polar-unit) * 2.15);
+  width: calc(var(--polar-unit) * 0.3);
+  height: calc(var(--polar-unit) * 2.4);
+  background: var(--hb-ink);
+  transform: rotate(12deg);
+  transform-origin: 50% 0;
+}
+.hb-polar-object--lid .hb-polar-hinge {
+  left: calc(var(--polar-unit) * -1.2);
+  top: calc(var(--polar-unit) * 2.15);
+  width: calc(var(--polar-unit) * 2.4);
+  height: calc(var(--polar-unit) * 0.42);
+  border-radius: 999px;
+  background: var(--hb-ink);
+}
+.hb-polar-object--lid .hb-polar-panel,
+.hb-polar-object--lid .hb-polar-panel-rim {
+  left: calc(var(--polar-unit) * -2.95);
+  top: calc(var(--polar-unit) * -2.6);
+  width: calc(var(--polar-unit) * 5.9);
+  height: calc(var(--polar-unit) * 5.2);
+  clip-path: polygon(16% 0, 84% 0, 100% 25%, 100% 75%, 84% 100%, 16% 100%, 0 75%, 0 25%);
+}
+.hb-polar-object--lid .hb-polar-panel {
+  background: color-mix(in srgb, var(--hb-paper) 92%, var(--hb-ink));
+  box-shadow: 0 16px 30px color-mix(in srgb, var(--hb-ink) 28%, transparent);
+}
+.hb-polar-object--lid .hb-polar-panel-rim {
+  background: transparent;
+  border: 2px solid var(--hb-ink);
+}
+.hex-bloom[data-polar-take="lid"] .hex-bloom-stage {
+  perspective: 640px;
+}
+.hex-bloom[data-polar-take="lid"] .hb-polar-action.shown {
+  transform: translateZ(calc(var(--polar-unit) * 0.16)) rotateX(-3deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-polar-object,
+  .hb-polar-object > div {
+    transition-duration: 0ms !important;
   }
 }
 
