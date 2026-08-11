@@ -981,17 +981,17 @@
 }
 
 /* ---- Spatial shell studies -------------------------------------------------
-   Both modes borrow the semantic seven-control flower. Eggshell uses two
-   cropped copies of the current canvas so the live projection remains wholly
-   untouched; Chamber warps the live projection and uses only a quiet central
-   veil here. Decorative layers never receive input. */
+   Both modes borrow the semantic seven-control flower. Eggshell separates
+   whole faces in the live renderer; this layer supplies only the aperture.
+   Chamber warps the live projection and adds a quiet central veil. Decorative
+   layers never receive input. */
 .hex-bloom[data-egg-shell="true"] .hex-bloom-scrim,
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 .hex-bloom[data-egg-shell="true"] .hex-bloom-scrim {
-  background: color-mix(in srgb, var(--hb-paper) 96%, transparent);
+  background: color-mix(in srgb, var(--hb-paper) 5%, transparent);
 }
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
   background: color-mix(in srgb, var(--hb-paper) 5%, transparent);
@@ -1015,103 +1015,28 @@
   visibility: visible;
 }
 
-body.hex-bloom-eggshell-active #gameCanvas {
-  opacity: 0;
-}
-#gameCanvas {
-  transition: opacity 90ms ease;
-}
-
-.hb-egg-frame {
+.hb-egg-interior {
   position: absolute;
-  transform-style: preserve-3d;
-  isolation: isolate;
-}
-.hb-egg-core,
-.hb-egg-piece {
-  position: absolute;
-  inset: 0;
+  left: var(--egg-cx, 50%);
+  top: var(--egg-cy, 50%);
+  width: calc(var(--egg-r, 220px) * 0.9);
+  height: calc(var(--egg-r, 220px) * 0.9);
   border-radius: 50%;
-}
-.hb-egg-core {
-  z-index: 0;
   background: radial-gradient(
     circle,
-    transparent 0 39%,
-    color-mix(in srgb, var(--hb-ink) 18%, transparent) 40% 41%,
-    transparent 43%
+    color-mix(in srgb, var(--hb-paper) 97%, transparent) 0 48%,
+    color-mix(in srgb, var(--hb-paper) 78%, transparent) 68%,
+    transparent 100%
   );
+  border: 1px solid color-mix(in srgb, var(--hb-ink) 22%, transparent);
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--hb-ink) 18%, transparent),
-    0 0 calc(var(--egg-r) * 0.045) color-mix(in srgb, var(--hb-ink) 16%, transparent);
-  opacity: 0;
-  transform: scale(0.86);
-  transition:
-    opacity 160ms ease 40ms,
-    transform 360ms cubic-bezier(0.22, 1, 0.3, 1);
-}
-.hb-egg-piece {
-  z-index: 1;
-  overflow: hidden;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  transition:
-    transform 360ms cubic-bezier(0.22, 1, 0.3, 1),
-    filter 220ms ease;
-  will-change: transform;
-}
-.hb-egg-piece::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hb-ink) 35%, transparent);
-}
-.hb-egg-piece--upper {
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 49%,
-    78% 47%,
-    65% 54%,
-    52% 48%,
-    39% 55%,
-    24% 47%,
-    0 51%
-  );
-  transform-origin: 50% 51%;
-}
-.hb-egg-piece--lower {
-  clip-path: polygon(
-    0 51%,
-    24% 47%,
-    39% 55%,
-    52% 48%,
-    65% 54%,
-    78% 47%,
-    100% 49%,
-    100% 100%,
-    0 100%
-  );
-  transform-origin: 50% 49%;
-}
-.hb-egg-snapshot {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.hex-bloom[data-open="true"] .hb-egg-core {
-  opacity: 1;
-  transform: scale(1);
-}
-.hex-bloom[data-open="true"] .hb-egg-piece--upper {
-  transform: translate(-2%, -19%) rotateX(-17deg) rotateZ(-1.5deg) scale(0.95);
-  filter: drop-shadow(0 10px 10px color-mix(in srgb, var(--hb-ink) 38%, transparent));
-}
-.hex-bloom[data-open="true"] .hb-egg-piece--lower {
-  transform: translate(2%, 19%) rotateX(17deg) rotateZ(1.5deg) scale(0.95);
-  filter: drop-shadow(0 -10px 10px color-mix(in srgb, var(--hb-ink) 34%, transparent));
+    inset 0 0 calc(var(--egg-r, 220px) * 0.16)
+      color-mix(in srgb, var(--hb-ink) 10%, transparent),
+    0 0 calc(var(--egg-r, 220px) * 0.08)
+      color-mix(in srgb, var(--hb-paper) 82%, transparent);
+  opacity: var(--egg-p, 0);
+  transform: translate(-50%, -50%) scale(var(--egg-scale, 0.72));
+  will-change: transform, opacity;
 }
 .hex-bloom[data-egg-shell="true"] .hex-bloom-stage {
   perspective: 820px;
@@ -1128,11 +1053,9 @@ body.hex-bloom-eggshell-active #gameCanvas {
   left: var(--chamber-cx, 50%);
   top: var(--chamber-cy, 50%);
   border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0.72);
-  opacity: 0;
-  transition:
-    transform 420ms cubic-bezier(0.65, 0, 0.35, 1),
-    opacity 260ms ease 90ms;
+  transform: translate(-50%, -50%) scale(var(--chamber-scale, 0.72));
+  opacity: var(--chamber-p, 0);
+  will-change: transform, opacity;
 }
 .hb-chamber-veil {
   width: calc(var(--chamber-r, 220px) * 0.46);
@@ -1160,11 +1083,6 @@ body.hex-bloom-eggshell-active #gameCanvas {
     inset 0 0 calc(var(--chamber-r, 220px) * 0.34) color-mix(in srgb, var(--hb-ink) 18%, transparent),
     inset 0 0 0 5px color-mix(in srgb, var(--hb-paper) 36%, transparent);
 }
-.hex-bloom[data-open="true"] .hb-chamber-veil,
-.hex-bloom[data-open="true"] .hb-chamber-rim {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-stage {
   perspective: none;
 }
@@ -1172,15 +1090,6 @@ body.hex-bloom-eggshell-active #gameCanvas {
   filter:
     drop-shadow(0 5px 11px color-mix(in srgb, var(--hb-ink) 42%, transparent))
     drop-shadow(0 0 4px var(--hb-paper));
-}
-
-@media (max-width: 520px) {
-  .hex-bloom[data-open="true"] .hb-egg-piece--upper {
-    transform: translate(-1.5%, -17%) rotateX(-14deg) rotateZ(-1deg) scale(0.96);
-  }
-  .hex-bloom[data-open="true"] .hb-egg-piece--lower {
-    transform: translate(1.5%, 17%) rotateX(14deg) rotateZ(1deg) scale(0.96);
-  }
 }
 
 /* ---- Polar control studies ------------------------------------------------
@@ -1480,8 +1389,7 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom-stage,
   .hex-bloom-hub,
   .hb-shell-scene,
-  .hb-egg-core,
-  .hb-egg-piece,
+  .hb-egg-interior,
   .hb-chamber-veil,
   .hb-chamber-rim,
   #gameCanvas {

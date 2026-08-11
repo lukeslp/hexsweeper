@@ -82,12 +82,12 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | 2026-08-10 | Base center flower gains a restrained whole-cluster pointer tilt and shared lift shadow; dome keeps its stronger oblique camera. The corner `?` moves onto a 10–14px safe inset after its stroked circle clipped at a 2px bottom offset. | **Keep** — depth without reopening seams; reference control stays reachable |
 | 2026-08-10 | `?dock=faces` turns a centered seven-face patch of the rendered sphere into the control surface itself. The buttons inherit the exact projected polygons, skew, and seams of those live board faces. | **Trial** — the strongest integration concept; deliberately compact at dense sizes |
 | 2026-08-10 | `?dock=equator` places Reset plus the six outcome controls on a draggable geodesic belt. Front controls grow and sharpen while the back arc recedes, fades, and stops intercepting input. | **Archived V1** — controls competed with live faces and lost a stable reading order |
-| 2026-08-10 | `?dock=eggshell` V2 freezes the rendered globe into two coherent hemispheres, opens a real negative gap, and removes the opaque equatorial core. The shell stays inside the viewport around the seven controls. | **Retry** — the literal opening now reads before the menu does |
-| 2026-08-10 | `?dock=chamber` V2 reverses the live projection inside a bounded 88%-of-short-edge annular bowl, preserving the full globe silhouette and a 23%-radius control aperture. | **Retry** — concavity without swallowing the viewport |
-| 2026-08-10 | `?dock=capstan` raises a faceted three-tier control spindle from the north pole, with Reset stamped into its top. | **Trial** — vertical instrument rather than flower |
-| 2026-08-10 | `?dock=crown` locks Reset and six geodesic vanes into one polar cap. | **Trial** — deliberately closest to the sphere's face grammar |
-| 2026-08-10 | `?dock=drill` telescopes three concentric control annuli toward a polar aperture. | **Trial** — clearest inside/outside hierarchy of the four polar studies |
-| 2026-08-10 | `?dock=lid` hinges one polar face into a shallow screen-facing 2–3–2 control panel, with its tether kept visible. | **Trial** — strongest detached-object read |
+| 2026-08-10 | `?dock=eggshell` V3 partitions the live rotated mesh into two frozen sets of whole faces. Each half moves as rigid 3D geometry, so the opening follows exact shared tile edges and the menu remains inside the interlocking aperture. | **Promising retry** — structurally correct shell break; desktop and mobile fit |
+| 2026-08-10 | `?dock=chamber` V3 keeps the bounded concave projection but lengthens the turn to 920ms open / 680ms close and removes double easing. The renderer now receives linear progress and supplies the one smoothstep. | **Promising retry** — enough legible frames to sell the inversion |
+| 2026-08-10 | `?dock=capstan` raises a faceted three-tier control spindle from the north pole, with Reset stamped into its top. | **Rejected; archived V1** — obscures the sphere and loses control order |
+| 2026-08-10 | `?dock=crown` locks Reset and six geodesic vanes into one polar cap. | **Captured prior art; archived V1** — petals have promise for other menus and visuals, not this one |
+| 2026-08-10 | `?dock=drill` telescopes three concentric control annuli toward a polar aperture. | **Rejected; archived V1** — reads as decoration around a bore |
+| 2026-08-10 | `?dock=lid` hinges one polar face into a shallow screen-facing 2–3–2 control panel, with its tether kept visible. | **Rejected; archived V1** — detached panel breaks the sphere/menu relationship |
 
 ### What Luke is asking for (intent thread, in his words + readings)
 

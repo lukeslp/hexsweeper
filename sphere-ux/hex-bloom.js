@@ -457,8 +457,8 @@
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
-    if (EGG_SHELL) return 420;
-    if (INNER_CHAMBER) return 340;
+    if (EGG_SHELL) return 500;
+    if (INNER_CHAMBER) return 680;
     if (POLAR_STUDY) return POLAR_TAKE === "lid" ? 420 : 300;
     return DOCK_CONTEXT ? 140 : 180;
   }
@@ -1252,7 +1252,6 @@
         const b = document.getElementById("reset-btn");
         if (b) b.click();
       }
-      if (EGG_SHELL) refreshEggShellSnapshot();
       announce("Board reset");
       if (state.phase === "open" || state.phase === "rising") collapse();
     }
@@ -1456,7 +1455,8 @@
     let ribbonAngle = Math.PI / 2;
     let ribbonActions = [];
     let ribbonSuppressClickUntil = 0;
-    let eggSnapshotCanvases = [];
+    let eggProgress = 0;
+    let eggRaf = 0;
     let chamberProgress = 0;
     let chamberRaf = 0;
 
@@ -1588,77 +1588,34 @@
       };
     }
 
-    function paintSphereCrop(target, geometry) {
-      if (!target || !geometry) return;
-      const width = Math.max(1, Math.round(geometry.diameter * geometry.scaleX));
-      const height = Math.max(1, Math.round(geometry.diameter * geometry.scaleY));
-      if (target.width !== width) target.width = width;
-      if (target.height !== height) target.height = height;
-      const targetContext = target.getContext("2d");
-      if (!targetContext) return;
-      targetContext.clearRect(0, 0, width, height);
-      targetContext.drawImage(
-        geometry.canvas,
-        (geometry.disk.cx - geometry.disk.r) * geometry.scaleX,
-        (geometry.disk.cy - geometry.disk.r) * geometry.scaleY,
-        geometry.diameter * geometry.scaleX,
-        geometry.diameter * geometry.scaleY,
-        0,
-        0,
-        width,
-        height
-      );
-    }
-
-    function positionEggFrame(frame, geometry) {
-      frame.style.left = geometry.left.toFixed(1) + "px";
-      frame.style.top = geometry.top.toFixed(1) + "px";
-      frame.style.width = geometry.diameter.toFixed(1) + "px";
-      frame.style.height = geometry.diameter.toFixed(1) + "px";
-      frame.style.setProperty("--egg-r", geometry.disk.r.toFixed(1) + "px");
-    }
-
     function buildEggShellScene() {
       if (!shellScene) return false;
       const geometry = shellGeometry();
       if (!geometry) return false;
       shellScene.textContent = "";
       shellScene.dataset.kind = "eggshell";
-      const frame = document.createElement("div");
-      frame.className = "hb-egg-frame";
-      positionEggFrame(frame, geometry);
-
-      const core = document.createElement("div");
-      core.className = "hb-egg-core";
-      frame.appendChild(core);
-
-      eggSnapshotCanvases = [];
-      ["upper", "lower"].forEach((side) => {
-        const piece = document.createElement("div");
-        piece.className = "hb-egg-piece hb-egg-piece--" + side;
-        const snapshot = document.createElement("canvas");
-        snapshot.className = "hb-egg-snapshot";
-        snapshot.setAttribute("aria-hidden", "true");
-        paintSphereCrop(snapshot, geometry);
-        eggSnapshotCanvases.push(snapshot);
-        piece.appendChild(snapshot);
-        frame.appendChild(piece);
-      });
-      shellScene.appendChild(frame);
-      document.body.classList.add("hex-bloom-eggshell-active");
-      void shellScene.offsetHeight;
-      return true;
-    }
-
-    function refreshEggShellSnapshot() {
-      if (!EGG_SHELL || !shellScene || !eggSnapshotCanvases.length) return;
-      const geometry = shellGeometry();
-      if (!geometry) return;
-      const frame = shellScene.querySelector(".hb-egg-frame");
-      if (frame) positionEggFrame(frame, geometry);
-      eggSnapshotCanvases.forEach((snapshot) =>
-        paintSphereCrop(snapshot, geometry)
+      shellScene.style.setProperty(
+        "--egg-cx",
+        (geometry.rect.left + geometry.disk.cx).toFixed(1) + "px"
       );
+      shellScene.style.setProperty(
+        "--egg-cy",
+        (geometry.rect.top + geometry.disk.cy).toFixed(1) + "px"
+      );
+      shellScene.style.setProperty("--egg-r", geometry.disk.r.toFixed(1) + "px");
+      shellScene.style.setProperty("--egg-p", eggProgress.toFixed(4));
+      shellScene.style.setProperty(
+        "--egg-scale",
+        (0.72 + eggProgress * 0.28).toFixed(4)
+      );
+      const interior = document.createElement("div");
+      interior.className = "hb-egg-interior";
+      shellScene.appendChild(interior);
+      document.body.classList.add("hex-bloom-eggshell-active");
+      if (typeof game.setChromeShell === "function") {
+        game.setChromeShell("eggshell", eggProgress);
+      }
+      return true;
     }
 
     function buildChamberScene() {
@@ -1678,6 +1635,11 @@
       shellScene.style.setProperty(
         "--chamber-r",
         geometry.disk.r.toFixed(1) + "px"
+      );
+      shellScene.style.setProperty("--chamber-p", chamberProgress.toFixed(4));
+      shellScene.style.setProperty(
+        "--chamber-scale",
+        (0.72 + chamberProgress * 0.28).toFixed(4)
       );
       const veil = document.createElement("div");
       veil.className = "hb-chamber-veil";
@@ -1745,13 +1707,18 @@
     }
 
     function clearSpatialScene() {
+      cancelAnimationFrame(eggRaf);
+      eggRaf = 0;
+      eggProgress = 0;
       cancelAnimationFrame(chamberRaf);
       chamberRaf = 0;
       chamberProgress = 0;
       if (typeof game.setChromeProjection === "function") {
         game.setChromeProjection(null, 0);
       }
-      eggSnapshotCanvases = [];
+      if (typeof game.setChromeShell === "function") {
+        game.setChromeShell(null, 0);
+      }
       if (shellScene) {
         shellScene.textContent = "";
         delete shellScene.dataset.kind;
@@ -1762,30 +1729,77 @@
       );
     }
 
+    function animateEggShell(target, duration) {
+      if (!EGG_SHELL || typeof game.setChromeShell !== "function") return;
+      cancelAnimationFrame(eggRaf);
+      eggRaf = 0;
+      const to = Math.max(0, Math.min(1, target));
+      const from = eggProgress;
+      const paint = (progress) => {
+        eggProgress = progress;
+        if (shellScene) {
+          shellScene.style.setProperty("--egg-p", progress.toFixed(4));
+          shellScene.style.setProperty(
+            "--egg-scale",
+            (0.72 + progress * 0.28).toFixed(4)
+          );
+        }
+        game.setChromeShell(progress > 0 || to > 0 ? "eggshell" : null, progress);
+      };
+      if (prefersReducedMotion() || !duration || from === to) {
+        paint(to);
+        return;
+      }
+      const effectiveDuration = Math.max(1, duration * Math.abs(to - from));
+      const started = performance.now();
+      const tick = (now) => {
+        const raw = Math.max(
+          0,
+          Math.min(1, (now - started) / effectiveDuration)
+        );
+        paint(from + (to - from) * raw);
+        if (raw < 1) eggRaf = requestAnimationFrame(tick);
+        else eggRaf = 0;
+      };
+      eggRaf = requestAnimationFrame(tick);
+    }
+
     function animateChamber(target, duration) {
       if (!INNER_CHAMBER || typeof game.setChromeProjection !== "function") return;
       cancelAnimationFrame(chamberRaf);
       chamberRaf = 0;
       const to = Math.max(0, Math.min(1, target));
       const from = chamberProgress;
+      const paint = (progress) => {
+        chamberProgress = progress;
+        if (shellScene) {
+          shellScene.style.setProperty("--chamber-p", progress.toFixed(4));
+          shellScene.style.setProperty(
+            "--chamber-scale",
+            (0.72 + progress * 0.28).toFixed(4)
+          );
+        }
+        game.setChromeProjection(
+          progress > 0 || to > 0 ? "chamber" : null,
+          progress
+        );
+      };
       if (prefersReducedMotion() || !duration) {
-        chamberProgress = to;
-        game.setChromeProjection(to > 0 ? "chamber" : null, to);
+        paint(to);
         return;
       }
+      const effectiveDuration = Math.max(1, duration * Math.abs(to - from));
       const started = performance.now();
       const tick = (now) => {
-        const raw = Math.max(0, Math.min(1, (now - started) / duration));
-        const eased =
-          raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
-        chamberProgress = from + (to - from) * eased;
-        game.setChromeProjection("chamber", chamberProgress);
+        const raw = Math.max(
+          0,
+          Math.min(1, (now - started) / effectiveDuration)
+        );
+        // The renderer supplies the one smoothstep. Feeding it linear time
+        // keeps useful motion in every frame instead of double-easing the turn.
+        paint(from + (to - from) * raw);
         if (raw < 1) chamberRaf = requestAnimationFrame(tick);
-        else {
-          chamberRaf = 0;
-          chamberProgress = to;
-          game.setChromeProjection(to > 0 ? "chamber" : null, to);
-        }
+        else chamberRaf = 0;
       };
       chamberRaf = requestAnimationFrame(tick);
     }
@@ -1798,10 +1812,12 @@
     }
 
     function refreshSpatialSceneSoon() {
-      if (!EGG_SHELL) return;
+      if (!EGG_SHELL && !INNER_CHAMBER) return;
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (state.phase === "open") refreshEggShellSnapshot();
+          if (state.phase !== "open") return;
+          if (EGG_SHELL) buildEggShellScene();
+          else if (INNER_CHAMBER) buildChamberScene();
         });
       });
     }
@@ -2069,7 +2085,7 @@
               sizeCenterFlower();
               renderBloom({ petals: true });
               bloomPetals();
-              if (EGG_SHELL) refreshEggShellSnapshot();
+              if (EGG_SHELL) buildEggShellScene();
               if (INNER_CHAMBER) buildChamberScene();
             });
           });
@@ -2690,7 +2706,8 @@
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
       setPhase("open");
-      if (INNER_CHAMBER) animateChamber(1, 420);
+      if (EGG_SHELL) animateEggShell(1, 620);
+      if (INNER_CHAMBER) animateChamber(1, 920);
       root.dataset.dock = "ready";
       paintDock();
       // Place on the next frame so data-phase=open has applied open CSS vars
@@ -2733,7 +2750,7 @@
         el.style.pointerEvents = "none";
       });
 
-      if (EGG_SHELL) refreshEggShellSnapshot();
+      if (EGG_SHELL) animateEggShell(0, foldMs());
       if (INNER_CHAMBER) animateChamber(0, foldMs());
       setPhase("falling");
       // Ride the petal layer back down with the dock while the petals fold —
@@ -3085,7 +3102,7 @@
         if (state.phase === "open") {
           // rebuild petal positions without losing open state
           sizeCenterFlower();
-          if (EGG_SHELL) refreshEggShellSnapshot();
+          if (EGG_SHELL) buildEggShellScene();
           if (INNER_CHAMBER) buildChamberScene();
           if (POLAR_STUDY) buildPolarScene();
           const active = state.active;

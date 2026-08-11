@@ -746,6 +746,13 @@
       chromeProjectionMode: null,
       chromeProjectionProgress: 0,
       chromeProjectionScale: 1.48,
+      // Eggshell is a renderer-native split of whole faces. Membership is
+      // frozen when the menu starts opening so the interlocking seam cannot
+      // crawl across the globe while the two shell halves travel apart.
+      chromeShellMode: null,
+      chromeShellProgress: 0,
+      chromeShellGroups: null,
+      chromeShellRevision: 0,
       rafScheduled: false,
       detonatorIdx: -1,
       endFx: null,
@@ -1467,16 +1474,37 @@
       return { x: n.x / len, y: n.y / len, z: n.z / len };
     }
 
+    function shellTransformRotated(r, tileIndex) {
+      if (
+        state.chromeShellMode !== "eggshell" ||
+        state.chromeShellProgress <= 0 ||
+        !state.chromeShellGroups
+      ) {
+        return r;
+      }
+      const raw = Math.max(0, Math.min(1, state.chromeShellProgress));
+      const eased = raw * raw * (3 - 2 * raw);
+      const group = state.chromeShellGroups[tileIndex] || 1;
+      // A rigid camera-space translation keeps every shared vertex inside a
+      // half coincident. Only edges crossing the frozen partition separate,
+      // producing a real tile-boundary seam instead of bisected face art.
+      return {
+        x: r.x,
+        y: r.y + group * 0.43 * eased,
+        z: r.z + 0.035 * eased,
+      };
+    }
+
     function projectTile(tile, rotY, rotX, lift) {
       const liftAmt = lift || 0;
       const n = faceNormal(tile, rotY, rotX);
       const liftVec = (p) => {
         const r = rotatePoint(p, rotY, rotX);
-        return {
+        return shellTransformRotated({
           x: r.x + n.x * liftAmt,
           y: r.y + n.y * liftAmt,
           z: r.z + n.z * liftAmt,
-        };
+        }, tile.index);
       };
       const centerR = liftVec(tile.centerPoint);
       const boundaryR = tile.boundary.map(liftVec);
@@ -1494,7 +1522,11 @@
         area: hexScreenArea(boundary),
         baseBoundary:
           liftAmt !== 0
-            ? tile.boundary.map((b) => projectPoint(b, rotY, rotX))
+            ? tile.boundary.map((b) =>
+                projectRotated(
+                  shellTransformRotated(rotatePoint(b, rotY, rotX), tile.index)
+                )
+              )
             : null,
       };
     }
@@ -1509,7 +1541,7 @@
     }
 
     function rotKey() {
-      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}|${state.chromeProjectionMode || "none"}|${state.chromeProjectionProgress.toFixed(4)}|${state.chromeProjectionScale.toFixed(3)}`;
+      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}|${state.chromeProjectionMode || "none"}|${state.chromeProjectionProgress.toFixed(4)}|${state.chromeProjectionScale.toFixed(3)}|${state.chromeShellMode || "none"}|${state.chromeShellProgress.toFixed(4)}|${state.chromeShellRevision}`;
     }
 
     /** Project all tiles once per frame; cull back hemisphere for pick + draw. */
@@ -1556,6 +1588,34 @@
         );
       } else {
         state.chromeProjectionScale = 1.48;
+      }
+      invalidateProjection();
+      scheduleFrame();
+    }
+
+    function setChromeShell(mode, progress) {
+      const nextMode = mode === "eggshell" ? "eggshell" : null;
+      const nextProgress = nextMode
+        ? Math.max(0, Math.min(1, Number(progress) || 0))
+        : 0;
+      if (
+        nextMode &&
+        (!state.chromeShellGroups ||
+          state.chromeShellGroups.length !== state.tiles.length)
+      ) {
+        const groups = [];
+        state.tiles.forEach((tile) => {
+          const rotated = rotatePoint(tile.centerPoint, state.rotY, state.rotX);
+          groups[tile.index] = rotated.y >= 0 ? 1 : -1;
+        });
+        state.chromeShellGroups = groups;
+        state.chromeShellRevision += 1;
+      }
+      state.chromeShellMode = nextMode;
+      state.chromeShellProgress = nextProgress;
+      if (!nextMode) {
+        state.chromeShellGroups = null;
+        state.chromeShellRevision += 1;
       }
       invalidateProjection();
       scheduleFrame();
@@ -1722,7 +1782,12 @@
     }
 
     function tickAmbientSpin(now) {
-      if (!state.ambientSpin || state.reduceMotion || state.dragging) return false;
+      if (
+        !state.ambientSpin ||
+        state.reduceMotion ||
+        state.dragging ||
+        state.chromeShellMode
+      ) return false;
       const prev = state.lastFrameAt || now;
       const dt = Math.min(48, Math.max(0, now - prev));
       if (dt <= 0) return true;
@@ -3330,11 +3395,11 @@
       const n = faceNormal(tile, rotY, rotX);
       const c = rotatePoint(tile.centerPoint, rotY, rotX);
       const lift = opts.lift || 0;
-      const origin = {
+      const origin = shellTransformRotated({
         x: c.x + n.x * lift,
         y: c.y + n.y * lift,
         z: c.z + n.z * lift,
-      };
+      }, tile.index);
       const p0 = projectRotated(origin);
       const size =
         opts.size ||
@@ -3921,9 +3986,14 @@
         state.chromeProjectionMode === "chamber"
           ? Math.max(0, Math.min(1, 1 - state.chromeProjectionProgress * 1.65))
           : 1;
-      if (chamberCoreAlpha > 0.001) {
+      const shellCoreAlpha =
+        state.chromeShellMode === "eggshell"
+          ? Math.max(0, Math.min(1, 1 - state.chromeShellProgress * 1.8))
+          : 1;
+      const chromeCoreAlpha = chamberCoreAlpha * shellCoreAlpha;
+      if (chromeCoreAlpha > 0.001) {
         ctx.save();
-        ctx.globalAlpha *= chamberCoreAlpha;
+        ctx.globalAlpha *= chromeCoreAlpha;
         if (state.theme.magmaCore) {
           drawMagmaCore(state.centerX, state.centerY, coreR, coreNow);
         } else if (state.theme.wellGlow && state.theme.coreGlow) {
@@ -4603,6 +4673,7 @@
       }),
       getMenuPatch,
       setChromeProjection,
+      setChromeShell,
       setCountStyle: (id, opts) => setCountStyle(id, opts),
       setRelief: (mode) => setRelief(mode),
       setSeams: (on) => setSeams(on),

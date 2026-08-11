@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <!--
-  Quick Take: Hexsweeper 3D — Polar Axis Drill — The pole telescopes inward through three annuli: reset at the bore, common actions on the inner ring, global axes outside.
+  Quick Take: Hexsweeper 3D — Polar Axis Drill — Rejected for this menu: the telescoping annuli made the controls read as decoration around a bore. Preserved as reviewed.
   Stack: Vanilla HTML, CSS, and JavaScript; Canvas 2D; no frameworks.
   Source: https://dr.eamer.dev/games/hexsweeper/collection/sphere-polar-drill.html
-  Live: https://dr.eamer.dev/games/hexsweeper/sphere-ux/?dock=drill
+  Live: https://dr.eamer.dev/games/hexsweeper/sphere/
   License: MIT · Author: Luke Steuber
   Note: Self-contained collection export for CodePen. Regenerate:
         python3 tools/export-collection.py
@@ -1717,17 +1717,17 @@ body[data-sphere-chrome="dark"] .cz-dot {
 }
 
 /* ---- Spatial shell studies -------------------------------------------------
-   Both modes borrow the semantic seven-control flower. Eggshell uses two
-   cropped copies of the current canvas so the live projection remains wholly
-   untouched; Chamber warps the live projection and uses only a quiet central
-   veil here. Decorative layers never receive input. */
+   Both modes borrow the semantic seven-control flower. Eggshell separates
+   whole faces in the live renderer; this layer supplies only the aperture.
+   Chamber warps the live projection and adds a quiet central veil. Decorative
+   layers never receive input. */
 .hex-bloom[data-egg-shell="true"] .hex-bloom-scrim,
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 .hex-bloom[data-egg-shell="true"] .hex-bloom-scrim {
-  background: color-mix(in srgb, var(--hb-paper) 96%, transparent);
+  background: color-mix(in srgb, var(--hb-paper) 5%, transparent);
 }
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-scrim {
   background: color-mix(in srgb, var(--hb-paper) 5%, transparent);
@@ -1751,103 +1751,28 @@ body[data-sphere-chrome="dark"] .cz-dot {
   visibility: visible;
 }
 
-body.hex-bloom-eggshell-active #gameCanvas {
-  opacity: 0;
-}
-#gameCanvas {
-  transition: opacity 90ms ease;
-}
-
-.hb-egg-frame {
+.hb-egg-interior {
   position: absolute;
-  transform-style: preserve-3d;
-  isolation: isolate;
-}
-.hb-egg-core,
-.hb-egg-piece {
-  position: absolute;
-  inset: 0;
+  left: var(--egg-cx, 50%);
+  top: var(--egg-cy, 50%);
+  width: calc(var(--egg-r, 220px) * 0.9);
+  height: calc(var(--egg-r, 220px) * 0.9);
   border-radius: 50%;
-}
-.hb-egg-core {
-  z-index: 0;
   background: radial-gradient(
     circle,
-    transparent 0 39%,
-    color-mix(in srgb, var(--hb-ink) 18%, transparent) 40% 41%,
-    transparent 43%
+    color-mix(in srgb, var(--hb-paper) 97%, transparent) 0 48%,
+    color-mix(in srgb, var(--hb-paper) 78%, transparent) 68%,
+    transparent 100%
   );
+  border: 1px solid color-mix(in srgb, var(--hb-ink) 22%, transparent);
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--hb-ink) 18%, transparent),
-    0 0 calc(var(--egg-r) * 0.045) color-mix(in srgb, var(--hb-ink) 16%, transparent);
-  opacity: 0;
-  transform: scale(0.86);
-  transition:
-    opacity 160ms ease 40ms,
-    transform 360ms cubic-bezier(0.22, 1, 0.3, 1);
-}
-.hb-egg-piece {
-  z-index: 1;
-  overflow: hidden;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  transition:
-    transform 360ms cubic-bezier(0.22, 1, 0.3, 1),
-    filter 220ms ease;
-  will-change: transform;
-}
-.hb-egg-piece::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hb-ink) 35%, transparent);
-}
-.hb-egg-piece--upper {
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 49%,
-    78% 47%,
-    65% 54%,
-    52% 48%,
-    39% 55%,
-    24% 47%,
-    0 51%
-  );
-  transform-origin: 50% 51%;
-}
-.hb-egg-piece--lower {
-  clip-path: polygon(
-    0 51%,
-    24% 47%,
-    39% 55%,
-    52% 48%,
-    65% 54%,
-    78% 47%,
-    100% 49%,
-    100% 100%,
-    0 100%
-  );
-  transform-origin: 50% 49%;
-}
-.hb-egg-snapshot {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.hex-bloom[data-open="true"] .hb-egg-core {
-  opacity: 1;
-  transform: scale(1);
-}
-.hex-bloom[data-open="true"] .hb-egg-piece--upper {
-  transform: translate(-2%, -19%) rotateX(-17deg) rotateZ(-1.5deg) scale(0.95);
-  filter: drop-shadow(0 10px 10px color-mix(in srgb, var(--hb-ink) 38%, transparent));
-}
-.hex-bloom[data-open="true"] .hb-egg-piece--lower {
-  transform: translate(2%, 19%) rotateX(17deg) rotateZ(1.5deg) scale(0.95);
-  filter: drop-shadow(0 -10px 10px color-mix(in srgb, var(--hb-ink) 34%, transparent));
+    inset 0 0 calc(var(--egg-r, 220px) * 0.16)
+      color-mix(in srgb, var(--hb-ink) 10%, transparent),
+    0 0 calc(var(--egg-r, 220px) * 0.08)
+      color-mix(in srgb, var(--hb-paper) 82%, transparent);
+  opacity: var(--egg-p, 0);
+  transform: translate(-50%, -50%) scale(var(--egg-scale, 0.72));
+  will-change: transform, opacity;
 }
 .hex-bloom[data-egg-shell="true"] .hex-bloom-stage {
   perspective: 820px;
@@ -1864,11 +1789,9 @@ body.hex-bloom-eggshell-active #gameCanvas {
   left: var(--chamber-cx, 50%);
   top: var(--chamber-cy, 50%);
   border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0.72);
-  opacity: 0;
-  transition:
-    transform 420ms cubic-bezier(0.65, 0, 0.35, 1),
-    opacity 260ms ease 90ms;
+  transform: translate(-50%, -50%) scale(var(--chamber-scale, 0.72));
+  opacity: var(--chamber-p, 0);
+  will-change: transform, opacity;
 }
 .hb-chamber-veil {
   width: calc(var(--chamber-r, 220px) * 0.46);
@@ -1896,11 +1819,6 @@ body.hex-bloom-eggshell-active #gameCanvas {
     inset 0 0 calc(var(--chamber-r, 220px) * 0.34) color-mix(in srgb, var(--hb-ink) 18%, transparent),
     inset 0 0 0 5px color-mix(in srgb, var(--hb-paper) 36%, transparent);
 }
-.hex-bloom[data-open="true"] .hb-chamber-veil,
-.hex-bloom[data-open="true"] .hb-chamber-rim {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
 .hex-bloom[data-inner-chamber="true"] .hex-bloom-stage {
   perspective: none;
 }
@@ -1908,15 +1826,6 @@ body.hex-bloom-eggshell-active #gameCanvas {
   filter:
     drop-shadow(0 5px 11px color-mix(in srgb, var(--hb-ink) 42%, transparent))
     drop-shadow(0 0 4px var(--hb-paper));
-}
-
-@media (max-width: 520px) {
-  .hex-bloom[data-open="true"] .hb-egg-piece--upper {
-    transform: translate(-1.5%, -17%) rotateX(-14deg) rotateZ(-1deg) scale(0.96);
-  }
-  .hex-bloom[data-open="true"] .hb-egg-piece--lower {
-    transform: translate(1.5%, 17%) rotateX(14deg) rotateZ(1deg) scale(0.96);
-  }
 }
 
 /* ---- Polar control studies ------------------------------------------------
@@ -2216,8 +2125,7 @@ body.hex-bloom-open .canvas-container {
   .hex-bloom-stage,
   .hex-bloom-hub,
   .hb-shell-scene,
-  .hb-egg-core,
-  .hb-egg-piece,
+  .hb-egg-interior,
   .hb-chamber-veil,
   .hb-chamber-rim,
   #gameCanvas {
@@ -4146,6 +4054,13 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
       chromeProjectionMode: null,
       chromeProjectionProgress: 0,
       chromeProjectionScale: 1.48,
+      // Eggshell is a renderer-native split of whole faces. Membership is
+      // frozen when the menu starts opening so the interlocking seam cannot
+      // crawl across the globe while the two shell halves travel apart.
+      chromeShellMode: null,
+      chromeShellProgress: 0,
+      chromeShellGroups: null,
+      chromeShellRevision: 0,
       rafScheduled: false,
       detonatorIdx: -1,
       endFx: null,
@@ -4867,16 +4782,37 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
       return { x: n.x / len, y: n.y / len, z: n.z / len };
     }
 
+    function shellTransformRotated(r, tileIndex) {
+      if (
+        state.chromeShellMode !== "eggshell" ||
+        state.chromeShellProgress <= 0 ||
+        !state.chromeShellGroups
+      ) {
+        return r;
+      }
+      const raw = Math.max(0, Math.min(1, state.chromeShellProgress));
+      const eased = raw * raw * (3 - 2 * raw);
+      const group = state.chromeShellGroups[tileIndex] || 1;
+      // A rigid camera-space translation keeps every shared vertex inside a
+      // half coincident. Only edges crossing the frozen partition separate,
+      // producing a real tile-boundary seam instead of bisected face art.
+      return {
+        x: r.x,
+        y: r.y + group * 0.43 * eased,
+        z: r.z + 0.035 * eased,
+      };
+    }
+
     function projectTile(tile, rotY, rotX, lift) {
       const liftAmt = lift || 0;
       const n = faceNormal(tile, rotY, rotX);
       const liftVec = (p) => {
         const r = rotatePoint(p, rotY, rotX);
-        return {
+        return shellTransformRotated({
           x: r.x + n.x * liftAmt,
           y: r.y + n.y * liftAmt,
           z: r.z + n.z * liftAmt,
-        };
+        }, tile.index);
       };
       const centerR = liftVec(tile.centerPoint);
       const boundaryR = tile.boundary.map(liftVec);
@@ -4894,7 +4830,11 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
         area: hexScreenArea(boundary),
         baseBoundary:
           liftAmt !== 0
-            ? tile.boundary.map((b) => projectPoint(b, rotY, rotX))
+            ? tile.boundary.map((b) =>
+                projectRotated(
+                  shellTransformRotated(rotatePoint(b, rotY, rotX), tile.index)
+                )
+              )
             : null,
       };
     }
@@ -4909,7 +4849,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
     }
 
     function rotKey() {
-      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}|${state.chromeProjectionMode || "none"}|${state.chromeProjectionProgress.toFixed(4)}|${state.chromeProjectionScale.toFixed(3)}`;
+      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}|${state.chromeProjectionMode || "none"}|${state.chromeProjectionProgress.toFixed(4)}|${state.chromeProjectionScale.toFixed(3)}|${state.chromeShellMode || "none"}|${state.chromeShellProgress.toFixed(4)}|${state.chromeShellRevision}`;
     }
 
     /** Project all tiles once per frame; cull back hemisphere for pick + draw. */
@@ -4956,6 +4896,34 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
         );
       } else {
         state.chromeProjectionScale = 1.48;
+      }
+      invalidateProjection();
+      scheduleFrame();
+    }
+
+    function setChromeShell(mode, progress) {
+      const nextMode = mode === "eggshell" ? "eggshell" : null;
+      const nextProgress = nextMode
+        ? Math.max(0, Math.min(1, Number(progress) || 0))
+        : 0;
+      if (
+        nextMode &&
+        (!state.chromeShellGroups ||
+          state.chromeShellGroups.length !== state.tiles.length)
+      ) {
+        const groups = [];
+        state.tiles.forEach((tile) => {
+          const rotated = rotatePoint(tile.centerPoint, state.rotY, state.rotX);
+          groups[tile.index] = rotated.y >= 0 ? 1 : -1;
+        });
+        state.chromeShellGroups = groups;
+        state.chromeShellRevision += 1;
+      }
+      state.chromeShellMode = nextMode;
+      state.chromeShellProgress = nextProgress;
+      if (!nextMode) {
+        state.chromeShellGroups = null;
+        state.chromeShellRevision += 1;
       }
       invalidateProjection();
       scheduleFrame();
@@ -5122,7 +5090,12 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
     }
 
     function tickAmbientSpin(now) {
-      if (!state.ambientSpin || state.reduceMotion || state.dragging) return false;
+      if (
+        !state.ambientSpin ||
+        state.reduceMotion ||
+        state.dragging ||
+        state.chromeShellMode
+      ) return false;
       const prev = state.lastFrameAt || now;
       const dt = Math.min(48, Math.max(0, now - prev));
       if (dt <= 0) return true;
@@ -6730,11 +6703,11 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
       const n = faceNormal(tile, rotY, rotX);
       const c = rotatePoint(tile.centerPoint, rotY, rotX);
       const lift = opts.lift || 0;
-      const origin = {
+      const origin = shellTransformRotated({
         x: c.x + n.x * lift,
         y: c.y + n.y * lift,
         z: c.z + n.z * lift,
-      };
+      }, tile.index);
       const p0 = projectRotated(origin);
       const size =
         opts.size ||
@@ -7321,9 +7294,14 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
         state.chromeProjectionMode === "chamber"
           ? Math.max(0, Math.min(1, 1 - state.chromeProjectionProgress * 1.65))
           : 1;
-      if (chamberCoreAlpha > 0.001) {
+      const shellCoreAlpha =
+        state.chromeShellMode === "eggshell"
+          ? Math.max(0, Math.min(1, 1 - state.chromeShellProgress * 1.8))
+          : 1;
+      const chromeCoreAlpha = chamberCoreAlpha * shellCoreAlpha;
+      if (chromeCoreAlpha > 0.001) {
         ctx.save();
-        ctx.globalAlpha *= chamberCoreAlpha;
+        ctx.globalAlpha *= chromeCoreAlpha;
         if (state.theme.magmaCore) {
           drawMagmaCore(state.centerX, state.centerY, coreR, coreNow);
         } else if (state.theme.wellGlow && state.theme.coreGlow) {
@@ -8003,6 +7981,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
       }),
       getMenuPatch,
       setChromeProjection,
+      setChromeShell,
       setCountStyle: (id, opts) => setCountStyle(id, opts),
       setRelief: (mode) => setRelief(mode),
       setSeams: (on) => setSeams(on),
@@ -8506,8 +8485,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
 
   function foldMs() {
     if (prefersReducedMotion()) return 0;
-    if (EGG_SHELL) return 420;
-    if (INNER_CHAMBER) return 340;
+    if (EGG_SHELL) return 500;
+    if (INNER_CHAMBER) return 680;
     if (POLAR_STUDY) return POLAR_TAKE === "lid" ? 420 : 300;
     return DOCK_CONTEXT ? 140 : 180;
   }
@@ -9301,7 +9280,6 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
         const b = document.getElementById("reset-btn");
         if (b) b.click();
       }
-      if (EGG_SHELL) refreshEggShellSnapshot();
       announce("Board reset");
       if (state.phase === "open" || state.phase === "rising") collapse();
     }
@@ -9505,7 +9483,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
     let ribbonAngle = Math.PI / 2;
     let ribbonActions = [];
     let ribbonSuppressClickUntil = 0;
-    let eggSnapshotCanvases = [];
+    let eggProgress = 0;
+    let eggRaf = 0;
     let chamberProgress = 0;
     let chamberRaf = 0;
 
@@ -9637,77 +9616,34 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
       };
     }
 
-    function paintSphereCrop(target, geometry) {
-      if (!target || !geometry) return;
-      const width = Math.max(1, Math.round(geometry.diameter * geometry.scaleX));
-      const height = Math.max(1, Math.round(geometry.diameter * geometry.scaleY));
-      if (target.width !== width) target.width = width;
-      if (target.height !== height) target.height = height;
-      const targetContext = target.getContext("2d");
-      if (!targetContext) return;
-      targetContext.clearRect(0, 0, width, height);
-      targetContext.drawImage(
-        geometry.canvas,
-        (geometry.disk.cx - geometry.disk.r) * geometry.scaleX,
-        (geometry.disk.cy - geometry.disk.r) * geometry.scaleY,
-        geometry.diameter * geometry.scaleX,
-        geometry.diameter * geometry.scaleY,
-        0,
-        0,
-        width,
-        height
-      );
-    }
-
-    function positionEggFrame(frame, geometry) {
-      frame.style.left = geometry.left.toFixed(1) + "px";
-      frame.style.top = geometry.top.toFixed(1) + "px";
-      frame.style.width = geometry.diameter.toFixed(1) + "px";
-      frame.style.height = geometry.diameter.toFixed(1) + "px";
-      frame.style.setProperty("--egg-r", geometry.disk.r.toFixed(1) + "px");
-    }
-
     function buildEggShellScene() {
       if (!shellScene) return false;
       const geometry = shellGeometry();
       if (!geometry) return false;
       shellScene.textContent = "";
       shellScene.dataset.kind = "eggshell";
-      const frame = document.createElement("div");
-      frame.className = "hb-egg-frame";
-      positionEggFrame(frame, geometry);
-
-      const core = document.createElement("div");
-      core.className = "hb-egg-core";
-      frame.appendChild(core);
-
-      eggSnapshotCanvases = [];
-      ["upper", "lower"].forEach((side) => {
-        const piece = document.createElement("div");
-        piece.className = "hb-egg-piece hb-egg-piece--" + side;
-        const snapshot = document.createElement("canvas");
-        snapshot.className = "hb-egg-snapshot";
-        snapshot.setAttribute("aria-hidden", "true");
-        paintSphereCrop(snapshot, geometry);
-        eggSnapshotCanvases.push(snapshot);
-        piece.appendChild(snapshot);
-        frame.appendChild(piece);
-      });
-      shellScene.appendChild(frame);
-      document.body.classList.add("hex-bloom-eggshell-active");
-      void shellScene.offsetHeight;
-      return true;
-    }
-
-    function refreshEggShellSnapshot() {
-      if (!EGG_SHELL || !shellScene || !eggSnapshotCanvases.length) return;
-      const geometry = shellGeometry();
-      if (!geometry) return;
-      const frame = shellScene.querySelector(".hb-egg-frame");
-      if (frame) positionEggFrame(frame, geometry);
-      eggSnapshotCanvases.forEach((snapshot) =>
-        paintSphereCrop(snapshot, geometry)
+      shellScene.style.setProperty(
+        "--egg-cx",
+        (geometry.rect.left + geometry.disk.cx).toFixed(1) + "px"
       );
+      shellScene.style.setProperty(
+        "--egg-cy",
+        (geometry.rect.top + geometry.disk.cy).toFixed(1) + "px"
+      );
+      shellScene.style.setProperty("--egg-r", geometry.disk.r.toFixed(1) + "px");
+      shellScene.style.setProperty("--egg-p", eggProgress.toFixed(4));
+      shellScene.style.setProperty(
+        "--egg-scale",
+        (0.72 + eggProgress * 0.28).toFixed(4)
+      );
+      const interior = document.createElement("div");
+      interior.className = "hb-egg-interior";
+      shellScene.appendChild(interior);
+      document.body.classList.add("hex-bloom-eggshell-active");
+      if (typeof game.setChromeShell === "function") {
+        game.setChromeShell("eggshell", eggProgress);
+      }
+      return true;
     }
 
     function buildChamberScene() {
@@ -9727,6 +9663,11 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
       shellScene.style.setProperty(
         "--chamber-r",
         geometry.disk.r.toFixed(1) + "px"
+      );
+      shellScene.style.setProperty("--chamber-p", chamberProgress.toFixed(4));
+      shellScene.style.setProperty(
+        "--chamber-scale",
+        (0.72 + chamberProgress * 0.28).toFixed(4)
       );
       const veil = document.createElement("div");
       veil.className = "hb-chamber-veil";
@@ -9794,13 +9735,18 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
     }
 
     function clearSpatialScene() {
+      cancelAnimationFrame(eggRaf);
+      eggRaf = 0;
+      eggProgress = 0;
       cancelAnimationFrame(chamberRaf);
       chamberRaf = 0;
       chamberProgress = 0;
       if (typeof game.setChromeProjection === "function") {
         game.setChromeProjection(null, 0);
       }
-      eggSnapshotCanvases = [];
+      if (typeof game.setChromeShell === "function") {
+        game.setChromeShell(null, 0);
+      }
       if (shellScene) {
         shellScene.textContent = "";
         delete shellScene.dataset.kind;
@@ -9811,30 +9757,77 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
       );
     }
 
+    function animateEggShell(target, duration) {
+      if (!EGG_SHELL || typeof game.setChromeShell !== "function") return;
+      cancelAnimationFrame(eggRaf);
+      eggRaf = 0;
+      const to = Math.max(0, Math.min(1, target));
+      const from = eggProgress;
+      const paint = (progress) => {
+        eggProgress = progress;
+        if (shellScene) {
+          shellScene.style.setProperty("--egg-p", progress.toFixed(4));
+          shellScene.style.setProperty(
+            "--egg-scale",
+            (0.72 + progress * 0.28).toFixed(4)
+          );
+        }
+        game.setChromeShell(progress > 0 || to > 0 ? "eggshell" : null, progress);
+      };
+      if (prefersReducedMotion() || !duration || from === to) {
+        paint(to);
+        return;
+      }
+      const effectiveDuration = Math.max(1, duration * Math.abs(to - from));
+      const started = performance.now();
+      const tick = (now) => {
+        const raw = Math.max(
+          0,
+          Math.min(1, (now - started) / effectiveDuration)
+        );
+        paint(from + (to - from) * raw);
+        if (raw < 1) eggRaf = requestAnimationFrame(tick);
+        else eggRaf = 0;
+      };
+      eggRaf = requestAnimationFrame(tick);
+    }
+
     function animateChamber(target, duration) {
       if (!INNER_CHAMBER || typeof game.setChromeProjection !== "function") return;
       cancelAnimationFrame(chamberRaf);
       chamberRaf = 0;
       const to = Math.max(0, Math.min(1, target));
       const from = chamberProgress;
+      const paint = (progress) => {
+        chamberProgress = progress;
+        if (shellScene) {
+          shellScene.style.setProperty("--chamber-p", progress.toFixed(4));
+          shellScene.style.setProperty(
+            "--chamber-scale",
+            (0.72 + progress * 0.28).toFixed(4)
+          );
+        }
+        game.setChromeProjection(
+          progress > 0 || to > 0 ? "chamber" : null,
+          progress
+        );
+      };
       if (prefersReducedMotion() || !duration) {
-        chamberProgress = to;
-        game.setChromeProjection(to > 0 ? "chamber" : null, to);
+        paint(to);
         return;
       }
+      const effectiveDuration = Math.max(1, duration * Math.abs(to - from));
       const started = performance.now();
       const tick = (now) => {
-        const raw = Math.max(0, Math.min(1, (now - started) / duration));
-        const eased =
-          raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
-        chamberProgress = from + (to - from) * eased;
-        game.setChromeProjection("chamber", chamberProgress);
+        const raw = Math.max(
+          0,
+          Math.min(1, (now - started) / effectiveDuration)
+        );
+        // The renderer supplies the one smoothstep. Feeding it linear time
+        // keeps useful motion in every frame instead of double-easing the turn.
+        paint(from + (to - from) * raw);
         if (raw < 1) chamberRaf = requestAnimationFrame(tick);
-        else {
-          chamberRaf = 0;
-          chamberProgress = to;
-          game.setChromeProjection(to > 0 ? "chamber" : null, to);
-        }
+        else chamberRaf = 0;
       };
       chamberRaf = requestAnimationFrame(tick);
     }
@@ -9847,10 +9840,12 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
     }
 
     function refreshSpatialSceneSoon() {
-      if (!EGG_SHELL) return;
+      if (!EGG_SHELL && !INNER_CHAMBER) return;
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (state.phase === "open") refreshEggShellSnapshot();
+          if (state.phase !== "open") return;
+          if (EGG_SHELL) buildEggShellScene();
+          else if (INNER_CHAMBER) buildChamberScene();
         });
       });
     }
@@ -10118,7 +10113,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
               sizeCenterFlower();
               renderBloom({ petals: true });
               bloomPetals();
-              if (EGG_SHELL) refreshEggShellSnapshot();
+              if (EGG_SHELL) buildEggShellScene();
               if (INNER_CHAMBER) buildChamberScene();
             });
           });
@@ -10739,7 +10734,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
       // tokens (centerXY), never a mid-transition getBoundingClientRect — that
       // is what stacked Dig/Size under Restart/Menu/Help after grow/lift.
       setPhase("open");
-      if (INNER_CHAMBER) animateChamber(1, 420);
+      if (EGG_SHELL) animateEggShell(1, 620);
+      if (INNER_CHAMBER) animateChamber(1, 920);
       root.dataset.dock = "ready";
       paintDock();
       // Place on the next frame so data-phase=open has applied open CSS vars
@@ -10782,7 +10778,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
         el.style.pointerEvents = "none";
       });
 
-      if (EGG_SHELL) refreshEggShellSnapshot();
+      if (EGG_SHELL) animateEggShell(0, foldMs());
       if (INNER_CHAMBER) animateChamber(0, foldMs());
       setPhase("falling");
       // Ride the petal layer back down with the dock while the petals fold —
@@ -11134,7 +11130,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "drill";
         if (state.phase === "open") {
           // rebuild petal positions without losing open state
           sizeCenterFlower();
-          if (EGG_SHELL) refreshEggShellSnapshot();
+          if (EGG_SHELL) buildEggShellScene();
           if (INNER_CHAMBER) buildChamberScene();
           if (POLAR_STUDY) buildPolarScene();
           const active = state.active;

@@ -85,12 +85,12 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/sphere-muse.html` | Visual take: Starlit Void |
 | `collection/sphere-face-takeover.html` | Control study: seven real sphere faces become the menu |
 | `collection/sphere-equator-ribbon.html` | Archived V1: draggable depth-sorted equator ribbon |
-| `collection/sphere-eggshell.html` | Spatial study V2: restrained sphere halves open around the controls |
-| `collection/sphere-chamber.html` | Spatial study V2: bounded concave annulus around the controls |
-| `collection/sphere-polar-capstan.html` | Polar study: faceted control spindle |
-| `collection/sphere-polar-crown.html` | Polar study: reset hub with six geodesic vanes |
-| `collection/sphere-polar-drill.html` | Polar study: telescoping concentric controls |
-| `collection/sphere-polar-lid.html` | Polar study: hinged 2–3–2 control panel |
+| `collection/sphere-eggshell.html` | Spatial study V3: whole live faces split along one interlocking seam |
+| `collection/sphere-chamber.html` | Spatial study V3: long single-eased turn into a bounded concave annulus |
+| `collection/sphere-polar-capstan.html` | Rejected archive: faceted control spindle |
+| `collection/sphere-polar-crown.html` | Captured prior art: reset hub with six promising geodesic petals |
+| `collection/sphere-polar-drill.html` | Rejected archive: telescoping concentric controls |
+| `collection/sphere-polar-lid.html` | Rejected archive: hinged 2–3–2 control panel |
 | `sphere/takes/*.json` | Model design specs for the three takes |
 | `sphere/assets/textures/` | Earth & Moon 2k daymaps for globe themes (`?theme=earth\|moon`) |
 | `collection/index.html` | Desk tile grid — sphere + takes under Experiments (Open + Copy HTML) |
