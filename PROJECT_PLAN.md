@@ -119,7 +119,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Light/Dark collection cut is one file (`theme-plate.html`) with in-file toggle
 - [x] Production chrome: BR Appearance · Reset · Menu (scores/modes/links inside Menu)
 - [x] Lab skins + classic: same BR Reset · Menu; scores + outbound links in Menu (no BL rail / gear)
-- [x] CI (`.github/workflows/ci.yml`): sphere neighbor smoke + `export-collection.py --check` + `export-choices-lab.py --check` on every push/PR to `main` — catches export drift before it ships (this is what would have caught the dev-chrome inlining gap)
+- [x] CI (`.github/workflows/ci.yml`): sphere neighbor smoke + Wheel effect-profile contract + `export-collection.py --check` + `export-choices-lab.py --check` on every push/PR to `main` — catches export drift before it ships (this is what would have caught the dev-chrome inlining gap)
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
 - [ ] Optional: browser probes (desktop/mobile) in CI — sphere neighbor test is covered; visual/interaction smoke still manual
 - [ ] Phase next: full / comprehensive / impressive cut beyond the collection scaffold
@@ -145,6 +145,11 @@ The renderer shares one wavy surface function between painting and gameplay.
 Refraction and reflection are limited to the shallow rescue band; depth haze
 intentionally obscures the submerged back half. The implementation stays on
 the existing Canvas 2D/offscreen-buffer path with no new runtime dependency.
+Cosmetic events live in `wheel/effects.js`: the default `kinetic` profile
+composes wakes, bubbles, pigment wash, caustics, fuse atmosphere, underwater
+detonation, and win ripples; `calm` preserves the base renderer. Effects remain
+independent channels so later skins can recombine them without changing game
+state or picking.
 The archived decorative theme remains at `collection/theme-water.html` and
 `?theme=water` on the sphere.
 

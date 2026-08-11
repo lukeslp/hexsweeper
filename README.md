@@ -145,7 +145,9 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - **First visit:** short icon help modal (`hexsweeper-sphere-welcome-v1`); `?welcome=1` forces, `?welcome=0` skips
 - **Endgame FX:** lose — graph-distance mine cascade + particle burst + shock ring; win — clearance pulse + confetti-lite (`prefers-reduced-motion`: instant states)
 
-Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at subdivisions 6, 10, 12).
+Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at
+subdivisions 6, 10, 12) and `node wheel/test-effects.js` (profile/event
+contract plus drawing-surface smoke).
 
 Flat game remains the default at `index.html`.
 
@@ -157,6 +159,10 @@ wavy waterline to quench it. Quenched mines stay inert across refresh, while
 ordinary flags wash off without revealing whether they were correct. The
 water renderer uses the existing Canvas 2D/offscreen-buffer path and keeps
 refraction concentrated near the surface so the rescue face remains readable.
+Its event effects are isolated in [`wheel/effects.js`](wheel/effects.js) and
+catalogued in [`wheel/EFFECTS.md`](wheel/EFFECTS.md). `?fx=kinetic` is the
+composed default; `?fx=calm` preserves the base treatment for comparison and
+reuse.
 
 ## Choices hub
 

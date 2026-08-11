@@ -2,7 +2,7 @@
 <!--
   File Purpose: Experimental Hexsweeper on a closed hex sphere (Canvas projection).
   Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
-  Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
+  Inputs: hexasphere.js, effects.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
   Chrome (sphere-ux): three-tile dock — Restart · Menu · Help.
   Idle: small/low; sides borderless; Menu has hollow-hex icon.
   Open: dock grows to bloom size, lifts; borders on all three; Menu = ×; fan up.
@@ -884,7 +884,8 @@ button, a, input[type="range"] { touch-action: manipulation; }
 </div>
 
 <script src="hexasphere.js?v=wheel3"></script>
-<script src="sphere.js?v=wheel5"></script>
+<script src="effects.js?v=wheel1"></script>
+<script src="sphere.js?v=wheel6"></script>
 <script src="hex-bloom.js?v=wheel2"></script>
 <script>
 const wheelGame = SphereSweeper.boot({ canvasId: "gameCanvas" });

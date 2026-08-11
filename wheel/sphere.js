@@ -773,6 +773,14 @@
       invertDragY: storedInvert.y,
     };
 
+    const wheelFx = global.WheelEffects
+      ? global.WheelEffects.create({
+          reduceMotion: () => state.reduceMotion,
+        })
+      : null;
+    state.wheelFxProfile = wheelFx ? wheelFx.getProfile() : "calm";
+    if (document.body) document.body.dataset.wheelFx = state.wheelFxProfile;
+
     // Seed relief/seams from legacy count styles that used to encode them.
     (function seedSurfaceFromCountStyle() {
       const cs = state.countStyle;
@@ -807,6 +815,7 @@
         _wetMs: 0,
         _dousedAt: 0,
         _washedAt: 0,
+        _wasSubmerged: null,
         neighborMines: 0,
         animReveal: 0,
         visualDue: 0,
@@ -1636,6 +1645,7 @@
       optsReset = optsReset || {};
       stopTimer();
       clearEndFx();
+      if (wheelFx) wheelFx.clear();
       const cfg = CONFIG[state.difficulty];
       if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
         throw new Error("SphereSweeper: Hexasphere not loaded");
@@ -1891,6 +1901,7 @@
       persistSuspended = true;
       stopTimer();
       clearEndFx();
+      if (wheelFx) wheelFx.clear();
       hideBanner();
 
       state.difficulty = data.difficulty;
@@ -2249,6 +2260,15 @@
           speed: Math.max(2.2, state.scale * 0.014),
         });
       }
+      if (wheelFx) {
+        const h = canvas.clientHeight || window.innerHeight;
+        wheelFx.emit("win", {
+          x: state.centerX,
+          y: state.centerY,
+          surfaceY: waterLineY(h),
+          r: state.scale,
+        });
+      }
       scheduleFrame();
     }
 
@@ -2412,9 +2432,10 @@
       persistNow();
     }
 
-    function detonateArmedMine() {
+    function detonateArmedMine(effectEvent) {
       const idx = state.armedMineIdx;
       if (idx < 0 || state.isGameOver) return;
+      if (wheelFx && effectEvent) wheelFx.emit("detonate", effectEvent);
       clearArmedMine();
       state.detonatorIdx = idx;
       if (wheelAlert) {
@@ -3892,6 +3913,14 @@
       haze.addColorStop(1, "rgba(3,28,42,0.82)");
       ctx.fillStyle = haze;
       ctx.fillRect(0, top, w, h - top);
+      if (wheelFx) {
+        wheelFx.drawCaustics(ctx, now, {
+          cx: state.centerX,
+          cy: state.centerY,
+          r: state.scale * 1.15,
+          surf,
+        });
+      }
       ctx.restore();
 
       if (surf < 0 || surf > h) return;
@@ -4061,7 +4090,15 @@
       ctx.restore();
     }
 
-    function quenchArmedMine(cell, now) {
+    function quenchArmedMine(cell, now, proj, surf) {
+      if (wheelFx && proj) {
+        wheelFx.emit("quench", {
+          x: proj.center.x,
+          y: proj.center.y,
+          surfaceY: surfaceYAt(proj.center.x, surf, now),
+          r: wheelFaceRadius(proj),
+        });
+      }
       cell.doused = true;
       cell.flagged = false;
       cell.revealed = true;
@@ -4085,7 +4122,20 @@
         !state.fusePausedAt &&
         now >= state.fuseDeadline
       ) {
-        detonateArmedMine();
+        const idx = state.armedMineIdx;
+        const proj = projected.find((p) => p.index === idx);
+        if (proj) {
+          const surfaceY = surfaceYAt(proj.center.x, surf, now);
+          detonateArmedMine({
+            x: proj.center.x,
+            y: proj.center.y,
+            surfaceY,
+            r: wheelFaceRadius(proj),
+            underwater: proj.center.y > surfaceY,
+          });
+        } else {
+          detonateArmedMine();
+        }
         return;
       }
 
@@ -4093,9 +4143,10 @@
         const cell = state.cells[proj.index];
         if (!cell) continue;
         const isFront = proj.z > 0.02;
+        const surfaceY = surfaceYAt(proj.center.x, surf, now);
+        const crossesSurface = proj.center.y > surfaceY;
         const submerged =
-          proj.center.y > surfaceYAt(proj.center.x, surf, now) +
-            wheelFaceRadius(proj) * 0.2;
+          proj.center.y > surfaceY + wheelFaceRadius(proj) * 0.2;
 
         if (isFront && cell._dousedAt && now - cell._dousedAt < 700) {
           drawQuenchFx(proj, (now - cell._dousedAt) / 700, true);
@@ -4103,9 +4154,50 @@
         if (isFront && cell._washedAt && now - cell._washedAt < 700) {
           drawQuenchFx(proj, (now - cell._washedAt) / 700, false);
         }
-        if (isFront && cell.doused) drawDousedBadge(proj, now);
+        if (isFront && cell.doused) {
+          drawDousedBadge(proj, now);
+          if (
+            wheelFx &&
+            cell._wasSubmerged != null &&
+            cell._wasSubmerged !== crossesSurface
+          ) {
+            wheelFx.emit("dousedCross", {
+              x: proj.center.x,
+              y: proj.center.y,
+              surfaceY,
+              r: wheelFaceRadius(proj),
+              entering: crossesSurface,
+            });
+          }
+          cell._wasSubmerged = crossesSurface;
+        }
 
         if (proj.index === state.armedMineIdx) {
+          if (isFront && wheelFx) {
+            if (
+              cell._wasSubmerged != null &&
+              cell._wasSubmerged !== crossesSurface
+            ) {
+              wheelFx.emit("surfaceCross", {
+                x: proj.center.x,
+                y: proj.center.y,
+                surfaceY,
+                r: wheelFaceRadius(proj),
+                entering: crossesSurface,
+              });
+            }
+            cell._wasSubmerged = crossesSurface;
+            wheelFx.updateArmed({
+              now,
+              x: proj.center.x,
+              y: proj.center.y,
+              surfaceY,
+              r: wheelFaceRadius(proj),
+              urgency: fuseUrgency(now),
+              submerged: crossesSurface,
+              paused: !!state.fusePausedAt,
+            });
+          }
           if (!state.fusePausedAt && isFront && submerged) {
             cell._wetMs = (cell._wetMs || 0) + dt;
           } else if (!state.fusePausedAt) {
@@ -4121,7 +4213,7 @@
             }
           }
           if (cell._wetMs >= WHEEL.QUENCH_DWELL_MS) {
-            quenchArmedMine(cell, now);
+            quenchArmedMine(cell, now, proj, surf);
             return;
           }
           continue;
@@ -4146,6 +4238,14 @@
         const frac = Math.min(1, cell._wetMs / WHEEL.WASH_DWELL_MS);
         if (isFront) drawDwellRing(proj, frac);
         if (frac >= 1) {
+          if (wheelFx) {
+            wheelFx.emit("wash", {
+              x: proj.center.x,
+              y: proj.center.y,
+              surfaceY,
+              r: wheelFaceRadius(proj),
+            });
+          }
           cell._wetMs = 0;
           cell.flagged = false;
           state.flagsPlaced = Math.max(0, state.flagsPlaced - 1);
@@ -4443,6 +4543,14 @@
       // Screen space, after the shake transform is released — otherwise
       // the waterline shudders loose from the horizon on a detonation.
       if (state.theme.waterScene) drawWaterPass(w, h, waterY);
+      if (state.theme.waterScene && wheelFx) {
+        wheelFx.drawEvents(ctx, now, {
+          w,
+          h,
+          surf: waterY,
+          surfaceAt: (x) => surfaceYAt(x, waterY, now),
+        });
+      }
       // Wheel rescue, douse and wash — screen-space, above the water.
       if (state.theme.waterScene) stepWaterWheel(projected, now, waterY);
     }
@@ -4452,6 +4560,7 @@
       // Ripple, tide and caustics are all time-driven; keep the loop alive.
       if (state.theme && state.theme.waterScene && !state.reduceMotion) return true;
       if (state.armedMineIdx >= 0 && !state.fusePausedAt) return true;
+      if (wheelFx && wheelFx.hasActive()) return true;
       // Earth/Moon magma core animates (boil + motes); keep the loop alive.
       if (state.theme && state.theme.magmaCore && !state.reduceMotion) return true;
       if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
@@ -4927,6 +5036,14 @@
       }),
       pauseWheel,
       resumeWheel,
+      getWheelEffects: () => (wheelFx ? wheelFx.getProfile() : "calm"),
+      setWheelEffects: (id) => {
+        if (!wheelFx || !wheelFx.setProfile(id)) return false;
+        state.wheelFxProfile = wheelFx.getProfile();
+        if (document.body) document.body.dataset.wheelFx = state.wheelFxProfile;
+        scheduleFrame();
+        return true;
+      },
       setFlagMode: (on) => {
         state.flagMode = !!on;
         if (flagToggle) {
