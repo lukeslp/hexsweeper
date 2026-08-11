@@ -12,9 +12,9 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 32 is the latest uploaded TestFlight build. The checked-in
+this same record. Build 33 is the latest uploaded TestFlight build. The checked-in
 Xcode project may lag that upload history, so set `CURRENT_PROJECT_VERSION` to
-**greater than 32** before the next archive.
+**greater than 33** before the next archive.
 
 ## Archive → TestFlight
 
@@ -78,7 +78,7 @@ Before Google Play staging:
 The record was inherited but turned out to be **empty**, not wrong — every
 field was null, so this was fill-in rather than cleanup.
 
-Done (updated 2026-08-10, through the App Store Connect API):
+Done (updated 2026-08-11, through the App Store Connect API):
 
 - [x] Name **Hexsweeper 3D** — `Hexsweeper`, `Hexsweep`, `Hex Sweeper`,
       `Hex Sweep`, `Hexasweeper`, `Hivesweeper` and `Hexhive` are all taken.
@@ -93,7 +93,7 @@ Done (updated 2026-08-10, through the App Store Connect API):
       preserved rather than overwritten by the four generated alternatives
 - [x] Build 8 processed, validated, and attached to the 1.0 version. Nothing
       submitted for review
-- [x] Build 32 uploaded to TestFlight on 2026-08-10 and processed as VALID;
+- [x] Build 33 uploaded to TestFlight on 2026-08-11 and processed as VALID;
       confirm distribution state in App Store Connect before widening access
 
 Still owed:
