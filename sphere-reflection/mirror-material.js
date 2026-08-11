@@ -141,6 +141,38 @@
       swatch: "repeating-conic-gradient(from 315deg at 50% 100%, #080808 0 7deg, #b28d55 8deg 9deg, #080808 10deg 16deg)",
       texture: { desktop: "assets/reflections/deco-2048.webp", mobile: "assets/reflections/deco-1024.webp", speed: 0.0009, exposure: 0.78, saturation: 0.74, backdrop: 0.44 },
     },
+    {
+      id: "oculus",
+      label: "Stained Oculus",
+      shortLabel: "Oculus",
+      fallback: ["#030608", "#315f76", "#f0a53c", "#16060a"],
+      swatch: "conic-gradient(from 18deg, #ffb32c, #e32d28, #18aee1, #15b86c, #ffdc4b, #ffb32c)",
+      texture: { desktop: "assets/reflections/oculus-1280.webp", mobile: "assets/reflections/oculus-768.webp", speed: 0.00035, exposure: 0.90, saturation: 1.08, backdrop: 0.34 },
+    },
+    {
+      id: "galaxy",
+      label: "Galactic Dust",
+      shortLabel: "Galaxy",
+      fallback: ["#050714", "#49405c", "#d09a9e", "#08172b"],
+      swatch: "radial-gradient(ellipse at 38% 62%, #d7a5a2 0 9%, #65506e 26%, #16345e 52%, #050714 78%)",
+      texture: { desktop: "assets/reflections/galaxy-1280.webp", mobile: "assets/reflections/galaxy-768.webp", speed: 0.00018, exposure: 1.10, saturation: 0.92, backdrop: 0.50 },
+    },
+    {
+      id: "night-cabin",
+      label: "Night Cabin",
+      shortLabel: "Cabin",
+      fallback: ["#01050a", "#112844", "#ffb56b", "#020305"],
+      swatch: "radial-gradient(circle at 56% 70%, #ffb56b 0 5%, #15253c 7% 23%, #030912 46%, #010204 76%)",
+      texture: { desktop: "assets/reflections/night-cabin-1280.webp", mobile: "assets/reflections/night-cabin-768.webp", speed: 0.00010, exposure: 1.18, saturation: 0.90, backdrop: 0.54, offsetX: -0.20, offsetY: 0.18 },
+    },
+    {
+      id: "gilded-ribbon",
+      label: "Gilded Ribbon",
+      shortLabel: "Ribbon",
+      fallback: ["#020103", "#4d3449", "#dfa35f", "#080510"],
+      swatch: "repeating-radial-gradient(ellipse at 72% 58%, #060407 0 8px, #c27d38 9px 11px, #16101c 12px 19px, #8c7bb5 20px 21px)",
+      texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00080, exposure: 0.84, saturation: 0.92, backdrop: 0.42 },
+    },
   ];
   const MATERIAL_INDEX = new Map(
     MATERIAL_PRESETS.map((preset, index) => [preset.id, index])
@@ -193,6 +225,7 @@ uniform float uRadius;
 uniform sampler2D uEnvironmentMap;
 uniform float uTextureReady;
 uniform vec4 uTextureParams;
+uniform vec4 uTextureTransform;
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -331,7 +364,10 @@ vec3 atriumEnvironment(vec3 ray) {
 vec3 imageEnvironment(vec3 ray, float lod) {
   float longitude = atan(ray.z, ray.x) / 6.28318531 + 0.5;
   float latitude = asin(clamp(ray.y, -1.0, 1.0)) / 3.14159265 + 0.5;
-  vec2 uv = vec2(fract(longitude + uTime * uTextureParams.x), clamp(latitude, 0.002, 0.998));
+  vec2 centered = vec2(longitude, latitude) - 0.5;
+  vec2 uv = centered * uTextureTransform.xy + 0.5 + uTextureTransform.zw;
+  uv.x = fract(uv.x + uTime * uTextureParams.x);
+  uv.y = clamp(uv.y, 0.002, 0.998);
   vec3 sampleColor = textureLod(uEnvironmentMap, uv, lod).rgb;
   float luma = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
   sampleColor = mix(vec3(luma), sampleColor, uTextureParams.z) * uTextureParams.y;
@@ -369,7 +405,11 @@ vec3 materialAccent() {
   if (uMaterial < 5.5) return vec3(0.67, 0.79, 0.59);
   if (uMaterial < 6.5) return vec3(0.96, 0.72, 0.39);
   if (uMaterial < 7.5) return vec3(0.72, 0.72, 0.70);
-  return vec3(0.86, 0.70, 0.42);
+  if (uMaterial < 9.5) return vec3(0.86, 0.70, 0.42);
+  if (uMaterial < 10.5) return vec3(0.22, 0.78, 0.95);
+  if (uMaterial < 11.5) return vec3(0.70, 0.52, 0.92);
+  if (uMaterial < 12.5) return vec3(1.0, 0.58, 0.24);
+  return vec3(0.92, 0.62, 0.34);
 }
 
 void main() {
@@ -522,6 +562,7 @@ void main() {
           "uEnvironmentMap",
           "uTextureReady",
           "uTextureParams",
+          "uTextureTransform",
         ].forEach((name) => {
           this.uniforms[name] = gl.getUniformLocation(this.program, name);
         });
@@ -824,6 +865,13 @@ void main() {
         texture.exposure || 1,
         texture.saturation == null ? 1 : texture.saturation,
         texture.backdrop || 0.2
+      );
+      gl.uniform4f(
+        this.uniforms.uTextureTransform,
+        texture.scaleX || 1,
+        texture.scaleY || 1,
+        texture.offsetX || 0,
+        texture.offsetY || 0
       );
       gl.uniform2f(this.uniforms.uResolution, this.canvas.width, this.canvas.height);
       gl.uniform2f(
