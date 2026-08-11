@@ -13,7 +13,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Hexsweeper</title>
-<meta name="description" content="Dig once to uncover Infinite, Bounded, and Sphere Hexsweeper.">
+<meta name="description" content="Choose Infinite, Bounded, or Sphere Hexsweeper from one safe opening.">
 <style>
 /* fonts/fonts.css (woff2 inlined) */
 /*
@@ -80,8 +80,9 @@
     --muted: #68798c;
     --focus: #246da0;
     --flag: #e33030;
-    --hex-w: clamp(50px, 17.5vw, 82px);
+    --hex-w: clamp(58px, 19vw, 88px);
     --hex-h: calc(var(--hex-w) * 1.1547);
+    --choice-scale: 1.06;
     color-scheme: light dark;
   }
   :root[data-appearance="dark"] {
@@ -222,13 +223,13 @@
     gap: 1px;
   }
   .starter-icon {
-    width: clamp(20px, 6vw, 28px);
-    height: clamp(20px, 6vw, 28px);
+    width: clamp(24px, 7vw, 32px);
+    height: clamp(24px, 7vw, 32px);
   }
   .starter-label,
   .mode-name {
     max-width: 92%;
-    font-size: clamp(.58rem, 2.7vw, .72rem);
+    font-size: clamp(.7rem, 3.2vw, .84rem);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -.02em;
@@ -282,22 +283,25 @@
     transition: opacity 170ms ease, transform 230ms cubic-bezier(.22, 1, .36, 1);
   }
   .mode-icon {
-    width: clamp(21px, 6.5vw, 30px);
-    height: clamp(21px, 6.5vw, 30px);
+    width: clamp(30px, 8vw, 36px);
+    height: clamp(30px, 8vw, 36px);
     overflow: visible;
   }
   .mode.is-available {
     z-index: 6;
     cursor: pointer;
     pointer-events: auto;
+    background: var(--focus);
+    transform: translate3d(var(--x), var(--y), 0) scale(var(--choice-scale));
     filter:
-      drop-shadow(0 6px 3px color-mix(in srgb, var(--tile-shadow) 92%, transparent))
-      drop-shadow(0 0 10px color-mix(in srgb, var(--field-glow) 58%, transparent));
+      drop-shadow(0 7px 3px color-mix(in srgb, var(--tile-shadow) 94%, transparent))
+      drop-shadow(0 0 12px color-mix(in srgb, var(--focus) 42%, transparent));
   }
+  .mode.is-available::before { inset: 3px 4px 7px; }
   .mode.is-available .mode-content { opacity: 1; transform: none; }
   .mode.is-available:hover::before { inset: 4px 5px 8px; }
   .mode.is-available:active {
-    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.95);
+    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(1);
   }
   .mode.is-dug {
     pointer-events: none;
@@ -310,33 +314,46 @@
   .mode.is-dug .mode-content { transform: scale(.9); }
 
   .board[data-phase="clearing"] .starter { animation: hit 220ms cubic-bezier(.22, 1, .36, 1) both; }
-  .board[data-phase="ready"] .mode.is-available { animation: mode-rise 330ms cubic-bezier(.22, 1, .36, 1) backwards; }
-  .board[data-phase="ready"] .mode-bounded { animation-delay: 45ms; }
-  .board[data-phase="ready"] .mode-sphere { animation-delay: 90ms; }
+  .board[data-phase="ready"] .mode.is-available { animation: mode-rise 250ms cubic-bezier(.22, 1, .36, 1) backwards; }
+  .board[data-phase="ready"] .mode-bounded { animation-delay: 35ms; }
+  .board[data-phase="ready"] .mode-sphere { animation-delay: 70ms; }
   .board.is-leaving .mode:not(.is-dug),
   .board.is-leaving .cell,
   .board.is-leaving .starter { opacity: .52; }
 
-  .hint {
+  .masthead {
     position: fixed;
     z-index: 10;
     left: 50%;
     top: max(18px, calc(env(safe-area-inset-top) + 12px));
     transform: translateX(-50%);
-    margin: 0;
-    padding: 7px 12px;
+    display: grid;
+    justify-items: center;
+    gap: 2px;
     max-width: calc(100vw - 32px);
-    color: var(--muted);
-    background: color-mix(in srgb, var(--field) 80%, transparent);
-    border: 1px solid color-mix(in srgb, var(--tile-edge) 34%, transparent);
-    border-radius: 999px;
-    font-size: clamp(.68rem, 2.8vw, .82rem);
-    font-weight: 600;
-    letter-spacing: .015em;
+    pointer-events: none;
     text-align: center;
     white-space: nowrap;
-    backdrop-filter: blur(8px);
-    transition: color 180ms ease, background 180ms ease;
+  }
+  .brand {
+    margin: 0;
+    color: var(--ink);
+    font-size: clamp(1.05rem, 5vw, 1.35rem);
+    font-weight: 700;
+    letter-spacing: .055em;
+    line-height: 1;
+    text-transform: uppercase;
+    text-shadow: 0 2px 10px color-mix(in srgb, var(--field) 72%, transparent);
+  }
+  .hint {
+    margin: 0;
+    padding: 4px 0 0;
+    color: var(--muted);
+    font-size: clamp(.75rem, 3.3vw, .88rem);
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-shadow: 0 1px 8px color-mix(in srgb, var(--field) 84%, transparent);
+    transition: color 180ms ease;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -356,7 +373,7 @@
     .count, .cell.count-1 .count, .cell.count-2 .count,
     .cell.count-3 .count, .cell.count-4 .count { color: CanvasText; text-shadow: none; }
     .starter:focus-visible, .mode:focus-visible { outline: 3px solid Highlight; outline-offset: -5px; }
-    .hint { color: CanvasText; background: Canvas; border: 1px solid CanvasText; }
+    .brand, .hint { color: CanvasText; text-shadow: none; }
   }
   @keyframes hit {
     45% { transform: translate3d(var(--x), calc(var(--y) + 7px), 0) scale(.86); }
@@ -366,13 +383,18 @@
       opacity: .35;
       transform: translate3d(var(--x), calc(var(--y) + 10px), 0) scale(.88);
     }
+    72% { transform: translate3d(var(--x), calc(var(--y) - 2px), 0) scale(1.1); }
+    to { transform: translate3d(var(--x), var(--y), 0) scale(var(--choice-scale)); }
   }
 </style>
 </head>
 <body>
 <main>
   <nav class="board" id="game-menu" data-phase="covered" aria-label="Choose a Hexsweeper game">
-    <p class="hint" id="menu-status" role="status" aria-live="polite">Dig once to uncover the games</p>
+    <header class="masthead">
+      <h1 class="brand">Hexsweeper</h1>
+      <p class="hint" id="menu-status" role="status" aria-live="polite">Choose a game</p>
+    </header>
     <div class="field" id="menu-field" aria-hidden="true"></div>
 
     <button class="hex starter" id="opening-dig" type="button" data-q="0" data-r="0" aria-describedby="menu-status" aria-label="Dig the opening tile to reveal game choices">
@@ -385,7 +407,7 @@
       </span>
     </button>
 
-    <a class="hex mode mode-infinite" href="games/infinite.html" data-q="0" data-r="-2" aria-label="Play Infinite Hexsweeper">
+    <a class="hex mode mode-infinite" href="games/infinite.html" data-q="0" data-r="-1" aria-label="Play Infinite Hexsweeper">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
@@ -399,7 +421,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-bounded" href="games/bounded.html" data-q="2" data-r="0" aria-label="Play Bounded Hexsweeper">
+    <a class="hex mode mode-bounded" href="games/bounded.html" data-q="1" data-r="0" aria-label="Play Bounded Hexsweeper">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -409,7 +431,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-sphere" href="games/sphere.html" data-q="-2" data-r="2" aria-label="Play Sphere Hexsweeper">
+    <a class="hex mode mode-sphere" href="games/sphere.html" data-q="-1" data-r="1" aria-label="Play Sphere Hexsweeper">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -430,7 +452,7 @@
   var starter = document.getElementById("opening-dig");
   var status = document.getElementById("menu-status");
   var modes = Array.prototype.slice.call(board.querySelectorAll(".mode"));
-  var modeSeats = { "0,-2": true, "2,0": true, "-2,2": true };
+  var modeSeats = { "0,-1": true, "1,0": true, "-1,1": true };
   var directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
   var cells = new Map();
   var mines = new Set();
@@ -456,19 +478,19 @@
     mines.clear();
     for (var r = -14; r <= 14; r += 1) {
       for (var q = -14; q <= 14; q += 1) {
-        if (distance(q, r) >= 4 && hash(q, r) < .205) mines.add(key(q, r));
+        if (distance(q, r) >= 3 && hash(q, r) < .205) mines.add(key(q, r));
       }
     }
-    // Every ring-three boundary face gets at least one real outward mine, so
+    // Every ring-two boundary face gets at least one real outward mine, so
     // the zero flood always stops in a readable numbered frontier.
-    for (var rr = -3; rr <= 3; rr += 1) {
-      for (var qq = -3; qq <= 3; qq += 1) {
-        if (distance(qq, rr) !== 3) continue;
+    for (var rr = -2; rr <= 2; rr += 1) {
+      for (var qq = -2; qq <= 2; qq += 1) {
+        if (distance(qq, rr) !== 2) continue;
         var outward = [];
         directions.forEach(function (dir) {
           var nq = qq + dir[0];
           var nr = rr + dir[1];
-          if (distance(nq, nr) === 4) outward.push([nq, nr]);
+          if (distance(nq, nr) === 3) outward.push([nq, nr]);
         });
         if (!outward.some(function (p) { return mines.has(key(p[0], p[1])); })) {
           outward.sort(function (a, b) { return hash(a[0], a[1]) - hash(b[0], b[1]); });
@@ -542,7 +564,7 @@
       if (id !== "0,0" && !modeSeats[id]) {
         plan.push({ key: id, step: item.step, jitter: Math.round(hash(item.q, item.r) * 34) });
       }
-      if (countAt(item.q, item.r) !== 0 || distance(item.q, item.r) >= 3) continue;
+      if (countAt(item.q, item.r) !== 0 || distance(item.q, item.r) >= 2) continue;
       directions.forEach(function (dir) {
         var q = item.q + dir[0];
         var r = item.r + dir[1];
@@ -594,6 +616,7 @@
 
   function startOpening(event) {
     if (phase !== "covered") return;
+    clearTimers();
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -603,7 +626,7 @@
     board.dataset.phase = "clearing";
     board.setAttribute("aria-busy", "true");
     starter.classList.add("is-hit");
-    status.textContent = "Clearing a safe opening…";
+    status.textContent = "Uncovering three games…";
     if (reducedMotion()) {
       finishOpening(true);
       return;
@@ -611,7 +634,7 @@
     var plan = floodPlan();
     var latest = 0;
     plan.forEach(function (item) {
-      var delay = 65 + item.step * 92 + item.jitter;
+      var delay = 55 + item.step * 82 + Math.round(item.jitter * .72);
       latest = Math.max(latest, delay);
       timers.push(setTimeout(function () {
         if (phase === "clearing") revealCell(item.key);
@@ -621,7 +644,7 @@
       if (phase !== "clearing") return;
       starter.classList.add("is-cleared");
     }, 70));
-    timers.push(setTimeout(function () { finishOpening(false); }, latest + 125));
+    timers.push(setTimeout(function () { finishOpening(false); }, latest + 110));
   }
 
   function chooseMode(event) {
@@ -684,6 +707,8 @@
   var alreadyOpened = false;
   try { alreadyOpened = sessionStorage.getItem(SESSION_KEY) === "1"; } catch (_) {}
   if (alreadyOpened) finishOpening(true);
+  else if (reducedMotion()) startOpening();
+  else timers.push(setTimeout(function () { startOpening(); }, 280));
 })();
 </script>
 <script>
