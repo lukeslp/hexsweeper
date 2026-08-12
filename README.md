@@ -61,6 +61,8 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 | `collection/` | Production + lab one-pagers; Copy HTML desk (CodePen-ready) |
 | `tools/export-collection.py` | Regenerates `collection/theme-*.html`, `skin-*.html`, and index |
 | `sphere/` | **Experimental** closed hex sphere minesweeper (Canvas projection) |
+| `monkey-grid/` | **Experimental** flat Catch the Monkey route-blocking game |
+| `monkey-sphere/` | **Experimental** spherical Catch the Monkey portal chase |
 | `choices.html` | Curated hub: production, sphere, lab links — not in theme switcher |
 | `choices/lab/` | Generated redirects to `collection/skin-*.html` |
 | `tools/export-choices-lab.py` | Regenerates `choices/lab/*.html` redirect stubs |
@@ -81,6 +83,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
 | `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
 | `collection/polyhedron.html` | Dodecahedron campaign — 12 connected panels with 19/37/61 cells per panel |
+| `collection/sphere-reflection*.html` | Obsidian Mirror studies — five procedural environments plus fifteen image-backed surfaces, including animated storm, cloud, ink, and oil-cell plates |
 | `collection/sphere-kimi.html` | Visual take: Moon Ink Orrery |
 | `collection/sphere-claude.html` | Visual take: Amber Codex |
 | `collection/sphere-muse.html` | Visual take: Starlit Void |
@@ -92,6 +95,8 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/sphere-polar-crown.html` | Captured prior art: reset hub with six promising geodesic petals |
 | `collection/sphere-polar-drill.html` | Rejected archive: telescoping concentric controls |
 | `collection/sphere-polar-lid.html` | Rejected archive: hinged 2–3–2 control panel |
+| `collection/catch-monkey-garden.html` | Game study: flat route-blocking chase toward the garden rim |
+| `collection/catch-monkey-orbit.html` | Game study: spherical route-blocking chase toward three portals |
 | `sphere/takes/*.json` | Model design specs for the three takes |
 | `sphere/assets/textures/` | Earth & Moon 2k daymaps for globe themes (`?theme=earth\|moon`) |
 | `collection/index.html` | Desk tile grid — sphere + takes under Experiments (Open + Copy HTML) |
@@ -162,6 +167,31 @@ contract plus drawing-surface smoke). `node wheel/test-menu-variants.js`
 guards the Water Wheel menu-profile aliases and projected patch selection.
 
 Flat game remains the default at `index.html`.
+
+## Catch the Monkey (experimental)
+
+Two playable studies reuse the hex language without inheriting Minesweeper's rules:
+
+- [`monkey-grid/`](monkey-grid/) is the fast 2D proof. Close one pale tile per turn; the monkey advances one step along a seeded shortest route to the rim.
+- [`monkey-sphere/`](monkey-sphere/) removes the natural edge. Drag to rotate the closed surface and seal all three coral portals before the monkey reaches one; a gold rim cue points toward it while it is behind the horizon.
+
+Both studies support seeded URLs, complete one-turn undo, mouse and touch input, keyboard shortcuts, reduced motion, and self-contained collection exports.
+
+## Obsidian Mirror (experimental)
+
+[`sphere-reflection/`](sphere-reflection/) — https://dr.eamer.dev/games/hexsweeper/sphere-reflection/
+
+- Original sphere gameplay and center-bloom controls, isolated from the native app payload.
+- Pointer-inert WebGL2 reflection beneath the authoritative Canvas 2D mesh.
+- Twenty reflected environments share one renderer and one game state: `?material=stormglass|studio|mercury|aurora|atrium|canopy|salon|paisley|portoro|deco|oculus|galaxy|night-cabin|gilded-ribbon|ion-storm|amber-tempest|heat-lightning|stratosphere|chromatic-ink|amber-cells`. Press **M** to cycle or choose one in Help.
+- The fifteen image-backed environments use responsive, same-origin desktop/mobile WebP plates under `sphere-reflection/assets/reflections/`; collection one-pagers embed both sizes so every surface remains self-contained. Select plates opt into shader-side weather drift, ink advection, or oil-cell refraction; reduced-motion mode freezes all material animation.
+- Covered faces retain the continuous mirror; cleared faces become matte wells; flags stay scarlet.
+- Analytic sphere normals replace a costly raymarch, with a capped backing buffer for mobile.
+- Environmental drift freezes for either operating-system reduced motion or the in-game reduced-effects setting; forced colors uses the flat black/white renderer.
+- WebGL compile/context loss falls back to a static reflective field without blocking play.
+- Share cards composite the reflection and game layers.
+
+The material study credits Matthias Hurrle (`@atzedent`) for the supplied reflection premise; its shader implementation is original to this experiment.
 
 ## Water Wheel
 
