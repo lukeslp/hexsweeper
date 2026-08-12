@@ -19,8 +19,10 @@ and any network dependency is a defect.
 | # | Check | Pass criteria | Result |
 |---|---|---|---|
 | 1 | Cold launch | Launch screen hands off to the covered picker board with no blank frame between | |
-| 2 | Picker reveal | The safe opening auto-digs smoothly; Infinite, Classic, and Sphere become unmistakable choices | |
-| 3 | Picker routes | Each choice opens the right game; **‹ Games** returns to the already-open picker | |
+| 2 | Picker reveal | The safe opening auto-digs smoothly; Infinite, Classic, Sphere, and the nearby Theme face become unmistakable choices | |
+| 3 | Picker routes | Each mode opens the right game; **‹ Games** returns to the already-open picker | |
+| 3a | Picker Resume | An unfinished Infinite or Sphere run appears in the center with that mode's name and accent; the newest run opens intact, while pristine and finished boards leave the center dug | |
+| 3b | Picker theme | Theme blooms into three connected Light / System / Dark faces; the checkmark, launcher colors, persistence, OS following, outside-tap close, and Escape focus return all work | |
 | 4 | Infinite | Dig, flag, chord, pan, pinch, Light/Dark, and run persistence work | |
 | 5 | Classic | Fixed board opens; S/M/L, dig, flag, chord, reset, and completion work | |
 | 6 | Sphere render | Sphere is centred and fully visible; no clipping at any edge | |
@@ -34,11 +36,11 @@ and any network dependency is a defect.
 | 14 | Customize panel | Opens, changes apply live, undo reverts one step | |
 | 15 | Share card | Produces an image; content matches the current board | |
 | 16 | Safe areas | Picker and game chrome clear the notch/Dynamic Island and home indicator in both orientations | |
-| 17 | Autosave | Force-quit mid-run, relaunch, and resumable runs return intact | |
+| 17 | Autosave | Force-quit mid-run, relaunch, and resumable runs return intact through the correctly labeled center Resume face | |
 | 18 | Backgrounding | Background 30s and return; no blank WebView, no reset | |
-| 19 | Reduced Motion | Picker reveal and endgame effects become instant states | |
+| 19 | Reduced Motion | Picker reveal, theme bloom, and endgame effects become instant states | |
 | 20 | Outbound links | Credits open in the system browser and return cleanly; the game is never replaced in-place | |
-| 21 | Rotation | Portrait ↔ landscape reflows without losing the run or obscuring picker choices | |
+| 21 | Rotation | Portrait ↔ landscape reflows without losing the run or obscuring the mode, Resume, or expanded theme choices | |
 | 22 | Android Back | From a game, **‹ Games** returns to the picker; system Back exits or follows documented platform behaviour without losing state | |
 | 23 | Android system bars | Content clears status/navigation/gesture insets in both orientations | |
 

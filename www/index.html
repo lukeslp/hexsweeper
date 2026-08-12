@@ -2,8 +2,8 @@
 <!--
   File Purpose: Native app launcher staged as one authentic Hexsweeper opening.
   Primary Functions/Classes: deterministic mine field, neighbor counts, zero-cell
-    flood reveal, and three reserved mode links left standing after the clear.
-  Inputs: viewport, saved appearance, session reveal state. Outputs: game links.
+    flood reveal, resumable-run routing, and a connected launcher-theme flower.
+  Inputs: viewport, saved runs/appearance, session reveal state. Outputs: game links.
   A11y: native button/links, visible focus, 50px+ targets, live status, keyboard
     reveal bypass, reduced motion, forced colors, and no timing-dependent action.
   Author: Luke Steuber <luke@lukesteuber.com>
@@ -74,11 +74,16 @@
     --tile-edge: #aebdce;
     --tile-shadow: #c8d4e1;
     --well: #8f9db0;
+    --well-ink: #172231;
     --well-edge: #738397;
     --well-shadow: #657386;
     --ink: #263240;
     --muted: #68798c;
     --focus: #246da0;
+    --infinite-accent: #246da0;
+    --classic-accent: #16794f;
+    --sphere-accent: #724ab5;
+    --theme-accent: #4e647b;
     --flag: #e33030;
     --ambient-strong: rgba(248, 250, 252, .84);
     --ambient-soft: rgba(248, 250, 252, .28);
@@ -95,6 +100,8 @@
     --hex-w: clamp(64px, 21vw, 96px);
     --hex-h: calc(var(--hex-w) * 1.1547);
     --choice-scale: 1.08;
+    --board-x: 0px;
+    --board-y: 0px;
     color-scheme: light dark;
   }
   :root[data-appearance="dark"] {
@@ -104,11 +111,16 @@
     --tile-edge: #536174;
     --tile-shadow: #070a0f;
     --well: #d7e0eb;
+    --well-ink: #182331;
     --well-edge: #f2f6fb;
     --well-shadow: #ffffff;
     --ink: #edf3fb;
     --muted: #a8b6c7;
     --focus: #78c5f4;
+    --infinite-accent: #78c5f4;
+    --classic-accent: #20a873;
+    --sphere-accent: #aa83e8;
+    --theme-accent: #a8b6c7;
     --ambient-strong: rgba(24, 33, 45, .84);
     --ambient-soft: rgba(24, 33, 45, .28);
     --edge-haze: rgba(7, 10, 15, .24);
@@ -155,8 +167,8 @@
   .field { z-index: 0; pointer-events: none; }
   .hex {
     position: absolute;
-    left: 50%;
-    top: 50%;
+    left: calc(50% + var(--board-x));
+    top: calc(50% + var(--board-y));
     width: var(--hex-w);
     height: var(--hex-h);
     margin-left: calc(var(--hex-w) / -2);
@@ -166,14 +178,18 @@
   }
   .cell,
   .starter,
-  .mode {
+  .mode,
+  .resume,
+  .theme-control {
     background: var(--tile-edge);
     filter: drop-shadow(0 4px 2px var(--tile-drop));
     filter: drop-shadow(0 4px 2px color-mix(in srgb, var(--tile-shadow) 76%, transparent));
   }
   .cell::before,
   .starter::before,
-  .mode::before {
+  .mode::before,
+  .resume::before,
+  .theme-control::before {
     content: "";
     position: absolute;
     inset: 2px 3px 6px;
@@ -226,7 +242,9 @@
   :root[data-appearance="dark"] .cell.count-4 .count { color: #aa83e8; }
 
   .starter,
-  .mode {
+  .mode,
+  .resume,
+  .theme-control {
     z-index: 4;
     display: grid;
     place-items: center;
@@ -244,7 +262,9 @@
     transition: transform 180ms cubic-bezier(.22, 1, .36, 1), filter 180ms ease;
   }
   .starter-content,
-  .mode-content {
+  .mode-content,
+  .resume-content,
+  .theme-content {
     position: relative;
     z-index: 2;
     display: grid;
@@ -256,7 +276,9 @@
     height: clamp(24px, 7vw, 32px);
   }
   .starter-label,
-  .mode-name {
+  .mode-name,
+  .resume-name,
+  .theme-name {
     max-width: 92%;
     font-size: clamp(.7rem, 3.2vw, .84rem);
     font-weight: 700;
@@ -265,17 +287,21 @@
     text-align: center;
   }
   .starter:focus,
-  .mode:focus {
-    background: var(--focus);
+  .mode:focus,
+  .resume:focus,
+  .theme-control:focus {
+    background: var(--control-accent, var(--focus));
     filter:
       drop-shadow(0 5px 2px var(--tile-drop))
       drop-shadow(0 0 5px var(--focus-drop));
     filter:
       drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 80%, transparent))
-      drop-shadow(0 0 5px color-mix(in srgb, var(--focus) 72%, transparent));
+      drop-shadow(0 0 5px color-mix(in srgb, var(--control-accent, var(--focus)) 72%, transparent));
   }
   .starter:focus::before,
-  .mode:focus::before { inset: 4px 5px 8px; }
+  .mode:focus::before,
+  .resume:focus::before,
+  .theme-control:focus::before { inset: 4px 5px 8px; }
   @media (hover: hover) {
     .starter:hover {
       background: var(--focus);
@@ -287,7 +313,9 @@
         drop-shadow(0 0 5px color-mix(in srgb, var(--focus) 72%, transparent));
     }
     .starter:hover::before,
-    .mode.is-available:hover::before { inset: 4px 5px 8px; }
+    .mode.is-available:hover::before,
+    .resume.is-available:hover::before,
+    .theme-control.is-available:hover::before { inset: 4px 5px 8px; }
   }
   .starter:active {
     transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.94);
@@ -321,18 +349,24 @@
       filter 180ms ease,
       opacity 180ms ease;
   }
-  .mode-content {
+  .mode-content,
+  .resume-content,
+  .theme-content {
     gap: 2px;
     opacity: 0;
     transform: translateY(5px) scale(.78);
     transition: opacity 170ms ease, transform 230ms cubic-bezier(.22, 1, .36, 1);
   }
-  .mode-icon {
+  .mode-icon,
+  .resume-icon,
+  .theme-icon {
     width: clamp(27px, 7.5vw, 36px);
     height: clamp(27px, 7.5vw, 36px);
     overflow: visible;
   }
-  .mode-note {
+  .mode-note,
+  .resume-note,
+  .theme-note {
     max-width: 92%;
     color: currentColor;
     opacity: .58;
@@ -342,21 +376,37 @@
     letter-spacing: .025em;
     text-align: center;
   }
+  .mode-infinite,
+  .resume[data-mode="infinite"] {
+    --mode-accent: var(--infinite-accent);
+    --control-accent: var(--infinite-accent);
+  }
+  .mode-bounded,
+  .resume[data-mode="bounded"] {
+    --mode-accent: var(--classic-accent);
+    --control-accent: var(--classic-accent);
+  }
+  .mode-sphere,
+  .resume[data-mode="sphere"] {
+    --mode-accent: var(--sphere-accent);
+    --control-accent: var(--sphere-accent);
+  }
   .mode.is-available {
     z-index: 6;
     cursor: pointer;
     pointer-events: auto;
-    background: var(--focus);
+    background: var(--mode-accent, var(--focus));
     transform: translate3d(var(--x), var(--y), 0) scale(var(--choice-scale));
     filter:
       drop-shadow(0 7px 3px var(--tile-drop-strong))
       drop-shadow(0 0 12px var(--focus-glow));
     filter:
       drop-shadow(0 7px 3px color-mix(in srgb, var(--tile-shadow) 94%, transparent))
-      drop-shadow(0 0 12px color-mix(in srgb, var(--focus) 42%, transparent));
+      drop-shadow(0 0 12px color-mix(in srgb, var(--mode-accent, var(--focus)) 42%, transparent));
   }
   .mode.is-available::before { inset: 3px 4px 7px; }
   .mode.is-available .mode-content { opacity: 1; transform: none; }
+  .mode.is-available .mode-icon { color: var(--mode-accent, var(--focus)); }
   .mode.is-available:active {
     transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(1);
   }
@@ -372,17 +422,123 @@
   .mode.is-dug::before { inset: 6px 7px 8px; background: var(--well); }
   .mode.is-dug .mode-content { transform: scale(.9); }
 
+  .resume {
+    z-index: 7;
+    cursor: default;
+    pointer-events: none;
+    transition:
+      transform 190ms cubic-bezier(.22, 1, .36, 1),
+      filter 180ms ease,
+      opacity 180ms ease;
+  }
+  .resume[hidden] { display: none; }
+  .resume.is-available {
+    cursor: pointer;
+    pointer-events: auto;
+    background: var(--mode-accent, var(--focus));
+    transform: translate3d(var(--x), var(--y), 0) scale(var(--choice-scale));
+    filter:
+      drop-shadow(0 7px 3px color-mix(in srgb, var(--tile-shadow) 94%, transparent))
+      drop-shadow(0 0 14px color-mix(in srgb, var(--mode-accent, var(--focus)) 50%, transparent));
+  }
+  .resume.is-available::before { inset: 3px 4px 7px; }
+  .resume.is-available .resume-content { opacity: 1; transform: none; }
+  .resume.is-available .resume-icon { color: var(--mode-accent, var(--focus)); }
+  .resume.is-available:active {
+    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(1);
+  }
+  .resume.is-dug {
+    pointer-events: none;
+    background: var(--well-edge);
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
+    transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
+  }
+  .resume.is-dug::before { inset: 6px 7px 8px; background: var(--well); }
+
+  .theme-control {
+    --control-accent: var(--theme-accent);
+    z-index: 3;
+    cursor: default;
+    pointer-events: none;
+    transition:
+      transform 210ms cubic-bezier(.22, 1, .36, 1),
+      filter 180ms ease,
+      opacity 180ms ease,
+      background 180ms ease;
+  }
+  .theme-control:disabled { opacity: 1; }
+  .theme-hub.is-available {
+    z-index: 6;
+    cursor: pointer;
+    pointer-events: auto;
+    background: var(--theme-accent);
+    transform: translate3d(var(--x), var(--y), 0) scale(1.025);
+    filter:
+      drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 88%, transparent))
+      drop-shadow(0 0 8px color-mix(in srgb, var(--theme-accent) 28%, transparent));
+  }
+  .theme-hub.is-available::before { inset: 3px 4px 7px; }
+  .theme-hub.is-available .theme-content { opacity: 1; transform: none; }
+  .theme-hub.is-expanded {
+    background: var(--well-edge);
+    color: var(--well-ink);
+    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.95);
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
+  }
+  .theme-hub.is-expanded::before { inset: 5px 6px 7px; background: var(--well); }
+  .theme-choice.is-available {
+    z-index: 6;
+    cursor: pointer;
+    pointer-events: auto;
+    background: var(--theme-accent);
+    transform: translate3d(var(--x), var(--y), 0) scale(1.045);
+    filter:
+      drop-shadow(0 6px 2px color-mix(in srgb, var(--tile-shadow) 90%, transparent))
+      drop-shadow(0 0 9px color-mix(in srgb, var(--theme-accent) 32%, transparent));
+    animation: theme-bloom 240ms cubic-bezier(.22, 1, .36, 1) var(--bloom-delay, 0ms) backwards;
+  }
+  .theme-choice.is-available::before { inset: 3px 4px 7px; }
+  .theme-choice.is-available .theme-content { opacity: 1; transform: none; }
+  .theme-choice.is-available:active {
+    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.98);
+  }
+  .theme-choice.is-available[aria-pressed="true"]::after {
+    content: "✓";
+    position: absolute;
+    z-index: 4;
+    top: 17%;
+    right: 21%;
+    display: grid;
+    place-items: center;
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    background: var(--tile);
+    color: var(--theme-accent);
+    font: 700 10px/1 var(--font-ui);
+  }
+  .theme-choice.is-available[aria-pressed="true"] .theme-icon {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-accent) 48%, transparent));
+  }
+
   .board[data-phase="clearing"] .starter { animation: hit 220ms cubic-bezier(.22, 1, .36, 1) both; }
   .board[data-phase="ready"] .mode.is-available { animation: mode-rise 250ms cubic-bezier(.22, 1, .36, 1) backwards; }
+  .board[data-phase="ready"] .resume.is-available { animation: mode-rise 250ms cubic-bezier(.22, 1, .36, 1) 105ms backwards; }
+  .board[data-phase="ready"] .theme-hub.is-available { animation: utility-rise 230ms cubic-bezier(.22, 1, .36, 1) 125ms backwards; }
   .board[data-phase="ready"] .cell { opacity: .78; }
   .board[data-phase="ready"] .cell.is-revealed { opacity: .88; }
   .board[data-phase="ready"] .starter { opacity: .72; }
   .board[data-phase="ready"] .mode-bounded { animation-delay: 35ms; }
   .board[data-phase="ready"] .mode-sphere { animation-delay: 70ms; }
   .board.is-leaving .mode:not(.is-dug),
+  .board.is-leaving .resume:not(.is-dug),
+  .board.is-leaving .theme-control,
   .board.is-leaving .cell,
   .board.is-leaving .starter { opacity: .52; }
-  .board.is-leaving .mode { pointer-events: none; }
+  .board.is-leaving .mode,
+  .board.is-leaving .resume,
+  .board.is-leaving .theme-control { pointer-events: none; }
 
   .masthead {
     position: fixed;
@@ -422,6 +578,11 @@
   }
 
   @media (max-height: 480px) and (orientation: landscape) {
+    :root {
+      --hex-w: clamp(56px, 16vh, 68px);
+      --choice-scale: 1.05;
+      --board-y: 28px;
+    }
     .masthead {
       left: max(18px, calc(env(safe-area-inset-left) + 12px));
       top: max(12px, calc(env(safe-area-inset-top) + 8px));
@@ -431,6 +592,18 @@
     }
     .brand { font-size: 1rem; }
     .hint { font-size: .72rem; }
+    .mode-content,
+    .resume-content,
+    .theme-content { gap: 0; }
+    .mode-icon,
+    .resume-icon,
+    .theme-icon { width: 22px; height: 22px; }
+    .mode-name,
+    .resume-name,
+    .theme-name { font-size: .62rem; }
+    .mode-note,
+    .resume-note,
+    .theme-note { font-size: .45rem; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -443,13 +616,16 @@
   }
   @media (forced-colors: active) {
     body, body::before { background: Canvas; }
-    .cell, .starter, .mode { color: ButtonText; background: ButtonText; filter: none; }
-    .cell::before, .starter::before, .mode::before { background: Canvas; }
-    .cell.is-revealed, .starter.is-cleared, .mode.is-dug { background: ButtonText; }
-    .cell.is-revealed::before, .starter.is-cleared::before, .mode.is-dug::before { background: Canvas; }
+    .cell, .starter, .mode, .resume, .theme-control { color: ButtonText; background: ButtonText; filter: none; }
+    .cell::before, .starter::before, .mode::before, .resume::before, .theme-control::before { background: Canvas; }
+    .cell.is-revealed, .starter.is-cleared, .mode.is-dug, .resume.is-dug, .theme-hub.is-expanded { background: ButtonText; }
+    .cell.is-revealed::before, .starter.is-cleared::before, .mode.is-dug::before,
+    .resume.is-dug::before, .theme-hub.is-expanded::before { background: Canvas; }
     .count, .cell.count-1 .count, .cell.count-2 .count,
     .cell.count-3 .count, .cell.count-4 .count { color: CanvasText; text-shadow: none; }
-    .starter:focus, .mode:focus { outline: 3px solid Highlight; outline-offset: -5px; }
+    .starter:focus, .mode:focus, .resume:focus, .theme-control:focus { outline: 3px solid Highlight; outline-offset: -5px; }
+    .theme-choice.is-available[aria-pressed="true"] { outline: 3px double Highlight; outline-offset: -7px; }
+    .theme-choice.is-available[aria-pressed="true"]::after { background: Canvas; color: CanvasText; }
     .brand, .hint { color: CanvasText; text-shadow: none; }
   }
   @keyframes hit {
@@ -462,6 +638,21 @@
     }
     72% { transform: translate3d(var(--x), calc(var(--y) - 2px), 0) scale(1.1); }
     to { transform: translate3d(var(--x), var(--y), 0) scale(var(--choice-scale)); }
+  }
+  @keyframes utility-rise {
+    from {
+      opacity: .45;
+      transform: translate3d(var(--x), calc(var(--y) + 7px), 0) scale(.9);
+    }
+    to { transform: translate3d(var(--x), var(--y), 0) scale(1.025); }
+  }
+  @keyframes theme-bloom {
+    from {
+      opacity: .5;
+      transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.84);
+    }
+    74% { transform: translate3d(var(--x), calc(var(--y) - 2px), 0) scale(1.075); }
+    to { transform: translate3d(var(--x), var(--y), 0) scale(1.045); }
   }
 </style>
 </head>
@@ -485,7 +676,18 @@
       </span>
     </button>
 
-    <a class="hex mode mode-infinite" href="games/infinite.html" data-q="0" data-r="-1" aria-label="Play Infinite Hexsweeper, endless board">
+    <a class="hex resume destination" id="resume-game" href="games/infinite.html" data-q="0" data-r="0" data-mode="infinite" aria-describedby="menu-status" aria-label="Resume Infinite Hexsweeper" hidden>
+      <span class="resume-content">
+        <svg class="resume-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M13 17H6v-7M7 17a18 18 0 1 1-1 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="m21 16 14 8-14 8Z" fill="currentColor"/>
+        </svg>
+        <span class="resume-name">Resume</span>
+        <span class="resume-note" id="resume-mode-name">Infinite</span>
+      </span>
+    </a>
+
+    <a class="hex mode mode-infinite destination" href="games/infinite.html" data-mode="infinite" data-q="0" data-r="-1" aria-label="Play Infinite Hexsweeper, endless board">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -495,7 +697,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-bounded" href="games/bounded.html" data-q="1" data-r="0" aria-label="Play Classic Hexsweeper, fixed board">
+    <a class="hex mode mode-bounded destination" href="games/bounded.html" data-mode="bounded" data-q="1" data-r="0" aria-label="Play Classic Hexsweeper, fixed board">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
@@ -506,7 +708,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-sphere" href="games/sphere.html" data-q="-1" data-r="1" aria-label="Play Sphere Hexsweeper, 3D globe">
+    <a class="hex mode mode-sphere destination" href="games/sphere.html" data-mode="sphere" data-q="-1" data-r="1" aria-label="Play Sphere Hexsweeper, 3D globe">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -516,6 +718,48 @@
         <span class="mode-note">3D</span>
       </span>
     </a>
+
+    <button class="hex theme-control theme-hub" id="theme-toggle" type="button" data-q="0" data-r="-2" aria-describedby="menu-status" aria-expanded="false" aria-controls="theme-light theme-system theme-dark" aria-label="Choose launcher theme" disabled>
+      <span class="theme-content">
+        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="15" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M24 9a15 15 0 0 0 0 30Z" fill="currentColor" opacity=".88"/>
+          <circle cx="24" cy="24" r="4" fill="var(--tile)"/>
+        </svg>
+        <span class="theme-name">Theme</span>
+        <span class="theme-note" id="theme-current">System</span>
+      </span>
+    </button>
+
+    <button class="hex theme-control theme-choice" id="theme-light" type="button" data-appearance="light" data-q="0" data-r="-3" style="--bloom-delay:0ms" aria-label="Use light launcher theme" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
+      <span class="theme-content">
+        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/>
+          <path d="M24 7v6m0 22v6M7 24h6m22 0h6M12 12l4 4m16 16 4 4m0-24-4 4M16 32l-4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+        <span class="theme-name">Light</span>
+      </span>
+    </button>
+
+    <button class="hex theme-control theme-choice" id="theme-system" type="button" data-appearance="system" data-q="1" data-r="-3" style="--bloom-delay:35ms" aria-label="Follow the system launcher theme" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
+      <span class="theme-content">
+        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <rect x="8" y="10" width="32" height="23" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M24 10h13a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H24Z" fill="currentColor" opacity=".82"/>
+          <path d="M18 40h12M24 33v7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="theme-name">System</span>
+      </span>
+    </button>
+
+    <button class="hex theme-control theme-choice" id="theme-dark" type="button" data-appearance="dark" data-q="1" data-r="-2" style="--bloom-delay:70ms" aria-label="Use dark launcher theme" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
+      <span class="theme-content">
+        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M34 34A16 16 0 0 1 18 8a16 16 0 1 0 16 26Z" fill="currentColor"/>
+        </svg>
+        <span class="theme-name">Dark</span>
+      </span>
+    </button>
   </nav>
 </main>
 
@@ -526,9 +770,24 @@
   var board = document.getElementById("game-menu");
   var field = document.getElementById("menu-field");
   var starter = document.getElementById("opening-dig");
+  var resume = document.getElementById("resume-game");
+  var resumeModeName = document.getElementById("resume-mode-name");
+  var themeToggle = document.getElementById("theme-toggle");
+  var themeCurrent = document.getElementById("theme-current");
+  var themeChoices = Array.prototype.slice.call(board.querySelectorAll(".theme-choice"));
   var status = document.getElementById("menu-status");
   var modes = Array.prototype.slice.call(board.querySelectorAll(".mode"));
-  var modeSeats = { "0,-1": true, "1,0": true, "-1,1": true };
+  var positionedControls = [starter, resume, themeToggle].concat(modes, themeChoices);
+  var reservedSeats = {
+    "0,0": true,
+    "0,-1": true,
+    "1,0": true,
+    "-1,1": true,
+    "0,-2": true,
+    "0,-3": true,
+    "1,-3": true,
+    "1,-2": true
+  };
   var directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
   var cells = new Map();
   var mines = new Set();
@@ -537,9 +796,12 @@
   var resizeTimer = null;
   var phase = "covered";
   var leaving = false;
+  var themeOpen = false;
+  var activeResume = null;
   var keyboardOpening = false;
   var pointerOpening = false;
   var SESSION_KEY = "hexsweeper-launcher-opening-v1";
+  var APPEARANCE_KEY = "hexsweeper-appearance-v1";
 
   function key(q, r) { return q + "," + r; }
   function distance(q, r) { return Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)); }
@@ -551,6 +813,59 @@
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   }
 
+  function storageValue(store, storageKey) {
+    try { return store.getItem(storageKey); } catch (_) { return null; }
+  }
+
+  function parseSave(raw) {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (_) { return null; }
+  }
+
+  function infiniteResumeCandidate() {
+    var data = parseSave(storageValue(localStorage, "hexsweeper-endless-plate-v1"));
+    if (!data || data.v !== 1 || data.endless !== true) return null;
+    if (data.first !== false || data.over !== false || Number(data.cleared) <= 0) return null;
+    return {
+      mode: "infinite",
+      name: "Infinite",
+      href: "games/infinite.html",
+      savedAt: Number(data.savedAt) || 0
+    };
+  }
+
+  function sphereResumeCandidate() {
+    var stores = [sessionStorage, localStorage];
+    var keys = ["hexsweeper-sphere-run-v2", "hexsweeper-sphere-run-v1"];
+    var best = null;
+    stores.forEach(function (store) {
+      keys.forEach(function (storageKey) {
+        var data = parseSave(storageValue(store, storageKey));
+        if (!data || (data.v !== 1 && data.v !== 2) || data.kind !== "sphere") return;
+        if (data.over !== false || typeof data.first !== "boolean") return;
+        var flagged = Array.isArray(data.flagged) ? data.flagged.length : Number(data.flags) || 0;
+        if (data.first && flagged <= 0) return;
+        if (!data.first && (!Array.isArray(data.mines) || data.mines.length === 0)) return;
+        var candidate = {
+          mode: "sphere",
+          name: "Sphere",
+          href: "games/sphere.html",
+          savedAt: Number(data.savedAt) || 0
+        };
+        if (!best || candidate.savedAt >= best.savedAt) best = candidate;
+      });
+    });
+    return best;
+  }
+
+  // Adapters keep launcher routing honest. Classic joins this list only when
+  // its finite board gains a real persistence contract.
+  function newestResumeCandidate() {
+    return [infiniteResumeCandidate(), sphereResumeCandidate()]
+      .filter(Boolean)
+      .sort(function (a, b) { return b.savedAt - a.savedAt; })[0] || null;
+  }
+
   function buildMines() {
     mines.clear();
     for (var r = -14; r <= 14; r += 1) {
@@ -558,6 +873,7 @@
         if (distance(q, r) >= 3 && hash(q, r) < .205) mines.add(key(q, r));
       }
     }
+    Object.keys(reservedSeats).forEach(function (seat) { mines.delete(seat); });
     // Every ring-two boundary face gets at least one real outward mine, so
     // the zero flood always stops in a readable numbered frontier.
     for (var rr = -2; rr <= 2; rr += 1) {
@@ -567,7 +883,7 @@
         directions.forEach(function (dir) {
           var nq = qq + dir[0];
           var nr = rr + dir[1];
-          if (distance(nq, nr) === 3) outward.push([nq, nr]);
+          if (distance(nq, nr) === 3 && !reservedSeats[key(nq, nr)]) outward.push([nq, nr]);
         });
         if (!outward.some(function (p) { return mines.has(key(p[0], p[1])); })) {
           outward.sort(function (a, b) { return hash(a[0], a[1]) - hash(b[0], b[1]); });
@@ -605,7 +921,7 @@
     for (var r = -Math.ceil(rLimit); r <= Math.ceil(rLimit); r += 1) {
       for (var q = -qLimit; q <= qLimit; q += 1) {
         var id = key(q, r);
-        if (id === "0,0" || modeSeats[id]) continue;
+        if (reservedSeats[id]) continue;
         var x = width * (q + r / 2);
         var y = height * .75 * r;
         if (Math.abs(x) > innerWidth / 2 + width || Math.abs(y) > innerHeight / 2 + height) continue;
@@ -625,9 +941,8 @@
       }
     }
     field.appendChild(fragment);
-    place(starter, 0, 0, width, height);
-    modes.forEach(function (mode) {
-      place(mode, Number(mode.dataset.q), Number(mode.dataset.r), width, height);
+    positionedControls.forEach(function (control) {
+      place(control, Number(control.dataset.q), Number(control.dataset.r), width, height);
     });
   }
 
@@ -638,7 +953,7 @@
     while (queue.length) {
       var item = queue.shift();
       var id = key(item.q, item.r);
-      if (id !== "0,0" && !modeSeats[id]) {
+      if (!reservedSeats[id]) {
         plan.push({ key: id, step: item.step, jitter: Math.round(hash(item.q, item.r) * 34) });
       }
       if (countAt(item.q, item.r) !== 0 || distance(item.q, item.r) >= 2) continue;
@@ -646,7 +961,7 @@
         var q = item.q + dir[0];
         var r = item.r + dir[1];
         var nextKey = key(q, r);
-        if (seen.has(nextKey) || mines.has(nextKey) || modeSeats[nextKey]) return;
+        if (seen.has(nextKey) || mines.has(nextKey) || reservedSeats[nextKey]) return;
         seen.add(nextKey);
         queue.push({ q: q, r: r, step: item.step + 1 });
       });
@@ -669,8 +984,109 @@
     try { sessionStorage.setItem(SESSION_KEY, "1"); } catch (_) {}
   }
 
+  function updateReadyStatus() {
+    if (phase !== "ready" || leaving) return;
+    if (themeOpen) {
+      status.textContent = "Choose a launcher theme";
+    } else if (activeResume) {
+      status.textContent = "Resume " + activeResume.name + ", or choose a board";
+    } else {
+      status.textContent = "Choose a board";
+    }
+  }
+
+  function refreshResume() {
+    activeResume = newestResumeCandidate();
+    resume.classList.remove("is-available", "is-dug");
+    if (!activeResume) {
+      resume.hidden = true;
+      resume.removeAttribute("data-mode");
+      updateReadyStatus();
+      return;
+    }
+    resume.hidden = false;
+    resume.href = activeResume.href;
+    resume.dataset.mode = activeResume.mode;
+    resumeModeName.textContent = activeResume.name;
+    resume.setAttribute("aria-label", "Resume " + activeResume.name + " Hexsweeper");
+    if (phase === "ready") resume.classList.add("is-available");
+    updateReadyStatus();
+  }
+
+  function syncThemeChoices() {
+    themeCurrent.textContent = appearancePreference === "system"
+      ? "System"
+      : appearancePreference.charAt(0).toUpperCase() + appearancePreference.slice(1);
+    themeChoices.forEach(function (choice) {
+      choice.setAttribute("aria-pressed", choice.dataset.appearance === appearancePreference ? "true" : "false");
+    });
+  }
+
+  function openTheme(event) {
+    if (phase !== "ready") {
+      finishOpening(true);
+      return;
+    }
+    if (themeOpen || leaving) return;
+    themeOpen = true;
+    board.classList.add("is-theme-open");
+    themeToggle.classList.add("is-expanded");
+    themeToggle.setAttribute("aria-expanded", "true");
+    themeChoices.forEach(function (choice) {
+      choice.disabled = false;
+      choice.tabIndex = 0;
+      choice.setAttribute("aria-hidden", "false");
+      choice.classList.add("is-available");
+    });
+    updateReadyStatus();
+    if (event && event.detail === 0) {
+      var selected = themeChoices.find(function (choice) {
+        return choice.dataset.appearance === appearancePreference;
+      });
+      if (selected) selected.focus({ preventScroll: true });
+    }
+  }
+
+  function closeTheme(options) {
+    if (!themeOpen) return;
+    var opts = options || {};
+    themeOpen = false;
+    board.classList.remove("is-theme-open");
+    themeToggle.classList.remove("is-expanded");
+    themeToggle.setAttribute("aria-expanded", "false");
+    themeChoices.forEach(function (choice) {
+      choice.classList.remove("is-available");
+      choice.disabled = true;
+      choice.tabIndex = -1;
+      choice.setAttribute("aria-hidden", "true");
+    });
+    updateReadyStatus();
+    if (opts.focus) themeToggle.focus({ preventScroll: true });
+  }
+
+  function toggleTheme(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (themeOpen) closeTheme({ focus: event.detail === 0 });
+    else openTheme(event);
+  }
+
+  function selectTheme(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    var next = event.currentTarget.dataset.appearance;
+    if (next !== "system" && next !== "light" && next !== "dark") return;
+    appearancePreference = next;
+    try { localStorage.setItem(APPEARANCE_KEY, next); } catch (_) {}
+    applyAppearance();
+    status.textContent = themeCurrent.textContent + " theme selected";
+  }
+
   function finishOpening(instant) {
-    if (phase === "ready") return;
+    if (phase === "ready") {
+      refreshResume();
+      return;
+    }
     var focusFirstMode = keyboardOpening || (!pointerOpening && document.activeElement === starter);
     clearTimers();
     floodPlan().forEach(function (item) { revealCell(item.key); });
@@ -683,12 +1099,15 @@
     starter.tabIndex = -1;
     starter.setAttribute("aria-hidden", "true");
     modes.forEach(function (mode) { mode.classList.add("is-available"); });
-    status.textContent = "Choose a board";
+    themeToggle.disabled = false;
+    themeToggle.classList.add("is-available");
+    refreshResume();
+    updateReadyStatus();
     rememberReady();
     keyboardOpening = false;
     pointerOpening = false;
     if (focusFirstMode) {
-      modes[0].focus({ preventScroll: true });
+      (activeResume ? resume : modes[0]).focus({ preventScroll: true });
     }
   }
 
@@ -726,8 +1145,8 @@
     timers.push(setTimeout(function () { finishOpening(false); }, latest + 110));
   }
 
-  function chooseMode(event) {
-    var mode = event.currentTarget;
+  function chooseDestination(event) {
+    var destination = event.currentTarget;
     if (phase !== "ready") {
       event.preventDefault();
       finishOpening(true);
@@ -740,22 +1159,29 @@
     if (event.button !== undefined && event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
+    closeTheme();
     leaving = true;
-    mode.classList.add("is-dug");
+    destination.classList.add("is-dug");
     board.setAttribute("aria-busy", "true");
     board.classList.add("is-leaving");
-    status.textContent = "Opening " + mode.querySelector(".mode-name").textContent;
+    var modeName = destination === resume
+      ? resumeModeName.textContent
+      : destination.querySelector(".mode-name").textContent;
+    status.textContent = (destination === resume ? "Resuming " : "Opening ") + modeName;
     var delay = reducedMotion() ? 30 : 230;
-    setTimeout(function () { location.href = mode.href; }, delay);
+    setTimeout(function () { location.href = destination.href; }, delay);
   }
 
   starter.addEventListener("click", startOpening);
   board.addEventListener("click", function (event) {
-    if (phase === "covered" && !event.target.closest(".mode") && !event.target.closest(".starter")) {
+    if (themeOpen && !event.target.closest(".theme-control")) {
+      closeTheme();
+    }
+    if (phase === "covered" && !event.target.closest(".destination") && !event.target.closest(".theme-control") && !event.target.closest(".starter")) {
       startOpening(event);
       return;
     }
-    if (phase === "clearing" && !event.target.closest(".mode") && !event.target.closest(".starter")) {
+    if (phase === "clearing" && !event.target.closest(".destination") && !event.target.closest(".theme-control") && !event.target.closest(".starter")) {
       event.preventDefault();
       finishOpening(true);
     }
@@ -764,7 +1190,19 @@
     mode.addEventListener("focus", function () {
       if (phase !== "ready") finishOpening(true);
     });
-    mode.addEventListener("click", chooseMode);
+    mode.addEventListener("click", chooseDestination);
+  });
+  resume.addEventListener("click", chooseDestination);
+  themeToggle.addEventListener("click", toggleTheme);
+  themeChoices.forEach(function (choice) {
+    choice.addEventListener("click", selectTheme);
+  });
+
+  addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && themeOpen) {
+      event.preventDefault();
+      closeTheme({ focus: true });
+    }
   });
 
   addEventListener("resize", function () {
@@ -779,27 +1217,32 @@
     leaving = false;
     board.classList.remove("is-leaving");
     board.removeAttribute("aria-busy");
-    modes.forEach(function (mode) { mode.classList.remove("is-dug"); });
+    board.querySelectorAll(".destination").forEach(function (destination) {
+      destination.classList.remove("is-dug");
+    });
+    closeTheme();
+    refreshResume();
     finishOpening(true);
   });
 
-  var saved = null;
+  var appearancePreference = "system";
   try {
-    saved = localStorage.getItem("hexsweeper-appearance-v1");
-    if (saved !== "light" && saved !== "dark") {
-      saved = localStorage.getItem("hexsweeper-mode-v3");
+    var storedAppearance = localStorage.getItem(APPEARANCE_KEY);
+    if (storedAppearance === "system" || storedAppearance === "light" || storedAppearance === "dark") {
+      appearancePreference = storedAppearance;
     }
   } catch (_) {}
-  if (saved !== "light" && saved !== "dark") saved = null;
   var colorScheme = matchMedia("(prefers-color-scheme: dark)");
   function applyAppearance() {
-    document.documentElement.dataset.appearance = saved || (colorScheme.matches ? "dark" : "light");
+    document.documentElement.dataset.appearance = appearancePreference === "system"
+      ? (colorScheme.matches ? "dark" : "light")
+      : appearancePreference;
+    document.documentElement.dataset.appearanceChoice = appearancePreference;
+    syncThemeChoices();
   }
   applyAppearance();
-  if (!saved) {
-    if (colorScheme.addEventListener) colorScheme.addEventListener("change", applyAppearance);
-    else if (colorScheme.addListener) colorScheme.addListener(applyAppearance);
-  }
+  if (colorScheme.addEventListener) colorScheme.addEventListener("change", applyAppearance);
+  else if (colorScheme.addListener) colorScheme.addListener(applyAppearance);
 
   buildMines();
   buildField();

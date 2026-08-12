@@ -5,9 +5,12 @@ are Canvas/vanilla-JS builds from
 [lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps them
 for iOS and Android from the same sealed offline payload.
 
-The app opens on a picker offering the three choices that are actually
-structural. Everything else — theme, board size, count style — is a setting
-inside a game, not a peer of it, so it does not appear in the picker.
+The app opens on an interactive 2D board. Its safe opening auto-digs to reveal
+the three structural modes, plus two contextual controls: the newest unfinished
+Infinite or Sphere run appears as a mode-colored **Resume** face in the center,
+and a nearby **Theme** face blooms into System / Light / Dark choices for the
+launcher. Gameplay materials, board size, and count style remain settings inside
+each game rather than peer modes.
 
 | Mode | Board | Source |
 |---|---|---|
@@ -17,7 +20,8 @@ inside a game, not a peer of it, so it does not appear in the picker.
 
 The picker reinforces those choices with the short qualifiers **Endless**, **Fixed**,
 and **3D**. Internal filenames keep `bounded` for compatibility; that is not a
-user-facing mode name.
+user-facing mode name. Classic does not offer Resume until its finite board has
+a persistence contract.
 
 Web version: <https://dr.eamer.dev/games/hexsweeper/sphere/>
 
