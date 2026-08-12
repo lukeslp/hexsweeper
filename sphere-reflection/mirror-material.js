@@ -173,6 +173,54 @@
       swatch: "repeating-radial-gradient(ellipse at 72% 58%, #060407 0 8px, #c27d38 9px 11px, #16101c 12px 19px, #8c7bb5 20px 21px)",
       texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00080, exposure: 0.84, saturation: 0.92, backdrop: 0.42 },
     },
+    {
+      id: "ion-storm",
+      label: "Ion Storm",
+      shortLabel: "Ion",
+      fallback: ["#06142d", "#175fa2", "#c893dc", "#060a19"],
+      swatch: "linear-gradient(135deg, #0a75be 12%, #123866 46%, #d39adb 72%, #100c27 92%)",
+      texture: { desktop: "assets/reflections/ion-storm-1280.webp", mobile: "assets/reflections/ion-storm-768.webp", speed: 0.00018, exposure: 0.98, saturation: 1.04, backdrop: 0.48, motion: 1, motionAmount: 0.018, motionRate: 0.055, pulse: 0.06 },
+    },
+    {
+      id: "amber-tempest",
+      label: "Amber Tempest",
+      shortLabel: "Tempest",
+      fallback: ["#071018", "#70472d", "#f1a14e", "#0c1721"],
+      swatch: "radial-gradient(circle at 60% 35%, #ffd082 0 7%, #b6602d 28%, #17232c 62%, #05090d 88%)",
+      texture: { desktop: "assets/reflections/amber-tempest-1280.webp", mobile: "assets/reflections/amber-tempest-768.webp", speed: -0.00012, exposure: 0.94, saturation: 0.92, backdrop: 0.48, motion: 1, motionAmount: 0.014, motionRate: 0.042, pulse: 0.05 },
+    },
+    {
+      id: "heat-lightning",
+      label: "Heat Lightning",
+      shortLabel: "Heat",
+      fallback: ["#0d1017", "#7a3f53", "#ffb05b", "#190f16"],
+      swatch: "radial-gradient(circle at 53% 44%, #fff1cf 0 5%, #ff9f45 14%, #7e3b5d 34%, #11131d 72%)",
+      texture: { desktop: "assets/reflections/heat-lightning-1280.webp", mobile: "assets/reflections/heat-lightning-768.webp", speed: 0.00008, exposure: 0.96, saturation: 0.98, backdrop: 0.46, motion: 1, motionAmount: 0.012, motionRate: 0.048, pulse: 0.07, offsetY: 0.02 },
+    },
+    {
+      id: "stratosphere",
+      label: "Stratosphere",
+      shortLabel: "Sky",
+      fallback: ["#e7f2fa", "#74b5df", "#ffffff", "#1d6fa9"],
+      swatch: "linear-gradient(180deg, #137ec2 0%, #77c1ec 42%, #ffffff 63%, #dbeef8 100%)",
+      texture: { desktop: "assets/reflections/stratosphere-1280.webp", mobile: "assets/reflections/stratosphere-768.webp", speed: 0.00010, exposure: 0.88, saturation: 0.82, backdrop: 0.50, motion: 1, motionAmount: 0.007, motionRate: 0.026, pulse: 0.0, offsetY: -0.04 },
+    },
+    {
+      id: "chromatic-ink",
+      label: "Chromatic Ink",
+      shortLabel: "Ink",
+      fallback: ["#132ccb", "#00d9d2", "#f3ef16", "#ff16a8"],
+      swatch: "conic-gradient(from 35deg, #1529c9, #04d7c8, #f0ef13, #fe7416, #f014a8, #1529c9)",
+      texture: { desktop: "assets/reflections/chromatic-ink-1280.webp", mobile: "assets/reflections/chromatic-ink-768.webp", speed: 0.00006, exposure: 0.82, saturation: 1.08, backdrop: 0.38, motion: 2, motionAmount: 0.16, motionRate: 0.032, pulse: 0.0, scaleX: 0.86, scaleY: 0.92 },
+    },
+    {
+      id: "amber-cells",
+      label: "Amber Cells",
+      shortLabel: "Cells",
+      fallback: ["#1c0b02", "#95500e", "#f5bd4e", "#40200a"],
+      swatch: "radial-gradient(circle at 28% 32%, #f4bd56 0 16%, #9b5417 17% 21%, transparent 22%), radial-gradient(circle at 68% 61%, #d98724 0 25%, #2b1205 27% 100%)",
+      texture: { desktop: "assets/reflections/amber-cells-1280.webp", mobile: "assets/reflections/amber-cells-768.webp", speed: -0.00005, exposure: 0.88, saturation: 0.90, backdrop: 0.44, motion: 3, motionAmount: 0.010, motionRate: 0.030, pulse: 0.0, scaleX: 0.92, scaleY: 0.96 },
+    },
   ];
   const MATERIAL_INDEX = new Map(
     MATERIAL_PRESETS.map((preset, index) => [preset.id, index])
@@ -226,6 +274,7 @@ uniform sampler2D uEnvironmentMap;
 uniform float uTextureReady;
 uniform vec4 uTextureParams;
 uniform vec4 uTextureTransform;
+uniform vec4 uTextureMotion;
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -367,10 +416,44 @@ vec3 imageEnvironment(vec3 ray, float lod) {
   vec2 centered = vec2(longitude, latitude) - 0.5;
   vec2 uv = centered * uTextureTransform.xy + 0.5 + uTextureTransform.zw;
   uv.x = fract(uv.x + uTime * uTextureParams.x);
+
+  // Image plates opt into one of three restrained motion families. Motion is
+  // applied before sampling so the sphere remains geometrically authoritative:
+  // weather drifts, ink folds around itself, and oil cells gently refract.
+  float motionMode = uTextureMotion.x;
+  float motionAmount = uTextureMotion.y;
+  float motionTime = uTime * uTextureMotion.z;
+  vec2 motionCenter = uv - 0.5;
+  if (motionMode > 0.5 && motionMode < 1.5) {
+    float cloudX = fbm(motionCenter * 3.2 + vec2(motionTime, -motionTime * 0.57));
+    float cloudY = fbm(motionCenter.yx * 3.7 + vec2(-motionTime * 0.43, motionTime * 0.71));
+    uv += (vec2(cloudX, cloudY) - 0.5) * motionAmount;
+  } else if (motionMode > 1.5 && motionMode < 2.5) {
+    float radius = length(motionCenter);
+    float eddy = fbm(motionCenter * 4.4 + vec2(motionTime * 0.7, -motionTime * 0.5)) - 0.5;
+    float angle = motionTime + (0.58 - radius) * motionAmount * 3.4 + eddy * motionAmount * 1.8;
+    motionCenter = rotate2(angle) * motionCenter;
+    vec2 current = vec2(
+      fbm(motionCenter * 5.0 + vec2(motionTime, 1.7)),
+      fbm(motionCenter.yx * 5.3 + vec2(-motionTime * 0.8, 3.1))
+    ) - 0.5;
+    uv = motionCenter + 0.5 + current * motionAmount * 0.12;
+  } else if (motionMode > 2.5) {
+    vec2 wobble = vec2(
+      sin((uv.y + motionTime) * 17.0),
+      cos((uv.x - motionTime * 0.73) * 15.0)
+    );
+    float lens = fbm(motionCenter * 4.0 + vec2(motionTime * 0.5, -motionTime * 0.4)) - 0.5;
+    uv += (wobble * 0.55 + lens) * motionAmount;
+  }
+
+  uv.x = fract(uv.x);
   uv.y = clamp(uv.y, 0.002, 0.998);
   vec3 sampleColor = textureLod(uEnvironmentMap, uv, lod).rgb;
   float luma = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
   sampleColor = mix(vec3(luma), sampleColor, uTextureParams.z) * uTextureParams.y;
+  float breathe = 0.5 + 0.5 * sin(uTime * 0.58 + longitude * 6.28318531);
+  sampleColor *= 1.0 + uTextureMotion.w * (breathe - 0.35);
   sampleColor = mix(sampleColor, vec3(luma * 0.72 + 0.26), uAppearance * 0.24);
   return sampleColor;
 }
@@ -409,7 +492,13 @@ vec3 materialAccent() {
   if (uMaterial < 10.5) return vec3(0.22, 0.78, 0.95);
   if (uMaterial < 11.5) return vec3(0.70, 0.52, 0.92);
   if (uMaterial < 12.5) return vec3(1.0, 0.58, 0.24);
-  return vec3(0.92, 0.62, 0.34);
+  if (uMaterial < 13.5) return vec3(0.92, 0.62, 0.34);
+  if (uMaterial < 14.5) return vec3(0.42, 0.69, 1.0);
+  if (uMaterial < 15.5) return vec3(1.0, 0.61, 0.28);
+  if (uMaterial < 16.5) return vec3(1.0, 0.55, 0.35);
+  if (uMaterial < 17.5) return vec3(0.58, 0.82, 1.0);
+  if (uMaterial < 18.5) return vec3(0.18, 0.94, 0.86);
+  return vec3(1.0, 0.64, 0.20);
 }
 
 void main() {
@@ -563,6 +652,7 @@ void main() {
           "uTextureReady",
           "uTextureParams",
           "uTextureTransform",
+          "uTextureMotion",
         ].forEach((name) => {
           this.uniforms[name] = gl.getUniformLocation(this.program, name);
         });
@@ -872,6 +962,13 @@ void main() {
         texture.scaleY || 1,
         texture.offsetX || 0,
         texture.offsetY || 0
+      );
+      gl.uniform4f(
+        this.uniforms.uTextureMotion,
+        texture.motion || 0,
+        texture.motionAmount || 0,
+        texture.motionRate || 0,
+        texture.pulse || 0
       );
       gl.uniform2f(this.uniforms.uResolution, this.canvas.width, this.canvas.height);
       gl.uniform2f(
