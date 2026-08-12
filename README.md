@@ -105,6 +105,16 @@ python3 tools/export-choices-lab.py          # choices/lab redirect stubs
 
 Production exports inline `core.js`, chrome CSS, and IBM Plex (base64 woff2). Each theme file sets `window.HEXSWEEPER_ONEPAGER` (`allowModes: ["light","dark"]` on the plate; single `mode` on the others). Lab skins boot via `Hexsweeper.boot` in their source files. Welcome stays hidden on production pens. The live multi-theme game remains `index.html`.
 
+## Native launcher
+
+`python3 tools/export-collection.py --app` stages the sealed Capacitor payload in
+`build/app/`. The launcher opens a safe patch into the three structural modes.
+Its covered **Theme** face blooms into System / Light / Dark choices for the
+launcher itself; gameplay materials remain owned by each game. When an unfinished
+Infinite or Sphere autosave exists, the newest run rises as a mode-colored
+**Resume** face in the center. Classic is omitted from Resume until its finite
+board has a real persistence contract.
+
 ## Engine API
 
 Skins and the production page boot via:

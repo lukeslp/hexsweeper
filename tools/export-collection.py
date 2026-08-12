@@ -1091,8 +1091,9 @@ def export_sphere_app(exp: dict) -> str:
 def export_app_launcher() -> str:
     """The picker: three structural choices — infinite, classic, sphere.
 
-    Theme, board size and count style are settings inside each game, not peers
-    of it, so they deliberately do not appear here.
+    Gameplay theme, board size and count style remain settings inside each game,
+    not peer modes. The launcher's System/Light/Dark flower only changes the
+    launcher's own appearance; Resume routes to a real persisted game lane.
     """
     template = (ROOT / "tools" / "app-launcher.html").read_text(encoding="utf-8")
     fonts_css = inline_css_urls(
