@@ -1585,6 +1585,7 @@
       const surface = water.surfaceAt(face.center.x);
       return {
         index: face.index,
+        sides: face.boundary.length,
         z: face.z,
         center: { x: face.center.x, y: face.center.y },
         boundary: face.boundary.map((point) => ({ x: point.x, y: point.y })),
@@ -1605,7 +1606,11 @@
       if (Array.isArray(opts.indices) && opts.indices.length === 7) {
         const center = byIndex.get(opts.indices[0]);
         const ring = opts.indices.slice(1).map((index) => byIndex.get(index));
-        if (center && ring.every(Boolean)) {
+        if (
+          center &&
+          center.boundary.length === 6 &&
+          ring.every((face) => face && face.boundary.length === 6)
+        ) {
           return {
             center: copyMenuFace(center),
             ring: ring.map(copyMenuFace),
@@ -1619,9 +1624,19 @@
           const tile = state.tiles[face.index];
           return (
             tile &&
+            tile.boundary &&
+            tile.boundary.length === 6 &&
             tile.neighborIndices &&
             tile.neighborIndices.length === 6 &&
-            tile.neighborIndices.every((index) => byIndex.has(index))
+            tile.neighborIndices.every((index) => {
+              const neighbor = state.tiles[index];
+              return (
+                byIndex.has(index) &&
+                neighbor &&
+                neighbor.boundary &&
+                neighbor.boundary.length === 6
+              );
+            })
           );
         })
         .map((center) => ({

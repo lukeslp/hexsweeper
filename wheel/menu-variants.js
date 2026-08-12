@@ -86,6 +86,17 @@
     return [candidate.center].concat(candidate.ring || []).filter(Boolean);
   }
 
+  function faceSides(face) {
+    if (!face) return 0;
+    if (Number.isFinite(face.sides)) return face.sides;
+    return Array.isArray(face.boundary) ? face.boundary.length : 0;
+  }
+
+  function isHexPatch(candidate) {
+    const faces = facesFor(candidate);
+    return faces.length === 7 && faces.every((face) => faceSides(face) === 6);
+  }
+
   function patchDistance(candidate, target) {
     const center = candidate && candidate.center && candidate.center.center;
     if (!center) return Infinity;
@@ -99,7 +110,9 @@
    * and side-effect free so renderer and tests share the same fallback rules.
    */
   function choosePatch(candidates, target) {
-    const list = Array.isArray(candidates) ? candidates.filter(Boolean) : [];
+    const list = Array.isArray(candidates)
+      ? candidates.filter(isHexPatch)
+      : [];
     if (!list.length) return null;
     const point = {
       x: Number.isFinite(target && target.x) ? target.x : 0,
@@ -143,6 +156,7 @@
     ARRANGEMENT,
     RING_ACTIONS,
     CENTER_ACTION,
+    isHexPatch,
     normalize,
     resolve,
     choosePatch,

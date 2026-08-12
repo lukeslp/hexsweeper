@@ -30,7 +30,7 @@ for (const profile of Object.values(variants.PROFILES)) {
 }
 
 function face(index, x, y, z = 1) {
-  return { index, z, center: { x, y } };
+  return { index, sides: 6, z, center: { x, y } };
 }
 
 function patch(index, x, y, ringY = y) {
@@ -45,6 +45,15 @@ function patch(index, x, y, ringY = y) {
 const center = patch(1, 50, 50);
 const lowPartial = patch(2, 50, 82, 58);
 const lowComplete = patch(3, 54, 88, 76);
+const nonHex = patch(4, 50, 50);
+nonHex.ring[2].sides = 5;
+assert.strictEqual(variants.isHexPatch(center), true);
+assert.strictEqual(variants.isHexPatch(nonHex), false);
+assert.strictEqual(
+  variants.choosePatch([nonHex, center], { x: 50, y: 50 }).center.index,
+  1
+);
+assert.strictEqual(variants.choosePatch([nonHex], { x: 50, y: 50 }), null);
 assert.strictEqual(
   variants.choosePatch([lowComplete, center], { x: 50, y: 50 }).center.index,
   1

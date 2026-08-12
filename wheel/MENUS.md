@@ -19,6 +19,9 @@ corner.
 The face variants use a temporary renderer-only zoom. Closing returns to the
 player's exact prior zoom before gameplay and an armed fuse resume. Reduced
 motion snaps the camera and disables face stagger and caustic drift.
+Their projected patch is restricted to seven true six-sided faces; pentagonal
+topology cells and any other non-hexagonal fill faces are never used as menu
+controls.
 
 First launch uses a three-step illustrated tour — Dig, Menu, Quench — in place
 of the former introductory modal. Help replays the tour, and its last step
