@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+  Catch the Monkey · Orbit
+  A spherical route-blocking experiment by Luke Steuber.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Catch the Monkey on a closed hex sphere: rotate the world and close one face per turn before it reaches a portal.">
+<meta name="theme-color" content="#101311">
+<title>Catch the Monkey · Orbit</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="game.css">
+</head>
+<body>
+<main class="game" aria-labelledby="game-title">
+  <header class="masthead">
+    <div>
+      <span class="eyebrow">Hex route study · closed surface</span>
+      <h1 id="game-title">Catch the Monkey</h1>
+    </div>
+    <dl class="stats" aria-label="Game status">
+      <div><dt>Turns</dt><dd id="turn-count">0</dd></div>
+      <div><dt>Open portals</dt><dd id="portal-count">3</dd></div>
+    </dl>
+  </header>
+
+  <div class="board-wrap">
+    <canvas id="game-canvas" tabindex="0" aria-label="Catch the Monkey spherical board. Drag to rotate; select an empty face to close it."></canvas>
+    <p class="gesture-hint"><span aria-hidden="true">↔</span> Drag the sphere · tap a face to close it</p>
+    <div id="result" class="result" role="status" aria-live="polite" hidden>
+      <strong id="result-title"></strong>
+      <span id="result-copy"></span>
+    </div>
+  </div>
+
+  <footer class="controls" aria-label="Game controls">
+    <p><span class="dot monkey-dot" aria-hidden="true"></span>The gold rim points toward the monkey when it crosses the horizon.</p>
+    <div class="actions">
+      <button type="button" id="undo-button" title="Undo last turn (U)" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7H3v-5M3.5 7.5A9 9 0 1 1 3 15"></path></svg>
+        <span>Undo</span>
+      </button>
+      <button type="button" id="new-button" title="New orbit (R)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20.5 11.5A9 9 0 1 0 21 4"></path></svg>
+        <span>New</span>
+      </button>
+      <button type="button" id="help-button" title="How to play (?)" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.7 9a2.4 2.4 0 1 1 3.2 2.25c-.9.38-1.4.92-1.4 1.75M11.5 17h.01"></path></svg>
+        <span>Rules</span>
+      </button>
+    </div>
+  </footer>
+</main>
+
+<div id="help-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+  <section class="help-card">
+    <button type="button" class="close" id="help-close" aria-label="Close rules">×</button>
+    <span class="eyebrow">No rim · three exits</span>
+    <h2 id="help-title">Close the orbit</h2>
+    <p>Drag to turn the world. Choose one pale face to close it; the monkey immediately hops one step along a shortest open route to a portal.</p>
+    <div class="rule-grid">
+      <div><span class="rule-mark route-mark"></span><strong>Gold pip</strong><small>Its next likely hop</small></div>
+      <div><span class="rule-mark wall-mark"></span><strong>Black face</strong><small>A closed route</small></div>
+      <div><span class="rule-mark portal-mark"></span><strong>Coral ring</strong><small>An escape portal</small></div>
+    </div>
+    <p>Because the board has no edge, every escape is explicit. Rotate whenever the monkey or a portal slips behind the sphere; a gold cue on the rim points toward it.</p>
+    <button type="button" class="done" id="help-done">Play</button>
+  </section>
+</div>
+
+<div class="sr-only" id="live-status" aria-live="polite"></div>
+<script src="../sphere/hexasphere.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
