@@ -1336,6 +1336,12 @@ body.hex-bloom-ui .legacy-hud {
 body.hex-bloom-open .canvas-container {
   pointer-events: none;
 }
+body.hex-bloom-open.hex-bloom-rotatable .canvas-container {
+  pointer-events: auto;
+}
+.hex-bloom[data-rotatable-menu="true"][data-open="true"] .hex-bloom-scrim {
+  pointer-events: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .hb-hex,

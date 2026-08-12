@@ -158,6 +158,7 @@
   const POLAR_STUDY = !!POLAR_TAKE;
   const SPATIAL_SHELL = EGG_SHELL || INNER_CHAMBER;
   const SCENE_STUDY = SPATIAL_SHELL || POLAR_STUDY;
+  const ROTATABLE_MENU = FACE_TAKEOVER || SCENE_STUDY;
   const FIXED_CENTER =
     DOCK_MODE === "center" ||
     FACE_TAKEOVER ||
@@ -466,6 +467,7 @@
   function initHexBloom(game) {
     if (!game) return null;
     document.body.classList.add("hex-bloom-ui");
+    document.body.classList.toggle("hex-bloom-rotatable", ROTATABLE_MENU);
 
     const THEMES = (global.SphereSweeper && global.SphereSweeper.THEMES) || [];
 
@@ -479,6 +481,7 @@
     } else {
       root.textContent = "";
     }
+    root.dataset.rotatableMenu = ROTATABLE_MENU ? "true" : "false";
 
     const scrim = document.createElement("div");
     scrim.className = "hex-bloom-scrim";
@@ -496,7 +499,7 @@
     stage.className = "hex-bloom-stage";
     stage.id = "hex-bloom-stage";
     stage.setAttribute("role", "dialog");
-    stage.setAttribute("aria-modal", "true");
+    stage.setAttribute("aria-modal", ROTATABLE_MENU ? "false" : "true");
     stage.setAttribute("aria-label", "Game menu");
     root.appendChild(stage);
 
@@ -1452,6 +1455,8 @@
     let dockHelpBtn = null; // corner seat, lower right
     let centerActionBtn = null;
     let lastFocus = null;
+    let facePatchIndices = null;
+    let faceActions = [];
     let ribbonAngle = Math.PI / 2;
     let ribbonActions = [];
     let ribbonSuppressClickUntil = 0;
@@ -1566,6 +1571,8 @@
       hideTooltip();
       stage.querySelectorAll(".hb-hex").forEach((n) => n.remove());
       centerActionBtn = null;
+      facePatchIndices = null;
+      faceActions = [];
       ribbonActions = [];
     }
 
@@ -2254,25 +2261,51 @@
       el.style.setProperty("--face-icon", Math.max(22, Math.min(46, height * 0.5)).toFixed(1) + "px");
     }
 
+    function currentFacePatch() {
+      if (typeof game.getMenuPatch !== "function") return null;
+      return facePatchIndices
+        ? game.getMenuPatch({ indices: facePatchIndices })
+        : game.getMenuPatch();
+    }
+
+    function layoutFaceTakeover() {
+      if (!FACE_TAKEOVER || !facePatchIndices || !faceActions.length) return;
+      const patch = currentFacePatch();
+      const canvas = document.getElementById("gameCanvas");
+      if (!patch || !canvas) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      const faces = new Map(
+        [patch.center].concat(patch.ring).map((face) => [face.index, face])
+      );
+      faceActions.forEach((action) => {
+        const face = faces.get(action.faceIndex);
+        if (face) placeProjectedFace(action.el, face, canvasRect);
+      });
+    }
+
     function renderFaceTakeover(cats) {
-      const patch =
-        typeof game.getMenuPatch === "function" ? game.getMenuPatch() : null;
+      const patch = currentFacePatch();
       const canvas = document.getElementById("gameCanvas");
       if (!patch || !canvas) return false;
+      facePatchIndices = patch.indices.slice();
       const canvasRect = canvas.getBoundingClientRect();
       const ring = orderProjectedRing(patch);
       ring.forEach((face, index) => {
         const el = makeExperimentAction(cats[index], index, "hb-face-action");
+        el.dataset.faceIndex = String(face.index);
         placeProjectedFace(el, face, canvasRect);
         el.classList.add("folded");
         el.dataset.delay = String(45 + index * 38);
+        faceActions.push({ el, faceIndex: face.index });
         stage.appendChild(el);
       });
       const reset = makeExperimentReset("hb-face-action hb-face-center");
+      reset.dataset.faceIndex = String(patch.center.index);
       placeProjectedFace(reset, patch.center, canvasRect);
       reset.classList.add("folded");
       reset.dataset.delay = "0";
       centerActionBtn = reset;
+      faceActions.push({ el: reset, faceIndex: patch.center.index });
       stage.appendChild(reset);
       return true;
     }
@@ -2623,7 +2656,10 @@
       clearInterval(statsTimer);
       statsTimer = setInterval(paintStats, 250);
       paintStats();
-      setCanvasInert(true);
+      setCanvasInert(!ROTATABLE_MENU);
+      if (typeof game.setMenuInteraction === "function") {
+        game.setMenuInteraction(ROTATABLE_MENU);
+      }
       // Menu open = time out. The hub keeps painting the frozen value.
       if (typeof game.pauseTimer === "function") game.pauseTimer();
       prepareSpatialScene();
@@ -2693,6 +2729,9 @@
         hub.dataset.open = "false";
         hub.hidden = true;
         if (SCENE_STUDY) clearSpatialScene();
+        if (typeof game.setMenuInteraction === "function") {
+          game.setMenuInteraction(false);
+        }
         setCanvasInert(false);
         if (typeof game.resumeTimer === "function") game.resumeTimer();
         announce("Menu closed");
@@ -2921,56 +2960,22 @@
       });
     }
 
-    // Spatial studies keep gameplay inert while the modal is open, but the
-    // shell itself remains an object the player can turn. The scrim owns that
-    // orbit gesture; menu tiles stay fixed in screen space above it.
-    let spatialDrag = null;
-    let suppressScrimClick = false;
-    if (SPATIAL_SHELL && typeof game.orbitBy === "function") {
-      scrim.addEventListener("pointerdown", (event) => {
-        if (state.phase !== "open") return;
-        suppressScrimClick = false;
-        spatialDrag = {
-          pointerId: event.pointerId,
-          x: event.clientX,
-          y: event.clientY,
-          distance: 0,
-        };
-        scrim.setPointerCapture(event.pointerId);
-      });
-      scrim.addEventListener("pointermove", (event) => {
-        if (!spatialDrag || spatialDrag.pointerId !== event.pointerId) return;
-        const dx = event.clientX - spatialDrag.x;
-        const dy = event.clientY - spatialDrag.y;
-        spatialDrag.x = event.clientX;
-        spatialDrag.y = event.clientY;
-        spatialDrag.distance += Math.hypot(dx, dy);
-        if (spatialDrag.distance > 6) {
-          suppressScrimClick = true;
-          game.orbitBy(dx, dy);
-          event.preventDefault();
-        }
-      });
-      const finishSpatialDrag = (event) => {
-        if (!spatialDrag || spatialDrag.pointerId !== event.pointerId) return;
-        try {
-          scrim.releasePointerCapture(event.pointerId);
-        } catch (_) {}
-        spatialDrag = null;
-      };
-      scrim.addEventListener("pointerup", finishSpatialDrag);
-      scrim.addEventListener("pointercancel", finishSpatialDrag);
-    }
-
-    // Scrim tap closes; the synthetic click after an orbit drag does not.
+    // Non-spatial profiles retain the modal scrim. Rotatable profiles pass
+    // through to the canvas and receive the equivalent background-tap event.
     scrim.addEventListener("click", (e) => {
       e.preventDefault();
-      if (suppressScrimClick) {
-        suppressScrimClick = false;
-        return;
-      }
       if (state.phase === "open") collapse();
     });
+
+    const gameCanvas = document.getElementById("gameCanvas");
+    if (gameCanvas) {
+      gameCanvas.addEventListener("hexsweeper:menu-background-tap", () => {
+        if (ROTATABLE_MENU && state.phase === "open") collapse();
+      });
+      gameCanvas.addEventListener("hexsweeper:rotation", () => {
+        if (FACE_TAKEOVER && state.phase === "open") layoutFaceTakeover();
+      });
+    }
 
     // Focus trap while open
     document.addEventListener(

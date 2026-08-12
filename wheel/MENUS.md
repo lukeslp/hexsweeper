@@ -22,6 +22,10 @@ motion snaps the camera and disables face stagger and caustic drift.
 Their projected patch is restricted to seven true six-sided faces; pentagonal
 topology cells and any other non-hexagonal fill faces are never used as menu
 controls.
+While either projected menu is open, dragging the surrounding sphere still
+rotates it and the controls remain attached to their chosen faces. A stationary
+background tap closes the menu; canvas taps, holds, pinch and wheel gestures do
+not dig, flag or change the saved zoom until the menu closes.
 
 First launch uses a three-step illustrated tour — Dig, Menu, Quench — in place
 of the former introductory modal. Help replays the tour, and its last step

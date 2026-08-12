@@ -152,6 +152,7 @@
       };
   const FACE_TAKEOVER = MENU_PROFILE.renderer === "faces";
   const UNDERWATER_TAKEOVER = MENU_PROFILE.id === "underwater";
+  const ROTATABLE_MENU = FACE_TAKEOVER;
 
   // Base uses the production Sphere flower. The two face profiles reuse the
   // exact action inventory and clockwise ring order on a real seven-face patch.
@@ -464,6 +465,7 @@
   function initHexBloom(game) {
     if (!game) return null;
     document.body.classList.add("hex-bloom-ui");
+    document.body.classList.toggle("hex-bloom-rotatable", ROTATABLE_MENU);
 
     const THEMES = (global.SphereSweeper && global.SphereSweeper.THEMES) || [];
 
@@ -478,6 +480,7 @@
       root.textContent = "";
     }
     root.dataset.menuVariant = MENU_PROFILE.id;
+    root.dataset.rotatableMenu = ROTATABLE_MENU ? "true" : "false";
     if (FACE_TAKEOVER) root.dataset.faceTakeover = "true";
     else delete root.dataset.faceTakeover;
     if (UNDERWATER_TAKEOVER) root.dataset.underwaterTakeover = "true";
@@ -492,7 +495,7 @@
     stage.className = "hex-bloom-stage";
     stage.id = "hex-bloom-stage";
     stage.setAttribute("role", "dialog");
-    stage.setAttribute("aria-modal", "true");
+    stage.setAttribute("aria-modal", ROTATABLE_MENU ? "false" : "true");
     stage.setAttribute("aria-label", "Game menu");
     root.appendChild(stage);
 
@@ -2338,7 +2341,10 @@
       clearInterval(statsTimer);
       statsTimer = setInterval(paintStats, 250);
       paintStats();
-      setCanvasInert(true);
+      setCanvasInert(!ROTATABLE_MENU);
+      if (typeof game.setMenuInteraction === "function") {
+        game.setMenuInteraction(ROTATABLE_MENU);
+      }
       // Menu open = time out. The hub keeps painting the frozen value and an
       // armed fuse resumes with exactly the same remaining time.
       if (typeof game.pauseWheel === "function") game.pauseWheel("menu");
@@ -2420,6 +2426,9 @@
         statsTimer = null;
         hub.dataset.open = "false";
         hub.hidden = true;
+        if (typeof game.setMenuInteraction === "function") {
+          game.setMenuInteraction(false);
+        }
         setCanvasInert(false);
         if (typeof game.resumeWheel === "function") game.resumeWheel("menu");
         else if (typeof game.resumeTimer === "function") game.resumeTimer();
@@ -2607,6 +2616,16 @@
       e.preventDefault();
       if (state.phase === "open") collapse();
     });
+
+    const gameCanvas = document.getElementById("gameCanvas");
+    if (gameCanvas) {
+      gameCanvas.addEventListener("hexsweeper:menu-background-tap", () => {
+        if (ROTATABLE_MENU && state.phase === "open") collapse();
+      });
+      gameCanvas.addEventListener("hexsweeper:rotation", () => {
+        if (FACE_TAKEOVER && state.phase === "open") layoutFaceTakeover();
+      });
+    }
 
     // Focus trap while open
     document.addEventListener(
