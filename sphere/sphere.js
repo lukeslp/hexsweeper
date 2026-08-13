@@ -686,14 +686,28 @@
     opts = opts || {};
     const variant =
       opts.variant && typeof opts.variant === "object" ? opts.variant : null;
+    if (variant) {
+      const storageKeyValid =
+        typeof opts.storageKey === "string" &&
+        opts.storageKey === opts.storageKey.trim() &&
+        opts.storageKey.length > 0 &&
+        opts.storageKey !== RUN_STORAGE_KEY &&
+        opts.storageKey !== RUN_STORAGE_KEY_LEGACY;
+      const runKindValid =
+        typeof opts.runKind === "string" &&
+        opts.runKind === opts.runKind.trim() &&
+        opts.runKind.length > 0 &&
+        opts.runKind !== "sphere";
+      if (!storageKeyValid || !runKindValid) {
+        throw new Error(
+          "SphereSweeper: variant storageKey and runKind must be non-canonical"
+        );
+      }
+    }
     const runStorageKey =
-      variant && typeof opts.storageKey === "string" && opts.storageKey
-        ? opts.storageKey
-        : RUN_STORAGE_KEY;
+      variant ? opts.storageKey : RUN_STORAGE_KEY;
     const runKind =
-      variant && typeof opts.runKind === "string" && opts.runKind
-        ? opts.runKind
-        : "sphere";
+      variant ? opts.runKind : "sphere";
     const variantId =
       variant && typeof variant.id === "string" && variant.id
         ? variant.id
@@ -830,6 +844,7 @@
     };
     let runId = null;
     let completionEmitted = false;
+    let lastVariantState = null;
 
     const END_FX = {
       active: false,
@@ -968,9 +983,24 @@
       );
     }
 
-    function callVariant(hook, extra) {
+    function callVariant(hook, extra, fallback) {
       if (!variant || typeof variant[hook] !== "function") return undefined;
-      return variant[hook](variantContext(extra));
+      try {
+        return variant[hook](variantContext(extra));
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function exportVariantState() {
+      if (!variant || typeof variant.exportState !== "function") {
+        return lastVariantState;
+      }
+      try {
+        const exported = variant.exportState(variantContext());
+        lastVariantState = exported === undefined ? null : exported;
+      } catch (_) {}
+      return lastVariantState;
     }
 
     function variantAdmitsReveal(index, source) {
@@ -1593,8 +1623,16 @@
     }
 
     function computeAllCounts() {
-      for (let i = 0; i < state.cells.length; i++) {
-        state.cells[i].neighborMines = countNeighborMines(i);
+      computeCountsFor(state.tiles, state.cells);
+    }
+
+    function computeCountsFor(tiles, cells) {
+      for (let i = 0; i < cells.length; i++) {
+        let count = 0;
+        for (const neighbor of tiles[i].neighborIndices) {
+          if (cells[neighbor].isMine) count++;
+        }
+        cells[i].neighborMines = count;
       }
     }
 
@@ -1710,6 +1748,7 @@
       state.camShake = 0;
       runId = variant ? createRunId() : null;
       completionEmitted = false;
+      lastVariantState = null;
       // Fresh board: resume idle spin until the player touches the canvas again.
       state.ambientSpin = !state.reduceMotion;
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
@@ -1870,8 +1909,7 @@
       if (variant) {
         data.runId = runId;
         data.completionEmitted = !!completionEmitted;
-        const variantState = callVariant("exportState");
-        data.variant = variantState === undefined ? null : variantState;
+        data.variant = exportVariantState();
       }
       return data;
     }
@@ -1929,40 +1967,33 @@
         return false;
       }
 
-      persistSuspended = true;
-      stopTimer();
-      clearEndFx();
-      hideBanner();
-
-      state.difficulty = data.difficulty;
-      syncSizeChrome();
-      try {
-        localStorage.setItem(SIZE_STORAGE_KEY, data.difficulty);
-      } catch (_) {}
-
-      const cfg = CONFIG[state.difficulty];
-      state.sphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
-      state.tiles = state.sphere.tiles;
-      attachEdgeNeighbors();
-      state.cells = state.tiles.map(() => freshCell());
-      const n = state.cells.length;
-
       const mineList = Array.isArray(data.mines) ? data.mines : [];
       const revealedList = Array.isArray(data.revealed) ? data.revealed : [];
       const flaggedList = Array.isArray(data.flagged) ? data.flagged : [];
 
       // Started game with no mines recorded = corrupt save (post-first-dig always has mines).
       if (!data.first && mineList.length === 0 && !data.over) {
-        persistSuspended = false;
         return false;
       }
 
+      // Build and validate a candidate board before mutating the active run.
+      // Variant import is therefore a preflight: rejection or an exception
+      // leaves the current board, timer, banner, and persistence untouched.
+      const cfg = CONFIG[data.difficulty];
+      const candidateSphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
+      const candidateTiles = candidateSphere.tiles;
+      attachEdgeNeighbors(candidateTiles);
+      const candidateCells = candidateTiles.map(() => freshCell());
+      const n = candidateCells.length;
+
       for (const idx of mineList) {
-        if ((idx | 0) === idx && idx >= 0 && idx < n) state.cells[idx].isMine = true;
+        if ((idx | 0) === idx && idx >= 0 && idx < n) {
+          candidateCells[idx].isMine = true;
+        }
       }
       for (const idx of revealedList) {
         if ((idx | 0) !== idx || idx < 0 || idx >= n) continue;
-        const c = state.cells[idx];
+        const c = candidateCells[idx];
         c.revealed = true;
         c.animReveal = 1;
         c.visualDue = 0;
@@ -1971,55 +2002,107 @@
       let flags = 0;
       for (const idx of flaggedList) {
         if ((idx | 0) !== idx || idx < 0 || idx >= n) continue;
-        const c = state.cells[idx];
+        const c = candidateCells[idx];
         if (c.revealed) continue;
         c.flagged = true;
         flags++;
       }
-      computeAllCounts();
+      computeCountsFor(candidateTiles, candidateCells);
 
-      state.isFirstClick = !!data.first;
-      state.isGameOver = !!data.over;
-      state.won = !!data.won;
-      state.detonatorIdx = -1;
-      state.flagsPlaced =
-        Number.isFinite(data.flags) ? data.flags | 0 : flags;
-      state.mineCount = Number.isFinite(data.mineCount)
+      const candidateFlags = Number.isFinite(data.flags) ? data.flags | 0 : flags;
+      const candidateMineCount = Number.isFinite(data.mineCount)
         ? data.mineCount | 0
-        : mineList.length || mineTargetForDifficulty(n);
-      state.timeElapsed = data.time | 0;
-      state.hovered = -1;
-      state.pressed = -1;
-      state.camShake = 0;
-      runId = variant
-        ? typeof data.runId === "string" && data.runId
+        : mineList.length || Math.max(1, Math.round(n * cfg.minePct));
+      const candidateRotY = Number.isFinite(data.rotY) ? data.rotY : state.rotY;
+      const candidateRotX = Number.isFinite(data.rotX) ? data.rotX : state.rotX;
+      const candidateZoom = Number.isFinite(data.zoom)
+        ? Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, data.zoom))
+        : state.zoomFactor;
+      const restoredRunId =
+        variant && typeof data.runId === "string" && data.runId
           ? data.runId
-          : createRunId()
-        : null;
+          : null;
+      const candidateState = Object.assign({}, state, {
+        difficulty: data.difficulty,
+        sphere: candidateSphere,
+        tiles: candidateTiles,
+        cells: candidateCells,
+        isFirstClick: !!data.first,
+        isGameOver: !!data.over,
+        won: !!data.won,
+        detonatorIdx: -1,
+        flagsPlaced: candidateFlags,
+        mineCount: candidateMineCount,
+        timeElapsed: data.time | 0,
+        hovered: -1,
+        pressed: -1,
+        camShake: 0,
+        ambientSpin: !!data.first && !state.reduceMotion && flags === 0,
+        rotY: candidateRotY,
+        rotX: candidateRotX,
+        targetRotY: candidateRotY,
+        targetRotX: candidateRotX,
+        zoomFactor: candidateZoom,
+        scale: state.baseScale * candidateZoom,
+      });
+      if (
+        variant &&
+        callVariant(
+          "importState",
+          {
+            saved: data.variant,
+            state: candidateState,
+            cells: candidateCells,
+            tiles: candidateTiles,
+            runId: restoredRunId,
+            endRun: () => false,
+            persist: () => false,
+            requestDraw: () => {},
+            projectFace: () => null,
+          },
+          false
+        ) === false
+      ) {
+        return false;
+      }
+
+      persistSuspended = true;
+      stopTimer();
+      clearEndFx();
+      hideBanner();
+
+      state.difficulty = candidateState.difficulty;
+      state.sphere = candidateSphere;
+      state.tiles = candidateTiles;
+      state.cells = candidateCells;
+      state.isFirstClick = candidateState.isFirstClick;
+      state.isGameOver = candidateState.isGameOver;
+      state.won = candidateState.won;
+      state.detonatorIdx = candidateState.detonatorIdx;
+      state.flagsPlaced = candidateFlags;
+      state.mineCount = candidateMineCount;
+      state.timeElapsed = candidateState.timeElapsed;
+      state.hovered = candidateState.hovered;
+      state.pressed = candidateState.pressed;
+      state.camShake = candidateState.camShake;
+      state.ambientSpin = candidateState.ambientSpin;
+      state.rotY = candidateRotY;
+      state.rotX = candidateRotX;
+      state.targetRotY = candidateRotY;
+      state.targetRotX = candidateRotX;
+      state.zoomFactor = candidateZoom;
+      state.scale = candidateState.scale;
+      runId = variant ? restoredRunId || createRunId() : null;
       completionEmitted = variant && !!data.completionEmitted;
-      // Fresh-ish (flags only, no dig yet): allow ambient spin again.
-      state.ambientSpin = !!data.first && !state.reduceMotion && flags === 0;
+      if (variant) lastVariantState = data.variant === undefined ? null : data.variant;
 
-      if (Number.isFinite(data.rotY)) {
-        state.rotY = data.rotY;
-        state.targetRotY = data.rotY;
-      }
-      if (Number.isFinite(data.rotX)) {
-        state.rotX = data.rotX;
-        state.targetRotX = data.rotX;
-      }
-      if (Number.isFinite(data.zoom)) {
-        state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, data.zoom));
-        state.scale = state.baseScale * state.zoomFactor;
-      }
-
+      syncSizeChrome();
+      try {
+        localStorage.setItem(SIZE_STORAGE_KEY, data.difficulty);
+      } catch (_) {}
       invalidateProjection();
       ensureGlobeForTheme(state.theme);
       bakeGlobeTileColors();
-      if (variant && callVariant("importState", { saved: data.variant }) === false) {
-        persistSuspended = false;
-        return false;
-      }
       updateUI();
 
       if (!state.isFirstClick && !state.isGameOver) {
@@ -2031,7 +2114,11 @@
 
       persistSuspended = false;
       // Re-write under v2 key so legacy saves migrate.
-      flushPersist();
+      const migrated = flushPersist();
+      if (!variant && migrated) {
+        storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
+        storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+      }
       return true;
     }
 
@@ -3008,13 +3095,14 @@
     }
 
     /** Map each boundary edge → neighbor tile index (for valley perimeter skirts). */
-    function attachEdgeNeighbors() {
+    function attachEdgeNeighbors(tiles) {
+      tiles = tiles || state.tiles;
       const pointKey = (p) =>
         `${p.x.toFixed(6)},${p.y.toFixed(6)},${p.z.toFixed(6)}`;
       const edgeMap = new Map();
-      for (let ti = 0; ti < state.tiles.length; ti++) {
-        const b = state.tiles[ti].boundary;
-        state.tiles[ti].edgeNeighbors = new Array(b.length).fill(-1);
+      for (let ti = 0; ti < tiles.length; ti++) {
+        const b = tiles[ti].boundary;
+        tiles[ti].edgeNeighbors = new Array(b.length).fill(-1);
         for (let i = 0; i < b.length; i++) {
           const j = (i + 1) % b.length;
           const key = [pointKey(b[i]), pointKey(b[j])].sort().join("|");
@@ -3025,8 +3113,8 @@
       edgeMap.forEach((ends) => {
         if (ends.length !== 2) return;
         const [a, b] = ends;
-        state.tiles[a.ti].edgeNeighbors[a.ei] = b.ti;
-        state.tiles[b.ti].edgeNeighbors[b.ei] = a.ti;
+        tiles[a.ti].edgeNeighbors[a.ei] = b.ti;
+        tiles[b.ti].edgeNeighbors[b.ei] = a.ti;
       });
     }
 

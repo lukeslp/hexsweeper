@@ -10,10 +10,12 @@ const sphereSource = fs.readFileSync(path.join(__dirname, "sphere.js"), "utf8");
 
 function memoryStorage(initial) {
   const values = new Map(Object.entries(initial || {}));
+  const reads = [];
   const writes = [];
   const removals = [];
   return {
     getItem(key) {
+      reads.push(key);
       return values.has(key) ? values.get(key) : null;
     },
     setItem(key, value) {
@@ -28,6 +30,10 @@ function memoryStorage(initial) {
     value(key) {
       return values.get(key);
     },
+    entries() {
+      return Object.fromEntries(values);
+    },
+    reads,
     writes,
     removals,
   };
@@ -91,13 +97,17 @@ function createHarness(options) {
   const frames = [];
   const listeners = Object.create(null);
   const classList = { add() {}, remove() {}, toggle() {}, contains: () => false };
+  const elements = {
+    "sphere-banner": { hidden: true, classList: { ...classList }, textContent: "" },
+    "banner-msg": { hidden: false, classList: { ...classList }, textContent: "" },
+  };
   const document = {
     visibilityState: "visible",
     documentElement: { setAttribute() {} },
     body: { dataset: {}, classList, appendChild() {} },
     activeElement: null,
     getElementById(id) {
-      return id === "gameCanvas" ? canvas : null;
+      return id === "gameCanvas" ? canvas : elements[id] || null;
     },
     querySelector: () => null,
     addEventListener(type, listener) {
@@ -113,6 +123,7 @@ function createHarness(options) {
     document,
     localStorage,
     sessionStorage,
+    elements,
     location: { search: "?welcome=0", pathname: "/sphere/", href: "https://example.test/sphere/" },
     navigator: {},
     performance: { now: () => 100 },
@@ -157,11 +168,20 @@ function createHarness(options) {
     SphereSweeper: sandbox.SphereSweeper,
     localStorage,
     sessionStorage,
+    elements,
     runFrame() {
       const frame = frames.shift();
       if (frame) frame(100);
     },
   };
+}
+
+function variantBoot(variant, overrides) {
+  return Object.assign({
+    variant,
+    storageKey: "hexsweeper-glitch-sphere-run-v1",
+    runKind: "glitch-sphere",
+  }, overrides);
 }
 
 function plain(value) {
@@ -243,6 +263,49 @@ test("keeps the canonical storage key and run kind unchanged without a variant",
   assert.ok(sessionStorage.value("hexsweeper-sphere-run-v2"));
 });
 
+test("rejects missing or canonical variant persistence options before storage access", () => {
+  const invalidOptions = [
+    { runKind: "glitch-sphere" },
+    { storageKey: "hexsweeper-glitch-sphere-run-v1" },
+    { storageKey: "hexsweeper-sphere-run-v2", runKind: "glitch-sphere" },
+    { storageKey: "hexsweeper-sphere-run-v1", runKind: "glitch-sphere" },
+    { storageKey: "hexsweeper-glitch-sphere-run-v1", runKind: "sphere" },
+  ];
+  for (const invalid of invalidOptions) {
+    const canonical = JSON.stringify({ kind: "sphere", sentinel: true });
+    const localStorage = memoryStorage({
+      "hexsweeper-sphere-run-v2": canonical,
+      "hexsweeper-sphere-run-v1": canonical,
+    });
+    const sessionStorage = memoryStorage({
+      "hexsweeper-sphere-run-v2": canonical,
+      "hexsweeper-sphere-run-v1": canonical,
+    });
+    assert.throws(
+      () => createHarness({
+        localStorage,
+        sessionStorage,
+        boot: Object.assign({ variant: { id: "glitch-sphere" } }, invalid),
+      }),
+      /variant.*(?:storageKey|runKind)/i
+    );
+    assert.deepStrictEqual(localStorage.entries(), {
+      "hexsweeper-sphere-run-v2": canonical,
+      "hexsweeper-sphere-run-v1": canonical,
+    });
+    assert.deepStrictEqual(sessionStorage.entries(), {
+      "hexsweeper-sphere-run-v2": canonical,
+      "hexsweeper-sphere-run-v1": canonical,
+    });
+    assert.deepStrictEqual(localStorage.reads, []);
+    assert.deepStrictEqual(sessionStorage.reads, []);
+    assert.deepStrictEqual(localStorage.writes, []);
+    assert.deepStrictEqual(sessionStorage.writes, []);
+    assert.deepStrictEqual(localStorage.removals, []);
+    assert.deepStrictEqual(sessionStorage.removals, []);
+  }
+});
+
 test("isolates variant persistence and restores its run identity and state", () => {
   const canonical = JSON.stringify({ kind: "sphere", sentinel: true });
   const localStorage = memoryStorage({ "hexsweeper-sphere-run-v2": canonical });
@@ -259,12 +322,9 @@ test("isolates variant persistence and restores its run identity and state", () 
   const first = createHarness({
     localStorage,
     sessionStorage,
-    boot: {
-      variant,
-      storageKey: "hexsweeper-glitch-sphere-run-v1",
-      runKind: "glitch-sphere",
+    boot: variantBoot(variant, {
       createRunId: () => "run-one",
-    },
+    }),
   });
   first.api.flagAt(0);
   const saved = plain(first.api.exportRunState());
@@ -278,15 +338,75 @@ test("isolates variant persistence and restores its run identity and state", () 
   const second = createHarness({
     localStorage,
     sessionStorage,
-    boot: {
-      variant,
-      storageKey: "hexsweeper-glitch-sphere-run-v1",
-      runKind: "glitch-sphere",
+    boot: variantBoot(variant, {
       createRunId: () => "should-not-replace-restored-id",
-    },
+    }),
   });
   assert.strictEqual(second.api.exportRunState().runId, "run-one");
   assert.deepStrictEqual(plain(imported.at(-1)), { occupied: 2, remainingMs: 400 });
+});
+
+test("advances run IDs on reset while retaining a restored run ID", () => {
+  const ids = ["run-first", "run-second", "run-unexpected"];
+  let calls = 0;
+  const { api } = createHarness({
+    boot: variantBoot({ id: "glitch-sphere", importState: () => true }, {
+      createRunId: () => ids[calls++],
+    }),
+  });
+  api.flagAt(0);
+  const first = plain(api.exportRunState());
+  assert.strictEqual(first.runId, "run-first");
+  api.reset();
+  api.flagAt(0);
+  assert.strictEqual(api.exportRunState().runId, "run-second");
+  assert.strictEqual(api.applyRunState(Object.assign({}, first, {
+    variant: null,
+    savedAt: 20,
+  })), true);
+  assert.strictEqual(api.exportRunState().runId, "run-first");
+  assert.strictEqual(calls, 2);
+});
+
+test("restores canonical current saves without a variant", () => {
+  const saved = begunRun({
+    kind: "sphere",
+    runId: undefined,
+    completionEmitted: undefined,
+    variant: undefined,
+    revealed: [0],
+  });
+  const sessionStorage = memoryStorage({
+    "hexsweeper-sphere-run-v2": JSON.stringify(saved),
+  });
+  const { api } = createHarness({ sessionStorage });
+  assert.strictEqual(api.getState().difficulty, "xsmall");
+  assert.strictEqual(api.getState().isFirstClick, false);
+  assert.strictEqual(api.getState().cells[0].revealed, true);
+  assert.strictEqual(api.exportRunState().kind, "sphere");
+});
+
+test("migrates a canonical legacy save and removes both legacy copies", () => {
+  const saved = begunRun({
+    v: 1,
+    kind: "sphere",
+    runId: undefined,
+    completionEmitted: undefined,
+    variant: undefined,
+    revealed: [0],
+  });
+  const localStorage = memoryStorage({
+    "hexsweeper-sphere-run-v1": JSON.stringify(saved),
+  });
+  const sessionStorage = memoryStorage({
+    "hexsweeper-sphere-run-v1": JSON.stringify(saved),
+  });
+  const { api } = createHarness({ localStorage, sessionStorage });
+  assert.strictEqual(api.getState().cells[0].revealed, true);
+  assert.ok(localStorage.value("hexsweeper-sphere-run-v2"));
+  assert.ok(sessionStorage.value("hexsweeper-sphere-run-v2"));
+  assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), undefined);
+  assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), undefined);
 });
 
 test("admits direct and flood reveals separately and runs the first-dig hook after flood", () => {
@@ -308,7 +428,7 @@ test("admits direct and flood reveals separately and runs the first-dig hook aft
     useDefaultWin: () => false,
   };
   const { api } = createHarness({
-    boot: { variant, runKind: "glitch-sphere", createRunId: () => "run-admission" },
+    boot: variantBoot(variant, { createRunId: () => "run-admission" }),
   });
   assert.strictEqual(api.digAt(1), false);
   assert.strictEqual(api.digAt(0), true);
@@ -341,7 +461,7 @@ test("includes variant state in undo and exposes reset, flag, tick, and draw hoo
     useDefaultWin: () => false,
   };
   const { api, runFrame } = createHarness({
-    boot: { variant, runKind: "glitch-sphere", createRunId: () => "run-hooks" },
+    boot: variantBoot(variant, { createRunId: () => "run-hooks" }),
   });
   assert.strictEqual(api.applyRunState(begunRun()), true);
   assert.strictEqual(api.digAt(0), true);
@@ -360,6 +480,67 @@ test("includes variant state in undo and exposes reset, flag, tick, and draw hoo
   assert.strictEqual(events.filter((event) => event === "reset").length, 2);
 });
 
+test("contains throwing notification hooks and continues engine actions", () => {
+  const events = [];
+  const fail = (name) => () => { throw new Error(`${name} failed`); };
+  const variant = {
+    id: "glitch-sphere",
+    reset: fail("reset"),
+    admitReveal: ({ index }) => index !== 1,
+    captureUndo: fail("captureUndo"),
+    restoreUndo: fail("restoreUndo"),
+    reveal: fail("reveal"),
+    firstResolvedDig: () => events.push("firstResolvedDig"),
+    flag: fail("flag"),
+    tick: fail("tick"),
+    draw: fail("draw"),
+    useDefaultWin: () => false,
+  };
+  const { api, runFrame } = createHarness({
+    boot: variantBoot(variant, { createRunId: () => "run-errors" }),
+  });
+  assert.strictEqual(api.digAt(0), true);
+  assert.deepStrictEqual(events, ["firstResolvedDig"]);
+  assert.strictEqual(api.undo(), true);
+  assert.strictEqual(api.flagAt(2), true);
+  assert.doesNotThrow(() => runFrame());
+  assert.doesNotThrow(() => api.reset());
+});
+
+test("rejects a throwing import without mutating the active board", () => {
+  const variant = {
+    id: "glitch-sphere",
+    importState: () => { throw new Error("bad variant snapshot"); },
+  };
+  const { api, localStorage, sessionStorage } = createHarness({
+    boot: variantBoot(variant, { createRunId: () => "run-atomic" }),
+  });
+  const before = {
+    difficulty: api.getState().difficulty,
+    first: api.getState().isFirstClick,
+    cells: api.getState().cells.map((cell) => ({
+      isMine: cell.isMine,
+      revealed: cell.revealed,
+      flagged: cell.flagged,
+    })),
+    localWrites: localStorage.writes.length,
+    sessionWrites: sessionStorage.writes.length,
+  };
+  assert.strictEqual(api.applyRunState(begunRun()), false);
+  assert.strictEqual(api.getState().difficulty, before.difficulty);
+  assert.strictEqual(api.getState().isFirstClick, before.first);
+  assert.deepStrictEqual(
+    plain(api.getState().cells.map((cell) => ({
+      isMine: cell.isMine,
+      revealed: cell.revealed,
+      flagged: cell.flagged,
+    }))),
+    before.cells
+  );
+  assert.strictEqual(localStorage.writes.length, before.localWrites);
+  assert.strictEqual(sessionStorage.writes.length, before.sessionWrites);
+});
+
 test("emits one completion per run and does not re-emit a restored completion", () => {
   const localStorage = memoryStorage();
   const sessionStorage = memoryStorage();
@@ -376,13 +557,10 @@ test("emits one completion per run and does not re-emit a restored completion", 
     }),
     useDefaultWin: () => false,
   };
-  const boot = {
-    variant,
-    storageKey: "hexsweeper-glitch-sphere-run-v1",
-    runKind: "glitch-sphere",
+  const boot = variantBoot(variant, {
     createRunId: () => "run-complete",
     onRunComplete: (payload) => completions.push(plain(payload)),
-  };
+  });
   const first = createHarness({ localStorage, sessionStorage, boot });
   assert.strictEqual(first.api.applyRunState(begunRun({ runId: "run-complete" })), true);
   assert.strictEqual(first.api.digAt(3), true);
@@ -414,6 +592,45 @@ test("emits one completion per run and does not re-emit a restored completion", 
     }),
   });
   assert.strictEqual(restoredCompletions.length, 0);
+});
+
+test("contains terminal hook failures and persists a recoverable terminal record", () => {
+  const completions = [];
+  const variant = {
+    id: "glitch-sphere",
+    terminal: () => { throw new Error("terminal failed"); },
+    terminalCopy: () => { throw new Error("copy failed"); },
+    exportState: () => { throw new Error("export failed"); },
+    useDefaultWin: () => false,
+  };
+  const { api, localStorage, elements } = createHarness({
+    boot: variantBoot(variant, {
+      createRunId: () => "run-terminal-errors",
+      onRunComplete: (payload) => completions.push(plain(payload)),
+    }),
+  });
+  const state = api.getState();
+  state.isFirstClick = false;
+  state.mineCount = 1;
+  state.cells[3].isMine = true;
+  assert.doesNotThrow(() => api.digAt(3));
+  assert.strictEqual(state.isGameOver, true);
+  assert.strictEqual(state.won, false);
+  assert.strictEqual(state.cells[3].endFlash, 1);
+  assert.strictEqual(elements["banner-msg"].textContent, "Mine detonated.");
+  assert.strictEqual(elements["sphere-banner"].hidden, false);
+  assert.strictEqual(completions.length, 1);
+  assert.strictEqual(api.digAt(3), false);
+  assert.strictEqual(completions.length, 1);
+  const saved = JSON.parse(
+    localStorage.value("hexsweeper-glitch-sphere-run-v1")
+  );
+  assert.strictEqual(saved.kind, "glitch-sphere");
+  assert.strictEqual(saved.over, true);
+  assert.strictEqual(saved.won, false);
+  assert.strictEqual(saved.runId, "run-terminal-errors");
+  assert.strictEqual(saved.completionEmitted, true);
+  assert.strictEqual(saved.variant, null);
 });
 
 console.log("All tests passed.");
