@@ -304,12 +304,16 @@ async function waitForExpression(cdp, sessionId, expression, timeoutMs = 10000) 
   throw new Error(`Timed out waiting for browser condition: ${expression}; last=${JSON.stringify(last)}`);
 }
 
+async function navigateDocument(cdp, sessionId, url) {
+  const result = await cdp.send("Page.navigate", { url }, sessionId);
+  if (result.errorText) throw new Error(`Browser navigation failed for ${url}: ${result.errorText}`);
+  await waitForExpression(cdp, sessionId, 'document.readyState === "complete"');
+}
+
 async function navigate(cdp, sessionId, url, diagnostics) {
   diagnostics.failures.length = 0;
   diagnostics.requests.clear();
-  const loaded = cdp.waitFor("Page.loadEventFired", sessionId);
-  await cdp.send("Page.navigate", { url }, sessionId);
-  await loaded;
+  await navigateDocument(cdp, sessionId, url);
   await waitForExpression(
     cdp,
     sessionId,
@@ -449,6 +453,35 @@ async function exerciseActiveRun(cdp, sessionId, injectDiagnostics = false) {
   assert.equal(active.hazard.active, true, "hazard did not spawn after the first resolved dig");
   assert.match(active.status, /Glitch appeared|Trap it/i);
 
+  const firstUndo = await evaluate(
+    cdp,
+    sessionId,
+    `(() => {
+      const game = glitchSphereRoute.game;
+      const undone = game.undo();
+      const state = game.getState();
+      const hazard = glitchSphereRoute.adapter.exportState();
+      const occupied = hazard.active ? state.cells[hazard.index] : null;
+      const replayed = game.digAt(${prepared.first});
+      return {
+        undone,
+        replayed,
+        first: state.isFirstClick,
+        hazard,
+        occupied: occupied && {
+          revealed: occupied.revealed,
+          flagged: occupied.flagged,
+          mine: occupied.isMine,
+        },
+      };
+    })()`
+  );
+  assert.equal(firstUndo.undone, true, "first resolved dig was not undoable");
+  assert.equal(firstUndo.first, false, "first-dig undo lost the resolved mine layout");
+  assert.equal(firstUndo.hazard.active, true, "first-dig undo removed the only hazard");
+  assert.deepEqual(firstUndo.occupied, { revealed: false, flagged: false, mine: false });
+  assert.equal(firstUndo.replayed, true, "the board was not playable after first-dig undo");
+
   const blocked = await evaluate(
     cdp,
     sessionId,
@@ -577,6 +610,7 @@ async function exerciseTerminalFixtures(cdp, sessionId, label) {
     sessionId,
     `(async () => {
       const game = glitchSphereRoute.game;
+      game.resumeTimer("browser-probe");
       const state = game.getState();
       const choose = () => {
         for (let hazard = 0; hazard < state.tiles.length; hazard++) {
@@ -637,21 +671,37 @@ async function exerciseTerminalFixtures(cdp, sessionId, label) {
         banner: document.getElementById("banner-msg").textContent,
       };
 
+      const undone = game.undo();
+      const continuationRunId = game.exportRunState().runId;
+      const continuationHazard = glitchSphereRoute.adapter.exportState();
+      for (const neighbor of state.tiles[continuationHazard.index].neighborIndices) {
+        if (!state.cells[neighbor].revealed && !state.cells[neighbor].flagged) {
+          game.flagAt(neighbor);
+        }
+      }
+      const continuation = {
+        over: game.getState().isGameOver,
+        won: game.getState().won,
+        banner: document.getElementById("banner-msg").textContent,
+      };
+
       const counts = Object.fromEntries(
-        [winRunId, lossRunId].map((runId) => [
+        [winRunId, lossRunId, continuationRunId].map((runId) => [
           runId,
           window.__glitchCompletions.filter((payload) => payload.runId === runId).length,
         ])
       );
       const payloads = window.__glitchCompletions.filter((payload) =>
-        payload.runId === winRunId || payload.runId === lossRunId
+        payload.runId === winRunId || payload.runId === lossRunId || payload.runId === continuationRunId
       );
-      return { win, loss, counts, payloads };
+      return { win, loss, undone, continuationRunId, continuation, counts, payloads };
     })()`
   );
+  assert.notEqual(result.continuationRunId, `browser-${label}-loss`);
   assert.deepEqual(result.counts, {
     [`browser-${label}-win`]: 1,
     [`browser-${label}-loss`]: 1,
+    [result.continuationRunId]: 1,
   });
   assert.equal(result.win.over, true);
   assert.equal(result.win.won, true);
@@ -659,6 +709,10 @@ async function exerciseTerminalFixtures(cdp, sessionId, label) {
   assert.equal(result.loss.over, true);
   assert.equal(result.loss.won, false);
   assert.match(result.loss.banner, /Mine detonated/i);
+  assert.equal(result.undone, true);
+  assert.equal(result.continuation.over, true);
+  assert.equal(result.continuation.won, true);
+  assert.match(result.continuation.banner, /Glitch trapped/i);
   for (const payload of result.payloads) {
     assert.equal(payload.type, "hexsweeper:run-complete");
     assert.equal(payload.schemaVersion, 1);
@@ -837,10 +891,8 @@ async function runBrowser(baseUrl, executable, options = {}) {
       { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false },
       sessionId
     );
-    const sphereLoaded = cdp.waitFor("Page.loadEventFired", sessionId);
     diagnostics.failures.length = 0;
-    await cdp.send("Page.navigate", { url: `${baseUrl}/sphere/?welcome=0&fresh=1` }, sessionId);
-    await sphereLoaded;
+    await navigateDocument(cdp, sessionId, `${baseUrl}/sphere/?welcome=0&fresh=1`);
     await waitForExpression(cdp, sessionId, "typeof SphereSweeper !== 'undefined'");
     await new Promise((resolveWait) => setTimeout(resolveWait, 120));
     assertNoFailures(diagnostics, "canonical Sphere route");

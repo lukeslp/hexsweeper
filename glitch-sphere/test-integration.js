@@ -45,7 +45,7 @@ function makeRoot(options) {
   const documentListeners = Object.create(null);
   const dispatched = [];
   const posted = [];
-  const calls = { pause: 0, resume: 0, digs: [], flags: [] };
+  const calls = { pause: 0, resume: 0, undo: 0, digs: [], flags: [] };
   const status = { textContent: "" };
   const canvas = {
     addEventListener(type, listener) {
@@ -81,6 +81,10 @@ function makeRoot(options) {
     },
     resumeTimer() {
       calls.resume++;
+    },
+    undo() {
+      calls.undo++;
+      return typeof options.undo === "function" ? options.undo() : false;
     },
   };
   const root = {
@@ -426,9 +430,10 @@ test("wires arrow rotation, centered dig/flag, and visibility pause through the 
   assert.strictEqual(harness.calls.resume, 1);
 });
 
-test("nests help, menu, and visibility pauses without consuming the held delay", () => {
+test("keeps undo paused under nested help, menu, and visibility reasons", () => {
   let now = 0;
-  const harness = makeRoot();
+  let undoAction = () => false;
+  const harness = makeRoot({ undo: () => undoAction() });
   const result = GlitchSphere.boot({ root: harness.root, now: () => now, random: () => 0 });
   const options = harness.getBootOptions();
   assert.strictEqual(typeof options.onHelpOpen, "function");
@@ -454,6 +459,14 @@ test("nests help, menu, and visibility pauses without consuming the held delay",
   harness.documentListeners.visibilitychange();
   assert.strictEqual(harness.calls.pause, 1);
   assert.strictEqual(result.adapter.exportState().remainingMs, 600);
+  const saved = result.adapter.variant.captureUndo(context);
+  undoAction = () => {
+    result.adapter.variant.restoreUndo(Object.assign({ saved }, context));
+    return true;
+  };
+  assert.strictEqual(result.game.undo(), true);
+  assert.strictEqual(harness.calls.undo, 1);
+  assert.strictEqual(harness.calls.pause, 2);
 
   now = 5000;
   options.onHelpClose();

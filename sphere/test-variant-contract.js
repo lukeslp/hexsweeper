@@ -76,8 +76,8 @@ function makeCanvas() {
   };
 }
 
-function makeTiles() {
-  const neighbors = [[1], [0, 2], [1, 3], [2]];
+function makeTiles(neighborGraph) {
+  const neighbors = neighborGraph || [[1], [0, 2], [1, 3], [2]];
   return neighbors.map((neighborIndices, index) => ({
     index,
     isPentagon: false,
@@ -188,7 +188,7 @@ function createHarness(options) {
     Math: Object.assign(Object.create(Math), { random: () => 0 }),
     Hexasphere: {
       generateHexasphere() {
-        return { tiles: makeTiles() };
+        return { tiles: makeTiles(options.neighbors) };
       },
     },
     matchMedia: () => ({ matches: true }),
@@ -230,13 +230,15 @@ function plain(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+let failures = 0;
 function test(name, fn) {
   try {
     fn();
     console.log(`  ${name} — OK`);
   } catch (error) {
+    failures++;
     console.error(`  ${name} — FAIL`);
-    throw error;
+    console.error(`    ${error.message}`);
   }
 }
 
@@ -446,7 +448,7 @@ test("restores canonical current saves without a variant", () => {
   assert.strictEqual(api.exportRunState().kind, "sphere");
 });
 
-test("migrates a canonical legacy save and removes both legacy copies", () => {
+test("restores canonical legacy saves without deleting the legacy copies", () => {
   const saved = begunRun({
     v: 1,
     kind: "sphere",
@@ -465,11 +467,11 @@ test("migrates a canonical legacy save and removes both legacy copies", () => {
   assert.strictEqual(api.getState().cells[0].revealed, true);
   assert.ok(localStorage.value("hexsweeper-sphere-run-v2"));
   assert.ok(sessionStorage.value("hexsweeper-sphere-run-v2"));
-  assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), undefined);
-  assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), undefined);
+  assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), JSON.stringify(saved));
+  assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), JSON.stringify(saved));
 });
 
-test("retains local legacy data when only the session v2 migration succeeds", () => {
+test("retains both canonical legacy copies when only the session v2 write succeeds", () => {
   const legacy = JSON.stringify(begunRun({
     v: 1,
     kind: "sphere",
@@ -488,10 +490,10 @@ test("retains local legacy data when only the session v2 migration succeeds", ()
   assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v2"), undefined);
   assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), legacy);
   assert.ok(sessionStorage.value("hexsweeper-sphere-run-v2"));
-  assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), undefined);
+  assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), legacy);
 });
 
-test("retains session legacy data when only the local v2 migration succeeds", () => {
+test("retains both canonical legacy copies when only the local v2 write succeeds", () => {
   const legacy = JSON.stringify(begunRun({
     v: 1,
     kind: "sphere",
@@ -508,9 +510,48 @@ test("retains session legacy data when only the local v2 migration succeeds", ()
   }, { failSet: true });
   createHarness({ localStorage, sessionStorage });
   assert.ok(localStorage.value("hexsweeper-sphere-run-v2"));
-  assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), undefined);
+  assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), legacy);
   assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v2"), undefined);
   assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), legacy);
+});
+
+test("falls back from a newer rejected save to an older valid copy", () => {
+  const imported = [];
+  const newer = begunRun({
+    savedAt: 20,
+    revealed: [1],
+    variant: { token: "rejected" },
+  });
+  const older = begunRun({
+    savedAt: 10,
+    revealed: [0],
+    variant: { token: "valid" },
+  });
+  const localStorage = memoryStorage({
+    "hexsweeper-glitch-sphere-run-v1": JSON.stringify(older),
+  });
+  const sessionStorage = memoryStorage({
+    "hexsweeper-glitch-sphere-run-v1": JSON.stringify(newer),
+  });
+  const { api } = createHarness({
+    localStorage,
+    sessionStorage,
+    boot: variantBoot({
+      id: "glitch-sphere",
+      importState({ saved }) {
+        imported.push(saved.token);
+        return saved.token === "valid";
+      },
+    }),
+  });
+
+  assert.deepStrictEqual(imported, ["rejected", "valid"]);
+  assert.strictEqual(api.getState().cells[0].revealed, true);
+  assert.strictEqual(api.getState().cells[1].revealed, false);
+  assert.ok(localStorage.value("hexsweeper-glitch-sphere-run-v1"));
+  assert.ok(sessionStorage.value("hexsweeper-glitch-sphere-run-v1"));
+  assert.deepStrictEqual(localStorage.removals, []);
+  assert.deepStrictEqual(sessionStorage.removals, []);
 });
 
 test("admits direct and flood reveals separately and runs the first-dig hook after flood", () => {
@@ -631,6 +672,62 @@ test("restores the active adapter and board together through Sphere undo", () =>
   assert.deepStrictEqual(restored.variant, before.variant);
 });
 
+test("keeps the spawned hazard coherent when undoing the first resolved dig", () => {
+  const adapter = GlitchSphere.createAdapter({ now: () => 0, random: () => 0 });
+  const { api } = createHarness({
+    neighbors: [[1], [0, 2], [1, 3], [2, 4], [3, 5], [4]],
+    boot: variantBoot(adapter.variant, { createRunId: () => "run-first-undo" }),
+  });
+
+  assert.strictEqual(api.digAt(0), true);
+  assert.strictEqual(adapter.exportState().active, true);
+  assert.strictEqual(api.undo(), true);
+
+  const state = api.getState();
+  const hazard = adapter.exportState();
+  assert.strictEqual(state.isFirstClick, false);
+  assert.strictEqual(hazard.active, true);
+  assert.ok(Number.isInteger(hazard.index));
+  assert.strictEqual(state.cells[hazard.index].revealed, false);
+  assert.strictEqual(state.cells[hazard.index].flagged, false);
+  assert.strictEqual(state.cells[hazard.index].isMine, false);
+  assert.strictEqual(api.digAt(5), true);
+});
+
+function adapterUndoHarness(runId) {
+  const adapter = GlitchSphere.createAdapter({ now: () => 0, random: () => 0 });
+  const { api } = createHarness({
+    boot: variantBoot(adapter.variant, { createRunId: () => runId }),
+  });
+  const saved = begunRun({
+    revealed: [],
+    variant: {
+      hazard: { active: true, index: 2, remainingMs: 725 },
+      terminalReason: null,
+    },
+  });
+  assert.strictEqual(api.applyRunState(saved), true);
+  assert.strictEqual(api.digAt(0), true);
+  assert.strictEqual(api.canUndo(), true);
+  return { adapter, api };
+}
+
+test("invalidates undo when reset starts a new run", () => {
+  const { adapter, api } = adapterUndoHarness("run-reset-undo");
+  api.reset();
+  assert.strictEqual(api.canUndo(), false);
+  assert.strictEqual(api.undo(), false);
+  assert.strictEqual(adapter.exportState().active, false);
+});
+
+test("invalidates undo when a size change starts a new run", () => {
+  const { adapter, api } = adapterUndoHarness("run-size-undo");
+  api.setSize("easy");
+  assert.strictEqual(api.canUndo(), false);
+  assert.strictEqual(api.undo(), false);
+  assert.strictEqual(adapter.exportState().active, false);
+});
+
 test("includes variant state in undo and exposes reset, flag, tick, and draw hooks", () => {
   const events = [];
   let token = "before-dig";
@@ -672,14 +769,67 @@ test("includes variant state in undo and exposes reset, flag, tick, and draw hoo
   assert.strictEqual(events.filter((event) => event === "reset").length, 2);
 });
 
+test("fails closed when reveal admission throws", () => {
+  const revealHarness = createHarness({
+    boot: variantBoot({
+      id: "glitch-sphere",
+      admitReveal() { throw new Error("reveal policy failed"); },
+    }),
+  });
+  assert.strictEqual(revealHarness.api.digAt(0), false);
+  assert.strictEqual(revealHarness.api.getState().isFirstClick, true);
+  assert.strictEqual(revealHarness.api.getState().cells[0].revealed, false);
+});
+
+test("fails closed when flag admission throws", () => {
+  const flagHarness = createHarness({
+    boot: variantBoot({
+      id: "glitch-sphere",
+      admitFlag() { throw new Error("flag policy failed"); },
+    }),
+  });
+  assert.strictEqual(flagHarness.api.flagAt(0), false);
+  assert.strictEqual(flagHarness.api.getState().cells[0].flagged, false);
+});
+
+test("rolls back to a fresh playable board when first spawn throws", () => {
+  const spawnHarness = createHarness({
+    boot: variantBoot({
+      id: "glitch-sphere",
+      firstResolvedDig() { throw new Error("spawn failed"); },
+      useDefaultWin: () => false,
+    }),
+  });
+  assert.strictEqual(spawnHarness.api.digAt(0), false);
+  assert.strictEqual(spawnHarness.api.getState().isFirstClick, true);
+  assert.strictEqual(spawnHarness.api.canUndo(), false);
+  assert.strictEqual(
+    spawnHarness.api.getState().cells.some((cell) => cell.revealed || cell.isMine),
+    false
+  );
+});
+
+test("fails closed when the default-win policy throws", () => {
+  const winHarness = createHarness({
+    boot: variantBoot({
+      id: "glitch-sphere",
+      importState: () => true,
+      useDefaultWin() { throw new Error("win policy failed"); },
+    }),
+  });
+  assert.strictEqual(winHarness.api.applyRunState(begunRun({ revealed: [0, 1] })), true);
+  assert.strictEqual(winHarness.api.digAt(2), true);
+  assert.strictEqual(winHarness.api.getState().isGameOver, false);
+});
+
 test("contains throwing notification hooks and continues engine actions", () => {
   const events = [];
   const fail = (name) => () => { throw new Error(`${name} failed`); };
   const variant = {
     id: "glitch-sphere",
     reset: fail("reset"),
-    admitReveal: ({ index }) => index !== 1,
-    admitFlag: fail("admitFlag"),
+    admitReveal: () => true,
+    admitFlag: () => true,
     captureUndo: fail("captureUndo"),
     restoreUndo: fail("restoreUndo"),
     reveal: fail("reveal"),
@@ -785,6 +935,37 @@ test("emits one completion per run and does not re-emit a restored completion", 
     }),
   });
   assert.strictEqual(restoredCompletions.length, 0);
+});
+
+test("emits loss then win once each after terminal undo starts a continuation", () => {
+  const completions = [];
+  const generatedIds = ["run-initial", "run-continuation"];
+  const variant = {
+    id: "glitch-sphere",
+    importState: () => true,
+    exportState: () => ({ active: false }),
+    flag({ endRun }) {
+      endRun("win");
+    },
+    useDefaultWin: () => false,
+  };
+  const { api } = createHarness({
+    boot: variantBoot(variant, {
+      createRunId: () => generatedIds.shift(),
+      onRunComplete: (payload) => completions.push(plain(payload)),
+    }),
+  });
+  assert.strictEqual(api.applyRunState(begunRun({ runId: "run-loss" })), true);
+  assert.strictEqual(api.digAt(3), true);
+  assert.strictEqual(api.undo(), true);
+  assert.strictEqual(api.flagAt(2), true);
+
+  assert.deepStrictEqual(completions.map((payload) => payload.outcome), ["loss", "win"]);
+  assert.deepStrictEqual(completions.map((payload) => payload.runId), [
+    "run-loss",
+    "run-continuation",
+  ]);
+  assert.strictEqual(new Set(completions.map((payload) => payload.runId)).size, 2);
 });
 
 test("restores every adapter terminal banner without re-emitting completion", () => {
@@ -909,4 +1090,9 @@ test("contains terminal hook failures and persists a recoverable terminal record
   assert.strictEqual(saved.variant, null);
 });
 
-console.log("All tests passed.");
+if (failures) {
+  console.error(`${failures} contract test${failures === 1 ? "" : "s"} failed.`);
+  process.exitCode = 1;
+} else {
+  console.log("All tests passed.");
+}

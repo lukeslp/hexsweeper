@@ -301,8 +301,7 @@
       restoreUndo(context) {
         remember(context);
         const saved = context.saved || {};
-        paused = false;
-        pausedState = null;
+        const preservePause = paused;
         terminalReason = TERMINAL_REASONS.has(saved.terminalReason)
           ? saved.terminalReason
           : null;
@@ -310,6 +309,13 @@
           saved.hazard || { active: false, index: null, remainingMs: 0 },
           gameFor(context)
         );
+        if (preservePause) {
+          paused = true;
+          pausedState = hazard.exportState();
+        } else {
+          paused = false;
+          pausedState = null;
+        }
         announce(result.status === "waiting" ? "Previous Glitch position restored." : "Glitch reset.");
       },
 
@@ -407,6 +413,7 @@
 
     const basePause = typeof game.pauseTimer === "function" ? game.pauseTimer.bind(game) : function () {};
     const baseResume = typeof game.resumeTimer === "function" ? game.resumeTimer.bind(game) : function () {};
+    const baseUndo = typeof game.undo === "function" ? game.undo.bind(game) : null;
     const pauseReasons = new Set();
     game.pauseTimer = function pauseTimer(reason) {
       const key = typeof reason === "string" && reason ? reason : "menu";
@@ -425,6 +432,13 @@
         baseResume();
       }
     };
+    if (baseUndo) {
+      game.undo = function undo() {
+        const restored = baseUndo();
+        if (restored && pauseReasons.size > 0) basePause();
+        return restored;
+      };
+    }
 
     if (helpPauseHeld) game.pauseTimer("help");
 

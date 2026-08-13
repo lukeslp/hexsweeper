@@ -845,6 +845,7 @@
     let runId = null;
     let completionEmitted = false;
     let lastVariantState = null;
+    const VARIANT_HOOK_FAILED = {};
 
     const END_FX = {
       active: false,
@@ -1004,7 +1005,7 @@
     }
 
     function variantAdmitsReveal(index, source) {
-      const result = callVariant("admitReveal", { index, source });
+      const result = callVariant("admitReveal", { index, source }, false);
       return !(
         result === false ||
         (result && result.allowed === false) ||
@@ -1013,7 +1014,7 @@
     }
 
     function variantAdmitsFlag(index, flagged) {
-      const result = callVariant("admitFlag", { index, flagged });
+      const result = callVariant("admitFlag", { index, flagged }, false);
       return !(
         result === false ||
         (result && result.allowed === false) ||
@@ -1035,6 +1036,8 @@
         flagsPlaced: state.flagsPlaced,
         isFirstClick: state.isFirstClick,
         timeElapsed: state.timeElapsed,
+        runId,
+        completionEmitted,
       };
       if (variant) undoSnapshot.variant = callVariant("captureUndo");
     }
@@ -1042,7 +1045,10 @@
     function restoreUndo() {
       if (!undoSnapshot) return false;
       const snap = undoSnapshot;
+      const startsContinuation =
+        !!variant && state.isGameOver && completionEmitted;
       undoSnapshot = null;
+      clearEndFx();
       for (let i = 0; i < state.cells.length; i++) {
         const c = state.cells[i];
         c.revealed = !!snap.revealed[i];
@@ -1058,6 +1064,12 @@
       state.isGameOver = false;
       state.won = false;
       state.detonatorIdx = -1;
+      if (variant) {
+        runId = startsContinuation ? createRunId() : snap.runId || runId;
+        completionEmitted = startsContinuation
+          ? false
+          : !!snap.completionEmitted;
+      }
       if (variant) callVariant("restoreUndo", { saved: snap.variant });
       hideBanner();
       if (!state.isFirstClick) startTimer();
@@ -1751,6 +1763,7 @@
       optsReset = optsReset || {};
       stopTimer();
       clearEndFx();
+      undoSnapshot = null;
       const cfg = CONFIG[state.difficulty];
       if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
         throw new Error("SphereSweeper: Hexasphere not loaded");
@@ -2123,6 +2136,7 @@
       runId = variant ? restoredRunId || createRunId() : null;
       completionEmitted = variant && !!data.completionEmitted;
       if (variant) lastVariantState = data.variant === undefined ? null : data.variant;
+      undoSnapshot = null;
 
       syncSizeChrome();
       try {
@@ -2142,25 +2156,17 @@
 
       persistSuspended = false;
       // Re-write under v2 key so legacy saves migrate.
-      const migrated = flushPersistResult();
-      if (!variant) {
-        if (migrated.local) {
-          storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
-        }
-        if (migrated.session) {
-          storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
-        }
-      }
+      flushPersistResult();
       return true;
     }
 
-    function readStoredRun() {
+    function readStoredRuns() {
       const keys = variant
         ? [runStorageKey]
         : [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY];
       const stores = [sessionStorage, localStorage];
-      let best = null;
-      let bestAt = -1;
+      const candidates = [];
+      let order = 0;
       for (const store of stores) {
         for (const key of keys) {
           const raw = storageGet(store, key);
@@ -2169,16 +2175,14 @@
             const data = JSON.parse(raw);
             if (!data || data.kind !== runKind) continue;
             const at = Number(data.savedAt) || 0;
-            if (at >= bestAt) {
-              best = data;
-              bestAt = at;
-            }
+            candidates.push({ data, at, order: order++ });
           } catch (_) {
             /* skip bad payload */
           }
         }
       }
-      return best;
+      candidates.sort((a, b) => b.at - a.at || b.order - a.order);
+      return candidates.map((candidate) => candidate.data);
     }
 
     function tryRestoreRun() {
@@ -2190,27 +2194,28 @@
         }
       } catch (_) {}
 
-      const data = readStoredRun();
-      if (!data) return false;
-      const ok = applyRunState(data);
-      if (!ok) {
-        // Corrupt for current build — drop so we do not loop-fail.
-        clearPersist();
-        return false;
+      const candidates = readStoredRuns();
+      if (!candidates.length) return false;
+      for (const data of candidates) {
+        if (!applyRunState(data)) continue;
+        if (typeof showCountStyleToast === "function") {
+          const cleared = Array.isArray(data.revealed) ? data.revealed.length : 0;
+          showCountStyleToast(
+            data.over
+              ? data.won
+                ? "Restored · cleared"
+                : "Restored · ended"
+              : cleared > 0
+                ? `Restored · ${cleared} open`
+                : "Restored"
+          );
+        }
+        return true;
       }
-      if (typeof showCountStyleToast === "function") {
-        const cleared = Array.isArray(data.revealed) ? data.revealed.length : 0;
-        showCountStyleToast(
-          data.over
-            ? data.won
-              ? "Restored · cleared"
-              : "Restored · ended"
-            : cleared > 0
-              ? `Restored · ${cleared} open`
-              : "Restored"
-        );
-      }
-      return true;
+      // Every parseable candidate was corrupt for this build. Explicitly
+      // clear the lane only after exhausting older copies.
+      clearPersist();
+      return false;
     }
 
     function clearEndFx() {
@@ -2541,7 +2546,19 @@
       const revealed = [idx, ...opened];
       callVariant("reveal", { index: idx, source: "direct", revealed });
       if (isFirstResolvedDig) {
-        callVariant("firstResolvedDig", { index: idx, revealed });
+        const result = callVariant(
+          "firstResolvedDig",
+          { index: idx, revealed },
+          VARIANT_HOOK_FAILED
+        );
+        if (result === VARIANT_HOOK_FAILED) {
+          resetGame();
+          scheduleFrame();
+          return false;
+        }
+        if (variant && undoSnapshot) {
+          undoSnapshot.variant = callVariant("captureUndo");
+        }
       }
       if (!state.isGameOver) checkWin();
       persistNow();
@@ -2601,10 +2618,14 @@
       }
       if (
         variant &&
-        callVariant("useDefaultWin", {
-          safeFacesRevealed: safeRevealed,
-          safeFaceCount: safeTotal,
-        }) === false
+        callVariant(
+          "useDefaultWin",
+          {
+            safeFacesRevealed: safeRevealed,
+            safeFaceCount: safeTotal,
+          },
+          false
+        ) === false
       ) {
         return;
       }
