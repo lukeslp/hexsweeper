@@ -74,6 +74,7 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 | `collection/` | Production + lab one-pagers; Copy HTML desk (CodePen-ready) |
 | `tools/export-collection.py` | Regenerates `collection/theme-*.html`, `skin-*.html`, and index |
 | `sphere/` | **Experimental** closed hex sphere minesweeper (Canvas projection) |
+| `glitch-sphere/` | **Experimental** moving-hazard route on the shared Sphere engine |
 | `monkey-grid/` | **Experimental** flat Catch the Monkey route-blocking game |
 | `monkey-sphere/` | **Experimental** spherical Catch the Monkey portal chase |
 | `choices.html` | Curated hub: production, sphere, lab links — not in theme switcher |
@@ -181,6 +182,30 @@ guards the Water Wheel menu-profile aliases and projected patch selection.
 
 Flat game remains the default at `index.html`.
 
+## Glitch Sphere (experimental)
+
+[`glitch-sphere/`](glitch-sphere/) — https://dr.eamer.dev/games/hexsweeper/glitch-sphere/
+
+Glitch Sphere reuses the canonical Sphere geometry, renderer, controls, themes,
+and assets. After the first safe dig and its flood resolve, a moving Glitch
+occupies one covered safe face. Revealed and flagged faces close routes: trap
+the Glitch to win before it reaches a mine. The occupied face blocks direct
+digs and stays identifiable through a yellow face, an exclamation marker, and
+the live text status.
+
+The canvas supports arrow-key rotation, Enter or Space to dig the centered
+face, and Shift with Enter or Space to flag it. The route has isolated run
+persistence, reload restore, reduced-motion treatment, and normalized
+exactly-once completion events. Run the deterministic browser verification
+with `node glitch-sphere/test-browser.mjs`; it exercises desktop, mobile,
+reduced-motion, keyboard, reset, restore, and terminal fixtures while rejecting
+console or local-resource failures. When Chrome is unavailable, the probe runs
+strict static route/resource checks and exits with status 2 so an interactive
+browser run is never reported as successful.
+
+The archive's flat Glitch Sweeper, Chain Reaction, and Flux Sphere pages remain
+archived mechanic studies. They are not shipped features of this route.
+
 ## Catch the Monkey (experimental)
 
 Two playable studies reuse the hex language without inheriting Minesweeper's rules:
@@ -242,7 +267,12 @@ Smoke: `node polyhedron/test-campaign.js` (coverage, planarity, adjacency, 1/5/5
 
 [`choices.html`](choices.html) — https://dr.eamer.dev/games/hexsweeper/choices.html
 
-Curated entry for production play, the sphere experiment, and ten lab skins (play via `choices/lab/` redirects or open from the collection desk). Copy HTML for lab pens is on [`collection/`](collection/) only. Regenerate with `python3 tools/export-collection.py` and `python3 tools/export-choices-lab.py` after skin or engine changes. Not linked from the production theme switcher.
+Curated entry for production play, the Sphere and Glitch Sphere experiments,
+and ten lab skins (play via `choices/lab/` redirects or open from the collection
+desk). Copy HTML for lab pens is on [`collection/`](collection/) only.
+Regenerate with `python3 tools/export-collection.py` and
+`python3 tools/export-choices-lab.py` after skin or engine changes. Not linked
+from the production theme switcher.
 
 ## Lab (prior art)
 

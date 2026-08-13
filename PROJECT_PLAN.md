@@ -11,6 +11,25 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - **`index.html`**: production chrome + declarative product profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes; renderers remain in place.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Current status (2026-08-13)
+
+- [x] Glitch Sphere experimental route reuses the canonical Sphere engine with
+      an isolated moving-hazard state machine and save lane.
+- [x] Deterministic state-machine and integration tests verify eligible spawn,
+      one-second movement, route blocking, trap win, mine loss, occupied-face
+      admission, pause/resume timing, persistence validation, keyboard wiring,
+      and same-origin completion forwarding.
+- [x] Desktop and mobile Chrome verification exercises first dig, active hazard,
+      keyboard rotation/dig/flag, reset, reload restore, deterministic win/loss
+      fixtures, and one completion event per terminal run with no console or
+      local-resource failures.
+- [x] Reduced-motion Chrome verification keeps the occupied-face marker and
+      movement cadence while removing transition motion.
+- [x] Glitch Sphere is discoverable from the README and Choices hub without
+      entering the five-theme production switcher.
+- [ ] Deployment: re-vendor the regenerated offline Sphere payload into the
+      separate `hexsweeper-app` repository after this web change is integrated.
+
 ## Current status (2026-08-10)
 
 - [x] Product profile seam separates structural mode behavior, material identity, optional ambient/reveal/flag effects, and mandatory endgame feedback.
@@ -24,7 +43,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] Sphere share card that works — real capture, wired from Customize panel
 - [x] Sphere Glow theme — luminous dig centers
 - [x] Sphere Earth / Moon globe-map themes (`?theme=earth|moon`); daymap textures tracked in `sphere/assets/textures/`
-- [x] Three AI model-take variants on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
+- [x] Three archived model-authored visual studies on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
 - [x] Free 360° drag tumble (was constrained camera)
 - [x] Autosave discard confirms; red-only flags
 - [x] `sphere/dev/` dev-chrome overlay (grid/debug HUD) alongside prod `sphere/index.html`
@@ -121,7 +140,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Lab skins + classic: same BR Reset · Menu; scores + outbound links in Menu (no BL rail / gear)
 - [x] CI (`.github/workflows/ci.yml`): sphere neighbor smoke + Wheel effect-profile contract + `export-collection.py --check` + `export-choices-lab.py --check` on every push/PR to `main` — catches export drift before it ships (this is what would have caught the dev-chrome inlining gap)
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
-- [ ] Optional: browser probes (desktop/mobile) in CI — sphere neighbor test is covered; visual/interaction smoke still manual
+- [ ] Optional: add browser probes to CI — Glitch Sphere has a local deterministic desktop/mobile/reduced-motion probe; the wider visual surface remains manual
 - [ ] Phase next: full / comprehensive / impressive cut beyond the collection scaffold
 
 ### Water Wheel — water as a mechanic, not a theme (Luke, 2026-08-10)
