@@ -1012,6 +1012,15 @@
       );
     }
 
+    function variantAdmitsFlag(index, flagged) {
+      const result = callVariant("admitFlag", { index, flagged });
+      return !(
+        result === false ||
+        (result && result.allowed === false) ||
+        (result && result.status === "blocked")
+      );
+    }
+
     function captureUndo() {
       const n = state.cells.length;
       const revealed = new Uint8Array(n);
@@ -1335,6 +1344,7 @@
 
     let releaseFocusTrap = null;
     let markWelcomeSeen = false;
+    let helpLifecycleHeld = false;
 
     let syncHelpControls = null;
 
@@ -1400,6 +1410,12 @@
 
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
+      if (!helpLifecycleHeld) {
+        helpLifecycleHeld = true;
+        try {
+          if (typeof opts.onHelpOpen === "function") opts.onHelpOpen();
+        } catch (_) {}
+      }
       if (fromWelcome) markWelcomeSeen = true;
       helpFocusReturn =
         document.activeElement && document.activeElement !== document.body
@@ -1415,6 +1431,12 @@
 
     function closeHelp() {
       if (!helpOverlay) return;
+      if (helpLifecycleHeld) {
+        helpLifecycleHeld = false;
+        try {
+          if (typeof opts.onHelpClose === "function") opts.onHelpClose();
+        } catch (_) {}
+      }
       if (markWelcomeSeen) {
         try {
           localStorage.setItem(WELCOME_KEY, "1");
@@ -2558,7 +2580,9 @@
     function toggleFlag(idx) {
       const cell = state.cells[idx];
       if (!cell || cell.revealed || state.isGameOver) return false;
-      cell.flagged = !cell.flagged;
+      const flagged = !cell.flagged;
+      if (!variantAdmitsFlag(idx, flagged)) return false;
+      cell.flagged = flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
       callVariant("flag", { index: idx, flagged: cell.flagged });

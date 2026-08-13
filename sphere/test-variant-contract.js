@@ -5,6 +5,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const GlitchSphere = require("../glitch-sphere/glitch-sphere.js");
 
 const sphereSource = fs.readFileSync(path.join(__dirname, "sphere.js"), "utf8");
 
@@ -98,11 +99,45 @@ function createHarness(options) {
   const sessionStorage = options.sessionStorage || memoryStorage();
   const frames = [];
   const listeners = Object.create(null);
-  const classList = { add() {}, remove() {}, toggle() {}, contains: () => false };
+  const elementListeners = Object.create(null);
+  const classes = new Set();
+  const classList = {
+    add(...names) { names.forEach((name) => classes.add(name)); },
+    remove(...names) { names.forEach((name) => classes.delete(name)); },
+    toggle(name, force) {
+      if (force === true || (force === undefined && !classes.has(name))) {
+        classes.add(name);
+        return true;
+      }
+      classes.delete(name);
+      return false;
+    },
+    contains: (name) => classes.has(name),
+  };
   const elements = {
     "sphere-banner": { hidden: true, classList: { ...classList }, textContent: "" },
     "banner-msg": { hidden: false, classList: { ...classList }, textContent: "" },
   };
+  if (options.withHelp) {
+    const helpControl = (id) => ({
+      hidden: false,
+      disabled: false,
+      classList,
+      focus() {},
+      addEventListener(type, listener) {
+        elementListeners[`${id}:${type}`] = listener;
+      },
+    });
+    elements["help-overlay"] = Object.assign(helpControl("help-overlay"), {
+      hidden: true,
+      querySelectorAll: () => [],
+      removeEventListener() {},
+    });
+    elements["help-panel"] = helpControl("help-panel");
+    elements["help-btn"] = helpControl("help-btn");
+    elements["help-close-btn"] = helpControl("help-close-btn");
+    elements["help-done-btn"] = helpControl("help-done-btn");
+  }
   const document = {
     visibilityState: "visible",
     documentElement: { setAttribute() {} },
@@ -126,7 +161,11 @@ function createHarness(options) {
     localStorage,
     sessionStorage,
     elements,
-    location: { search: "?welcome=0", pathname: "/sphere/", href: "https://example.test/sphere/" },
+    location: {
+      search: options.search || "?welcome=0",
+      pathname: "/sphere/",
+      href: "https://example.test/sphere/",
+    },
     navigator: {},
     performance: { now: () => 100 },
     requestAnimationFrame(callback) {
@@ -171,6 +210,7 @@ function createHarness(options) {
     localStorage,
     sessionStorage,
     elements,
+    elementListeners,
     runFrame() {
       const frame = frames.shift();
       if (frame) frame(100);
@@ -263,6 +303,24 @@ test("keeps the canonical storage key and run kind unchanged without a variant",
   assert.strictEqual(Object.prototype.hasOwnProperty.call(saved, "completionEmitted"), false);
   assert.ok(localStorage.value("hexsweeper-sphere-run-v2"));
   assert.ok(sessionStorage.value("hexsweeper-sphere-run-v2"));
+});
+
+test("notifies optional help lifecycle callbacks exactly once per open cycle", () => {
+  const events = [];
+  const harness = createHarness({
+    withHelp: true,
+    search: "?welcome=1",
+    boot: {
+      onHelpOpen: () => events.push("open"),
+      onHelpClose: () => events.push("close"),
+    },
+  });
+  assert.deepStrictEqual(events, ["open"]);
+  harness.elementListeners["help-done-btn:click"]({
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  assert.deepStrictEqual(events, ["open", "close"]);
 });
 
 test("rejects missing or canonical variant persistence options before storage access", () => {
@@ -485,6 +543,94 @@ test("admits direct and flood reveals separately and runs the first-dig hook aft
   assert.strictEqual(api.getState().isGameOver, false);
 });
 
+test("admits flags before mutation and only notifies the variant after acceptance", () => {
+  const admissions = [];
+  const flags = [];
+  const variant = {
+    id: "glitch-sphere",
+    admitFlag({ index, flagged }) {
+      admissions.push([index, flagged]);
+      return index !== 1;
+    },
+    flag({ index, flagged }) {
+      flags.push([index, flagged]);
+    },
+  };
+  const { api } = createHarness({
+    boot: variantBoot(variant, { createRunId: () => "run-flag-admission" }),
+  });
+
+  assert.strictEqual(api.flagAt(1), false);
+  assert.strictEqual(api.getState().cells[1].flagged, false);
+  assert.strictEqual(api.getState().flagsPlaced, 0);
+  assert.strictEqual(api.flagAt(2), true);
+  assert.strictEqual(api.flagAt(2), true);
+  assert.deepStrictEqual(admissions, [[1, true], [2, true], [2, false]]);
+  assert.deepStrictEqual(flags, [[2, true], [2, false]]);
+  assert.strictEqual(api.getState().flagsPlaced, 0);
+});
+
+test("keeps an occupied flag attempt out of the board and restores the active adapter save", () => {
+  const localStorage = memoryStorage();
+  const sessionStorage = memoryStorage();
+  const adapter = GlitchSphere.createAdapter({ now: () => 0, random: () => 0 });
+  const first = createHarness({
+    localStorage,
+    sessionStorage,
+    boot: variantBoot(adapter.variant, { createRunId: () => "run-occupied-flag" }),
+  });
+  assert.strictEqual(first.api.applyRunState(begunRun({
+    revealed: [0],
+    variant: {
+      hazard: { active: true, index: 1, remainingMs: 650 },
+      terminalReason: null,
+    },
+  })), true);
+
+  const before = plain(first.api.exportRunState());
+  assert.strictEqual(first.api.flagAt(1), false);
+  const after = plain(first.api.exportRunState());
+  assert.deepStrictEqual(after.flagged, before.flagged);
+  assert.strictEqual(after.flags, before.flags);
+  assert.deepStrictEqual(after.variant, before.variant);
+
+  const restoredAdapter = GlitchSphere.createAdapter({ now: () => 5000, random: () => 0 });
+  const restored = createHarness({
+    localStorage,
+    sessionStorage,
+    boot: variantBoot(restoredAdapter.variant, {
+      createRunId: () => "run-should-not-replace",
+    }),
+  });
+  const restoredSave = plain(restored.api.exportRunState());
+  assert.deepStrictEqual(restoredSave.flagged, before.flagged);
+  assert.strictEqual(restoredSave.flags, before.flags);
+  assert.deepStrictEqual(restoredSave.variant, before.variant);
+});
+
+test("restores the active adapter and board together through Sphere undo", () => {
+  const adapter = GlitchSphere.createAdapter({ now: () => 0, random: () => 0 });
+  const harness = createHarness({
+    boot: variantBoot(adapter.variant, { createRunId: () => "run-adapter-undo" }),
+  });
+  assert.strictEqual(harness.api.applyRunState(begunRun({
+    variant: {
+      hazard: { active: true, index: 2, remainingMs: 725 },
+      terminalReason: null,
+    },
+  })), true);
+  const before = plain(harness.api.exportRunState());
+
+  assert.strictEqual(harness.api.digAt(0), true);
+  assert.notDeepStrictEqual(plain(harness.api.exportRunState().revealed), before.revealed);
+  assert.strictEqual(harness.api.undo(), true);
+  const restored = plain(harness.api.exportRunState());
+  assert.deepStrictEqual(restored.revealed, before.revealed);
+  assert.deepStrictEqual(restored.flagged, before.flagged);
+  assert.strictEqual(restored.flags, before.flags);
+  assert.deepStrictEqual(restored.variant, before.variant);
+});
+
 test("includes variant state in undo and exposes reset, flag, tick, and draw hooks", () => {
   const events = [];
   let token = "before-dig";
@@ -533,6 +679,7 @@ test("contains throwing notification hooks and continues engine actions", () => 
     id: "glitch-sphere",
     reset: fail("reset"),
     admitReveal: ({ index }) => index !== 1,
+    admitFlag: fail("admitFlag"),
     captureUndo: fail("captureUndo"),
     restoreUndo: fail("restoreUndo"),
     reveal: fail("reveal"),
@@ -638,6 +785,89 @@ test("emits one completion per run and does not re-emit a restored completion", 
     }),
   });
   assert.strictEqual(restoredCompletions.length, 0);
+});
+
+test("restores every adapter terminal banner without re-emitting completion", () => {
+  const cases = [
+    {
+      reason: "direct-mine",
+      expected: /Mine detonated/i,
+      saved: begunRun({
+        variant: {
+          hazard: { active: false, index: null, remainingMs: 0 },
+          terminalReason: null,
+        },
+      }),
+      finish(harness) {
+        harness.api.digAt(3);
+      },
+    },
+    {
+      reason: "hazard-mine",
+      expected: /Glitch reached a mine/i,
+      saved: begunRun({
+        revealed: [0, 1],
+        variant: {
+          hazard: { active: true, index: 2, remainingMs: 0 },
+          terminalReason: null,
+        },
+      }),
+      finish(harness) {
+        harness.runFrame();
+      },
+    },
+    {
+      reason: "trapped",
+      expected: /Glitch trapped/i,
+      saved: begunRun({
+        revealed: [0],
+        flagged: [2],
+        flags: 1,
+        variant: {
+          hazard: { active: true, index: 1, remainingMs: 0 },
+          terminalReason: null,
+        },
+      }),
+      finish(harness) {
+        harness.runFrame();
+      },
+    },
+  ];
+
+  for (const entry of cases) {
+    const localStorage = memoryStorage();
+    const sessionStorage = memoryStorage();
+    const completions = [];
+    const adapter = GlitchSphere.createAdapter({ now: () => 0, random: () => 0 });
+    const first = createHarness({
+      localStorage,
+      sessionStorage,
+      boot: variantBoot(adapter.variant, {
+        createRunId: () => `run-${entry.reason}`,
+        onRunComplete: (payload) => completions.push(plain(payload)),
+      }),
+    });
+    assert.strictEqual(first.api.applyRunState(entry.saved), true);
+    entry.finish(first);
+    assert.strictEqual(first.api.getState().isGameOver, true);
+    assert.strictEqual(completions.length, 1);
+    assert.strictEqual(first.api.exportRunState().variant.terminalReason, entry.reason);
+    assert.match(first.elements["banner-msg"].textContent, entry.expected);
+
+    const restoredCompletions = [];
+    const restoredAdapter = GlitchSphere.createAdapter({ now: () => 10000, random: () => 0 });
+    const restored = createHarness({
+      localStorage,
+      sessionStorage,
+      boot: variantBoot(restoredAdapter.variant, {
+        createRunId: () => "run-unexpected",
+        onRunComplete: (payload) => restoredCompletions.push(payload),
+      }),
+    });
+    assert.strictEqual(restored.api.getState().isGameOver, true);
+    assert.match(restored.elements["banner-msg"].textContent, entry.expected);
+    assert.strictEqual(restoredCompletions.length, 0);
+  }
 });
 
 test("contains terminal hook failures and persists a recoverable terminal record", () => {

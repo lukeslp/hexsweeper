@@ -15,6 +15,7 @@
   const STORAGE_KEY = "hexsweeper-glitch-sphere-run-v1";
   const RUN_KIND = "glitch-sphere";
   const ROTATION_STEP = Math.PI / 18;
+  const TERMINAL_REASONS = new Set(["trapped", "hazard-mine", "direct-mine"]);
 
   function neighborsFor(tiles) {
     return (tiles || []).map((tile) =>
@@ -120,6 +121,33 @@
       return hazard.exportState();
     }
 
+    function exportPersistedState() {
+      return { hazard: exportState(), terminalReason };
+    }
+
+    function readPersistedState(saved, state) {
+      if (!saved || typeof saved !== "object") return null;
+      const wrapped = Object.prototype.hasOwnProperty.call(saved, "hazard");
+      const hazardState = wrapped ? saved.hazard : saved;
+      let reason = wrapped ? saved.terminalReason : null;
+      const completed = !!(state && state.isGameOver);
+
+      if (wrapped) {
+        if (!Object.prototype.hasOwnProperty.call(saved, "terminalReason")) return null;
+        if (reason !== null && !TERMINAL_REASONS.has(reason)) return null;
+      } else if (completed) {
+        // Saves written before terminal reasons were persisted can still restore.
+        reason = state.won ? "trapped" : "direct-mine";
+      }
+
+      if (!completed && reason !== null) return null;
+      if (completed) {
+        if (!hazardState || hazardState.active !== false) return null;
+        if (state.won ? reason !== "trapped" : reason === "trapped") return null;
+      }
+      return { hazard: hazardState, terminalReason: reason };
+    }
+
     function pause() {
       if (paused) return exportState();
       pausedState = hazard.exportState();
@@ -193,8 +221,17 @@
       admitReveal(context) {
         remember(context);
         const result = hazard.admitReveal(context.index);
-        if (result.status === "blocked") {
+        if (result.status === "blocked" && context.source === "direct") {
           announce("That face is occupied. The Glitch blocks a direct dig.");
+        }
+        return result;
+      },
+
+      admitFlag(context) {
+        remember(context);
+        const result = hazard.admitReveal(context.index);
+        if (result.status === "blocked") {
+          announce("That face is occupied. The Glitch cannot be flagged.");
         }
         return result;
       },
@@ -238,16 +275,18 @@
       },
 
       exportState() {
-        return exportState();
+        return exportPersistedState();
       },
 
       importState(context) {
         remember(context);
+        const saved = readPersistedState(context.saved, context.state);
+        if (!saved) return false;
+        const result = hazard.restore(saved.hazard, gameFor(context));
+        if (result.status === "blocked") return false;
         paused = false;
         pausedState = null;
-        terminalReason = null;
-        const result = hazard.restore(context.saved, gameFor(context));
-        if (result.status === "blocked") return false;
+        terminalReason = saved.terminalReason;
         if (result.status === "waiting") {
           announce("Glitch run restored.");
         }
@@ -264,7 +303,9 @@
         const saved = context.saved || {};
         paused = false;
         pausedState = null;
-        terminalReason = saved.terminalReason || null;
+        terminalReason = TERMINAL_REASONS.has(saved.terminalReason)
+          ? saved.terminalReason
+          : null;
         const result = hazard.restore(
           saved.hazard || { active: false, index: null, remainingMs: 0 },
           gameFor(context)
@@ -338,12 +379,26 @@
       moveIntervalMs: options.moveIntervalMs,
       statusElement,
     });
-    const game = host.SphereSweeper.boot({
+    let game = null;
+    let helpPauseHeld = false;
+    function acquireHelpPause() {
+      if (helpPauseHeld) return;
+      helpPauseHeld = true;
+      if (game) game.pauseTimer("help");
+    }
+    function releaseHelpPause() {
+      if (!helpPauseHeld) return;
+      helpPauseHeld = false;
+      if (game) game.resumeTimer("help");
+    }
+    game = host.SphereSweeper.boot({
       canvasId: options.canvasId || "gameCanvas",
       variant: adapter.variant,
       storageKey: STORAGE_KEY,
       runKind: RUN_KIND,
       createRunId: options.createRunId,
+      onHelpOpen: acquireHelpPause,
+      onHelpClose: releaseHelpPause,
       onRunComplete(payload) {
         forwardCompletion(payload, host);
         if (typeof options.onRunComplete === "function") options.onRunComplete(payload);
@@ -370,6 +425,8 @@
         baseResume();
       }
     };
+
+    if (helpPauseHeld) game.pauseTimer("help");
 
     if (canvas && typeof canvas.addEventListener === "function") {
       canvas.addEventListener("keydown", (event) => {

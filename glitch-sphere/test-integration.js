@@ -233,11 +233,117 @@ test("blocks an occupied dig and completes an immediate route trap through the S
     requestDraw() {},
   };
   adapter.variant.firstResolvedDig(context);
+  const spawnAnnouncement = status.textContent;
+  assert.strictEqual(adapter.variant.admitReveal(Object.assign({ index: 1, source: "flood" }, context)).status, "blocked");
+  assert.strictEqual(status.textContent, spawnAnnouncement);
   assert.strictEqual(adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, context)).status, "blocked");
   assert.match(status.textContent, /blocks|occupied/i);
+  assert.strictEqual(adapter.variant.admitFlag(Object.assign({ index: 1, flagged: true }, context)).status, "blocked");
   cells[3].flagged = true;
   adapter.variant.flag(Object.assign({ index: 3, flagged: true }, context));
   assert.deepStrictEqual(endings, ["win"]);
+});
+
+test("round-trips active hazard state and rejects invalid terminal persistence", () => {
+  const cells = [
+    { revealed: true, flagged: false, isMine: false },
+    { revealed: false, flagged: false, isMine: false },
+    { revealed: false, flagged: false, isMine: false },
+  ];
+  const tiles = [
+    { neighborIndices: [1] },
+    { neighborIndices: [0, 2] },
+    { neighborIndices: [1] },
+  ];
+  const context = {
+    cells,
+    tiles,
+    state: { cells, tiles, isGameOver: false, won: false },
+    persist() {},
+    requestDraw() {},
+    endRun() {},
+  };
+  const first = GlitchSphere.createAdapter({ random: () => 0, now: () => 0 });
+  first.variant.firstResolvedDig(context);
+  const saved = first.variant.exportState();
+  assert.deepStrictEqual(saved, {
+    hazard: { active: true, index: 1, remainingMs: 1000 },
+    terminalReason: null,
+  });
+
+  const restored = GlitchSphere.createAdapter({ random: () => 0, now: () => 5000 });
+  assert.strictEqual(restored.variant.importState(Object.assign({ saved }, context)), true);
+  assert.deepStrictEqual(restored.variant.exportState(), saved);
+  assert.strictEqual(
+    restored.variant.importState(Object.assign({
+      saved: { hazard: saved.hazard, terminalReason: "unknown" },
+    }, context)),
+    false
+  );
+  assert.strictEqual(
+    restored.variant.importState(Object.assign({
+      saved: { hazard: saved.hazard, terminalReason: "direct-mine" },
+    }, context)),
+    false
+  );
+});
+
+test("round-trips each completed terminal reason to the correct restored banner copy", () => {
+  const cases = [
+    ["trapped", "win", /Glitch trapped/i],
+    ["hazard-mine", "loss", /Glitch reached a mine/i],
+    ["direct-mine", "loss", /Mine detonated/i],
+  ];
+  for (const [terminalReason, outcome, expectedCopy] of cases) {
+    const cells = [
+      { revealed: true, flagged: false, isMine: false },
+      { revealed: false, flagged: false, isMine: false },
+      { revealed: false, flagged: false, isMine: true },
+    ];
+    const tiles = [
+      { neighborIndices: [1] },
+      { neighborIndices: [0, 2] },
+      { neighborIndices: [1] },
+    ];
+    const state = { cells, tiles, isGameOver: true, won: outcome === "win" };
+    const context = { cells, tiles, state, persist() {}, requestDraw() {}, endRun() {} };
+    const saved = {
+      hazard: { active: false, index: null, remainingMs: 0 },
+      terminalReason,
+    };
+    const restored = GlitchSphere.createAdapter({ now: () => 0 });
+    assert.strictEqual(restored.variant.importState(Object.assign({ saved }, context)), true);
+    assert.deepStrictEqual(restored.variant.exportState(), saved);
+    assert.match(restored.variant.terminalCopy({ outcome }).message, expectedCopy);
+  }
+});
+
+test("restores the hazard and terminal reason captured for undo", () => {
+  const cells = [
+    { revealed: true, flagged: false, isMine: false },
+    { revealed: false, flagged: false, isMine: false },
+    { revealed: false, flagged: false, isMine: false },
+  ];
+  const tiles = [
+    { neighborIndices: [1] },
+    { neighborIndices: [0, 2] },
+    { neighborIndices: [1] },
+  ];
+  const context = {
+    cells,
+    tiles,
+    state: { cells, tiles, isGameOver: false, won: false },
+    persist() {},
+    requestDraw() {},
+    endRun() {},
+  };
+  const adapter = GlitchSphere.createAdapter({ random: () => 0, now: () => 0 });
+  adapter.variant.firstResolvedDig(context);
+  const undo = adapter.variant.captureUndo(context);
+  adapter.variant.terminal(Object.assign({ outcome: "loss" }, context));
+  assert.strictEqual(adapter.variant.exportState().terminalReason, "direct-mine");
+  adapter.variant.restoreUndo(Object.assign({ saved: undo }, context));
+  assert.deepStrictEqual(adapter.variant.exportState(), undo);
 });
 
 test("leaves an ordinary mined reveal to Sphere instead of converting it to a trap win", () => {
@@ -318,6 +424,46 @@ test("wires arrow rotation, centered dig/flag, and visibility pause through the 
   harness.root.document.visibilityState = "visible";
   harness.documentListeners.visibilitychange();
   assert.strictEqual(harness.calls.resume, 1);
+});
+
+test("nests help, menu, and visibility pauses without consuming the held delay", () => {
+  let now = 0;
+  const harness = makeRoot();
+  const result = GlitchSphere.boot({ root: harness.root, now: () => now, random: () => 0 });
+  const options = harness.getBootOptions();
+  assert.strictEqual(typeof options.onHelpOpen, "function");
+  assert.strictEqual(typeof options.onHelpClose, "function");
+
+  const cells = [
+    { revealed: true, flagged: false, isMine: false },
+    { revealed: false, flagged: false, isMine: false },
+    { revealed: false, flagged: false, isMine: false },
+  ];
+  const tiles = [
+    { neighborIndices: [1] },
+    { neighborIndices: [0, 2] },
+    { neighborIndices: [1] },
+  ];
+  const context = { cells, tiles, state: { cells, tiles }, persist() {}, requestDraw() {}, endRun() {} };
+  result.adapter.variant.firstResolvedDig(context);
+
+  now = 400;
+  options.onHelpOpen();
+  result.game.pauseTimer("menu");
+  harness.root.document.visibilityState = "hidden";
+  harness.documentListeners.visibilitychange();
+  assert.strictEqual(harness.calls.pause, 1);
+  assert.strictEqual(result.adapter.exportState().remainingMs, 600);
+
+  now = 5000;
+  options.onHelpClose();
+  result.game.resumeTimer("menu");
+  assert.strictEqual(harness.calls.resume, 0);
+  assert.strictEqual(result.adapter.exportState().remainingMs, 600);
+  harness.root.document.visibilityState = "visible";
+  harness.documentListeners.visibilitychange();
+  assert.strictEqual(harness.calls.resume, 1);
+  assert.strictEqual(result.adapter.exportState().remainingMs, 600);
 });
 
 test("dispatches completion locally and forwards only to an embedded same-origin parent", () => {
