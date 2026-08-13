@@ -1929,20 +1929,26 @@
 
     function writePersistPayload(json) {
       // Dual-write: session for same-tab reload resilience, local for return visits.
-      const a = storageSet(localStorage, runStorageKey, json);
-      const b = storageSet(sessionStorage, runStorageKey, json);
-      return a || b;
+      return {
+        local: storageSet(localStorage, runStorageKey, json),
+        session: storageSet(sessionStorage, runStorageKey, json),
+      };
     }
 
-    function flushPersist() {
-      if (persistSuspended) return false;
+    function flushPersistResult() {
+      if (persistSuspended) return { local: false, session: false };
       const data = exportRunState();
       if (!data) {
         // Fresh board: do NOT wipe an existing save here. Only clearPersist()
         // (Reset / size) should drop a stored run. Avoids races wiping progress.
-        return false;
+        return { local: false, session: false };
       }
       return writePersistPayload(JSON.stringify(data));
+    }
+
+    function flushPersist() {
+      const result = flushPersistResult();
+      return result.local || result.session;
     }
 
     function schedulePersist() {
@@ -2114,10 +2120,14 @@
 
       persistSuspended = false;
       // Re-write under v2 key so legacy saves migrate.
-      const migrated = flushPersist();
-      if (!variant && migrated) {
-        storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
-        storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+      const migrated = flushPersistResult();
+      if (!variant) {
+        if (migrated.local) {
+          storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
+        }
+        if (migrated.session) {
+          storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+        }
       }
       return true;
     }

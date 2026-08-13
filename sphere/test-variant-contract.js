@@ -8,7 +8,8 @@ const vm = require("vm");
 
 const sphereSource = fs.readFileSync(path.join(__dirname, "sphere.js"), "utf8");
 
-function memoryStorage(initial) {
+function memoryStorage(initial, options) {
+  options = options || {};
   const values = new Map(Object.entries(initial || {}));
   const reads = [];
   const writes = [];
@@ -21,6 +22,7 @@ function memoryStorage(initial) {
     setItem(key, value) {
       const stringValue = String(value);
       writes.push([key, stringValue]);
+      if (options.failSet) throw new Error("storage set failed");
       values.set(key, stringValue);
     },
     removeItem(key) {
@@ -407,6 +409,50 @@ test("migrates a canonical legacy save and removes both legacy copies", () => {
   assert.ok(sessionStorage.value("hexsweeper-sphere-run-v2"));
   assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), undefined);
   assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), undefined);
+});
+
+test("retains local legacy data when only the session v2 migration succeeds", () => {
+  const legacy = JSON.stringify(begunRun({
+    v: 1,
+    kind: "sphere",
+    runId: undefined,
+    completionEmitted: undefined,
+    variant: undefined,
+    revealed: [0],
+  }));
+  const localStorage = memoryStorage({
+    "hexsweeper-sphere-run-v1": legacy,
+  }, { failSet: true });
+  const sessionStorage = memoryStorage({
+    "hexsweeper-sphere-run-v1": legacy,
+  });
+  createHarness({ localStorage, sessionStorage });
+  assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v2"), undefined);
+  assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), legacy);
+  assert.ok(sessionStorage.value("hexsweeper-sphere-run-v2"));
+  assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), undefined);
+});
+
+test("retains session legacy data when only the local v2 migration succeeds", () => {
+  const legacy = JSON.stringify(begunRun({
+    v: 1,
+    kind: "sphere",
+    runId: undefined,
+    completionEmitted: undefined,
+    variant: undefined,
+    revealed: [0],
+  }));
+  const localStorage = memoryStorage({
+    "hexsweeper-sphere-run-v1": legacy,
+  });
+  const sessionStorage = memoryStorage({
+    "hexsweeper-sphere-run-v1": legacy,
+  }, { failSet: true });
+  createHarness({ localStorage, sessionStorage });
+  assert.ok(localStorage.value("hexsweeper-sphere-run-v2"));
+  assert.strictEqual(localStorage.value("hexsweeper-sphere-run-v1"), undefined);
+  assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v2"), undefined);
+  assert.strictEqual(sessionStorage.value("hexsweeper-sphere-run-v1"), legacy);
 });
 
 test("admits direct and flood reveals separately and runs the first-dig hook after flood", () => {
