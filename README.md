@@ -1,11 +1,24 @@
 # Hexsweeper
 
-Hexagonal minesweeper for [dr.eamer.dev](https://dr.eamer.dev/games/hexsweeper/).
+[![Play Hexsweeper](https://img.shields.io/badge/Play-live-7c3aed?logo=gamepad&logoColor=white)](https://dr.eamer.dev/games/hexsweeper/)
+[![CI](https://github.com/lukeslp/hexsweeper/actions/workflows/ci.yml/badge.svg)](https://github.com/lukeslp/hexsweeper/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
 
-**Live path:** `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/`  
-**Public URL:** https://dr.eamer.dev/games/hexsweeper/
+A hexagonal minesweeper with five production modes, a stack of playable experiments, and deliberate support for keyboard, touch, and reduced-motion play.
 
-Edits on Drummer are live static deploys (same pattern as `/clocks/`). This folder is its own nested Git worktree (`lukeslp/hexsweeper`). Beast mirror: `/Users/luke/workspace/hexsweeper`. Typography is self-hosted IBM Plex under `fonts/` (SIL OFL 1.1 — see `fonts/OFL.txt`; no Google Fonts CDN).
+**[Play Hexsweeper on dr.eamer.dev](https://dr.eamer.dev/games/hexsweeper/).**
+
+## Run locally
+
+No build step is required for the main game. Serve the repository with any static web server, then open `index.html` in a modern browser:
+
+```bash
+python3 -m http.server 8080
+```
+
+## Production notes
+
+The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on Drummer. This repository is its own nested Git worktree there; the Beast mirror lives at `/Users/luke/workspace/hexsweeper`. IBM Plex is self-hosted under `fonts/` under the SIL Open Font License 1.1. No Google Fonts CDN is used.
 
 ## Modes (production)
 
