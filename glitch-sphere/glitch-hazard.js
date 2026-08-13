@@ -46,7 +46,8 @@
     return snapshot && snapshot.active === true && Number.isInteger(snapshot.index)
       && snapshot.index >= 0 && Array.isArray(game && game.cells)
       && snapshot.index < game.cells.length && isEligible(game.cells[snapshot.index])
-      && Number.isFinite(snapshot.remainingMs) && snapshot.remainingMs >= 0;
+      && Number.isFinite(snapshot.remainingMs) && snapshot.remainingMs >= 0
+      && snapshot.remainingMs <= moveIntervalMs;
   }
 
   return {

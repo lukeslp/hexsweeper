@@ -2,6 +2,9 @@
 "use strict";
 
 const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
 const createHazard = require("./glitch-hazard.js");
 
 function board(cells, neighbors) {
@@ -57,6 +60,17 @@ test("excludes revealed, flagged, and mined spawn faces", () => {
 
 test("moves only when a full interval has elapsed", () => {
   const { hazard, time } = makeHazard();
+  const game = board([cell(), cell()], [[1], [0]]);
+  hazard.spawn(game);
+  time.set(999);
+  assert.deepStrictEqual(hazard.tick(game), { status: "waiting", remainingMs: 1 });
+  time.set(1000);
+  assert.deepStrictEqual(hazard.tick(game), { status: "moved", from: 0, index: 1 });
+});
+
+test("uses the default 1000ms interval when none is supplied", () => {
+  const time = clock(0);
+  const hazard = createHazard({ random: () => 0, now: time.now });
   const game = board([cell(), cell()], [[1], [0]]);
   hazard.spawn(game);
   time.set(999);
@@ -130,6 +144,21 @@ test("rejects invalid active restore state", () => {
   ]) {
     assert.deepStrictEqual(hazard.restore(snapshot, game), { status: "blocked" });
   }
+});
+
+test("rejects a restore delay beyond the move interval", () => {
+  const { hazard } = makeHazard();
+  const game = board([cell()], [[]]);
+  assert.deepStrictEqual(hazard.restore({ active: true, index: 0, remainingMs: 1001 }, game), {
+    status: "blocked",
+  });
+});
+
+test("exposes the factory through the browser-global UMD path", () => {
+  const source = fs.readFileSync(path.join(__dirname, "glitch-hazard.js"), "utf8");
+  const browser = {};
+  vm.runInNewContext(source, browser, { filename: "glitch-hazard.js" });
+  assert.strictEqual(typeof browser.GlitchHazard, "function");
 });
 
 console.log("All tests passed.");
