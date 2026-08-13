@@ -666,8 +666,52 @@
   /** Loaded equirectangular maps (ImageData cache). */
   const globeCache = Object.create(null);
 
+  /** Build the stable, transport-neutral payload shared by Sphere variants. */
+  function buildRunCompletionPayload(details) {
+    return {
+      type: "hexsweeper:run-complete",
+      schemaVersion: 1,
+      runId: details.runId,
+      variant: details.variant,
+      outcome: details.outcome,
+      elapsedSeconds: details.elapsedSeconds,
+      safeFacesRevealed: details.safeFacesRevealed,
+      mineCount: details.mineCount,
+      difficulty: details.difficulty,
+      completedAt: details.completedAt,
+    };
+  }
+
   function boot(opts) {
     opts = opts || {};
+    const variant =
+      opts.variant && typeof opts.variant === "object" ? opts.variant : null;
+    const runStorageKey =
+      variant && typeof opts.storageKey === "string" && opts.storageKey
+        ? opts.storageKey
+        : RUN_STORAGE_KEY;
+    const runKind =
+      variant && typeof opts.runKind === "string" && opts.runKind
+        ? opts.runKind
+        : "sphere";
+    const variantId =
+      variant && typeof variant.id === "string" && variant.id
+        ? variant.id
+        : runKind;
+
+    function createRunId() {
+      if (variant && typeof opts.createRunId === "function") {
+        const supplied = opts.createRunId();
+        if (typeof supplied === "string" && supplied) return supplied;
+      }
+      try {
+        if (global.crypto && typeof global.crypto.randomUUID === "function") {
+          return global.crypto.randomUUID();
+        }
+      } catch (_) {}
+      return `sphere-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    }
+
     // Publish the resolved effects preference before first paint so CSS gates
     // apply to the opening frame rather than snapping in after it.
     applyEffectsAttribute();
@@ -784,6 +828,8 @@
       invertDragX: storedInvert.x,
       invertDragY: storedInvert.y,
     };
+    let runId = null;
+    let completionEmitted = false;
 
     const END_FX = {
       active: false,
@@ -887,6 +933,55 @@
      */
     let undoSnapshot = null;
 
+    function variantContext(extra) {
+      return Object.assign(
+        {
+          state,
+          cells: state.cells,
+          tiles: state.tiles,
+          canvas,
+          context2d: ctx,
+          runId,
+          endRun(outcome, terminal) {
+            if (state.isGameOver) return false;
+            if (
+              terminal &&
+              Number.isInteger(terminal.detonatorIndex) &&
+              terminal.detonatorIndex >= 0 &&
+              terminal.detonatorIndex < state.cells.length
+            ) {
+              state.detonatorIdx = terminal.detonatorIndex;
+            }
+            gameOver(outcome === true || outcome === "win");
+            return true;
+          },
+          persist: () => persistNow(),
+          requestDraw: () => scheduleFrame(),
+          projectFace(index, lift) {
+            const tile = state.tiles[index];
+            return tile
+              ? projectTile(tile, state.rotY, state.rotX, lift || 0)
+              : null;
+          },
+        },
+        extra || {}
+      );
+    }
+
+    function callVariant(hook, extra) {
+      if (!variant || typeof variant[hook] !== "function") return undefined;
+      return variant[hook](variantContext(extra));
+    }
+
+    function variantAdmitsReveal(index, source) {
+      const result = callVariant("admitReveal", { index, source });
+      return !(
+        result === false ||
+        (result && result.allowed === false) ||
+        (result && result.status === "blocked")
+      );
+    }
+
     function captureUndo() {
       const n = state.cells.length;
       const revealed = new Uint8Array(n);
@@ -902,6 +997,7 @@
         isFirstClick: state.isFirstClick,
         timeElapsed: state.timeElapsed,
       };
+      if (variant) undoSnapshot.variant = callVariant("captureUndo");
     }
 
     function restoreUndo() {
@@ -923,6 +1019,7 @@
       state.isGameOver = false;
       state.won = false;
       state.detonatorIdx = -1;
+      if (variant) callVariant("restoreUndo", { saved: snap.variant });
       hideBanner();
       if (!state.isFirstClick) startTimer();
       updateUI();
@@ -1611,6 +1708,8 @@
       state.hovered = -1;
       state.pressed = -1;
       state.camShake = 0;
+      runId = variant ? createRunId() : null;
+      completionEmitted = false;
       // Fresh board: resume idle spin until the player touches the canvas again.
       state.ambientSpin = !state.reduceMotion;
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
@@ -1618,6 +1717,7 @@
       ensureGlobeForTheme(state.theme);
       bakeGlobeTileColors();
       updateUI();
+      callVariant("reset");
       if (!optsReset.keepPersist) clearPersist();
     }
 
@@ -1749,9 +1849,9 @@
         if (c.flagged) flagged.push(i);
       }
       // Pre-first-dig with only flags: still persist flags + camera.
-      return {
+      const data = {
         v: 2,
-        kind: "sphere",
+        kind: runKind,
         difficulty: state.difficulty,
         first: !!state.isFirstClick,
         over: !!state.isGameOver,
@@ -1767,20 +1867,32 @@
         flagged,
         savedAt: Date.now(),
       };
+      if (variant) {
+        data.runId = runId;
+        data.completionEmitted = !!completionEmitted;
+        const variantState = callVariant("exportState");
+        data.variant = variantState === undefined ? null : variantState;
+      }
+      return data;
     }
 
     /** Explicit clear only — Reset button / size change / invalid save. */
     function clearPersist() {
-      storageRemove(localStorage, RUN_STORAGE_KEY);
-      storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
-      storageRemove(sessionStorage, RUN_STORAGE_KEY);
-      storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+      if (variant) {
+        storageRemove(localStorage, runStorageKey);
+        storageRemove(sessionStorage, runStorageKey);
+      } else {
+        storageRemove(localStorage, RUN_STORAGE_KEY);
+        storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
+        storageRemove(sessionStorage, RUN_STORAGE_KEY);
+        storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+      }
     }
 
     function writePersistPayload(json) {
       // Dual-write: session for same-tab reload resilience, local for return visits.
-      const a = storageSet(localStorage, RUN_STORAGE_KEY, json);
-      const b = storageSet(sessionStorage, RUN_STORAGE_KEY, json);
+      const a = storageSet(localStorage, runStorageKey, json);
+      const b = storageSet(sessionStorage, runStorageKey, json);
       return a || b;
     }
 
@@ -1810,7 +1922,7 @@
     }
 
     function applyRunState(data) {
-      if (!data || data.kind !== "sphere") return false;
+      if (!data || data.kind !== runKind) return false;
       if (data.v !== 1 && data.v !== 2) return false;
       if (!SIZE_ORDER.includes(data.difficulty)) return false;
       if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
@@ -1879,6 +1991,12 @@
       state.hovered = -1;
       state.pressed = -1;
       state.camShake = 0;
+      runId = variant
+        ? typeof data.runId === "string" && data.runId
+          ? data.runId
+          : createRunId()
+        : null;
+      completionEmitted = variant && !!data.completionEmitted;
       // Fresh-ish (flags only, no dig yet): allow ambient spin again.
       state.ambientSpin = !!data.first && !state.reduceMotion && flags === 0;
 
@@ -1898,20 +2016,17 @@
       invalidateProjection();
       ensureGlobeForTheme(state.theme);
       bakeGlobeTileColors();
+      if (variant && callVariant("importState", { saved: data.variant }) === false) {
+        persistSuspended = false;
+        return false;
+      }
       updateUI();
 
       if (!state.isFirstClick && !state.isGameOver) {
         startTimer(state.timeElapsed);
       }
       if (state.isGameOver) {
-        if (state.won) {
-          showBanner("Cleared the sphere!", {
-            share: true,
-            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
-          });
-        } else {
-          showBanner("Mine detonated.", { share: false });
-        }
+        showTerminalBanner(state.won);
       }
 
       persistSuspended = false;
@@ -1921,7 +2036,9 @@
     }
 
     function readStoredRun() {
-      const keys = [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY];
+      const keys = variant
+        ? [runStorageKey]
+        : [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY];
       const stores = [sessionStorage, localStorage];
       let best = null;
       let bestAt = -1;
@@ -1931,7 +2048,7 @@
           if (!raw) continue;
           try {
             const data = JSON.parse(raw);
-            if (!data || data.kind !== "sphere") continue;
+            if (!data || data.kind !== runKind) continue;
             const at = Number(data.savedAt) || 0;
             if (at >= bestAt) {
               best = data;
@@ -2247,7 +2364,8 @@
      * Flood zeros with logic immediate (revealed=true) and paint staggered by
      * graph distance — mirrors flat core.js BFS wave, capped ~880ms.
      */
-    function floodFrom(startIdx) {
+    function floodFrom(startIdx, optsFlood) {
+      optsFlood = optsFlood || {};
       const opened = new Set();
       const queue = [{ idx: startIdx, dist: 0 }];
       const visited = new Set([startIdx]);
@@ -2258,19 +2376,29 @@
           visited.add(n);
           const c = state.cells[n];
           if (c.revealed || c.flagged || c.isMine) continue;
+          if (!variantAdmitsReveal(n, "flood")) continue;
           c.revealed = true;
           scheduleRevealVisual(n, dist + 1);
           opened.add(n);
           if (c.neighborMines === 0) queue.push({ idx: n, dist: dist + 1 });
         }
       }
+      if (variant && optsFlood.notify !== false && opened.size) {
+        callVariant("reveal", {
+          index: startIdx,
+          source: "flood",
+          revealed: Array.from(opened),
+        });
+      }
       return opened;
     }
 
     function reveal(idx) {
       const cell = state.cells[idx];
-      if (!cell || cell.revealed || cell.flagged || state.isGameOver) return;
-      if (state.isFirstClick) {
+      if (!cell || cell.revealed || cell.flagged || state.isGameOver) return false;
+      if (!variantAdmitsReveal(idx, "direct")) return false;
+      const isFirstResolvedDig = state.isFirstClick;
+      if (isFirstResolvedDig) {
         placeMines(idx);
         state.isFirstClick = false;
         startTimer();
@@ -2281,12 +2409,24 @@
       if (cell.isMine) {
         cell.animReveal = 1;
         state.detonatorIdx = idx;
+        callVariant("reveal", {
+          index: idx,
+          source: "direct",
+          revealed: [idx],
+        });
         gameOver(false);
-        return;
+        return true;
       }
-      if (cell.neighborMines === 0) floodFrom(idx);
-      checkWin();
+      const opened =
+        cell.neighborMines === 0 ? floodFrom(idx, { notify: false }) : new Set();
+      const revealed = [idx, ...opened];
+      callVariant("reveal", { index: idx, source: "direct", revealed });
+      if (isFirstResolvedDig) {
+        callVariant("firstResolvedDig", { index: idx, revealed });
+      }
+      if (!state.isGameOver) checkWin();
       persistNow();
+      return true;
     }
 
     function tickRevealAnim(now) {
@@ -2320,11 +2460,13 @@
 
     function toggleFlag(idx) {
       const cell = state.cells[idx];
-      if (!cell || cell.revealed || state.isGameOver) return;
+      if (!cell || cell.revealed || state.isGameOver) return false;
       cell.flagged = !cell.flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
+      callVariant("flag", { index: idx, flagged: cell.flagged });
       persistNow();
+      return true;
     }
 
     function checkWin() {
@@ -2336,24 +2478,85 @@
           if (state.cells[i].revealed) safeRevealed++;
         }
       }
+      if (
+        variant &&
+        callVariant("useDefaultWin", {
+          safeFacesRevealed: safeRevealed,
+          safeFaceCount: safeTotal,
+        }) === false
+      ) {
+        return;
+      }
       if (safeRevealed === safeTotal) gameOver(true);
     }
 
     function gameOver(won) {
+      if (state.isGameOver) return false;
       state.isGameOver = true;
       state.won = won;
       stopTimer();
+      callVariant("terminal", { won, outcome: won ? "win" : "loss" });
       if (!won) {
         startLoseFx(state.detonatorIdx >= 0 ? state.detonatorIdx : 0);
-        showBanner("Mine detonated.", { share: false });
       } else {
         startWinFx();
-        showBanner("Cleared the sphere!", {
-          share: true,
-          meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
-        });
       }
+      showTerminalBanner(won);
+      emitRunCompletion(won);
       persistNow();
+      return true;
+    }
+
+    function terminalCopy(won) {
+      const defaults = won
+        ? {
+            message: "Cleared the sphere!",
+            share: true,
+            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
+          }
+        : { message: "Mine detonated.", share: false };
+      const custom = callVariant("terminalCopy", {
+        won,
+        outcome: won ? "win" : "loss",
+        defaultCopy: Object.assign({}, defaults),
+      });
+      return custom && typeof custom === "object"
+        ? Object.assign({}, defaults, custom)
+        : defaults;
+    }
+
+    function showTerminalBanner(won) {
+      const copy = terminalCopy(won);
+      showBanner(copy.message, copy);
+    }
+
+    function emitRunCompletion(won) {
+      if (
+        !variant ||
+        completionEmitted ||
+        typeof opts.onRunComplete !== "function"
+      ) {
+        return false;
+      }
+      let safeFacesRevealed = 0;
+      for (const cell of state.cells) {
+        if (!cell.isMine && cell.revealed) safeFacesRevealed++;
+      }
+      const payload = buildRunCompletionPayload({
+        runId,
+        variant: variantId,
+        outcome: won ? "win" : "loss",
+        elapsedSeconds: state.timeElapsed | 0,
+        safeFacesRevealed,
+        mineCount: state.mineCount | 0,
+        difficulty: state.difficulty,
+        completedAt: new Date().toISOString(),
+      });
+      completionEmitted = true;
+      try {
+        opts.onRunComplete(payload);
+      } catch (_) {}
+      return true;
     }
 
     function showBanner(msg, opts) {
@@ -3487,6 +3690,7 @@
         }
       }
 
+      callVariant("draw", { now, projected });
       drawEndFxOverlay(now);
       ctx.restore();
     }
@@ -3518,6 +3722,7 @@
       const now = ts || performance.now();
       tickAmbientSpin(now);
       tickRevealAnim(now);
+      if (!state.isGameOver) callVariant("tick", { now });
       tickEndFx(now);
       draw();
       state.lastFrameAt = now;
@@ -3899,6 +4104,8 @@
       undo: () => restoreUndo(),
       canUndo: () => !!undoSnapshot,
       floodFrom,
+      digAt: (index) => reveal(index),
+      flagAt: (index) => toggleFlag(index),
       getState: () => state,
       pickTile,
       projectTile,
@@ -3960,5 +4167,6 @@
     EFFECTS_KEY,
     effectsReduced,
     applyEffectsAttribute,
+    buildRunCompletionPayload,
   };
 })(typeof window !== "undefined" ? window : global);
