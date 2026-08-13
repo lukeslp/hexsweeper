@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 
 const routeDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(routeDir, "..");
+const diagnosticSelfTest = process.argv.includes("--self-test-diagnostics");
 const artifactDir = process.env.GLITCH_SPHERE_ARTIFACT_DIR
   ? resolve(process.env.GLITCH_SPHERE_ARTIFACT_DIR)
   : mkdtempSync(join(tmpdir(), "glitch-sphere-browser-"));
@@ -410,7 +411,7 @@ async function assertRouteContract(cdp, sessionId) {
   }
 }
 
-async function exerciseActiveRun(cdp, sessionId) {
+async function exerciseActiveRun(cdp, sessionId, injectDiagnostics = false) {
   const prepared = await evaluate(
     cdp,
     sessionId,
@@ -493,6 +494,18 @@ async function exerciseActiveRun(cdp, sessionId) {
     })()`
   );
   assert.equal(flagged, true, "Shift+Space did not flag the selected centered face");
+
+  if (injectDiagnostics) {
+    await evaluate(
+      cdp,
+      sessionId,
+      `(() => {
+        console.error("probe-active-console-error");
+        fetch("/glitch-sphere/probe-active-missing.js").catch(() => {});
+      })()`
+    );
+    await new Promise((resolveWait) => setTimeout(resolveWait, 150));
+  }
 
   return evaluate(
     cdp,
@@ -654,7 +667,84 @@ async function exerciseTerminalFixtures(cdp, sessionId, label) {
   }
 }
 
-async function runViewport(cdp, sessionId, baseUrl, diagnostics, viewport) {
+async function measureReducedMotionCadence(cdp, sessionId) {
+  const fixture = await evaluate(
+    cdp,
+    sessionId,
+    `(() => {
+      const game = glitchSphereRoute.game;
+      const state = game.getState();
+      let hazard = -1;
+      let mine = -1;
+      for (let index = 0; index < state.tiles.length; index++) {
+        const blocked = new Set([index, ...state.tiles[index].neighborIndices]);
+        const candidateMine = state.cells.findIndex((_, candidate) => !blocked.has(candidate));
+        if (candidateMine >= 0 && state.tiles[index].neighborIndices.length > 0) {
+          hazard = index;
+          mine = candidateMine;
+          break;
+        }
+      }
+      if (hazard < 0 || mine < 0) throw new Error("unable to build cadence fixture");
+      const saved = {
+        v: 2,
+        kind: "glitch-sphere",
+        difficulty: state.difficulty,
+        first: false,
+        over: false,
+        won: false,
+        flags: 0,
+        mineCount: 1,
+        time: 0,
+        rotY: 0,
+        rotX: 0.25,
+        zoom: 0.72,
+        mines: [mine],
+        revealed: [],
+        flagged: [],
+        savedAt: Date.now(),
+        runId: "browser-reduced-cadence",
+        completionEmitted: false,
+        variant: {
+          hazard: { active: true, index: hazard, remainingMs: 1000 },
+          terminalReason: null,
+        },
+      };
+      if (!game.applyRunState(saved)) throw new Error("cadence fixture was rejected");
+      window.__probeCadenceStart = performance.now();
+      return { initialIndex: hazard };
+    })()`
+  );
+
+  await new Promise((resolveWait) => setTimeout(resolveWait, 600));
+  const early = await evaluate(
+    cdp,
+    sessionId,
+    `(() => {
+      const hazard = glitchSphereRoute.adapter.exportState();
+      return { index: hazard.index, remainingMs: hazard.remainingMs };
+    })()`
+  );
+  const moved = await waitForExpression(
+    cdp,
+    sessionId,
+    `(() => {
+      const hazard = glitchSphereRoute.adapter.exportState();
+      if (!hazard.active || hazard.index === ${fixture.initialIndex}) return null;
+      return { index: hazard.index, elapsedMs: performance.now() - window.__probeCadenceStart };
+    })()`,
+    1600
+  );
+  return {
+    initialIndex: fixture.initialIndex,
+    earlyIndex: early.index,
+    earlyRemainingMs: early.remainingMs,
+    movedIndex: moved.index,
+    movedAfterMs: moved.elapsedMs,
+  };
+}
+
+async function runViewport(cdp, sessionId, baseUrl, diagnostics, viewport, injectDiagnostics = false) {
   await cdp.send(
     "Emulation.setDeviceMetricsOverride",
     {
@@ -673,9 +763,10 @@ async function runViewport(cdp, sessionId, baseUrl, diagnostics, viewport) {
   await navigate(cdp, sessionId, `${baseUrl}/glitch-sphere/?welcome=0&fresh=1`, diagnostics);
   await assertRouteContract(cdp, sessionId);
   assertNoFailures(diagnostics, `${viewport.name} initial route`);
-  const previous = await exerciseActiveRun(cdp, sessionId);
+  const previous = await exerciseActiveRun(cdp, sessionId, injectDiagnostics);
   await orientHazardForCapture(cdp, sessionId);
   await capture(cdp, sessionId, `${viewport.name}-active`);
+  assertNoFailures(diagnostics, `${viewport.name} active interactions`);
   await assertRestoreAndReset(cdp, sessionId, baseUrl, previous, diagnostics);
   assertNoFailures(diagnostics, `${viewport.name} restore`);
   await exerciseTerminalFixtures(cdp, sessionId, viewport.name);
@@ -684,7 +775,7 @@ async function runViewport(cdp, sessionId, baseUrl, diagnostics, viewport) {
   note(`  ${viewport.name}: first dig, active hazard, keyboard, restore, reset, win/loss, exactly-once completion — OK`);
 }
 
-async function runBrowser(baseUrl, executable) {
+async function runBrowser(baseUrl, executable, options = {}) {
   const cdp = new PipeCdp(executable);
   try {
     const { targetId } = await cdp.send("Target.createTarget", { url: "about:blank" });
@@ -759,7 +850,14 @@ async function runBrowser(baseUrl, executable) {
       { name: "desktop", width: 1280, height: 800, mobile: false },
       { name: "mobile", width: 390, height: 844, mobile: true },
     ]) {
-      await runViewport(cdp, sessionId, baseUrl, diagnostics, viewport);
+      await runViewport(
+        cdp,
+        sessionId,
+        baseUrl,
+        diagnostics,
+        viewport,
+        !!options.injectActiveDiagnostics && viewport.name === "desktop"
+      );
     }
 
     await cdp.send(
@@ -785,6 +883,15 @@ async function runBrowser(baseUrl, executable) {
     assert.equal(reducedBefore.media, true);
     assert.equal(reducedBefore.state, true);
     assert.equal(reducedBefore.transition, "0s");
+    const reducedCadence = await measureReducedMotionCadence(cdp, sessionId);
+    assert.equal(reducedCadence.earlyIndex, reducedCadence.initialIndex);
+    assert.ok(reducedCadence.earlyRemainingMs > 0, "reduced-motion hazard moved before its deadline");
+    assert.notEqual(reducedCadence.movedIndex, reducedCadence.initialIndex);
+    assert.ok(reducedCadence.movedAfterMs >= 900, "reduced-motion hazard moved too early");
+    assert.ok(reducedCadence.movedAfterMs <= 1600, "reduced-motion hazard missed its cadence window");
+    note(`  reduced-motion cadence: held through 600ms; moved at ${Math.round(reducedCadence.movedAfterMs)}ms — OK`);
+    assertNoFailures(diagnostics, "reduced-motion cadence");
+    await navigate(cdp, sessionId, `${baseUrl}/glitch-sphere/?welcome=0&fresh=1`, diagnostics);
     const reducedActive = await exerciseActiveRun(cdp, sessionId);
     assert.equal(reducedActive.hazard.active, true);
     await orientHazardForCapture(cdp, sessionId);
@@ -805,6 +912,17 @@ try {
   const executable = chromePath();
   if (!executable) {
     await staticFallback(server.baseUrl);
+  } else if (diagnosticSelfTest) {
+    let rejection = null;
+    try {
+      await runBrowser(server.baseUrl, executable, { injectActiveDiagnostics: true });
+    } catch (error) {
+      rejection = error;
+    }
+    assert.ok(rejection, "Diagnostic self-test failed: browser probe accepted injected active-phase failures");
+    assert.match(rejection.message, /probe-active-console-error/);
+    assert.match(rejection.message, /probe-active-missing\.js/);
+    note("Diagnostic self-test: injected active-phase console/resource failures were rejected — OK");
   } else {
     note(`Glitch Sphere browser probe (${executable})…`);
     await runBrowser(server.baseUrl, executable);
