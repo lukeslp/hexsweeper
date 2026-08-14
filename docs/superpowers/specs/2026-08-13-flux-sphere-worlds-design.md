@@ -3,8 +3,8 @@
 ## Summary
 
 Flux Sphere turns the archived “Dig one, reveal both” label into a complete
-Hexsweeper Sphere variant. After the first safe opening resolves, every still
-covered safe face is paired with a distant safe face. Digging either face opens
+Hexsweeper Sphere variant. After the first safe opening resolves, Flux links
+every still-covered safe face to a distant safe face. Digging either face opens
 its partner through the canonical Sphere reveal engine.
 
 Public route: `https://dr.eamer.dev/games/hexsweeper/flux-sphere/`
@@ -27,9 +27,9 @@ stubs, and developer routes remain unlisted.
 ## Game Rules
 
 1. The first dig remains safe and resolves the normal Sphere flood.
-2. After that opening, every still-covered, unflagged, non-mine face is paired
-   with a distant eligible face. At most one face is unpaired when the eligible
-   count is odd.
+2. After that opening, Flux links every still-covered, unflagged, non-mine face
+   with a distant eligible face. When the eligible count is odd, one face has no
+   partner.
 3. Pairing is deterministic for a given board and geometry. It uses geometric
    separation with stable index tie-breaking, not ambient randomness.
 4. A direct safe dig reveals its partner in the same undoable move. A zero-count
@@ -38,7 +38,7 @@ stubs, and developer routes remain unlisted.
    echo.
 6. A flagged or already revealed partner is not forced open. The status tells
    the player that the echo was held or already resolved.
-7. Pair identities remain visually latent while both faces are covered so they
+7. Pair identities remain visually latent while both faces stay covered so they
    do not disclose which faces are safe. After an echo, both endpoints receive
    a short shape-and-glyph highlight and the live status identifies the result.
 8. The canonical all-safe-faces rule wins the game. Reset, size change, undo,
@@ -56,8 +56,8 @@ serializes the mapping.
 revealSafeFaces(indices) -> number[]
 ```
 
-The method is enabled only while the engine is notifying a variant about an
-accepted direct reveal. It validates every index, refuses mines and flags,
+The engine enables this method only while it notifies a variant about an
+accepted direct reveal. The method validates every index, refuses mines and flags,
 reveals accepted faces, runs canonical zero floods without recursive variant
 notifications, and returns every face opened by the echo. Without a variant,
 all canonical code paths and storage behavior remain unchanged.
@@ -80,8 +80,9 @@ byte-identical local deployment artifact is
 
 Flux uses `hexsweeper-flux-sphere-run-v1` and run kind `flux-sphere`. Its
 variant payload contains a versioned symmetric `pairFor` array. Imports reject
-wrong lengths, out-of-range partners, self-pairs, asymmetric pairs, mine pairs,
-or pairs that include a face already revealed before Flux activation.
+wrong lengths, out-of-range partners, self-pairs, asymmetric pairs, and mine
+pairs. Revealed endpoints remain valid because ordinary play reveals them after
+activation.
 
 Terminal runs use the existing version-1 `hexsweeper:run-complete` envelope and
 exactly-once guard, with `variant: "flux-sphere"`. Restore never re-emits a
@@ -131,12 +132,12 @@ publishing the reviewed 1200×630 Hexsweeper social image at
 - Browser smoke covers canonical Sphere plus Flux desktop, mobile, keyboard,
   reduced motion, first dig, echo, undo, restore, win, loss, console errors, and
   missing resources.
-- All generated Sphere exports and the offline app payload are regenerated and
-  pass drift checks; the companion `hexsweeper-app` payload is re-vendored.
+- Regenerate all Sphere exports and the offline app payload, then pass their
+  drift checks and re-vendor the companion `hexsweeper-app` payload.
 - The updated catalog contains exactly the eight approved additions and every
   primary/secondary target returns HTTP 200 after deployment.
-- Hexsweeper is pushed and deployed by pinned SHA. The manual catalog and social
-  asset have timestamped server backups and exact rollback bytes.
+- Push and deploy Hexsweeper by pinned SHA. Keep timestamped server backups and
+  exact rollback bytes for the manual catalog and social asset.
 
 ## Non-Goals
 
