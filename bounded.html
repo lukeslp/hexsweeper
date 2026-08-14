@@ -2640,12 +2640,31 @@ body {
 
 </script>
 <script>
+const CLASSIC_SIZE_KEY = "hexsweeper-classic-size-v1";
+const CLASSIC_SIZES = ["easy", "medium", "hard"];
+let classicSize = "medium";
+try {
+  const requested = new URLSearchParams(location.search).get("size");
+  const stored = localStorage.getItem(CLASSIC_SIZE_KEY);
+  classicSize = CLASSIC_SIZES.includes(requested)
+    ? requested
+    : (CLASSIC_SIZES.includes(stored) ? stored : "medium");
+  localStorage.setItem(CLASSIC_SIZE_KEY, classicSize);
+} catch (_) {}
+
 Hexsweeper.boot({
+  difficulty: classicSize,
   theme: {
     bg: "#e0e5ec", shadowLight: "#ffffff", shadowDark: "#a3b1c6",
     covered: "#e0e5ec", revealed: "#e0e5ec", flag: "#ef4444",
     text: {1:"#3b82f6",2:"#10b981",3:"#ef4444",4:"#8b5cf6",5:"#f59e0b",6:"#ec4899",mine:"#333"}
   }
+});
+
+document.getElementById("diff-selector").addEventListener("click", (event) => {
+  const option = event.target.closest("[data-val]");
+  if (!option || !CLASSIC_SIZES.includes(option.dataset.val)) return;
+  try { localStorage.setItem(CLASSIC_SIZE_KEY, option.dataset.val); } catch (_) {}
 });
 
 </script>
