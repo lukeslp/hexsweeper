@@ -1873,6 +1873,47 @@ body.help-open { overflow: hidden; }
     scale: 1.24;
   }
 }
+/* Reflection is a visual showcase, but its flower still has to read as a
+   menu. Keep every action/state name on its tile instead of relying on hover
+   tooltips, which do not exist on touch screens. The menu engine may retain
+   its screen-reader hiding classes as state changes; this scoped presentation
+   mode intentionally overrides them without changing the shared Sphere menu. */
+.hex-bloom[data-persistent-labels="true"] .hb-hex.is-primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1px, calc(var(--tile-h) * 0.018), 3px);
+  padding: 5px 4px 8px;
+}
+.hex-bloom[data-persistent-labels="true"] .hb-hex.is-primary .hb-label.sr-visual-hide,
+.hex-bloom[data-persistent-labels="true"] .hb-hex.is-primary .hb-label.hb-label-sr {
+  position: relative;
+  width: auto;
+  height: auto;
+  max-width: 88%;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  border: 0;
+  font-size: clamp(9px, calc(var(--tile-h) * 0.072), 12px);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.hex-bloom[data-persistent-labels="true"][data-icon-menu="true"] .hb-hex.is-primary .hb-glyph {
+  width: clamp(30px, calc(var(--tile-h) * 0.28), 46px);
+  height: clamp(30px, calc(var(--tile-h) * 0.28), 46px);
+  flex: 0 0 auto;
+}
+.hex-bloom[data-persistent-labels="true"][data-icon-menu="true"] .hb-hex.is-primary .hb-icon {
+  width: clamp(28px, calc(var(--tile-h) * 0.25), 42px);
+  height: clamp(28px, calc(var(--tile-h) * 0.25), 42px);
+}
 .hud-stats {
   position: fixed;
   top: max(12px, env(safe-area-inset-top));
@@ -10450,6 +10491,8 @@ const reflectionGame = reflectionMaterial
   ? reflectionMaterial.attach(reflectionBaseGame)
   : reflectionBaseGame;
 const sphereMenu = initHexBloom(reflectionGame);
+const reflectionMenuRoot = document.getElementById("hex-bloom");
+if (reflectionMenuRoot) reflectionMenuRoot.dataset.persistentLabels = "true";
 if (reflectionMaterial) {
   const surfaceOptions = document.getElementById("reflection-surface-options");
   MirrorMaterial.MATERIALS.forEach((material) => {
