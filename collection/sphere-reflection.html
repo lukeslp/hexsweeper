@@ -5907,10 +5907,15 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "stormglass";
     function coveredStyle(proj, tile, isFront) {
       const T = state.theme;
       if (T.reflectionSurface) {
+        const edgeWidth = tile.isPentagon
+          ? T.surfacePentagonEdgeWidth || 1.05
+          : T.surfaceEdgeWidth || 0.78;
         return {
           fill: isFront ? T.covered : T.backface,
           stroke: isFront ? T.coveredEdge : T.backfaceEdge,
-          lineWidth: isFront ? (tile.isPentagon ? 2 : 1.35) : 0.75,
+          lineWidth: isFront
+            ? edgeWidth
+            : T.surfaceBackfaceEdgeWidth || 0.45,
           showLabel: false,
         };
       }
@@ -6862,7 +6867,12 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "stormglass";
     bgGlow: "rgba(0,0,0,0)",
     covered: "rgba(3,9,13,0.08)",
     coveredHi: "rgba(255,255,255,0.08)",
-    coveredEdge: "rgba(222,242,250,0.42)",
+    // Covered topology should read as a fine etch in the material, not a cage
+    // laid over it. Wells and interactive states retain their stronger edges.
+    coveredEdge: "rgba(222,242,250,0.20)",
+    surfaceEdgeWidth: 0.78,
+    surfacePentagonEdgeWidth: 1.05,
+    surfaceBackfaceEdgeWidth: 0.45,
     coveredShadow: "rgba(0,0,0,0.4)",
     tierCovered: "rgba(3,9,13,0.08)",
     tierFlagged: "#e5222a",
@@ -6882,11 +6892,11 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "stormglass";
     mineEdge: "#ff3b3f",
     mineBurst: "#ffffff",
     pentagon: "rgba(3,9,13,0.08)",
-    pentagonEdge: "rgba(238,248,252,0.62)",
+    pentagonEdge: "rgba(238,248,252,0.28)",
     hoverRing: "#ffffff",
     activeRing: "#9ee8ff",
     backface: "rgba(0,4,8,0.035)",
-    backfaceEdge: "rgba(214,237,246,0.14)",
+    backfaceEdge: "rgba(214,237,246,0.075)",
     core: "rgba(0,0,0,0)",
     floatShadow: null,
     text: {

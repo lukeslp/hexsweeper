@@ -3130,10 +3130,15 @@
     function coveredStyle(proj, tile, isFront) {
       const T = state.theme;
       if (T.reflectionSurface) {
+        const edgeWidth = tile.isPentagon
+          ? T.surfacePentagonEdgeWidth || 1.05
+          : T.surfaceEdgeWidth || 0.78;
         return {
           fill: isFront ? T.covered : T.backface,
           stroke: isFront ? T.coveredEdge : T.backfaceEdge,
-          lineWidth: isFront ? (tile.isPentagon ? 2 : 1.35) : 0.75,
+          lineWidth: isFront
+            ? edgeWidth
+            : T.surfaceBackfaceEdgeWidth || 0.45,
           showLabel: false,
         };
       }
