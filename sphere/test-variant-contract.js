@@ -611,6 +611,85 @@ test("admits flags before mutation and only notifies the variant after acceptanc
   assert.strictEqual(api.getState().flagsPlaced, 0);
 });
 
+test("opens linked safe faces and zero floods inside the direct reveal undo", () => {
+  let notifications = 0;
+  let linkedResult = null;
+  let outsideContext = null;
+  const variant = {
+    id: "flux-sphere",
+    reset(context) {
+      outsideContext = context;
+    },
+    admitReveal: () => true,
+    importState: () => true,
+    reveal(context) {
+      notifications++;
+      linkedResult = context.revealSafeFaces([0]);
+    },
+    useDefaultWin: () => false,
+  };
+  const { api } = createHarness({
+    boot: variantBoot(variant, {
+      storageKey: "hexsweeper-flux-sphere-run-v1",
+      runKind: "flux-sphere",
+      createRunId: () => "run-linked-reveal",
+    }),
+  });
+  assert.strictEqual(api.applyRunState(begunRun({
+    kind: "flux-sphere",
+    revealed: [],
+    variant: { v: 1 },
+  })), true);
+
+  assert.strictEqual(api.digAt(2), true);
+  assert.deepStrictEqual(plain(linkedResult), [0, 1]);
+  assert.strictEqual(notifications, 1);
+  assert.deepStrictEqual(
+    api.getState().cells.map((cell) => cell.revealed),
+    [true, true, true, false]
+  );
+  assert.strictEqual(api.undo(), true);
+  assert.deepStrictEqual(
+    api.getState().cells.map((cell) => cell.revealed),
+    [false, false, false, false]
+  );
+  assert.deepStrictEqual(plain(outsideContext.revealSafeFaces([0])), []);
+  assert.strictEqual(api.revealSafeFaces, undefined);
+});
+
+test("refuses invalid, flagged, and mined linked reveal targets", () => {
+  let linkedResult = null;
+  const variant = {
+    id: "flux-sphere",
+    admitReveal: () => true,
+    importState: () => true,
+    reveal(context) {
+      linkedResult = context.revealSafeFaces([-1, 1, 3, 9]);
+    },
+    useDefaultWin: () => false,
+  };
+  const { api } = createHarness({
+    boot: variantBoot(variant, {
+      storageKey: "hexsweeper-flux-sphere-run-v1",
+      runKind: "flux-sphere",
+      createRunId: () => "run-linked-rejections",
+    }),
+  });
+  assert.strictEqual(api.applyRunState(begunRun({
+    kind: "flux-sphere",
+    flags: 1,
+    flagged: [1],
+    variant: { v: 1 },
+  })), true);
+
+  assert.strictEqual(api.digAt(2), true);
+  assert.deepStrictEqual(plain(linkedResult), []);
+  assert.strictEqual(api.getState().cells[1].flagged, true);
+  assert.strictEqual(api.getState().cells[1].revealed, false);
+  assert.strictEqual(api.getState().cells[3].isMine, true);
+  assert.strictEqual(api.getState().cells[3].revealed, false);
+});
+
 test("keeps an occupied flag attempt out of the board and restores the active adapter save", () => {
   const localStorage = memoryStorage();
   const sessionStorage = memoryStorage();

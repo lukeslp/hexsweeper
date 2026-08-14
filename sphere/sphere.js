@@ -948,6 +948,7 @@
      * the one move players want back.
      */
     let undoSnapshot = null;
+    let variantRevealMutationDepth = 0;
 
     function variantContext(extra) {
       return Object.assign(
@@ -973,6 +974,7 @@
           },
           persist: () => persistNow(),
           requestDraw: () => scheduleFrame(),
+          revealSafeFaces: (indices) => revealSafeFaces(indices),
           projectFace(index, lift) {
             const tile = state.tiles[index];
             return tile
@@ -990,6 +992,16 @@
         return variant[hook](variantContext(extra));
       } catch (_) {
         return fallback;
+      }
+    }
+
+    function notifyVariantReveal(extra, allowLinkedReveal) {
+      if (!allowLinkedReveal) return callVariant("reveal", extra);
+      variantRevealMutationDepth++;
+      try {
+        return callVariant("reveal", extra);
+      } finally {
+        variantRevealMutationDepth--;
       }
     }
 
@@ -2508,13 +2520,38 @@
         }
       }
       if (variant && optsFlood.notify !== false && opened.size) {
-        callVariant("reveal", {
+        notifyVariantReveal({
           index: startIdx,
           source: "flood",
           revealed: Array.from(opened),
-        });
+        }, false);
       }
       return opened;
+    }
+
+    /**
+     * Reveal variant-requested safe faces inside the current direct-dig undo.
+     * The window guard keeps import/reset/tick/draw hooks from mutating a board,
+     * and notify:false prevents an echo from recursively creating another echo.
+     */
+    function revealSafeFaces(indices) {
+      if (!variant || variantRevealMutationDepth < 1 || !Array.isArray(indices)) {
+        return [];
+      }
+      const opened = new Set();
+      for (const index of indices) {
+        if (!Number.isInteger(index) || index < 0 || index >= state.cells.length) continue;
+        const cell = state.cells[index];
+        if (!cell || cell.revealed || cell.flagged || cell.isMine) continue;
+        if (!variantAdmitsReveal(index, "linked")) continue;
+        cell.revealed = true;
+        scheduleRevealVisual(index, 0);
+        opened.add(index);
+        if (cell.neighborMines === 0) {
+          for (const flooded of floodFrom(index, { notify: false })) opened.add(flooded);
+        }
+      }
+      return Array.from(opened);
     }
 
     function reveal(idx) {
@@ -2533,18 +2570,18 @@
       if (cell.isMine) {
         cell.animReveal = 1;
         state.detonatorIdx = idx;
-        callVariant("reveal", {
+        notifyVariantReveal({
           index: idx,
           source: "direct",
           revealed: [idx],
-        });
+        }, false);
         gameOver(false);
         return true;
       }
       const opened =
         cell.neighborMines === 0 ? floodFrom(idx, { notify: false }) : new Set();
       const revealed = [idx, ...opened];
-      callVariant("reveal", { index: idx, source: "direct", revealed });
+      notifyVariantReveal({ index: idx, source: "direct", revealed }, true);
       if (isFirstResolvedDig) {
         const result = callVariant(
           "firstResolvedDig",
