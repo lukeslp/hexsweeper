@@ -6946,7 +6946,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Canopy",
       fallback: ["#07100b", "#34563a", "#9ab18d", "#101a13"],
       swatch: "radial-gradient(circle at 62% 24%, #b9c99e 0 8%, #34563a 35%, #07100b 76%)",
-      texture: { desktop: "assets/reflections/canopy-2048.webp", mobile: "assets/reflections/canopy-1024.webp", speed: 0.0012, exposure: 0.74, saturation: 0.86, backdrop: 0.46, mapping: "environment", reflectionStrength: 0.24, roughness: 0.12 },
+      texture: { desktop: "assets/reflections/canopy-2048.webp", mobile: "assets/reflections/canopy-1024.webp", speed: 0.0012, exposure: 0.74, saturation: 0.86, backdrop: 0.46, mapping: "environment", frame: "ambient", reflectionStrength: 0.24, roughness: 0.12, motion: 5, motionAmount: 0.006, motionRate: 0.025 },
     },
     {
       id: "salon",
@@ -6954,7 +6954,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Bokeh",
       fallback: ["#100b08", "#7c5835", "#d7a45f", "#211610"],
       swatch: "radial-gradient(circle at 32% 42%, #e3b267 0 11%, transparent 12%), radial-gradient(circle at 72% 28%, #ac7744 0 15%, #150d09 42%)",
-      texture: { desktop: "assets/reflections/salon-2048.webp", mobile: "assets/reflections/salon-1024.webp", speed: 0.0018, exposure: 0.82, saturation: 0.88, backdrop: 0.56, mapping: "environment", reflectionStrength: 0.30, roughness: 0.08 },
+      texture: { desktop: "assets/reflections/salon-2048.webp", mobile: "assets/reflections/salon-1024.webp", speed: 0.0018, exposure: 0.82, saturation: 0.88, backdrop: 0.56, mapping: "environment", frame: "ambient", reflectionStrength: 0.30, roughness: 0.08, motion: 5, motionAmount: 0.008, motionRate: 0.022 },
     },
     {
       // Retired slot. Keep its position so the shader indices for later
@@ -6971,7 +6971,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Portoro",
       fallback: ["#050403", "#604c2c", "#d4b26f", "#15110a"],
       swatch: "linear-gradient(118deg, #030303 0 34%, #ba9656 35% 38%, #f0dfb2 39%, #090807 41% 68%, #745b35 69% 72%, #020202 73%)",
-      texture: { desktop: "assets/reflections/portoro-2048.webp", mobile: "assets/reflections/portoro-1024.webp", speed: 0.0005, exposure: 0.82, saturation: 0.76, backdrop: 0.44, mapping: "surface", surfaceMix: 0.90, reflectionStrength: 0.30, roughness: 0.08, gamma: 0.82 },
+      texture: { desktop: "assets/reflections/portoro-2048.webp", mobile: "assets/reflections/portoro-1024.webp", speed: 0.0005, exposure: 0.82, saturation: 0.76, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.90, reflectionStrength: 0.30, roughness: 0.08, gamma: 0.82 },
     },
     {
       id: "deco",
@@ -6979,7 +6979,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Deco",
       fallback: ["#030303", "#5b492d", "#c4a26b", "#100e0b"],
       swatch: "repeating-conic-gradient(from 315deg at 50% 100%, #080808 0 7deg, #b28d55 8deg 9deg, #080808 10deg 16deg)",
-      texture: { desktop: "assets/reflections/deco-2048.webp", mobile: "assets/reflections/deco-1024.webp", speed: 0.0009, exposure: 0.84, saturation: 0.74, backdrop: 0.44, mapping: "surface", surfaceMix: 0.88, reflectionStrength: 0.28, roughness: 0.10, gamma: 0.84 },
+      texture: { desktop: "assets/reflections/deco-2048.webp", mobile: "assets/reflections/deco-1024.webp", speed: 0.0009, exposure: 0.84, saturation: 0.74, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.88, reflectionStrength: 0.28, roughness: 0.10, gamma: 0.84 },
     },
     {
       id: "oculus",
@@ -6987,7 +6987,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Oculus",
       fallback: ["#030608", "#315f76", "#f0a53c", "#16060a"],
       swatch: "conic-gradient(from 18deg, #ffb32c, #e32d28, #18aee1, #15b86c, #ffdc4b, #ffb32c)",
-      texture: { desktop: "assets/reflections/oculus-1280.webp", mobile: "assets/reflections/oculus-768.webp", speed: 0, exposure: 0.90, saturation: 1.08, backdrop: 0.34, mapping: "hybrid", surfaceMix: 0.72, reflectionStrength: 0.28, roughness: 0.06, motion: 4, motionAmount: 0.009, motionRate: 0.040, pulse: 0.0 },
+      texture: { desktop: "assets/reflections/oculus-1280.webp", mobile: "assets/reflections/oculus-768.webp", speed: 0, exposure: 0.90, saturation: 1.08, backdrop: 0.34, mapping: "hybrid", frame: "shell", surfaceMix: 0.72, reflectionStrength: 0.28, roughness: 0.06, motion: 4, motionAmount: 0.009, motionRate: 0.040, pulse: 0.0 },
     },
     {
       id: "galaxy",
@@ -6995,7 +6995,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Galaxy",
       fallback: ["#050714", "#49405c", "#d09a9e", "#08172b"],
       swatch: "radial-gradient(ellipse at 38% 62%, #d7a5a2 0 9%, #65506e 26%, #16345e 52%, #050714 78%)",
-      texture: { desktop: "assets/reflections/galaxy-1280.webp", mobile: "assets/reflections/galaxy-768.webp", speed: 0.00018, exposure: 1.10, saturation: 0.92, backdrop: 0.50, mapping: "environment", reflectionStrength: 0.22, roughness: 0.06 },
+      texture: { desktop: "assets/reflections/galaxy-1280.webp", mobile: "assets/reflections/galaxy-768.webp", speed: 0.00018, exposure: 1.10, saturation: 0.92, backdrop: 0.50, mapping: "environment", frame: "ambient", reflectionStrength: 0.22, roughness: 0.06, motion: 5, motionAmount: 0.004, motionRate: 0.016 },
     },
     {
       id: "night-cabin",
@@ -7003,7 +7003,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Cabin",
       fallback: ["#01050a", "#112844", "#ffb56b", "#020305"],
       swatch: "radial-gradient(circle at 56% 70%, #ffb56b 0 5%, #15253c 7% 23%, #030912 46%, #010204 76%)",
-      texture: { desktop: "assets/reflections/night-cabin-1280.webp", mobile: "assets/reflections/night-cabin-768.webp", speed: 0.00010, exposure: 1.18, saturation: 0.90, backdrop: 0.54, mapping: "environment", reflectionStrength: 0.28, roughness: 0.04, offsetX: -0.20, offsetY: 0.18 },
+      texture: { desktop: "assets/reflections/night-cabin-1280.webp", mobile: "assets/reflections/night-cabin-768.webp", speed: 0.00010, exposure: 1.18, saturation: 0.90, backdrop: 0.54, mapping: "environment", frame: "ambient", reflectionStrength: 0.28, roughness: 0.04, offsetX: -0.20, offsetY: 0.18, motion: 5, motionAmount: 0.002, motionRate: 0.010 },
     },
     {
       id: "gilded-ribbon",
@@ -7011,7 +7011,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Ribbon",
       fallback: ["#020103", "#4d3449", "#dfa35f", "#080510"],
       swatch: "repeating-radial-gradient(ellipse at 72% 58%, #060407 0 8px, #c27d38 9px 11px, #16101c 12px 19px, #8c7bb5 20px 21px)",
-      texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00080, exposure: 0.90, saturation: 0.92, backdrop: 0.44, mapping: "surface", surfaceMix: 0.90, reflectionStrength: 0.30, roughness: 0.08, gamma: 0.78 },
+      texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00080, exposure: 0.90, saturation: 0.92, backdrop: 0.44, mapping: "surface", frame: "lag", surfaceMix: 0.90, reflectionStrength: 0.30, roughness: 0.08, gamma: 0.78, motion: 5, motionAmount: 0.003, motionRate: 0.018 },
     },
     {
       id: "ion-storm",
@@ -7019,7 +7019,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Ion",
       fallback: ["#06142d", "#175fa2", "#c893dc", "#060a19"],
       swatch: "linear-gradient(135deg, #0a75be 12%, #123866 46%, #d39adb 72%, #100c27 92%)",
-      texture: { desktop: "assets/reflections/ion-storm-1280.webp", mobile: "assets/reflections/ion-storm-768.webp", speed: 0.00045, exposure: 0.98, saturation: 1.04, backdrop: 0.48, mapping: "hybrid", surfaceMix: 0.68, reflectionStrength: 0.34, roughness: 0.10, motion: 1, motionAmount: 0.030, motionRate: 0.095, pulse: 0.06 },
+      texture: { desktop: "assets/reflections/ion-storm-1280.webp", mobile: "assets/reflections/ion-storm-768.webp", speed: 0.00045, exposure: 0.98, saturation: 1.04, backdrop: 0.48, mapping: "hybrid", frame: "lag", surfaceMix: 0.68, reflectionStrength: 0.34, roughness: 0.10, motion: 1, motionAmount: 0.030, motionRate: 0.095, pulse: 0.06 },
     },
     {
       id: "amber-tempest",
@@ -7027,7 +7027,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Tempest",
       fallback: ["#071018", "#70472d", "#f1a14e", "#0c1721"],
       swatch: "radial-gradient(circle at 60% 35%, #ffd082 0 7%, #b6602d 28%, #17232c 62%, #05090d 88%)",
-      texture: { desktop: "assets/reflections/amber-tempest-1280.webp", mobile: "assets/reflections/amber-tempest-768.webp", speed: -0.00035, exposure: 0.94, saturation: 0.92, backdrop: 0.48, mapping: "hybrid", surfaceMix: 0.64, reflectionStrength: 0.36, roughness: 0.10, motion: 1, motionAmount: 0.026, motionRate: 0.080, pulse: 0.05 },
+      texture: { desktop: "assets/reflections/amber-tempest-1280.webp", mobile: "assets/reflections/amber-tempest-768.webp", speed: -0.00035, exposure: 0.94, saturation: 0.92, backdrop: 0.48, mapping: "hybrid", frame: "lag", surfaceMix: 0.64, reflectionStrength: 0.36, roughness: 0.10, motion: 1, motionAmount: 0.026, motionRate: 0.080, pulse: 0.05 },
     },
     {
       id: "heat-lightning",
@@ -7035,7 +7035,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Heat",
       fallback: ["#0d1017", "#7a3f53", "#ffb05b", "#190f16"],
       swatch: "radial-gradient(circle at 53% 44%, #fff1cf 0 5%, #ff9f45 14%, #7e3b5d 34%, #11131d 72%)",
-      texture: { desktop: "assets/reflections/heat-lightning-1280.webp", mobile: "assets/reflections/heat-lightning-768.webp", speed: 0.00025, exposure: 0.96, saturation: 0.98, backdrop: 0.46, mapping: "hybrid", surfaceMix: 0.66, reflectionStrength: 0.36, roughness: 0.08, motion: 1, motionAmount: 0.026, motionRate: 0.090, pulse: 0.07, offsetY: 0.02 },
+      texture: { desktop: "assets/reflections/heat-lightning-1280.webp", mobile: "assets/reflections/heat-lightning-768.webp", speed: 0.00025, exposure: 0.96, saturation: 0.98, backdrop: 0.46, mapping: "hybrid", frame: "lag", surfaceMix: 0.66, reflectionStrength: 0.36, roughness: 0.08, motion: 1, motionAmount: 0.026, motionRate: 0.090, pulse: 0.07, offsetY: 0.02 },
     },
     {
       id: "stratosphere",
@@ -7043,7 +7043,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Sky",
       fallback: ["#e7f2fa", "#74b5df", "#ffffff", "#1d6fa9"],
       swatch: "linear-gradient(180deg, #137ec2 0%, #77c1ec 42%, #ffffff 63%, #dbeef8 100%)",
-      texture: { desktop: "assets/reflections/stratosphere-1280.webp", mobile: "assets/reflections/stratosphere-768.webp", speed: 0.00020, exposure: 0.88, saturation: 0.82, backdrop: 0.50, mapping: "environment", reflectionStrength: 0.20, roughness: 0.16, motion: 1, motionAmount: 0.012, motionRate: 0.045, pulse: 0.0, offsetY: -0.04 },
+      texture: { desktop: "assets/reflections/stratosphere-1280.webp", mobile: "assets/reflections/stratosphere-768.webp", speed: 0.00020, exposure: 0.88, saturation: 0.82, backdrop: 0.50, mapping: "environment", frame: "ambient", reflectionStrength: 0.20, roughness: 0.16, motion: 1, motionAmount: 0.012, motionRate: 0.045, pulse: 0.0, offsetY: -0.04 },
     },
     {
       id: "chromatic-ink",
@@ -7051,7 +7051,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Ink",
       fallback: ["#132ccb", "#00d9d2", "#f3ef16", "#ff16a8"],
       swatch: "conic-gradient(from 35deg, #1529c9, #04d7c8, #f0ef13, #fe7416, #f014a8, #1529c9)",
-      texture: { desktop: "assets/reflections/chromatic-ink-1280.webp", mobile: "assets/reflections/chromatic-ink-768.webp", speed: 0.00015, exposure: 0.82, saturation: 1.08, backdrop: 0.38, mapping: "surface", surfaceMix: 0.94, reflectionStrength: 0.24, roughness: 0.12, motion: 2, motionAmount: 0.22, motionRate: 0.075, pulse: 0.0, scaleX: 0.86, scaleY: 0.92 },
+      texture: { desktop: "assets/reflections/chromatic-ink-1280.webp", mobile: "assets/reflections/chromatic-ink-768.webp", speed: 0.00015, exposure: 0.82, saturation: 1.08, backdrop: 0.38, mapping: "surface", frame: "shell", surfaceMix: 0.94, reflectionStrength: 0.24, roughness: 0.12, motion: 2, motionAmount: 0.22, motionRate: 0.075, pulse: 0.0, scaleX: 0.86, scaleY: 0.92 },
     },
     {
       id: "amber-cells",
@@ -7059,7 +7059,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "galaxy";
       shortLabel: "Cells",
       fallback: ["#1c0b02", "#95500e", "#f5bd4e", "#40200a"],
       swatch: "radial-gradient(circle at 28% 32%, #f4bd56 0 16%, #9b5417 17% 21%, transparent 22%), radial-gradient(circle at 68% 61%, #d98724 0 25%, #2b1205 27% 100%)",
-      texture: { desktop: "assets/reflections/amber-cells-1280.webp", mobile: "assets/reflections/amber-cells-768.webp", speed: -0.00012, exposure: 0.88, saturation: 0.90, backdrop: 0.44, mapping: "surface", surfaceMix: 0.92, reflectionStrength: 0.26, roughness: 0.14, motion: 3, motionAmount: 0.016, motionRate: 0.055, pulse: 0.0, scaleX: 0.92, scaleY: 0.96 },
+      texture: { desktop: "assets/reflections/amber-cells-1280.webp", mobile: "assets/reflections/amber-cells-768.webp", speed: -0.00012, exposure: 0.88, saturation: 0.90, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.92, reflectionStrength: 0.26, roughness: 0.14, motion: 3, motionAmount: 0.016, motionRate: 0.055, pulse: 0.0, scaleX: 0.92, scaleY: 0.96 },
     },
   ];
   const MATERIAL_INDEX = new Map(
@@ -7112,6 +7112,7 @@ uniform vec2 uResolution;
 uniform vec2 uCenter;
 uniform vec2 uPointer;
 uniform vec2 uRotation;
+uniform vec2 uShellRotation;
 uniform float uRadius;
 uniform sampler2D uEnvironmentMap;
 uniform float uTextureReady;
@@ -7166,11 +7167,11 @@ vec3 cameraEnvironmentRay(vec3 ray) {
   return normalize(ray);
 }
 
-vec3 inverseSphereRotation(vec3 direction) {
+vec3 inverseSphereRotation(vec3 direction, vec2 rotation) {
   // sphere.js rotates object points around Y first, then X. Undo that exact
   // transform in reverse so material landmarks remain attached to the tiles.
-  direction.yz = rotate2(uRotation.y) * direction.yz;
-  direction.xz = rotate2(-uRotation.x) * direction.xz;
+  direction.yz = rotate2(rotation.y) * direction.yz;
+  direction.xz = rotate2(-rotation.x) * direction.xz;
   return normalize(direction);
 }
 
@@ -7296,10 +7297,11 @@ vec3 imageEnvironment(vec3 ray, float lod) {
   vec2 centered = vec2(longitude, latitude) - 0.5;
   vec2 uv = centered * uTextureTransform.xy + 0.5 + uTextureTransform.zw;
 
-  // Image plates opt into one of four restrained motion families. Motion is
+  // Image plates opt into one of five restrained motion families. Motion is
   // applied before sampling so the sphere remains geometrically authoritative:
-  // weather drifts, ink folds around itself, oil cells merge, and stained
-  // glass separates light while rotating. Quiet plates stay truly still.
+  // weather drifts, ink folds around itself, oil cells merge, stained glass
+  // separates light while rotating, and atmospheric worlds breathe. Quiet
+  // plates stay truly still.
   float motionMode = uTextureMotion.x;
   float motionAmount = uTextureMotion.y;
   float motionTime = uTime * uTextureMotion.z;
@@ -7340,17 +7342,25 @@ vec3 imageEnvironment(vec3 ray, float lod) {
         deltaB / max(length(deltaB), 0.035) * fieldB;
       float membrane = fbm(motionCenter * 4.2 + vec2(motionTime * 0.42, -motionTime * 0.36)) - 0.5;
       uv += (lensFlow * 0.72 + membrane * 0.42) * motionAmount;
+    } else if (motionMode > 4.5) {
+      // World/ambient plates breathe independently of shell input. This is a
+      // minute optical drift, not a second rotation competing with the board.
+      vec2 ambientDrift = vec2(
+        sin(motionTime * 0.83 + uv.y * 5.0),
+        cos(motionTime * 0.67 + uv.x * 4.2)
+      );
+      uv += ambientDrift * motionAmount;
     }
   }
 
   uv.x = fract(uv.x);
   uv.y = clamp(uv.y, 0.002, 0.998);
   vec3 sampleColor = textureLod(uEnvironmentMap, uv, lod).rgb;
-  if (motionMode > 3.5) {
+  if (motionMode > 3.5 && motionMode < 4.5) {
     // The oculus is fixed into the rotating shell, but its channels refract at
     // slightly different angles. Rotational energy briefly widens the split,
     // then the image resolves back into one piece as the sphere settles.
-    float prismAngle = uRotation.x + uRotation.y * 0.73 + motionTime;
+    float prismAngle = uShellRotation.x + uShellRotation.y * 0.73 + motionTime;
     vec2 prismDirection = vec2(cos(prismAngle), sin(prismAngle));
     float prismWidth = motionAmount * (0.45 + uDynamics.z * 1.9);
     vec3 warmSample = textureLod(
@@ -7625,7 +7635,11 @@ void main() {
     );
     vec3 mirror;
     if (uMaterial > 4.5 && uTextureReady > 0.5 && uTextureMapping.x > 0.5) {
-      vec3 surfaceRay = inverseSphereRotation(normal);
+      vec3 surfaceRay = uTextureDisplay.y < 0.5
+        ? normal
+        : uTextureDisplay.y < 1.5
+          ? inverseSphereRotation(normal, uShellRotation)
+          : inverseSphereRotation(normal, uRotation);
       vec3 surfaceColor = imageEnvironment(
         surfaceRay,
         0.65 + uTextureMapping.w * 2.0
@@ -7789,6 +7803,7 @@ void main() {
           "uCenter",
           "uPointer",
           "uRotation",
+          "uShellRotation",
           "uRadius",
           "uEnvironmentMap",
           "uTextureReady",
@@ -8227,6 +8242,9 @@ void main() {
       const mappingMode = texture.mapping === "surface"
         ? 1
         : texture.mapping === "hybrid" ? 2 : 0;
+      const textureFrame = texture.frame === "shell"
+        ? 1
+        : texture.frame === "lag" ? 2 : 0;
       gl.uniform4f(
         this.uniforms.uTextureMapping,
         mappingMode,
@@ -8237,9 +8255,9 @@ void main() {
       gl.uniform4f(
         this.uniforms.uTextureDisplay,
         texture.seamSafe === false ? 0 : 1,
-        texture.backdropScale || 1,
-        texture.backdropX || 0,
-        texture.backdropY || 0
+        textureFrame,
+        0,
+        0
       );
       gl.uniform4f(
         this.uniforms.uTextureGrade,
@@ -8256,6 +8274,11 @@ void main() {
       );
       gl.uniform2f(this.uniforms.uPointer, this.pointer.x, -this.pointer.y);
       gl.uniform2f(this.uniforms.uRotation, dynamics.rotY, dynamics.rotX);
+      gl.uniform2f(
+        this.uniforms.uShellRotation,
+        state.rotY || 0,
+        state.rotX || 0
+      );
       gl.uniform4f(
         this.uniforms.uActionOrigin,
         action[0],
