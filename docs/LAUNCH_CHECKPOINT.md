@@ -10,8 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` matches the latest uploaded build 35; increment
-      beyond 35 before the next archive
+- [x] `CURRENT_PROJECT_VERSION` is 36 for the responsive-launcher archive
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [x] Archive signs cleanly under team `596T7J7FB6`

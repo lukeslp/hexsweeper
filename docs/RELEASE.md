@@ -12,9 +12,8 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 35 is the latest uploaded TestFlight build and the
-checked-in project matches it. Set `CURRENT_PROJECT_VERSION` to **greater than
-35** before the next archive.
+this same record. Build 35 is the latest processed TestFlight build. The
+checked-in project is prepared as build 36 for the responsive-launcher upload.
 
 ## Archive → TestFlight
 
@@ -58,7 +57,7 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-Current Android identity is `versionCode 2`, `versionName 1.0-test`, targeting
+Current Android identity is `versionCode 3`, `versionName 1.0-test`, targeting
 API 36 with minimum API 24. The direct test APK is debug-signed with the same
 certificate as build 1 so testers can upgrade in place. The release AAB remains
 deliberately unsigned. Create and
