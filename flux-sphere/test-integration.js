@@ -1,0 +1,319 @@
+#!/usr/bin/env node
+"use strict";
+
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+
+function read(name) {
+  try {
+    return fs.readFileSync(path.join(__dirname, name), "utf8");
+  } catch (_) {
+    return "";
+  }
+}
+
+const html = read("index.html");
+const css = read("flux-sphere.css");
+const adapterSource = read("flux-sphere.js");
+let FluxSphere = null;
+try {
+  FluxSphere = require("./flux-sphere.js");
+} catch (_) {}
+
+let failures = 0;
+function test(name, fn) {
+  try {
+    fn();
+    console.log(`  ${name} — OK`);
+  } catch (error) {
+    failures++;
+    console.error(`  ${name} — FAIL`);
+    console.error(`    ${error.message}`);
+  }
+}
+
+function tagWithId(source, tagName, id) {
+  const match = source.match(new RegExp(`<${tagName}\\b[^>]*\\bid=["']${id}["'][^>]*>`, "i"));
+  return match ? match[0] : "";
+}
+
+function cell(overrides) {
+  return Object.assign({ revealed: false, flagged: false, isMine: false }, overrides);
+}
+
+function tile(x, y, z) {
+  return {
+    centerPoint: { x, y, z },
+    neighborIndices: [],
+  };
+}
+
+function makeContext(overrides) {
+  const cells = [
+    cell({ revealed: true }),
+    cell(),
+    cell(),
+    cell({ isMine: true }),
+  ];
+  const tiles = [
+    tile(0, 1, 0),
+    tile(1, 0, 0),
+    tile(-1, 0, 0),
+    tile(0, -1, 0),
+  ];
+  const calls = { revealSafeFaces: [], persisted: 0, draws: 0 };
+  const context = Object.assign({
+    cells,
+    tiles,
+    state: { cells, tiles, isGameOver: false, won: false, reduceMotion: false },
+    now: 100,
+    revealSafeFaces(indices) {
+      calls.revealSafeFaces.push(indices.slice());
+      const opened = [];
+      for (const index of indices) {
+        if (cells[index] && !cells[index].revealed && !cells[index].flagged && !cells[index].isMine) {
+          cells[index].revealed = true;
+          opened.push(index);
+        }
+      }
+      return opened;
+    },
+    persist() { calls.persisted++; },
+    requestDraw() { calls.draws++; },
+    projectFace() { return null; },
+  }, overrides || {});
+  return { context, cells, tiles, calls };
+}
+
+function makeRoot(options) {
+  options = options || {};
+  const canvasListeners = {};
+  const dispatched = [];
+  const posted = [];
+  const calls = { digs: [], flags: [] };
+  const status = { textContent: "" };
+  const canvas = {
+    addEventListener(type, listener) { canvasListeners[type] = listener; },
+  };
+  const state = {
+    centerX: 400,
+    centerY: 300,
+    targetRotX: 0.25,
+    targetRotY: 0,
+    isGameOver: false,
+  };
+  const game = {
+    getState: () => state,
+    pickTile: () => 5,
+    digAt(index) { calls.digs.push(index); return true; },
+    flagAt(index) { calls.flags.push(index); return true; },
+  };
+  let bootOptions = null;
+  const root = {
+    document: {
+      getElementById(id) {
+        if (id === "gameCanvas") return canvas;
+        if (id === "flux-status") return status;
+        return null;
+      },
+    },
+    location: { origin: "https://example.test" },
+    SphereSweeper: {
+      boot(received) { bootOptions = received; return game; },
+    },
+    initHexBloom(received) {
+      assert.strictEqual(received, game);
+      return { open() {}, close() {} };
+    },
+    CustomEvent: function CustomEvent(type, init) {
+      this.type = type;
+      this.detail = init.detail;
+    },
+    dispatchEvent(event) { dispatched.push(event); return true; },
+  };
+  root.parent = options.embedded
+    ? {
+        location: { origin: options.parentOrigin || root.location.origin },
+        postMessage(payload, origin) { posted.push([payload, origin]); },
+      }
+    : root;
+  return {
+    root,
+    state,
+    calls,
+    canvasListeners,
+    dispatched,
+    posted,
+    getBootOptions: () => bootOptions,
+  };
+}
+
+console.log("Flux Sphere route integration tests…");
+
+test("publishes Flux metadata and canonical Sphere dependencies", () => {
+  assert.match(html, /<title>[^<]*Flux Sphere[^<]*<\/title>/i);
+  assert.match(html, /<meta\s+name=["']description["'][^>]+(entangled|linked|echo)/i);
+  assert.match(html, /https:\/\/dr\.eamer\.dev\/games\/hexsweeper\/flux-sphere\//i);
+  for (const asset of [
+    "../fonts/fonts.css",
+    "../skin-chrome.css",
+    "../sphere/dev-chrome.css",
+    "../sphere/hex-bloom.css",
+    "../sphere/hexasphere.js",
+    "../sphere/sphere.js",
+    "../sphere/hex-bloom.js",
+    "flux-pairs.js",
+    "flux-sphere.js",
+    "flux-sphere.css",
+  ]) {
+    assert.ok(html.includes(asset), `missing asset reference: ${asset}`);
+  }
+  for (const duplicate of ["hexasphere.js", "sphere.js", "hex-bloom.js"]) {
+    assert.strictEqual(fs.existsSync(path.join(__dirname, duplicate)), false, `duplicated ${duplicate}`);
+  }
+});
+
+test("exposes a named keyboard board, instructions, and polite atomic status", () => {
+  const canvas = tagWithId(html, "canvas", "gameCanvas");
+  const status = tagWithId(html, "p", "flux-status");
+  assert.match(canvas, /tabindex=["']0["']/i);
+  assert.match(canvas, /aria-label=["'][^"']*Flux Sphere[^"']*["']/i);
+  assert.match(canvas, /aria-describedby=["']board-instructions["']/i);
+  assert.match(status, /role=["']status["']/i);
+  assert.match(status, /aria-live=["']polite["']/i);
+  assert.match(status, /aria-atomic=["']true["']/i);
+  assert.match(html, /Arrow keys/i);
+  assert.match(html, /Enter[^<]*(dig|center)|dig[^<]*Enter/i);
+  assert.match(html, /Shift[^<]*(flag|Space|Enter)/i);
+  assert.match(css, /#gameCanvas:focus-visible[\s\S]*outline/i);
+});
+
+test("documents latent pairs, linked glyphs, held flags, and reduced motion", () => {
+  assert.match(html, /Dig one[^<.]*reveal both|digging one[^<.]*partner/i);
+  assert.match(html, /(hidden|latent)[^<.]*pair|pair[^<.]*(hidden|latent)/i);
+  assert.match(html, /flagged[^<.]*(held|hold)|held[^<.]*flag/i);
+  assert.match(html, /(linked glyph|chain glyph|↔)/i);
+  assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i);
+  assert.match(css, /animation[^;]*none|transition[^;]*none/i);
+  assert.match(adapterSource, /reduceMotion/);
+});
+
+test("activates distant pairs after the first resolved dig and echoes a safe reveal", () => {
+  assert.ok(FluxSphere && typeof FluxSphere.createAdapter === "function");
+  const status = { textContent: "" };
+  const adapter = FluxSphere.createAdapter({ statusElement: status });
+  const { context, cells, calls } = makeContext();
+  const activated = adapter.variant.firstResolvedDig(context);
+  assert.deepStrictEqual(activated, { status: "active", pairCount: 1, unpairedCount: 0 });
+  assert.match(status.textContent, /linked 1 distant pair/i);
+
+  cells[1].revealed = true;
+  const result = adapter.variant.reveal(Object.assign({
+    index: 1,
+    source: "direct",
+    revealed: [1],
+  }, context));
+  assert.deepStrictEqual(calls.revealSafeFaces, [[2]]);
+  assert.deepStrictEqual(result, { status: "echoed", from: 1, partner: 2, opened: [2] });
+  assert.strictEqual(cells[2].revealed, true);
+  assert.match(status.textContent, /echo opened a linked face/i);
+});
+
+test("never echoes from a mine and holds an echo behind a flag", () => {
+  const status = { textContent: "" };
+  const adapter = FluxSphere.createAdapter({ statusElement: status });
+  const first = makeContext();
+  adapter.variant.firstResolvedDig(first.context);
+  first.cells[3].revealed = true;
+  assert.deepStrictEqual(adapter.variant.reveal(Object.assign({
+    index: 3,
+    source: "direct",
+    revealed: [3],
+  }, first.context)), { status: "idle" });
+  assert.deepStrictEqual(first.calls.revealSafeFaces, []);
+
+  const held = makeContext();
+  adapter.variant.reset(held.context);
+  adapter.variant.firstResolvedDig(held.context);
+  held.cells[2].flagged = true;
+  held.cells[1].revealed = true;
+  assert.deepStrictEqual(adapter.variant.reveal(Object.assign({
+    index: 1,
+    source: "direct",
+    revealed: [1],
+  }, held.context)), { status: "held", from: 1, partner: 2 });
+  assert.deepStrictEqual(held.calls.revealSafeFaces, []);
+  assert.match(status.textContent, /flagged[^.]*held|held[^.]*flagged/i);
+});
+
+test("round-trips pair state and regenerates pairs for first-dig undo", () => {
+  const adapter = FluxSphere.createAdapter();
+  const first = makeContext();
+  adapter.variant.firstResolvedDig(first.context);
+  const saved = adapter.variant.exportState();
+  assert.deepStrictEqual(saved, {
+    pairs: { v: 1, active: true, pairFor: [-1, 2, 1, -1] },
+  });
+
+  const restored = FluxSphere.createAdapter();
+  assert.strictEqual(restored.variant.importState(Object.assign({ saved }, first.context)), true);
+  assert.deepStrictEqual(restored.variant.exportState(), saved);
+
+  const undo = adapter.variant.captureUndo(first.context);
+  assert.strictEqual(undo.regenerateOnRestore, true);
+  const allCovered = makeContext();
+  allCovered.cells[0].revealed = false;
+  adapter.variant.restoreUndo(Object.assign({ saved: undo }, allCovered.context));
+  const regenerated = adapter.variant.exportState().pairs.pairFor;
+  assert.ok(regenerated[0] >= 0, "the undone opening face should receive a new pair");
+});
+
+test("uses canonical win, terminal copy, isolated storage, and Flux completion", () => {
+  const adapter = FluxSphere.createAdapter();
+  assert.strictEqual(adapter.variant.useDefaultWin(), true);
+  assert.match(adapter.variant.terminalCopy({ outcome: "win" }).message, /Flux stabilized/i);
+
+  const harness = makeRoot();
+  const result = FluxSphere.boot({ root: harness.root });
+  const options = harness.getBootOptions();
+  assert.strictEqual(options.storageKey, "hexsweeper-flux-sphere-run-v1");
+  assert.strictEqual(options.runKind, "flux-sphere");
+  assert.strictEqual(options.variant.id, "flux-sphere");
+  assert.strictEqual(typeof options.onRunComplete, "function");
+  assert.strictEqual(result.game.getState(), harness.state);
+});
+
+test("wires centered keyboard dig and flag actions", () => {
+  const harness = makeRoot();
+  FluxSphere.boot({ root: harness.root });
+  const keydown = harness.canvasListeners.keydown;
+  assert.strictEqual(typeof keydown, "function");
+  const before = harness.state.targetRotY;
+  keydown({ key: "ArrowRight", shiftKey: false, repeat: false, preventDefault() {} });
+  keydown({ key: "Enter", shiftKey: false, repeat: false, preventDefault() {} });
+  keydown({ key: " ", code: "Space", shiftKey: true, repeat: false, preventDefault() {} });
+  assert.ok(harness.state.targetRotY > before);
+  assert.deepStrictEqual(harness.calls.digs, [5]);
+  assert.deepStrictEqual(harness.calls.flags, [5]);
+});
+
+test("dispatches completion locally and posts only to a same-origin parent", () => {
+  const payload = { type: "hexsweeper:run-complete", runId: "flux-1" };
+  const same = makeRoot({ embedded: true });
+  FluxSphere.forwardCompletion(payload, same.root);
+  assert.strictEqual(same.dispatched.length, 1);
+  assert.deepStrictEqual(same.posted, [[payload, "https://example.test"]]);
+
+  const cross = makeRoot({ embedded: true, parentOrigin: "https://elsewhere.test" });
+  FluxSphere.forwardCompletion(payload, cross.root);
+  assert.strictEqual(cross.dispatched.length, 1);
+  assert.deepStrictEqual(cross.posted, []);
+});
+
+if (failures) {
+  console.error(`${failures} integration test${failures === 1 ? "" : "s"} failed.`);
+  process.exitCode = 1;
+} else {
+  console.log("All tests passed.");
+}
