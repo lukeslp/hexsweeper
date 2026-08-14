@@ -125,6 +125,34 @@ test("rejects malformed, asymmetric, self, out-of-range, and mined mappings", ()
   }
 });
 
+test("rejecting a malformed restore preserves the active pair mapping", () => {
+  const game = board(
+    [cell(), cell(), cell()],
+    [tile(1, 0, 0), tile(-1, 0, 0), tile(0, 1, 0)]
+  );
+  const flux = createFluxPairs();
+  flux.activate(game);
+  const before = flux.exportState();
+
+  assert.deepStrictEqual(
+    flux.restore({ v: 1, active: true, pairFor: [1, -1, -1] }, game),
+    { status: "blocked" }
+  );
+  assert.deepStrictEqual(flux.exportState(), before);
+});
+
+test("restore summaries count only currently eligible unpaired faces", () => {
+  const game = board(
+    [cell({ revealed: true }), cell(), cell(), cell({ isMine: true }), cell()],
+    [tile(1, 0, 0), tile(-1, 0, 0), tile(0, 1, 0), tile(0, -1, 0), tile(0, 0, 1)]
+  );
+  const flux = createFluxPairs();
+  assert.deepStrictEqual(
+    flux.restore({ v: 1, active: true, pairFor: [-1, 2, 1, -1, -1] }, game),
+    { status: "active", pairCount: 1, unpairedCount: 1 }
+  );
+});
+
 test("reset clears all pair state", () => {
   const flux = createFluxPairs();
   flux.activate(board([cell(), cell()], [tile(1, 0, 0), tile(-1, 0, 0)]));

@@ -28,8 +28,12 @@
     const now = typeof options.now === "function"
       ? options.now
       : () => typeof performance !== "undefined" ? performance.now() : Date.now();
+    const schedule = typeof options.schedule === "function"
+      ? options.schedule
+      : (callback) => setTimeout(callback, 20);
     let lastContext = null;
     let lastAnnouncement = "";
+    let announcementToken = 0;
     let lastEcho = null;
     let justActivated = false;
 
@@ -47,8 +51,17 @@
     }
 
     function announce(message) {
-      if (!statusElement || !message || message === lastAnnouncement) return;
+      if (!statusElement || !message) return;
+      const repeated = message === lastAnnouncement;
       lastAnnouncement = message;
+      const token = ++announcementToken;
+      if (repeated) {
+        statusElement.textContent = "";
+        schedule(() => {
+          if (token === announcementToken) statusElement.textContent = message;
+        });
+        return;
+      }
       statusElement.textContent = message;
     }
 
@@ -63,7 +76,7 @@
       return { pairs: pairs.exportState() };
     }
 
-    function paintEndpoint(context, index, glyph) {
+    function paintEndpoint(context, index, glyph, palette) {
       if (typeof context.projectFace !== "function" || !context.context2d) return false;
       const projection = context.projectFace(index, 0.02);
       if (!projection || projection.z <= 0.02 || !projection.boundary.length) return false;
@@ -77,10 +90,10 @@
         drawing.lineTo(projection.boundary[i].x, projection.boundary[i].y);
       }
       drawing.closePath();
-      drawing.strokeStyle = "#006d77";
+      drawing.strokeStyle = palette.stroke;
       drawing.lineWidth = 3;
       drawing.stroke();
-      drawing.fillStyle = "#00363a";
+      drawing.fillStyle = palette.fill;
       drawing.font = `700 ${fontSize}px "IBM Plex Mono", ui-monospace, monospace`;
       drawing.textAlign = "center";
       drawing.textBaseline = "middle";
@@ -98,6 +111,7 @@
         lastEcho = null;
         justActivated = false;
         lastAnnouncement = "";
+        announcementToken++;
         announce("Dig a face to energize the Flux field.");
       },
 
@@ -156,8 +170,8 @@
           lastEcho = null;
           return;
         }
-        paintEndpoint(context, lastEcho.from, "↔");
-        paintEndpoint(context, lastEcho.partner, "↔");
+        paintEndpoint(context, lastEcho.from, "↔", { stroke: "#00a6b2", fill: "#005a61" });
+        paintEndpoint(context, lastEcho.partner, "↔", { stroke: "#d97706", fill: "#78350f" });
         if (!(context.state && context.state.reduceMotion) && typeof context.requestDraw === "function") {
           context.requestDraw();
         }

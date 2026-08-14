@@ -208,7 +208,7 @@ test("documents latent pairs, linked glyphs, held flags, and reduced motion", ()
 test("activates distant pairs after the first resolved dig and echoes a safe reveal", () => {
   assert.ok(FluxSphere && typeof FluxSphere.createAdapter === "function");
   const status = { textContent: "" };
-  const adapter = FluxSphere.createAdapter({ statusElement: status });
+  const adapter = FluxSphere.createAdapter({ statusElement: status, schedule: (callback) => callback() });
   const { context, cells, calls } = makeContext();
   const activated = adapter.variant.firstResolvedDig(context);
   assert.deepStrictEqual(activated, { status: "active", pairCount: 1, unpairedCount: 0 });
@@ -251,6 +251,58 @@ test("never echoes from a mine and holds an echo behind a flag", () => {
   }, held.context)), { status: "held", from: 1, partner: 2 });
   assert.deepStrictEqual(held.calls.revealSafeFaces, []);
   assert.match(status.textContent, /flagged[^.]*held|held[^.]*flagged/i);
+});
+
+test("re-announces identical held echoes as separate live-region updates", () => {
+  const writes = [];
+  const status = {};
+  Object.defineProperty(status, "textContent", {
+    get() { return writes[writes.length - 1] || ""; },
+    set(value) { writes.push(value); },
+  });
+  const adapter = FluxSphere.createAdapter({ statusElement: status, schedule: (callback) => callback() });
+  const held = makeContext();
+  adapter.variant.firstResolvedDig(held.context);
+  held.cells[2].flagged = true;
+  held.cells[1].revealed = true;
+  const action = Object.assign({ index: 1, source: "direct", revealed: [1] }, held.context);
+  adapter.variant.reveal(action);
+  const afterFirst = writes.length;
+  adapter.variant.reveal(action);
+  assert.strictEqual(writes.length, afterFirst + 2);
+  assert.strictEqual(writes[afterFirst], "");
+  assert.strictEqual(writes[writes.length - 1], writes[afterFirst - 1]);
+});
+
+test("draws echo endpoints with distinct cyan and amber outlines", () => {
+  const adapter = FluxSphere.createAdapter({ now: () => 100 });
+  const active = makeContext();
+  adapter.variant.firstResolvedDig(active.context);
+  active.cells[1].revealed = true;
+  adapter.variant.reveal(Object.assign({ index: 1, source: "direct", revealed: [1] }, active.context));
+
+  const strokeStyles = [];
+  const drawing = {
+    save() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, stroke() {},
+    fillText() {}, restore() {},
+    set strokeStyle(value) { strokeStyles.push(value); },
+    set lineWidth(_) {}, set fillStyle(_) {}, set font(_) {}, set textAlign(_) {},
+    set textBaseline(_) {},
+  };
+  adapter.variant.draw(Object.assign({}, active.context, {
+    now: 100,
+    context2d: drawing,
+    projectFace() {
+      return {
+        z: 1,
+        area: 225,
+        center: { x: 10, y: 10 },
+        boundary: [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 10, y: 20 }],
+      };
+    },
+  }));
+  assert.strictEqual(strokeStyles.length, 2);
+  assert.strictEqual(new Set(strokeStyles).size, 2);
 });
 
 test("round-trips pair state and regenerates pairs for first-dig undo", () => {

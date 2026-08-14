@@ -98,7 +98,6 @@
   }
 
   function restore(saved, game) {
-    reset();
     const cells = game && Array.isArray(game.cells) ? game.cells : [];
     const tiles = game && Array.isArray(game.tiles) ? game.tiles : [];
     if (!saved || saved.v !== 1 || typeof saved.active !== "boolean") {
@@ -108,7 +107,7 @@
       if (!Array.isArray(saved.pairFor) || saved.pairFor.length !== 0) {
         return { status: "blocked" };
       }
-      return { status: "idle" };
+      return reset();
     }
     if (!cells.length || tiles.length !== cells.length || !Array.isArray(saved.pairFor)) {
       return { status: "blocked" };
@@ -128,7 +127,10 @@
 
     pairFor = candidate;
     active = true;
-    return summary();
+    const unpairedCount = candidate.reduce((count, partner, index) => (
+      count + (partner === -1 && isCellEligible(cells[index]) ? 1 : 0)
+    ), 0);
+    return summary(unpairedCount);
   }
 
   return {
