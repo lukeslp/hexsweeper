@@ -12,13 +12,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The game itself lives in lukeslp/hexsweeper (public, no token needed).
-      # Checking it out lets the smoke script regenerate the payload and prove
-      # www/ is still exactly what that source produces.
+      # The game source is private. A repository-scoped read-only deploy key
+      # lets this job regenerate the payload and prove www/ still matches it.
       - uses: actions/checkout@v4
         with:
           repository: lukeslp/hexsweeper
+          ref: main
           path: .hexsweeper-source
+          ssh-key: ${{ secrets.HEXSWEEPER_DEPLOY_KEY }}
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v4
 
