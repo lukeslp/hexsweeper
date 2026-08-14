@@ -2,8 +2,8 @@
 <!--
   File Purpose: Native app launcher staged as one authentic Hexsweeper opening.
   Primary Functions/Classes: deterministic mine field, neighbor counts, zero-cell
-    flood reveal, resumable-run routing, and a connected launcher-theme flower.
-  Inputs: viewport, saved runs/appearance, session reveal state. Outputs: game links.
+    flood reveal, resumable-run routing, and three connected option flowers.
+  Inputs: viewport, saved runs/preferences, session reveal state. Outputs: game links.
   A11y: native button/links, visible focus, 50px+ targets, live status, keyboard
     reveal bypass, reduced motion, forced colors, and no timing-dependent action.
   Author: Luke Steuber <luke@lukesteuber.com>
@@ -35,6 +35,7 @@
     --classic-accent: #16794f;
     --sphere-accent: #724ab5;
     --theme-accent: #4e647b;
+    --settings-accent: #4e647b;
     --flag: #e33030;
     --ambient-strong: rgba(248, 250, 252, .84);
     --ambient-soft: rgba(248, 250, 252, .28);
@@ -72,6 +73,7 @@
     --classic-accent: #20a873;
     --sphere-accent: #aa83e8;
     --theme-accent: #a8b6c7;
+    --settings-accent: #a8b6c7;
     --ambient-strong: rgba(24, 33, 45, .84);
     --ambient-soft: rgba(24, 33, 45, .28);
     --edge-haze: rgba(7, 10, 15, .24);
@@ -422,11 +424,11 @@
     z-index: 6;
     cursor: pointer;
     pointer-events: auto;
-    background: var(--theme-accent);
+    background: var(--control-accent, var(--theme-accent));
     transform: translate3d(var(--x), var(--y), 0) scale(1.025);
     filter:
       drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 88%, transparent))
-      drop-shadow(0 0 8px color-mix(in srgb, var(--theme-accent) 28%, transparent));
+      drop-shadow(0 0 8px color-mix(in srgb, var(--control-accent, var(--theme-accent)) 28%, transparent));
   }
   .theme-hub.is-available::before { inset: 3px 4px 7px; }
   .theme-hub.is-available .theme-content { opacity: 1; transform: none; }
@@ -441,11 +443,11 @@
     z-index: 6;
     cursor: pointer;
     pointer-events: auto;
-    background: var(--theme-accent);
+    background: var(--control-accent, var(--theme-accent));
     transform: translate3d(var(--x), var(--y), 0) scale(1.045);
     filter:
       drop-shadow(0 6px 2px color-mix(in srgb, var(--tile-shadow) 90%, transparent))
-      drop-shadow(0 0 9px color-mix(in srgb, var(--theme-accent) 32%, transparent));
+      drop-shadow(0 0 9px color-mix(in srgb, var(--control-accent, var(--theme-accent)) 32%, transparent));
     animation: theme-bloom 240ms cubic-bezier(.22, 1, .36, 1) var(--bloom-delay, 0ms) backwards;
   }
   .theme-choice.is-available::before { inset: 3px 4px 7px; }
@@ -453,7 +455,7 @@
   .theme-choice.is-available:active {
     transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.98);
   }
-  .theme-choice.is-available[aria-pressed="true"]::after {
+  .theme-choice.is-available[aria-current="true"]::after {
     content: "✓";
     position: absolute;
     z-index: 4;
@@ -466,12 +468,34 @@
     border: 1.5px solid currentColor;
     border-radius: 50%;
     background: var(--tile);
-    color: var(--theme-accent);
+    color: var(--control-accent, var(--theme-accent));
     font: 700 10px/1 var(--font-ui);
   }
-  .theme-choice.is-available[aria-pressed="true"] .theme-icon {
-    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--theme-accent) 48%, transparent));
+  .theme-choice.is-available[aria-current="true"] .theme-icon {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--control-accent, var(--theme-accent)) 48%, transparent));
   }
+  .size-choice .theme-icon {
+    display: grid;
+    place-items: center;
+    font: 700 clamp(1.15rem, 6vw, 1.55rem)/1 var(--font-count);
+  }
+  .theme-choice.is-dug {
+    pointer-events: none;
+    color: var(--dug-ink);
+    background: var(--well-edge);
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
+    transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
+  }
+  .theme-choice.is-dug::before { inset: 6px 7px 8px; background: var(--well); }
+  .theme-choice.is-dug .theme-content { transform: scale(.9); }
+
+  .settings-hub,
+  .settings-choice { --control-accent: var(--settings-accent); }
+  .size-hub,
+  .size-choice { --control-accent: var(--classic-accent); }
+  .style-hub,
+  .style-choice { --control-accent: var(--sphere-accent); }
+  .board[data-open-branch="settings"] { --board-x: clamp(40px, 11vw, 48px); }
 
   .board[data-phase="clearing"] .starter { animation: hit 220ms cubic-bezier(.22, 1, .36, 1) both; }
   .board[data-phase="ready"] .mode.is-available { animation: mode-rise 250ms cubic-bezier(.22, 1, .36, 1) backwards; }
@@ -575,8 +599,8 @@
     .count, .cell.count-1 .count, .cell.count-2 .count,
     .cell.count-3 .count, .cell.count-4 .count { color: CanvasText; text-shadow: none; }
     .starter:focus, .mode:focus, .resume:focus, .theme-control:focus { outline: 3px solid Highlight; outline-offset: -5px; }
-    .theme-choice.is-available[aria-pressed="true"] { outline: 3px double Highlight; outline-offset: -7px; }
-    .theme-choice.is-available[aria-pressed="true"]::after { background: Canvas; color: CanvasText; }
+    .theme-choice.is-available[aria-current="true"] { outline: 3px double Highlight; outline-offset: -7px; }
+    .theme-choice.is-available[aria-current="true"]::after { background: Canvas; color: CanvasText; }
     .brand, .hint { color: CanvasText; text-shadow: none; }
   }
   @keyframes hit {
@@ -648,7 +672,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-bounded destination" href="{{BOUNDED_HREF}}" data-mode="bounded" data-q="1" data-r="0" aria-label="Play Classic Hexsweeper, fixed board">
+    <a class="hex mode mode-bounded destination" id="classic-game" href="{{BOUNDED_HREF}}?size=medium" data-base-href="{{BOUNDED_HREF}}" data-mode="bounded" data-q="1" data-r="0" aria-label="Play Classic Hexsweeper, fixed board">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
@@ -670,47 +694,92 @@
       </span>
     </a>
 
-    <button class="hex theme-control theme-hub" id="theme-toggle" type="button" data-q="0" data-r="-2" aria-describedby="menu-status" aria-expanded="false" aria-controls="theme-light theme-system theme-dark" aria-label="Choose launcher theme" disabled>
+    <button class="hex theme-control theme-hub settings-hub" id="settings-toggle" type="button" data-branch="settings" data-q="-1" data-r="0" aria-describedby="menu-status" aria-expanded="false" aria-controls="setting-appearance setting-effects setting-invert" aria-label="Open settings" disabled>
+      <span class="theme-content">
+        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="2.4"/>
+          <path d="M24 6v6m0 24v6M6 24h6m24 0h6M11.3 11.3l4.2 4.2m17 17 4.2 4.2m0-25.4-4.2 4.2m-17 17-4.2 4.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <span class="theme-name">Settings</span>
+        <span class="theme-note">3 options</span>
+      </span>
+    </button>
+
+    <button class="hex theme-control theme-hub size-hub" id="size-toggle" type="button" data-branch="size" data-q="1" data-r="-1" aria-describedby="menu-status" aria-expanded="false" aria-controls="size-small size-medium size-large" aria-label="Choose Classic board size" disabled>
+      <span class="theme-content">
+        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M14 30h4V18h-4m9 12V18l4 7 4-7v12" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="theme-name">Board</span>
+        <span class="theme-note" id="size-current">Medium</span>
+      </span>
+    </button>
+
+    <button class="hex theme-control theme-hub style-hub" id="style-toggle" type="button" data-branch="style" data-q="0" data-r="1" aria-describedby="menu-status" aria-expanded="false" aria-controls="style-light style-shell style-glow" aria-label="Choose Sphere style" disabled>
+      <span class="theme-content">
+        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="16" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M24 8a16 16 0 0 0 0 32Z" fill="currentColor" opacity=".82"/>
+          <path d="M8 24h32M24 8c-6 5-8 10-8 16s2 11 8 16" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+        <span class="theme-name">Style</span>
+        <span class="theme-note" id="style-current">Light</span>
+      </span>
+    </button>
+
+    <button class="hex theme-control theme-choice settings-choice" id="setting-appearance" type="button" data-branch="settings" data-setting="appearance" data-q="-1" data-r="-1" style="--bloom-delay:0ms" aria-label="Launcher appearance: System. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
           <circle cx="24" cy="24" r="15" fill="none" stroke="currentColor" stroke-width="2"/>
           <path d="M24 9a15 15 0 0 0 0 30Z" fill="currentColor" opacity=".88"/>
           <circle cx="24" cy="24" r="4" fill="var(--tile)"/>
         </svg>
-        <span class="theme-name">Theme</span>
-        <span class="theme-note" id="theme-current">System</span>
+        <span class="theme-name">Appearance</span>
+        <span class="theme-note" id="appearance-current">System</span>
       </span>
     </button>
 
-    <button class="hex theme-control theme-choice" id="theme-light" type="button" data-appearance="light" data-q="0" data-r="-3" style="--bloom-delay:0ms" aria-label="Use light launcher theme" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
+    <button class="hex theme-control theme-choice settings-choice" id="setting-effects" type="button" data-branch="settings" data-setting="effects" data-q="-2" data-r="0" style="--bloom-delay:35ms" aria-label="Effects: Auto. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/>
-          <path d="M24 7v6m0 22v6M7 24h6m22 0h6M12 12l4 4m16 16 4 4m0-24-4 4M16 32l-4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="m24 6 2.6 9.4L36 18l-9.4 2.6L24 30l-2.6-9.4L12 18l9.4-2.6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="m36 30 1.5 5.5L43 37l-5.5 1.5L36 44l-1.5-5.5L29 37l5.5-1.5ZM10 28l1.2 4.2 4.3 1.3-4.3 1.2L10 39l-1.2-4.3-4.3-1.2 4.3-1.3Z" fill="currentColor"/>
         </svg>
-        <span class="theme-name">Light</span>
+        <span class="theme-name">Effects</span>
+        <span class="theme-note" id="effects-current">Auto</span>
       </span>
     </button>
 
-    <button class="hex theme-control theme-choice" id="theme-system" type="button" data-appearance="system" data-q="1" data-r="-3" style="--bloom-delay:35ms" aria-label="Follow the system launcher theme" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
+    <button class="hex theme-control theme-choice settings-choice" id="setting-invert" type="button" data-branch="settings" data-setting="invert" data-q="-2" data-r="1" style="--bloom-delay:70ms" aria-label="Sphere drag: Natural. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <rect x="8" y="10" width="32" height="23" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
-          <path d="M24 10h13a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H24Z" fill="currentColor" opacity=".82"/>
-          <path d="M18 40h12M24 33v7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M10 15h28M10 15l6-6m-6 6 6 6M38 33H10m28 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="theme-name">System</span>
+        <span class="theme-name">Sphere drag</span>
+        <span class="theme-note" id="invert-current">Natural</span>
       </span>
     </button>
 
-    <button class="hex theme-control theme-choice" id="theme-dark" type="button" data-appearance="dark" data-q="1" data-r="-2" style="--bloom-delay:70ms" aria-label="Use dark launcher theme" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
-      <span class="theme-content">
-        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M34 34A16 16 0 0 1 18 8a16 16 0 1 0 16 26Z" fill="currentColor"/>
-        </svg>
-        <span class="theme-name">Dark</span>
-      </span>
-    </button>
+    <a class="hex theme-control theme-choice size-choice destination" id="size-small" href="{{BOUNDED_HREF}}?size=easy" data-branch="size" data-classic-size="easy" data-destination-name="Small Classic" data-q="1" data-r="-2" style="--bloom-delay:0ms" aria-label="Play a small Classic board, 10 mines" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><span class="theme-icon" aria-hidden="true">S</span><span class="theme-name">Small</span><span class="theme-note">10 mines</span></span>
+    </a>
+    <a class="hex theme-control theme-choice size-choice destination" id="size-medium" href="{{BOUNDED_HREF}}?size=medium" data-branch="size" data-classic-size="medium" data-destination-name="Medium Classic" data-q="2" data-r="-2" style="--bloom-delay:35ms" aria-label="Play a medium Classic board, 35 mines" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><span class="theme-icon" aria-hidden="true">M</span><span class="theme-name">Medium</span><span class="theme-note">35 mines</span></span>
+    </a>
+    <a class="hex theme-control theme-choice size-choice destination" id="size-large" href="{{BOUNDED_HREF}}?size=hard" data-branch="size" data-classic-size="hard" data-destination-name="Large Classic" data-q="2" data-r="-1" style="--bloom-delay:70ms" aria-label="Play a large Classic board, 80 mines" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><span class="theme-icon" aria-hidden="true">L</span><span class="theme-name">Large</span><span class="theme-note">80 mines</span></span>
+    </a>
+
+    <a class="hex theme-control theme-choice style-choice destination" id="style-light" href="{{SPHERE_HREF}}?theme=light" data-branch="style" data-sphere-theme="light" data-destination-name="Light Sphere" data-q="1" data-r="1" style="--bloom-delay:0ms" aria-label="Play Sphere with the Light style" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="theme-name">Light</span><span class="theme-note">White field</span></span>
+    </a>
+    <a class="hex theme-control theme-choice style-choice destination" id="style-shell" href="{{SPHERE_HREF}}?theme=shell" data-branch="style" data-sphere-theme="shell" data-destination-name="Shell Sphere" data-q="0" data-r="2" style="--bloom-delay:35ms" aria-label="Play Sphere with the Shell style" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="11" fill="var(--tile)"/><circle cx="24" cy="24" r="6" fill="currentColor"/></svg><span class="theme-name">Shell</span><span class="theme-note">Dark field</span></span>
+    </a>
+    <a class="hex theme-control theme-choice style-choice destination" id="style-glow" href="{{SPHERE_HREF}}?theme=glow" data-branch="style" data-sphere-theme="glow" data-destination-name="Glow Sphere" data-q="-1" data-r="2" style="--bloom-delay:70ms" aria-label="Play Sphere with the Glow style" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="1" opacity=".45"/></svg><span class="theme-name">Glow</span><span class="theme-note">Luminous</span></span>
+    </a>
   </nav>
 </main>
 
@@ -723,22 +792,27 @@
   var starter = document.getElementById("opening-dig");
   var resume = document.getElementById("resume-game");
   var resumeModeName = document.getElementById("resume-mode-name");
-  var themeToggle = document.getElementById("theme-toggle");
-  var themeCurrent = document.getElementById("theme-current");
-  var themeChoices = Array.prototype.slice.call(board.querySelectorAll(".theme-choice"));
+  var classicGame = document.getElementById("classic-game");
   var status = document.getElementById("menu-status");
   var modes = Array.prototype.slice.call(board.querySelectorAll(".mode"));
-  var positionedControls = [starter, resume, themeToggle].concat(modes, themeChoices);
-  var reservedSeats = {
-    "0,0": true,
-    "0,-1": true,
-    "1,0": true,
-    "-1,1": true,
-    "0,-2": true,
-    "0,-3": true,
-    "1,-3": true,
-    "1,-2": true
-  };
+  var branchHubs = Array.prototype.slice.call(board.querySelectorAll(".theme-hub[data-branch]"));
+  var branchChoices = Array.prototype.slice.call(board.querySelectorAll(".theme-choice[data-branch]"));
+  var settingsChoices = branchChoices.filter(function (choice) { return choice.dataset.branch === "settings"; });
+  var destinations = Array.prototype.slice.call(board.querySelectorAll(".destination"));
+  var branches = {};
+  branchHubs.forEach(function (hub) {
+    branches[hub.dataset.branch] = {
+      hub: hub,
+      choices: branchChoices.filter(function (choice) {
+        return choice.dataset.branch === hub.dataset.branch;
+      })
+    };
+  });
+  var positionedControls = [starter, resume].concat(modes, branchHubs, branchChoices);
+  var reservedSeats = {};
+  positionedControls.forEach(function (control) {
+    reservedSeats[key(Number(control.dataset.q), Number(control.dataset.r))] = true;
+  });
   var directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
   var cells = new Map();
   var mines = new Set();
@@ -747,16 +821,52 @@
   var resizeTimer = null;
   var phase = "covered";
   var leaving = false;
-  var themeOpen = false;
+  var activeBranch = null;
   var activeResume = null;
   var keyboardOpening = false;
   var pointerOpening = false;
   var SESSION_KEY = "hexsweeper-launcher-opening-v1";
   var APPEARANCE_KEY = "hexsweeper-appearance-v1";
+  var EFFECTS_KEY = "hexsweeper-effects-v1";
+  var INVERT_KEY = "hexsweeper-sphere-invert-v1";
+  var CLASSIC_SIZE_KEY = "hexsweeper-classic-size-v1";
+  var SPHERE_THEME_KEY = "hexsweeper-sphere-theme-v6";
+  var appearancePreference = "system";
+  var effectsPreference = "auto";
+  var invertPreference = { x: false, y: false };
+  var classicSizePreference = "medium";
+  var sphereThemePreference = "light";
+  var colorScheme = matchMedia("(prefers-color-scheme: dark)");
+  var INVERT_OPTIONS = [
+    { x: false, y: false, label: "Natural" },
+    { x: true, y: false, label: "Invert X" },
+    { x: false, y: true, label: "Invert Y" },
+    { x: true, y: true, label: "Invert both" }
+  ];
+  var SPHERE_THEME_NAMES = {
+    light: "Light",
+    shell: "Shell",
+    dark: "Dark",
+    ink: "Ink",
+    float: "Float",
+    card: "Card",
+    glow: "Glow"
+  };
+  var CLASSIC_SIZE_NAMES = { easy: "Small", medium: "Medium", hard: "Large" };
 
   function key(q, r) { return q + "," + r; }
   function distance(q, r) { return Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)); }
-  function reducedMotion() { return matchMedia("(prefers-reduced-motion: reduce)").matches; }
+  function effectsReduced() {
+    if (effectsPreference === "reduced") return true;
+    if (effectsPreference === "full") return false;
+    return matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function reducedMotion() { return effectsReduced(); }
+
+  function applyEffectsAttribute() {
+    document.documentElement.dataset.effects = effectsReduced() ? "reduced" : "full";
+  }
 
   function hash(q, r) {
     var n = Math.imul(q + 37, 374761393) ^ Math.imul(r - 19, 668265263) ^ 0x5f3759df;
@@ -771,6 +881,33 @@
   function parseSave(raw) {
     if (!raw) return null;
     try { return JSON.parse(raw); } catch (_) { return null; }
+  }
+
+  function writePreference(storageKey, value) {
+    try { localStorage.setItem(storageKey, value); } catch (_) {}
+  }
+
+  function loadPreferences() {
+    var storedAppearance = storageValue(localStorage, APPEARANCE_KEY);
+    if (["system", "light", "dark"].indexOf(storedAppearance) >= 0) {
+      appearancePreference = storedAppearance;
+    }
+    var storedEffects = storageValue(localStorage, EFFECTS_KEY);
+    if (["auto", "full", "reduced"].indexOf(storedEffects) >= 0) {
+      effectsPreference = storedEffects;
+    }
+    var storedSize = storageValue(localStorage, CLASSIC_SIZE_KEY);
+    if (["easy", "medium", "hard"].indexOf(storedSize) >= 0) {
+      classicSizePreference = storedSize;
+    }
+    var storedTheme = storageValue(localStorage, SPHERE_THEME_KEY);
+    if (SPHERE_THEME_NAMES[storedTheme]) sphereThemePreference = storedTheme;
+    try {
+      var storedInvert = JSON.parse(storageValue(localStorage, INVERT_KEY) || "null");
+      if (storedInvert && typeof storedInvert === "object") {
+        invertPreference = { x: !!storedInvert.x, y: !!storedInvert.y };
+      }
+    } catch (_) {}
   }
 
   function infiniteResumeCandidate() {
@@ -912,7 +1049,9 @@
         var q = item.q + dir[0];
         var r = item.r + dir[1];
         var nextKey = key(q, r);
-        if (seen.has(nextKey) || mines.has(nextKey) || reservedSeats[nextKey]) return;
+        // Reserved controls are guaranteed safe. Traverse through them so the
+        // complete seven-face launcher flower cannot wall off the opening flood.
+        if (seen.has(nextKey) || mines.has(nextKey)) return;
         seen.add(nextKey);
         queue.push({ q: q, r: r, step: item.step + 1 });
       });
@@ -937,8 +1076,12 @@
 
   function updateReadyStatus() {
     if (phase !== "ready" || leaving) return;
-    if (themeOpen) {
-      status.textContent = "Choose a launcher theme";
+    if (activeBranch === "settings") {
+      status.textContent = "Change settings";
+    } else if (activeBranch === "size") {
+      status.textContent = "Choose a Classic board size";
+    } else if (activeBranch === "style") {
+      status.textContent = "Choose a Sphere style";
     } else if (activeResume) {
       status.textContent = "Resume " + activeResume.name + ", or choose a board";
     } else {
@@ -964,73 +1107,134 @@
     updateReadyStatus();
   }
 
-  function syncThemeChoices() {
-    themeCurrent.textContent = appearancePreference === "system"
-      ? "System"
-      : appearancePreference.charAt(0).toUpperCase() + appearancePreference.slice(1);
-    themeChoices.forEach(function (choice) {
-      choice.setAttribute("aria-pressed", choice.dataset.appearance === appearancePreference ? "true" : "false");
+  function invertLabel() {
+    var current = INVERT_OPTIONS.find(function (option) {
+      return option.x === invertPreference.x && option.y === invertPreference.y;
+    });
+    return current ? current.label : "Natural";
+  }
+
+  function titleCase(value) {
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  function setCurrent(choice, current) {
+    if (current) choice.setAttribute("aria-current", "true");
+    else choice.removeAttribute("aria-current");
+  }
+
+  function syncPreferences() {
+    var appearanceName = titleCase(appearancePreference);
+    var effectsName = titleCase(effectsPreference);
+    var inversionName = invertLabel();
+    document.getElementById("appearance-current").textContent = appearanceName;
+    document.getElementById("effects-current").textContent = effectsName;
+    document.getElementById("invert-current").textContent = inversionName;
+    document.getElementById("size-current").textContent = CLASSIC_SIZE_NAMES[classicSizePreference];
+    document.getElementById("style-current").textContent = SPHERE_THEME_NAMES[sphereThemePreference];
+    document.getElementById("setting-appearance").setAttribute("aria-label", "Launcher appearance: " + appearanceName + ". Activate to cycle.");
+    document.getElementById("setting-effects").setAttribute("aria-label", "Effects: " + effectsName + ". Activate to cycle.");
+    document.getElementById("setting-invert").setAttribute("aria-label", "Sphere drag: " + inversionName + ". Activate to cycle.");
+    classicGame.href = classicGame.dataset.baseHref + "?size=" + classicSizePreference;
+    board.querySelectorAll("[data-classic-size]").forEach(function (choice) {
+      setCurrent(choice, choice.dataset.classicSize === classicSizePreference);
+    });
+    board.querySelectorAll("[data-sphere-theme]").forEach(function (choice) {
+      setCurrent(choice, choice.dataset.sphereTheme === sphereThemePreference);
     });
   }
 
-  function openTheme(event) {
-    if (phase !== "ready") {
-      finishOpening(true);
-      return;
-    }
-    if (themeOpen || leaving) return;
-    themeOpen = true;
-    board.classList.add("is-theme-open");
-    themeToggle.classList.add("is-expanded");
-    themeToggle.setAttribute("aria-expanded", "true");
-    themeChoices.forEach(function (choice) {
-      choice.disabled = false;
+  function applyAppearance() {
+    document.documentElement.dataset.appearance = appearancePreference === "system"
+      ? (colorScheme.matches ? "dark" : "light")
+      : appearancePreference;
+    document.documentElement.dataset.appearanceChoice = appearancePreference;
+    syncPreferences();
+  }
+
+  function selectedBranchChoice(branchName) {
+    var branch = branches[branchName];
+    if (!branch) return null;
+    return branch.choices.find(function (choice) {
+      return choice.getAttribute("aria-current") === "true";
+    }) || branch.choices[0] || null;
+  }
+
+  function openBranch(branchName, event) {
+    if (phase !== "ready") finishOpening(true);
+    if (leaving || activeBranch === branchName || !branches[branchName]) return;
+    if (activeBranch) closeBranch();
+    var branch = branches[branchName];
+    activeBranch = branchName;
+    board.dataset.openBranch = branchName;
+    branch.hub.classList.add("is-expanded");
+    branch.hub.setAttribute("aria-expanded", "true");
+    branch.choices.forEach(function (choice) {
+      if (choice.tagName === "BUTTON") choice.disabled = false;
       choice.tabIndex = 0;
       choice.setAttribute("aria-hidden", "false");
       choice.classList.add("is-available");
     });
     updateReadyStatus();
     if (event && event.detail === 0) {
-      var selected = themeChoices.find(function (choice) {
-        return choice.dataset.appearance === appearancePreference;
-      });
-      if (selected) selected.focus({ preventScroll: true });
+      var target = selectedBranchChoice(branchName);
+      if (target) target.focus({ preventScroll: true });
     }
   }
 
-  function closeTheme(options) {
-    if (!themeOpen) return;
+  function closeBranch(options) {
+    if (!activeBranch) return;
     var opts = options || {};
-    themeOpen = false;
-    board.classList.remove("is-theme-open");
-    themeToggle.classList.remove("is-expanded");
-    themeToggle.setAttribute("aria-expanded", "false");
-    themeChoices.forEach(function (choice) {
+    var branch = branches[activeBranch];
+    activeBranch = null;
+    delete board.dataset.openBranch;
+    branch.hub.classList.remove("is-expanded");
+    branch.hub.setAttribute("aria-expanded", "false");
+    branch.choices.forEach(function (choice) {
       choice.classList.remove("is-available");
-      choice.disabled = true;
+      if (choice.tagName === "BUTTON") choice.disabled = true;
       choice.tabIndex = -1;
       choice.setAttribute("aria-hidden", "true");
     });
     updateReadyStatus();
-    if (opts.focus) themeToggle.focus({ preventScroll: true });
+    if (opts.focus) branch.hub.focus({ preventScroll: true });
   }
 
-  function toggleTheme(event) {
+  function toggleBranch(event) {
     event.preventDefault();
     event.stopPropagation();
-    if (themeOpen) closeTheme({ focus: event.detail === 0 });
-    else openTheme(event);
+    var branchName = event.currentTarget.dataset.branch;
+    if (activeBranch === branchName) closeBranch({ focus: event.detail === 0 });
+    else openBranch(branchName, event);
   }
 
-  function selectTheme(event) {
+  function cycleSetting(event) {
     event.preventDefault();
     event.stopPropagation();
-    var next = event.currentTarget.dataset.appearance;
-    if (next !== "system" && next !== "light" && next !== "dark") return;
-    appearancePreference = next;
-    try { localStorage.setItem(APPEARANCE_KEY, next); } catch (_) {}
-    applyAppearance();
-    status.textContent = themeCurrent.textContent + " theme selected";
+    var setting = event.currentTarget.dataset.setting;
+    if (setting === "appearance") {
+      var appearances = ["system", "light", "dark"];
+      appearancePreference = appearances[(appearances.indexOf(appearancePreference) + 1) % appearances.length];
+      writePreference(APPEARANCE_KEY, appearancePreference);
+      applyAppearance();
+      status.textContent = "Appearance: " + titleCase(appearancePreference);
+    } else if (setting === "effects") {
+      var effects = ["auto", "full", "reduced"];
+      effectsPreference = effects[(effects.indexOf(effectsPreference) + 1) % effects.length];
+      writePreference(EFFECTS_KEY, effectsPreference);
+      applyEffectsAttribute();
+      syncPreferences();
+      status.textContent = "Effects: " + titleCase(effectsPreference);
+    } else if (setting === "invert") {
+      var currentIndex = INVERT_OPTIONS.findIndex(function (option) {
+        return option.x === invertPreference.x && option.y === invertPreference.y;
+      });
+      var next = INVERT_OPTIONS[(Math.max(0, currentIndex) + 1) % INVERT_OPTIONS.length];
+      invertPreference = { x: next.x, y: next.y };
+      writePreference(INVERT_KEY, JSON.stringify(invertPreference));
+      syncPreferences();
+      status.textContent = "Sphere drag: " + next.label;
+    }
   }
 
   function finishOpening(instant) {
@@ -1050,8 +1254,10 @@
     starter.tabIndex = -1;
     starter.setAttribute("aria-hidden", "true");
     modes.forEach(function (mode) { mode.classList.add("is-available"); });
-    themeToggle.disabled = false;
-    themeToggle.classList.add("is-available");
+    branchHubs.forEach(function (hub) {
+      hub.disabled = false;
+      hub.classList.add("is-available");
+    });
     refreshResume();
     updateReadyStatus();
     rememberReady();
@@ -1110,14 +1316,24 @@
     if (event.button !== undefined && event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    closeTheme();
+    if (destination.dataset.classicSize) {
+      classicSizePreference = destination.dataset.classicSize;
+      writePreference(CLASSIC_SIZE_KEY, classicSizePreference);
+    }
+    if (destination.dataset.sphereTheme) {
+      sphereThemePreference = destination.dataset.sphereTheme;
+      writePreference(SPHERE_THEME_KEY, sphereThemePreference);
+    }
+    syncPreferences();
+    closeBranch();
     leaving = true;
     destination.classList.add("is-dug");
     board.setAttribute("aria-busy", "true");
     board.classList.add("is-leaving");
+    var label = destination.querySelector(".mode-name, .theme-name");
     var modeName = destination === resume
       ? resumeModeName.textContent
-      : destination.querySelector(".mode-name").textContent;
+      : (destination.dataset.destinationName || (label ? label.textContent : "Hexsweeper"));
     status.textContent = (destination === resume ? "Resuming " : "Opening ") + modeName;
     var delay = reducedMotion() ? 30 : 230;
     setTimeout(function () { location.href = destination.href; }, delay);
@@ -1125,8 +1341,8 @@
 
   starter.addEventListener("click", startOpening);
   board.addEventListener("click", function (event) {
-    if (themeOpen && !event.target.closest(".theme-control")) {
-      closeTheme();
+    if (activeBranch && !event.target.closest(".theme-control")) {
+      closeBranch();
     }
     if (phase === "covered" && !event.target.closest(".destination") && !event.target.closest(".theme-control") && !event.target.closest(".starter")) {
       startOpening(event);
@@ -1137,23 +1353,34 @@
       finishOpening(true);
     }
   });
-  modes.forEach(function (mode) {
-    mode.addEventListener("focus", function () {
+  modes.concat(branchHubs).forEach(function (control) {
+    control.addEventListener("focus", function () {
       if (phase !== "ready") finishOpening(true);
     });
-    mode.addEventListener("click", chooseDestination);
   });
-  resume.addEventListener("click", chooseDestination);
-  themeToggle.addEventListener("click", toggleTheme);
-  themeChoices.forEach(function (choice) {
-    choice.addEventListener("click", selectTheme);
+  destinations.forEach(function (destination) {
+    destination.addEventListener("click", chooseDestination);
+  });
+  branchHubs.forEach(function (hub) {
+    hub.addEventListener("click", toggleBranch);
+  });
+  settingsChoices.forEach(function (choice) {
+    choice.addEventListener("click", cycleSetting);
   });
 
   addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && themeOpen) {
+    if (event.key === "Escape" && activeBranch) {
       event.preventDefault();
-      closeTheme({ focus: true });
+      closeBranch({ focus: true });
+      return;
     }
+    if (!activeBranch || ["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].indexOf(event.key) < 0) return;
+    var choices = branches[activeBranch].choices;
+    var currentIndex = choices.indexOf(document.activeElement);
+    if (currentIndex < 0) return;
+    event.preventDefault();
+    var delta = (event.key === "ArrowRight" || event.key === "ArrowDown") ? 1 : -1;
+    choices[(currentIndex + delta + choices.length) % choices.length].focus({ preventScroll: true });
   });
 
   addEventListener("resize", function () {
@@ -1171,27 +1398,19 @@
     board.querySelectorAll(".destination").forEach(function (destination) {
       destination.classList.remove("is-dug");
     });
-    closeTheme();
+    closeBranch();
+    loadPreferences();
+    applyAppearance();
+    applyEffectsAttribute();
+    syncPreferences();
     refreshResume();
     finishOpening(true);
   });
 
-  var appearancePreference = "system";
-  try {
-    var storedAppearance = localStorage.getItem(APPEARANCE_KEY);
-    if (storedAppearance === "system" || storedAppearance === "light" || storedAppearance === "dark") {
-      appearancePreference = storedAppearance;
-    }
-  } catch (_) {}
-  var colorScheme = matchMedia("(prefers-color-scheme: dark)");
-  function applyAppearance() {
-    document.documentElement.dataset.appearance = appearancePreference === "system"
-      ? (colorScheme.matches ? "dark" : "light")
-      : appearancePreference;
-    document.documentElement.dataset.appearanceChoice = appearancePreference;
-    syncThemeChoices();
-  }
+  loadPreferences();
   applyAppearance();
+  applyEffectsAttribute();
+  syncPreferences();
   if (colorScheme.addEventListener) colorScheme.addEventListener("change", applyAppearance);
   else if (colorScheme.addListener) colorScheme.addListener(applyAppearance);
 

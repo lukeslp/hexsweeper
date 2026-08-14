@@ -157,12 +157,18 @@ pens. The live multi-theme game remains available at `play.html`.
 `python3 tools/export-collection.py --app` stages the sealed Capacitor payload in
 `build/app/`. The public `index.html` and native app launcher are both rendered
 from `tools/app-launcher.html`; route and asset treatment differ by platform.
-The launcher opens a safe patch into the three structural modes.
-Its covered **Theme** face blooms into System / Light / Dark choices for the
-launcher itself; gameplay materials remain owned by each game. When an unfinished
-Infinite or Sphere autosave exists, the newest run rises as a mode-colored
-**Resume** face in the center. Classic is omitted from Resume until its finite
-board has a real persistence contract.
+One safe opening reveals a connected seven-face menu: direct
+**Infinite**, **Classic**, and **Sphere** entries; adjacent **Board**, **Style**,
+and **Settings** branches; and the cleared center. Board blooms into Small /
+Medium / Large Classic boards, Style into the curated Light / Shell / Glow
+Sphere materials, and Settings into launcher appearance, effects intensity, and
+Sphere drag direction. Selecting a branch value writes the same preference key
+used by its game, while the primary mode faces remain one-tap entries.
+
+When an unfinished Infinite or Sphere autosave exists, the newest run rises as
+a mode-colored **Resume** face in the center. Launcher preferences never mutate
+those save blobs. Classic is omitted from Resume until its finite board has a
+real persistence contract.
 
 ## Engine API
 
