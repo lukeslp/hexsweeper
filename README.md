@@ -35,7 +35,8 @@ The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on
 
 The root launcher also surfaces the newest unfinished Infinite or Sphere run.
 Classic joins Resume only after it gains a finite-board persistence contract.
-The launcher’s System / Light / Dark flower changes the launcher alone.
+Each mode has its own adjacent settings face, so launch-time choices stay tied
+to the board they affect.
 
 The former five-mode flat production surface remains at `play.html` for its
 distinct materials and mechanics:
@@ -158,12 +159,15 @@ pens. The live multi-theme game remains available at `play.html`.
 `build/app/`. The public `index.html` and native app launcher are both rendered
 from `tools/app-launcher.html`; route and asset treatment differ by platform.
 One safe opening reveals a connected seven-face menu: direct
-**Infinite**, **Classic**, and **Sphere** entries; adjacent **Board**, **Style**,
-and **Settings** branches; and the cleared center. Board blooms into Small /
-Medium / Large Classic boards, Style into the curated Light / Shell / Glow
-Sphere materials, and Settings into launcher appearance, effects intensity, and
-Sphere drag direction. Selecting a branch value writes the same preference key
-used by its game, while the primary mode faces remain one-tap entries.
+**Infinite**, **Classic**, and **Sphere** entries, one adjacent **Settings** face
+for each mode, and the cleared or resumable center. Infinite settings bloom into
+its visual themes and effects level; Classic into Small / Medium / Large boards;
+Sphere into its curated materials and drag direction. The active branch is
+automatically fitted and centered at narrow widths and browser reflow sizes.
+Choice faces are placed from their branch data rather than fixed viewport
+offsets, so additional launch-time materials can join the next connected hex.
+Selecting a value writes the same preference key used by its game, while the
+primary mode faces remain one-tap entries.
 
 When an unfinished Infinite or Sphere autosave exists, the newest run rises as
 a mode-colored **Resume** face in the center. Launcher preferences never mutate

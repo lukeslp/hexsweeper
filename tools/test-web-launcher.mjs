@@ -35,9 +35,9 @@ for (const [label, selector] of [
   ["Infinite mode at the top of the ring", 'id="infinite-game" href="infinite.html?mode=light" data-base-href="infinite.html" data-mode="infinite" data-q="0" data-r="-1"'],
   ["Classic mode at the lower-right of the ring", 'id="classic-game" href="bounded.html?size=medium" data-base-href="bounded.html" data-mode="bounded" data-q="1" data-r="0"'],
   ["Sphere mode at the lower-left of the ring", 'data-mode="sphere" data-q="-1" data-r="1"'],
-  ["Infinite settings outside its mode", 'id="infinite-toggle" type="button" data-branch="infinite" data-q="0" data-r="-2"'],
-  ["Classic settings outside its mode", 'id="size-toggle" type="button" data-branch="size" data-q="2" data-r="0"'],
-  ["Sphere settings outside its mode", 'id="style-toggle" type="button" data-branch="style" data-q="-2" data-r="2"'],
+  ["Infinite settings outside its mode", 'id="infinite-toggle" type="button" data-branch="infinite" data-owner-mode="infinite" data-out-q="0" data-out-r="-1" data-q="0" data-r="-2"'],
+  ["Classic settings outside its mode", 'id="size-toggle" type="button" data-branch="size" data-owner-mode="bounded" data-out-q="1" data-out-r="0" data-q="2" data-r="0"'],
+  ["Sphere settings outside its mode", 'id="style-toggle" type="button" data-branch="style" data-owner-mode="sphere" data-out-q="-1" data-out-r="1" data-q="-2" data-r="2"'],
 ]) {
   expect(launcher.includes(selector), `launcher lost ${label}`);
 }
@@ -55,6 +55,19 @@ for (const branch of ["infinite", "size", "style"]) {
     `launcher is missing the ${branch} settings bloom`,
   );
 }
+expect(
+  template.includes("function layoutBranchChoices()") && template.includes("choice.dataset.layoutIndex"),
+  "launcher choices are no longer assigned to connected branch seats from data",
+);
+expect(
+  template.includes("function fitLayout()") && template.includes("availableWidth / Math.max(1, maxX - minX)"),
+  "launcher no longer fits the active hex cluster to the viewport",
+);
+expect(
+  !template.includes('.board[data-open-branch="size"] { --board-x') &&
+    !template.includes('.board[data-open-branch="style"] {\n    --board-x'),
+  "launcher brought back hard-coded branch viewport offsets",
+);
 
 expect(
   launcher.includes('location.replace("play.html" + location.search + location.hash)'),
