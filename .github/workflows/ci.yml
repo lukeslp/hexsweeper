@@ -36,6 +36,9 @@ jobs:
           node flux-sphere/test-flux-pairs.js
           node flux-sphere/test-integration.js
 
+      - name: Catch the Monkey UI and input contract
+        run: node --test tools/test-monkey-ui.mjs
+
       - name: Water Wheel effect profile contract
         run: node wheel/test-effects.js
 

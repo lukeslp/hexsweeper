@@ -263,7 +263,10 @@ Two playable studies reuse the hex language without inheriting Minesweeper's rul
 - [`monkey-grid/`](monkey-grid/) is the fast 2D proof. Close one pale tile per turn; the monkey advances one step along a seeded shortest route to the rim.
 - [`monkey-sphere/`](monkey-sphere/) removes the natural edge. Drag to rotate the closed surface and seal all three coral portals before the monkey reaches one; a gold rim cue points toward it while it is behind the horizon.
 
-Both studies support seeded URLs, complete one-turn undo, mouse and touch input, keyboard shortcuts, reduced motion, and self-contained collection exports.
+Both studies use one full-screen, four-control shell over locally bundled jungle
+art. They support seeded URLs, complete one-turn undo, mouse and touch input,
+full keyboard board play (Arrow keys plus Enter or Space), visible focus,
+reduced motion, forced-color fallbacks, and route-specific screenshot cards.
 
 ## Obsidian Mirror (experimental)
 

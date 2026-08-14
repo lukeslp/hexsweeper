@@ -1,0 +1,238 @@
+/**
+ * File Purpose: Shared minimalist game surface for Catch the Monkey.
+ * Author: Luke Steuber <luke@lukesteuber.com>
+ */
+:root {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color-scheme: dark;
+  --ink: #f3f0e7;
+  --muted: rgba(243, 240, 231, .68);
+  --glass: rgba(8, 14, 10, .72);
+  --glass-strong: rgba(8, 14, 10, .92);
+  --line: rgba(243, 240, 231, .18);
+  --focus: #f4c75d;
+  --accent: #e4ab36;
+  --danger: #e96550;
+}
+
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; }
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: var(--ink);
+  background-color: #0a110c;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 48%, transparent 25%, rgba(2, 7, 4, .32) 100%);
+}
+
+button { font: inherit; }
+.game { position: fixed; inset: 0; overflow: hidden; }
+.board-wrap { position: absolute; inset: 0; }
+#game-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  outline: none;
+}
+#game-canvas:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -5px;
+}
+
+.game-hud {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+.status-capsule {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  margin: 0;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--glass);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(14px) saturate(.9);
+  -webkit-backdrop-filter: blur(14px) saturate(.9);
+  font: 600 .69rem/1 "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: .015em;
+}
+.status-capsule strong { color: var(--ink); font-size: .82rem; }
+.status-separator { width: 1px; height: 13px; background: var(--line); }
+.game-name { color: var(--accent); text-transform: uppercase; letter-spacing: .11em; }
+
+.control-rail {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+.control-rail a,
+.control-rail button,
+.close-button {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink);
+  background: var(--glass);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(14px) saturate(.9);
+  -webkit-backdrop-filter: blur(14px) saturate(.9);
+  cursor: pointer;
+  text-decoration: none;
+}
+.control-rail a:hover,
+.control-rail button:hover,
+.close-button:hover { background: var(--glass-strong); border-color: rgba(243, 240, 231, .42); }
+.control-rail button:disabled { opacity: .32; cursor: default; }
+.control-rail a:focus-visible,
+.control-rail button:focus-visible,
+.close-button:focus-visible,
+.done:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.action-icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.result {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(430px, calc(100% - 28px));
+  padding: 13px 17px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  background: var(--glass-strong);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(14px);
+  text-align: center;
+}
+.result[hidden] { display: none; }
+.result strong { display: block; font-size: .92rem; }
+.result span { display: block; margin-top: 3px; color: var(--muted); font-size: .74rem; line-height: 1.4; }
+
+.overlay {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(2, 7, 4, .68);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.overlay[hidden] { display: none; }
+.help-card {
+  position: relative;
+  width: min(410px, 100%);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--glass-strong);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .45);
+}
+.help-card h2 { margin: 0 42px 8px 0; font-size: 1.42rem; line-height: 1.1; }
+.help-card > p { margin: 0; color: var(--muted); font-size: .86rem; line-height: 1.55; }
+.close-button { position: absolute; top: 12px; right: 12px; box-shadow: none; }
+.rules { display: grid; gap: 10px; margin: 20px 0; padding: 0; list-style: none; counter-reset: rules; }
+.rules li { display: grid; grid-template-columns: 27px 1fr; gap: 10px; align-items: start; color: var(--muted); font-size: .78rem; line-height: 1.45; counter-increment: rules; }
+.rules li::before {
+  content: counter(rules);
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--accent);
+  font: 600 .68rem/1 "IBM Plex Mono", monospace;
+}
+.rules strong { color: var(--ink); }
+.done {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  color: #10150f;
+  background: var(--ink);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 560px) {
+  .status-capsule { top: auto; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .game-name { display: none; }
+  .control-rail { gap: 4px; }
+  .help-card { padding: 24px 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  body::before { display: none; }
+  .status-capsule,
+  .control-rail a,
+  .control-rail button,
+  .close-button,
+  .result,
+  .help-card { border: 1px solid CanvasText; background: Canvas; color: CanvasText; forced-color-adjust: none; }
+  #game-canvas:focus-visible { outline-color: Highlight; }
+}

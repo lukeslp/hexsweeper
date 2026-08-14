@@ -35,6 +35,7 @@
   let seed = 1;
   let turnHistory = [];
   let hovered = -1;
+  let keyboardSelected = -1;
   let polygons = [];
   let layout = { size: 20, cx: 0, cy: 0 };
   let hop = null;
@@ -170,6 +171,7 @@
       pool.slice(0, STARTING_WALLS).forEach((cell) => walls.add(cell.index));
       attempts += 1;
     } while (!escapeSearch(monkey, attempts * 101).path && attempts < 40);
+    keyboardSelected = cells.find((cell) => cell.index !== monkey && !walls.has(cell.index))?.index ?? -1;
     result.hidden = true;
     updateURL();
     updateUI();
@@ -187,6 +189,9 @@
     gameOver = saved.gameOver;
     outcome = saved.outcome;
     hop = null;
+    if (keyboardSelected < 0 || keyboardSelected === monkey || walls.has(keyboardSelected)) {
+      keyboardSelected = cells.find((cell) => cell.index !== monkey && !walls.has(cell.index))?.index ?? -1;
+    }
     result.hidden = !gameOver;
     if (gameOver) showResult(outcome);
     updateUI();
@@ -258,7 +263,7 @@
     const width = rect.width;
     const height = rect.height;
     const sizeByWidth = width / (Math.sqrt(3) * (RADIUS * 2 + 1.35));
-    const sizeByHeight = height / (1.5 * (RADIUS * 2 + 0.95));
+    const sizeByHeight = height / (1.5 * RADIUS * 2 + 2.25);
     layout = { size: Math.max(9, Math.min(sizeByWidth, sizeByHeight)), cx: width / 2, cy: height / 2 };
     scheduleDraw();
   }
@@ -330,11 +335,12 @@
       polygons[cell.index] = point;
       const isWall = walls.has(cell.index);
       const isHover = hovered === cell.index && !isWall && cell.index !== monkey && !gameOver;
+      const isKeyboard = document.activeElement === canvas && keyboardSelected === cell.index;
       hexPath(point.x, point.y, layout.size * .965);
-      ctx.fillStyle = isWall ? "#141613" : isHover ? "#fffdf7" : "rgba(255,253,247,.72)";
+      ctx.fillStyle = isWall ? "#132018" : isHover || isKeyboard ? "#fff9dc" : "rgba(245,239,207,.78)";
       ctx.fill();
-      ctx.strokeStyle = isWall ? "#141613" : cell.edge ? "#777b72" : "rgba(18,20,18,.34)";
-      ctx.lineWidth = isHover ? 2.1 : cell.edge ? 1.65 : 1.05;
+      ctx.strokeStyle = isKeyboard ? "#f5cc66" : isWall ? "#0a120d" : cell.edge ? "#687863" : "rgba(13,27,17,.42)";
+      ctx.lineWidth = isKeyboard ? 3 : isHover ? 2.1 : cell.edge ? 1.65 : 1.05;
       ctx.stroke();
 
       if (cell.edge && !isWall) {
@@ -387,8 +393,14 @@
   canvas.addEventListener("pointerleave", () => { hovered = -1; scheduleDraw(); });
   canvas.addEventListener("pointerup", (event) => {
     const point = canvasPoint(event);
-    closeHex(hitTest(point.x, point.y));
+    keyboardSelected = hitTest(point.x, point.y);
+    closeHex(keyboardSelected);
   });
+  canvas.addEventListener("focus", () => {
+    if (keyboardSelected < 0) keyboardSelected = cells.find((cell) => cell.index !== monkey && !walls.has(cell.index))?.index ?? -1;
+    scheduleDraw();
+  });
+  canvas.addEventListener("blur", scheduleDraw);
 
   undoButton.addEventListener("click", () => {
     if (!turnHistory.length) return;
@@ -413,10 +425,45 @@
   helpOverlay.addEventListener("click", (event) => { if (event.target === helpOverlay) closeHelp(); });
 
   addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !helpOverlay.hidden) closeHelp();
-    else if ((event.key === "u" || event.key === "U") && helpOverlay.hidden) undoButton.click();
-    else if ((event.key === "r" || event.key === "R") && helpOverlay.hidden) newButton.click();
-    else if (event.key === "?" && helpOverlay.hidden) openHelp();
+    if (event.key === "Escape" && !helpOverlay.hidden) {
+      closeHelp();
+      return;
+    }
+    if (!helpOverlay.hidden) {
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const target = event.shiftKey
+          ? document.activeElement === helpClose ? helpDone : helpClose
+          : document.activeElement === helpDone ? helpClose : helpDone;
+        target.focus();
+      }
+      return;
+    }
+    if ((event.key === "u" || event.key === "U")) undoButton.click();
+    else if ((event.key === "r" || event.key === "R")) newButton.click();
+    else if (event.key === "?") openHelp();
+    else if (document.activeElement === canvas) {
+      const moves = {
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+      };
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        closeHex(keyboardSelected);
+      } else if (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown") {
+        event.preventDefault();
+        const current = cells[keyboardSelected] || cells[centerIndex];
+        const [dq, dr] = moves[event.key];
+        const next = byKey.get(key(current.q + dq, current.r + dr));
+        if (Number.isInteger(next)) {
+          keyboardSelected = next;
+          liveStatus.textContent = walls.has(next) ? "Closed hex selected." : next === monkey ? "Monkey hex selected." : "Open hex selected. Press Enter to close it.";
+          scheduleDraw();
+        }
+      }
+    }
   });
   addEventListener("resize", resize, { passive: true });
 

@@ -22,8 +22,10 @@
 <meta name="twitter:title" content="Catch the Monkey — Closed Orbit">
 <meta name="twitter:description" content="A playable spherical route-blocking study: rotate the world and seal every portal before the monkey escapes.">
 <meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
-<meta name="theme-color" content="#101311">
+<meta name="theme-color" content="#071014">
 <title>Catch the Monkey — Closed Orbit</title>
+<link rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/monkey-sphere/">
+<link rel="preload" as="image" href="assets/jungle-night.webp" type="image/webp">
 <style>
 /* fonts/fonts.css (woff2 inlined) */
 /*
@@ -74,249 +76,100 @@
 }
 
 </style>
+<link rel="stylesheet" href="../monkey-shell.css">
 <style>
 /* game.css */
 /**
- * File Purpose: Responsive chrome for the spherical Catch the Monkey experiment.
+ * File Purpose: Orbit palette and nocturnal jungle canopy for Catch the Monkey.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 :root {
-  color-scheme: dark;
-  --night: #101311;
-  --night-hi: #181d1a;
-  --paper: #f5f1e6;
-  --sub: #a8aea7;
-  --gold: #e4ab36;
-  --green: #54a774;
-  --coral: #e45143;
-  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  --ink: #eef4ec;
+  --muted: rgba(238, 244, 236, .68);
+  --glass: rgba(4, 14, 15, .7);
+  --glass-strong: rgba(4, 14, 15, .94);
+  --line: rgba(238, 244, 236, .19);
+  --focus: #f4c75d;
+  --accent: #e4ab36;
 }
 
-* { box-sizing: border-box; }
-html, body { width: 100%; min-height: 100%; margin: 0; }
 body {
-  min-height: 100vh;
-  min-height: 100dvh;
-  overflow: hidden;
-  color: var(--paper);
-  background:
-    radial-gradient(circle at 50% 48%, #28302b 0, #161a17 38%, #0c0e0d 78%),
-    var(--night);
+  background-color: #071014;
+  background-image:
+    linear-gradient(rgba(2, 8, 10, .14), rgba(2, 8, 10, .34)),
+    url("assets/jungle-night.webp");
 }
-body::before {
+body::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: .18;
-  background-image: radial-gradient(rgba(255,255,255,.45) .6px, transparent .6px);
-  background-size: 7px 7px;
-  mask-image: radial-gradient(circle, #000, transparent 72%);
+  background: radial-gradient(circle at 50% 48%, rgba(123, 170, 173, .1), transparent 50%);
 }
 
-button { font: inherit; }
-.game {
-  position: relative;
-  width: min(1120px, 100%);
-  height: 100vh;
-  height: 100dvh;
-  margin: auto;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  padding: max(18px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
-}
-
-.masthead, .controls {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-.masthead { border-bottom: 1px solid rgba(245,241,230,.16); padding-bottom: 12px; }
-.eyebrow {
-  display: block;
-  color: var(--sub);
-  font: 600 .67rem/1.2 "IBM Plex Mono", ui-monospace, monospace;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-h1 { margin: 5px 0 0; font-size: clamp(1.28rem, 2vw, 1.7rem); line-height: 1; }
-.stats { display: flex; gap: 22px; margin: 0; }
-.stats div { min-width: 78px; text-align: right; }
-.stats dt { color: var(--sub); font: 600 .61rem/1.1 "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
-.stats dd { margin: 2px 0 0; font: 600 1.25rem/1 "IBM Plex Mono", monospace; }
-
-.board-wrap { position: relative; min-height: 0; }
-#game-canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; cursor: grab; }
+#game-canvas { cursor: grab; }
 #game-canvas:active { cursor: grabbing; }
-#game-canvas:focus-visible { filter: drop-shadow(0 0 5px rgba(228,171,54,.5)); }
-.gesture-hint {
-  position: absolute;
-  left: 50%;
-  bottom: 9px;
-  transform: translateX(-50%);
-  margin: 0;
-  color: rgba(245,241,230,.56);
-  font: 500 .65rem/1 "IBM Plex Mono", monospace;
-  letter-spacing: .02em;
-  white-space: nowrap;
-  pointer-events: none;
-}
 
-.controls { border-top: 1px solid rgba(245,241,230,.16); padding-top: 12px; }
-.controls p { max-width: 560px; margin: 0; color: var(--sub); font-size: .78rem; line-height: 1.4; }
-.dot { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 3px rgba(228,171,54,.14); }
-.actions { display: flex; gap: 7px; }
-.actions button {
-  min-width: 68px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 12px;
-  border: 1px solid rgba(245,241,230,.2);
-  border-radius: 999px;
-  color: var(--paper);
-  background: rgba(245,241,230,.06);
-  cursor: pointer;
-}
-.actions button:hover { background: rgba(245,241,230,.13); border-color: rgba(245,241,230,.5); }
-.actions button:focus-visible, .done:focus-visible, .close:focus-visible { outline: 3px solid rgba(228,171,54,.58); outline-offset: 2px; }
-.actions button:disabled { opacity: .3; cursor: default; }
-.actions svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
-.result {
-  position: absolute;
-  left: 50%;
-  bottom: 29px;
-  transform: translateX(-50%);
-  width: min(430px, calc(100% - 28px));
-  padding: 12px 16px;
-  border: 1px solid rgba(245,241,230,.22);
-  border-radius: 14px;
-  background: rgba(14,17,15,.86);
-  backdrop-filter: blur(12px);
-  text-align: center;
-  box-shadow: 0 12px 40px rgba(0,0,0,.35);
-}
-.result strong { display: block; font-size: .93rem; }
-.result span { display: block; margin-top: 2px; color: var(--sub); font-size: .74rem; }
-
-.overlay {
-  position: fixed;
-  z-index: 20;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(5,7,6,.66);
-  backdrop-filter: blur(10px);
-}
-.overlay[hidden] { display: none; }
-.help-card {
-  position: relative;
-  width: min(480px, 100%);
-  padding: 25px;
-  border: 1px solid rgba(245,241,230,.2);
-  border-radius: 18px;
-  background: rgba(24,29,26,.96);
-  box-shadow: 0 28px 90px rgba(0,0,0,.5);
-}
-.help-card h2 { margin: 7px 0 10px; font-size: 1.45rem; }
-.help-card p { margin: 0 0 16px; color: #c2c7c1; font-size: .86rem; line-height: 1.55; }
-.close { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; color: var(--sub); font-size: 1.4rem; cursor: pointer; }
-.rule-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
-.rule-grid div { padding: 12px 8px; border: 1px solid rgba(245,241,230,.12); border-radius: 10px; text-align: center; }
-.rule-grid strong, .rule-grid small { display: block; }
-.rule-grid strong { margin-top: 7px; font-size: .75rem; }
-.rule-grid small { margin-top: 2px; color: var(--sub); font-size: .63rem; }
-.rule-mark { display: block; width: 28px; height: 28px; margin: auto; border-radius: 50%; }
-.route-mark { background: var(--gold); transform: scale(.28); box-shadow: 0 0 0 17px rgba(228,171,54,.09); }
-.wall-mark { border-radius: 7px; background: #030403; }
-.portal-mark { border: 5px solid var(--coral); box-shadow: inset 0 0 0 2px var(--night); }
-.done { width: 100%; min-height: 44px; border: 0; border-radius: 999px; background: var(--paper); color: var(--night); font-weight: 600; cursor: pointer; }
-.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-
-@media (max-width: 620px) {
-  .game { padding: max(12px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
-  .masthead { padding-inline: 3px; }
-  .stats { gap: 10px; }
-  .stats div { min-width: 62px; }
-  .controls { align-items: flex-end; }
-  .controls p { max-width: 150px; font-size: .67rem; }
-  .actions button { min-width: 44px; width: 44px; padding: 0; }
-  .actions button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-  .rule-grid { gap: 5px; }
-  .help-card { padding: 22px 18px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+@media (forced-colors: active) {
+  body { background-image: none; }
+  body::after { display: none; }
 }
 
 </style>
 </head>
 <body>
 <main class="game" aria-labelledby="game-title">
-  <header class="masthead">
-    <div>
-      <span class="eyebrow">Hex route study · closed surface</span>
-      <h1 id="game-title">Catch the Monkey</h1>
-    </div>
-    <dl class="stats" aria-label="Game status">
-      <div><dt>Turns</dt><dd id="turn-count">0</dd></div>
-      <div><dt>Open portals</dt><dd id="portal-count">3</dd></div>
-    </dl>
-  </header>
-
+  <h1 class="sr-only" id="game-title">Catch the Monkey: Orbit</h1>
   <div class="board-wrap">
-    <canvas id="game-canvas" tabindex="0" aria-label="Catch the Monkey spherical board. Drag to rotate; select an empty face to close it."></canvas>
-    <p class="gesture-hint"><span aria-hidden="true">↔</span> Drag the sphere · tap a face to close it</p>
+    <canvas id="game-canvas" tabindex="0" aria-label="Catch the Monkey spherical board" aria-describedby="board-instructions"></canvas>
+    <p class="sr-only" id="board-instructions">Use the Arrow keys to rotate the sphere. Press Enter or Space to close the centered face. Drag to rotate with a pointer. U undoes a turn, R starts a new orbit, and question mark opens the rules.</p>
     <div id="result" class="result" role="status" aria-live="polite" hidden>
       <strong id="result-title"></strong>
       <span id="result-copy"></span>
     </div>
   </div>
 
-  <footer class="controls" aria-label="Game controls">
-    <p><span class="dot monkey-dot" aria-hidden="true"></span>The gold rim points toward the monkey when it crosses the horizon.</p>
-    <div class="actions">
-      <button type="button" id="undo-button" title="Undo last turn (U)" disabled>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7H3v-5M3.5 7.5A9 9 0 1 1 3 15"></path></svg>
-        <span>Undo</span>
+  <div class="game-hud">
+    <p class="status-capsule" role="status" aria-live="polite" aria-atomic="true">
+      <span class="game-name">Orbit</span>
+      <span><strong id="turn-count">0</strong> turns</span>
+      <span class="status-separator" aria-hidden="true"></span>
+      <span><strong id="portal-count">3</strong> portals</span>
+    </p>
+    <nav class="control-rail" aria-label="Game controls">
+      <a id="back-link" href="../choices.html" aria-label="Back to Hexsweeper worlds">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>Back</title><path d="M15.5 5.5 9 12l6.5 6.5"></path><path d="M9.5 12H20"></path></svg>
+      </a>
+      <button type="button" id="undo-button" aria-label="Undo last turn" title="Undo (U)" disabled>
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>Undo</title><path d="M8 8H4V4"></path><path d="M4.6 8.4a8 8 0 1 1-.2 7.1"></path></svg>
       </button>
-      <button type="button" id="new-button" title="New orbit (R)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20.5 11.5A9 9 0 1 0 21 4"></path></svg>
-        <span>New</span>
+      <button type="button" id="new-button" aria-label="Start a new orbit" title="New orbit (R)">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>New orbit</title><path d="m12 3 7.5 4.4v9.2L12 21l-7.5-4.4V7.4z"></path><path d="M8.5 9.2h.01M15.5 9.2h.01M12 14.8h.01"></path></svg>
       </button>
-      <button type="button" id="help-button" title="How to play (?)" aria-haspopup="dialog">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.7 9a2.4 2.4 0 1 1 3.2 2.25c-.9.38-1.4.92-1.4 1.75M11.5 17h.01"></path></svg>
-        <span>Rules</span>
+      <button type="button" id="help-button" aria-label="How to play" title="Rules (?)" aria-haspopup="dialog">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>How to play</title><circle cx="12" cy="12" r="8.5"></circle><path d="M12 10.8v5.1M12 8.1h.01"></path></svg>
       </button>
-    </div>
-  </footer>
+    </nav>
+  </div>
 </main>
 
 <div id="help-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
   <section class="help-card">
-    <button type="button" class="close" id="help-close" aria-label="Close rules">×</button>
-    <span class="eyebrow">No rim · three exits</span>
+    <button type="button" class="close-button" id="help-close" aria-label="Close rules">
+      <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>Close</title><path d="m7 7 10 10M17 7 7 17"></path></svg>
+    </button>
     <h2 id="help-title">Close the orbit</h2>
-    <p>Drag to turn the world. Choose one pale face to close it; the monkey immediately hops one step along a shortest open route to a portal.</p>
-    <div class="rule-grid">
-      <div><span class="rule-mark route-mark"></span><strong>Gold pip</strong><small>Its next likely hop</small></div>
-      <div><span class="rule-mark wall-mark"></span><strong>Black face</strong><small>A closed route</small></div>
-      <div><span class="rule-mark portal-mark"></span><strong>Coral ring</strong><small>An escape portal</small></div>
-    </div>
-    <p>Because the board has no edge, every escape is explicit. Rotate whenever the monkey or a portal slips behind the sphere; a gold cue on the rim points toward it.</p>
+    <p>Seal all three portals before the monkey reaches one.</p>
+    <ol class="rules">
+      <li><span><strong>Turn the world.</strong> Drag, or use the Arrow keys, to bring a face into view.</span></li>
+      <li><span><strong>Close one pale face.</strong> The monkey immediately takes a shortest open route.</span></li>
+      <li><span><strong>Block every portal.</strong> Coral rings are exits; the gold rim cue finds a hidden monkey.</span></li>
+    </ol>
     <button type="button" class="done" id="help-done">Play</button>
   </section>
 </div>
 
-<div class="sr-only" id="live-status" aria-live="polite"></div>
+<div class="sr-only" id="live-status" aria-live="polite" aria-atomic="true"></div>
 <script>
 /* collection / CodePen boot */
 try {
@@ -613,6 +466,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   let seed = 1;
   let turnHistory = [];
   let hovered = -1;
+  let keyboardSelected = -1;
   let projected = [];
   let rotation = { x: -0.17, y: 0.38 };
   let zoom = 1;
@@ -754,6 +608,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     outcome = "";
     turnHistory = [];
     hovered = -1;
+    keyboardSelected = -1;
     hop = null;
     result.hidden = true;
     const startPoint = tiles[monkey].centerPoint;
@@ -778,6 +633,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     outcome = saved.outcome;
     rotation = saved.rotation;
     hop = null;
+    keyboardSelected = -1;
     result.hidden = !gameOver;
     if (gameOver) showResult(outcome);
     updateUI();
@@ -950,21 +806,23 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     ctx.beginPath(); ctx.arc(view.cx, view.cy, view.radius * .93, 0, Math.PI * 2); ctx.fill();
 
     projected = projectTiles(view);
+    if (document.activeElement === canvas) keyboardSelected = pickFace(view.cx, view.cy);
     const search = currentSearch();
     const predicted = search.path && search.path[1];
     projected.forEach((face) => {
       const isWall = walls.has(face.index);
       const isPortal = portals.has(face.index);
       const isHover = face.index === hovered && !isWall && !isPortal && face.index !== monkey && !gameOver;
+      const isKeyboard = document.activeElement === canvas && face.index === keyboardSelected;
       const shade = Math.max(0, Math.min(1, (face.z + .1) / 1.1));
       tracePolygon(face.polygon);
       if (isWall) ctx.fillStyle = `rgb(${Math.round(8 + shade * 8)},${Math.round(10 + shade * 9)},${Math.round(8 + shade * 8)})`;
       else if (isPortal) ctx.fillStyle = `rgb(${Math.round(44 + shade * 28)},${Math.round(16 + shade * 8)},${Math.round(13 + shade * 7)})`;
-      else if (isHover) ctx.fillStyle = "#fffdf6";
-      else ctx.fillStyle = `rgb(${Math.round(190 + shade * 57)},${Math.round(189 + shade * 53)},${Math.round(180 + shade * 50)})`;
+      else if (isHover || isKeyboard) ctx.fillStyle = "#fff8d8";
+      else ctx.fillStyle = `rgb(${Math.round(174 + shade * 55)},${Math.round(191 + shade * 48)},${Math.round(171 + shade * 49)})`;
       ctx.fill();
-      ctx.strokeStyle = isPortal ? "#e45143" : isWall ? "rgba(245,241,230,.24)" : `rgba(16,19,17,${.28 + shade * .52})`;
-      ctx.lineWidth = isPortal ? Math.max(2.5, face.center.depth * 3.5) : Math.max(.8, face.center.depth * 1.15);
+      ctx.strokeStyle = isKeyboard ? "#f4c75d" : isPortal ? "#e45143" : isWall ? "rgba(245,241,230,.24)" : `rgba(9,24,17,${.32 + shade * .5})`;
+      ctx.lineWidth = isKeyboard ? Math.max(3, face.center.depth * 4) : isPortal ? Math.max(2.5, face.center.depth * 3.5) : Math.max(.8, face.center.depth * 1.15);
       ctx.stroke();
 
       if (face.index === predicted && face.index !== monkey && !gameOver) {
@@ -1041,7 +899,10 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   canvas.addEventListener("pointerup", (event) => {
     if (!drag || drag.id !== event.pointerId) return;
     const point = canvasPoint(event);
-    if (!drag.moved) closeFace(pickFace(point.x, point.y));
+    if (!drag.moved) {
+      keyboardSelected = pickFace(point.x, point.y);
+      closeFace(keyboardSelected);
+    }
     drag = null;
   });
   canvas.addEventListener("pointercancel", () => { drag = null; });
@@ -1051,6 +912,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
     zoom = Math.max(.72, Math.min(1.18, zoom - event.deltaY * .0007));
     scheduleDraw();
   }, { passive: false });
+  canvas.addEventListener("focus", scheduleDraw);
+  canvas.addEventListener("blur", scheduleDraw);
 
   undoButton.addEventListener("click", () => {
     if (!turnHistory.length) return;
@@ -1066,10 +929,45 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
   helpDone.addEventListener("click", hideHelp);
   helpOverlay.addEventListener("click", (event) => { if (event.target === helpOverlay) hideHelp(); });
   addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !helpOverlay.hidden) hideHelp();
-    if ((event.key === "u" || event.key === "U") && helpOverlay.hidden) undoButton.click();
-    if ((event.key === "r" || event.key === "R") && helpOverlay.hidden) newButton.click();
-    if (event.key === "?" && helpOverlay.hidden) showHelp();
+    if (event.key === "Escape" && !helpOverlay.hidden) {
+      hideHelp();
+      return;
+    }
+    if (!helpOverlay.hidden) {
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const target = event.shiftKey
+          ? document.activeElement === helpClose ? helpDone : helpClose
+          : document.activeElement === helpDone ? helpClose : helpDone;
+        target.focus();
+      }
+      return;
+    }
+    if ((event.key === "u" || event.key === "U")) undoButton.click();
+    else if ((event.key === "r" || event.key === "R")) newButton.click();
+    else if (event.key === "?") showHelp();
+    else if (document.activeElement === canvas) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        closeFace(keyboardSelected);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        rotation.y -= .13;
+        scheduleDraw();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        rotation.y += .13;
+        scheduleDraw();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        rotation.x = Math.max(-1.45, rotation.x - .13);
+        scheduleDraw();
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        rotation.x = Math.min(1.45, rotation.x + .13);
+        scheduleDraw();
+      }
+    }
   });
   addEventListener("resize", scheduleDraw);
 
