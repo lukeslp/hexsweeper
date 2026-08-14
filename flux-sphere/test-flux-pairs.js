@@ -54,17 +54,18 @@ test("uses stable index tie-breaking", () => {
   assert.strictEqual(flux.partnerFor(1), 0);
 });
 
-test("excludes revealed, flagged, and mined faces", () => {
+test("pairs covered mines while excluding revealed and flagged faces", () => {
   const flux = createFluxPairs();
   const result = flux.activate(board(
     [cell({ revealed: true }), cell({ flagged: true }), cell({ isMine: true }), cell(), cell()],
     [tile(1, 0, 0), tile(-1, 0, 0), tile(0, 1, 0), tile(0, -1, 0), tile(0, 0, 1)]
   ));
-  assert.deepStrictEqual(result, { status: "active", pairCount: 1, unpairedCount: 0 });
+  assert.deepStrictEqual(result, { status: "active", pairCount: 1, unpairedCount: 1 });
   assert.strictEqual(flux.partnerFor(0), -1);
   assert.strictEqual(flux.partnerFor(1), -1);
-  assert.strictEqual(flux.partnerFor(2), -1);
-  assert.strictEqual(flux.partnerFor(3), 4);
+  assert.strictEqual(flux.partnerFor(2), 3);
+  assert.strictEqual(flux.partnerFor(3), 2);
+  assert.strictEqual(flux.partnerFor(4), -1);
 });
 
 test("leaves one eligible face unpaired when the count is odd", () => {
@@ -94,7 +95,7 @@ test("exports and restores a symmetric mapping", () => {
   const first = createFluxPairs();
   first.activate(game);
   const saved = first.exportState();
-  assert.deepStrictEqual(saved, { v: 1, active: true, pairFor: [1, 0, -1] });
+  assert.deepStrictEqual(saved, { v: 2, active: true, pairFor: [1, 0, -1] });
 
   const restored = createFluxPairs();
   assert.deepStrictEqual(restored.restore(saved, game), {
@@ -105,23 +106,35 @@ test("exports and restores a symmetric mapping", () => {
   assert.deepStrictEqual(restored.exportState(), saved);
 });
 
-test("rejects malformed, asymmetric, self, out-of-range, and mined mappings", () => {
+test("migrates a valid legacy safe-pair mapping", () => {
+  const game = board(
+    [cell(), cell(), cell({ isMine: true }), cell()],
+    [tile(1, 0, 0), tile(-1, 0, 0), tile(0, 1, 0), tile(0, -1, 0)]
+  );
+  const flux = createFluxPairs();
+  assert.deepStrictEqual(
+    flux.restore({ v: 1, active: true, pairFor: [1, 0, -1, -1] }, game),
+    { status: "active", pairCount: 2, unpairedCount: 0 }
+  );
+  assert.deepStrictEqual(flux.exportState(), { v: 2, active: true, pairFor: [1, 0, 3, 2] });
+});
+
+test("rejects malformed, asymmetric, self, and out-of-range mappings", () => {
   const game = board(
     [cell(), cell(), cell({ isMine: true })],
     [tile(1, 0, 0), tile(-1, 0, 0), tile(0, 1, 0)]
   );
   for (const saved of [
     null,
-    { v: 2, active: true, pairFor: [1, 0, -1] },
-    { v: 1, active: true, pairFor: [1, 0] },
-    { v: 1, active: true, pairFor: [1, -1, -1] },
-    { v: 1, active: true, pairFor: [0, -1, -1] },
-    { v: 1, active: true, pairFor: [3, -1, -1] },
     { v: 1, active: true, pairFor: [2, -1, 0] },
+    { v: 2, active: true, pairFor: [1, 0] },
+    { v: 2, active: true, pairFor: [1, -1, -1] },
+    { v: 2, active: true, pairFor: [0, -1, -1] },
+    { v: 2, active: true, pairFor: [3, -1, -1] },
   ]) {
     const flux = createFluxPairs();
     assert.deepStrictEqual(flux.restore(saved, game), { status: "blocked" });
-    assert.deepStrictEqual(flux.exportState(), { v: 1, active: false, pairFor: [] });
+    assert.deepStrictEqual(flux.exportState(), { v: 2, active: false, pairFor: [] });
   }
 });
 
@@ -135,7 +148,7 @@ test("rejecting a malformed restore preserves the active pair mapping", () => {
   const before = flux.exportState();
 
   assert.deepStrictEqual(
-    flux.restore({ v: 1, active: true, pairFor: [1, -1, -1] }, game),
+    flux.restore({ v: 2, active: true, pairFor: [1, -1, -1] }, game),
     { status: "blocked" }
   );
   assert.deepStrictEqual(flux.exportState(), before);
@@ -148,8 +161,8 @@ test("restore summaries count only currently eligible unpaired faces", () => {
   );
   const flux = createFluxPairs();
   assert.deepStrictEqual(
-    flux.restore({ v: 1, active: true, pairFor: [-1, 2, 1, -1, -1] }, game),
-    { status: "active", pairCount: 1, unpairedCount: 1 }
+    flux.restore({ v: 2, active: true, pairFor: [-1, 2, 1, 4, 3] }, game),
+    { status: "active", pairCount: 2, unpairedCount: 0 }
   );
 });
 
@@ -157,7 +170,7 @@ test("reset clears all pair state", () => {
   const flux = createFluxPairs();
   flux.activate(board([cell(), cell()], [tile(1, 0, 0), tile(-1, 0, 0)]));
   assert.deepStrictEqual(flux.reset(), { status: "idle" });
-  assert.deepStrictEqual(flux.exportState(), { v: 1, active: false, pairFor: [] });
+  assert.deepStrictEqual(flux.exportState(), { v: 2, active: false, pairFor: [] });
 });
 
 test("exposes the factory through the browser-global UMD path", () => {

@@ -219,12 +219,14 @@ forward there.
 
 Flux Sphere turns the archived “Dig one, reveal both” study into a complete
 variant on the canonical Sphere engine. After the first safe opening, every
-still-covered safe face receives a deterministic distant partner. A direct dig
-opens its partner through the same reveal and zero-flood logic, inside the same
-undo step. Pair identities stay hidden until triggered, so they do not disclose
-covered safe faces; a flagged partner holds the echo.
+remaining covered face—including mines—receives a deterministic distant
+partner. Activate once to trace the A/B endpoints without opening them, then
+activate either endpoint again to commit both inside one undo step. A flag
+grounds its endpoint and holds the echo, so deductions across both
+neighborhoods decide whether to take the double reveal or isolate a mine.
 
-The route has isolated `hexsweeper-flux-sphere-run-v1` persistence, reload
+The route keeps its isolated `hexsweeper-flux-sphere-run-v1` storage key and
+migrates the pair payload to version 2 without abandoning live runs. Reload
 restore, exactly-once completion events, keyboard-centered dig and flag
 controls, live text feedback, non-color linked glyphs, and a static
 reduced-motion treatment. Run `node flux-sphere/test-flux-pairs.js` and

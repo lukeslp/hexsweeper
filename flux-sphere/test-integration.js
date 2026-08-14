@@ -68,22 +68,23 @@ function makeContext(overrides) {
     tile(-1, 0, 0),
     tile(0, -1, 0),
   ];
-  const calls = { revealSafeFaces: [], persisted: 0, draws: 0 };
+  const calls = { resolveLinkedFaces: [], persisted: 0, draws: 0 };
   const context = Object.assign({
     cells,
     tiles,
     state: { cells, tiles, isGameOver: false, won: false, reduceMotion: false },
     now: 100,
-    revealSafeFaces(indices) {
-      calls.revealSafeFaces.push(indices.slice());
+    resolveLinkedFaces(indices) {
+      calls.resolveLinkedFaces.push(indices.slice());
       const opened = [];
       for (const index of indices) {
-        if (cells[index] && !cells[index].revealed && !cells[index].flagged && !cells[index].isMine) {
+        if (cells[index] && !cells[index].revealed && !cells[index].flagged) {
           cells[index].revealed = true;
           opened.push(index);
+          if (cells[index].isMine) return { opened, detonated: index };
         }
       }
-      return opened;
+      return { opened, detonated: -1 };
     },
     persist() { calls.persisted++; },
     requestDraw() { calls.draws++; },
@@ -161,6 +162,8 @@ test("publishes Flux metadata and canonical Sphere dependencies", () => {
   assert.match(html, /<title>[^<]*Flux Sphere[^<]*<\/title>/i);
   assert.match(html, /<meta\s+name=["']description["'][^>]+(entangled|linked|echo)/i);
   assert.match(html, /https:\/\/dr\.eamer\.dev\/games\/hexsweeper\/flux-sphere\//i);
+  assert.match(html, /flux-sphere\/assets\/og\.png/i);
+  assert.ok(fs.existsSync(path.join(__dirname, "assets", "og.png")), "missing Flux screenshot card");
   for (const asset of [
     "../fonts/fonts.css",
     "../skin-chrome.css",
@@ -195,9 +198,10 @@ test("exposes a named keyboard board, instructions, and polite atomic status", (
   assert.match(css, /#gameCanvas:focus-visible[\s\S]*outline/i);
 });
 
-test("documents latent pairs, linked glyphs, held flags, and reduced motion", () => {
-  assert.match(html, /Dig one[^<.]*reveal both|digging one[^<.]*partner/i);
-  assert.match(html, /(hidden|latent)[^<.]*pair|pair[^<.]*(hidden|latent)/i);
+test("documents trace-then-commit pairs, linked glyphs, grounded flags, and reduced motion", () => {
+  assert.match(html, /(trace|select)[^<.]*(pair|link)|pair[^<.]*(trace|select)/i);
+  assert.match(html, /(again|second)[^<.]*(open|commit|dig)|commit[^<.]*both/i);
+  assert.match(html, /either endpoint[^<.]*mine|mine[^<.]*either endpoint/i);
   assert.match(html, /flagged[^<.]*(held|hold)|held[^<.]*flag/i);
   assert.match(html, /(linked glyph|chain glyph|↔)/i);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i);
@@ -205,39 +209,46 @@ test("documents latent pairs, linked glyphs, held flags, and reduced motion", ()
   assert.match(adapterSource, /reduceMotion/);
 });
 
-test("activates distant pairs after the first resolved dig and echoes a safe reveal", () => {
+test("traces a distant pair before committing one atomic linked reveal", () => {
   assert.ok(FluxSphere && typeof FluxSphere.createAdapter === "function");
   const status = { textContent: "" };
   const adapter = FluxSphere.createAdapter({ statusElement: status, schedule: (callback) => callback() });
   const { context, cells, calls } = makeContext();
   const activated = adapter.variant.firstResolvedDig(context);
-  assert.deepStrictEqual(activated, { status: "active", pairCount: 1, unpairedCount: 0 });
+  assert.deepStrictEqual(activated, { status: "active", pairCount: 1, unpairedCount: 1 });
   assert.match(status.textContent, /linked 1 distant pair/i);
 
+  const trace = adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, context));
+  assert.deepStrictEqual(trace, { allowed: false, status: "traced", from: 1, partner: 2 });
+  assert.match(status.textContent, /trace|linked/i);
+  assert.strictEqual(adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, context)), true);
   cells[1].revealed = true;
   const result = adapter.variant.reveal(Object.assign({
     index: 1,
     source: "direct",
     revealed: [1],
   }, context));
-  assert.deepStrictEqual(calls.revealSafeFaces, [[2]]);
+  assert.deepStrictEqual(calls.resolveLinkedFaces, [[2]]);
   assert.deepStrictEqual(result, { status: "echoed", from: 1, partner: 2, opened: [2] });
   assert.strictEqual(cells[2].revealed, true);
   assert.match(status.textContent, /echo opened a linked face/i);
 });
 
-test("never echoes from a mine and holds an echo behind a flag", () => {
+test("a linked mine detonates while a flagged endpoint grounds the echo", () => {
   const status = { textContent: "" };
   const adapter = FluxSphere.createAdapter({ statusElement: status });
   const first = makeContext();
+  first.cells[1].revealed = true;
   adapter.variant.firstResolvedDig(first.context);
-  first.cells[3].revealed = true;
+  adapter.variant.admitReveal(Object.assign({ index: 2, source: "direct" }, first.context));
+  adapter.variant.admitReveal(Object.assign({ index: 2, source: "direct" }, first.context));
+  first.cells[2].revealed = true;
   assert.deepStrictEqual(adapter.variant.reveal(Object.assign({
-    index: 3,
+    index: 2,
     source: "direct",
-    revealed: [3],
-  }, first.context)), { status: "idle" });
-  assert.deepStrictEqual(first.calls.revealSafeFaces, []);
+    revealed: [2],
+  }, first.context)), { status: "detonated", from: 2, partner: 3, opened: [3], detonated: 3 });
+  assert.deepStrictEqual(first.calls.resolveLinkedFaces, [[3]]);
 
   const held = makeContext();
   adapter.variant.reset(held.context);
@@ -249,7 +260,7 @@ test("never echoes from a mine and holds an echo behind a flag", () => {
     source: "direct",
     revealed: [1],
   }, held.context)), { status: "held", from: 1, partner: 2 });
-  assert.deepStrictEqual(held.calls.revealSafeFaces, []);
+  assert.deepStrictEqual(held.calls.resolveLinkedFaces, []);
   assert.match(status.textContent, /flagged[^.]*held|held[^.]*flagged/i);
 });
 
@@ -282,11 +293,13 @@ test("draws echo endpoints with distinct cyan and amber outlines", () => {
   adapter.variant.reveal(Object.assign({ index: 1, source: "direct", revealed: [1] }, active.context));
 
   const strokeStyles = [];
+  const fillStyles = [];
+  const glyphs = [];
   const drawing = {
     save() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, stroke() {},
-    fillText() {}, restore() {},
+    arc() {}, fill() {}, fillText(value) { glyphs.push(value); }, restore() {},
     set strokeStyle(value) { strokeStyles.push(value); },
-    set lineWidth(_) {}, set fillStyle(_) {}, set font(_) {}, set textAlign(_) {},
+    set lineWidth(_) {}, set fillStyle(value) { fillStyles.push(value); }, set font(_) {}, set textAlign(_) {},
     set textBaseline(_) {},
   };
   adapter.variant.draw(Object.assign({}, active.context, {
@@ -301,17 +314,22 @@ test("draws echo endpoints with distinct cyan and amber outlines", () => {
       };
     },
   }));
-  assert.strictEqual(strokeStyles.length, 2);
-  assert.strictEqual(new Set(strokeStyles).size, 2);
+  assert.ok(strokeStyles.includes("#00a6b2"));
+  assert.ok(strokeStyles.includes("#d97706"));
+  assert.ok(fillStyles.includes("#ffffff"));
+  assert.ok(fillStyles.includes("#000000"));
+  assert.deepStrictEqual(glyphs, ["↔", "↔"]);
 });
 
 test("round-trips pair state and regenerates pairs for first-dig undo", () => {
   const adapter = FluxSphere.createAdapter();
   const first = makeContext();
   adapter.variant.firstResolvedDig(first.context);
+  adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, first.context));
   const saved = adapter.variant.exportState();
   assert.deepStrictEqual(saved, {
-    pairs: { v: 1, active: true, pairFor: [-1, 2, 1, -1] },
+    pairs: { v: 2, active: true, pairFor: [-1, 2, 1, -1] },
+    trace: [1, 2],
   });
 
   const restored = FluxSphere.createAdapter();
@@ -320,6 +338,7 @@ test("round-trips pair state and regenerates pairs for first-dig undo", () => {
 
   const undo = adapter.variant.captureUndo(first.context);
   assert.strictEqual(undo.regenerateOnRestore, true);
+  assert.deepStrictEqual(undo.trace, [1, 2]);
   const allCovered = makeContext();
   allCovered.cells[0].revealed = false;
   adapter.variant.restoreUndo(Object.assign({ saved: undo }, allCovered.context));

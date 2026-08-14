@@ -10,18 +10,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Flux Sphere — Hexsweeper 3D</title>
-<meta name="description" content="Entangled Hexsweeper on a sphere: dig one safe face and reveal its distant linked echo.">
+<meta name="description" content="Entangled Hexsweeper on a sphere: trace a distant pair, then risk opening both endpoints at once.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Flux Sphere — Hexsweeper 3D">
-<meta property="og:description" content="Dig one safe face and reveal its distant linked echo across the Hexsweeper sphere.">
+<meta property="og:description" content="Trace a distant pair, then risk opening both endpoints at once across the Hexsweeper sphere.">
 <meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/flux-sphere/">
-<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
+<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/flux-sphere/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Flux Sphere — Hexsweeper 3D">
-<meta name="twitter:description" content="Dig one safe face and reveal its distant linked echo across the Hexsweeper sphere.">
-<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
+<meta name="twitter:description" content="Trace a distant pair, then risk opening both endpoints at once across the Hexsweeper sphere.">
+<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/flux-sphere/assets/og.png">
 <link rel="stylesheet" href="../fonts/fonts.css">
 <link rel="stylesheet" href="../skin-chrome.css">
 <link rel="stylesheet" href="../sphere/dev-chrome.css?v=20260813">
@@ -112,9 +112,10 @@
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Flux Sphere</h2>
-    <p class="help-lede">Dig one face and reveal both. After your first safe opening, Flux links covered safe faces to distant partners across the globe.</p>
+    <p class="help-lede">Trace a distant pair, then decide when to commit both endpoints. After your first safe opening, Flux links every covered face across the globe.</p>
     <ul class="help-controls" aria-label="Controls">
-      <li><span class="act">Tap</span><span>Dig a face</span></li>
+      <li><span class="act">Tap once</span><span>Trace a linked pair</span></li>
+      <li><span class="act">Tap again</span><span>Commit and open both endpoints</span></li>
       <li><span class="act">Hold</span><span>Flag a face on touch screens</span></li>
       <li><span class="act">Drag</span><span>Rotate the sphere</span></li>
       <li><span class="act">Arrow keys</span><span>Rotate from the focused board</span></li>
@@ -122,8 +123,8 @@
       <li><span class="act">Shift + Enter</span><span>Flag the centered face; Shift + Space also works</span></li>
     </ul>
     <div class="help-body">
-      <p>Pairs stay hidden while both faces are covered, so the links never disclose which faces are safe. Digging one linked face opens its partner and may start a second normal flood.</p>
-      <p>A flagged partner holds the echo until you choose how to handle that face. Mines are never linked, and digging a mine ends the run normally.</p>
+      <p>The first activation marks the two linked endpoints as A and B without revealing either. Rotate the globe to find B, then activate either endpoint again to commit the pair. Either endpoint can be a mine, so inspect the numbered neighborhoods around both before you commit.</p>
+      <p>A flagged partner grounds and holds the echo. Use that when one endpoint looks dangerous; remove the flag later if your deduction changes.</p>
       <p>After an echo, both endpoints receive a non-color ↔ linked glyph and outline. Reduced motion keeps those static markers and all text feedback.</p>
       <p>Open the center menu for reset, undo, flag mode, board size, theme, warning style, and drag inversion. Pair state and progress autosave through refresh.</p>
     </div>

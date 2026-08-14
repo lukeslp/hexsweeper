@@ -36,6 +36,7 @@
     let announcementToken = 0;
     let lastEcho = null;
     let justActivated = false;
+    let tracedPair = null;
 
     function remember(context) {
       if (context) lastContext = context;
@@ -73,7 +74,23 @@
     }
 
     function exportState() {
-      return { pairs: pairs.exportState() };
+      return {
+        pairs: pairs.exportState(),
+        trace: tracedPair ? tracedPair.slice() : null,
+      };
+    }
+
+    function validTrace(trace, savedPairs, game) {
+      if (trace == null) return null;
+      if (!Array.isArray(trace) || trace.length !== 2) return false;
+      const [from, partner] = trace;
+      const mapping = savedPairs && Array.isArray(savedPairs.pairFor) ? savedPairs.pairFor : [];
+      if (!Number.isInteger(from) || !Number.isInteger(partner) || from === partner) return false;
+      if (mapping[from] !== partner || mapping[partner] !== from) return false;
+      const cells = game.cells || [];
+      if (!cells[from] || !cells[partner]) return false;
+      if (cells[from].revealed || cells[partner].revealed) return false;
+      return [from, partner];
     }
 
     function paintEndpoint(context, index, glyph, palette) {
@@ -93,7 +110,15 @@
       drawing.strokeStyle = palette.stroke;
       drawing.lineWidth = 3;
       drawing.stroke();
-      drawing.fillStyle = palette.fill;
+      const badgeRadius = fontSize * 0.62;
+      drawing.beginPath();
+      drawing.arc(center.x, center.y, badgeRadius, 0, Math.PI * 2);
+      drawing.fillStyle = "#ffffff";
+      drawing.fill();
+      drawing.strokeStyle = "#000000";
+      drawing.lineWidth = 2;
+      drawing.stroke();
+      drawing.fillStyle = "#000000";
       drawing.font = `700 ${fontSize}px "IBM Plex Mono", ui-monospace, monospace`;
       drawing.textAlign = "center";
       drawing.textBaseline = "middle";
@@ -110,6 +135,7 @@
         pairs.reset();
         lastEcho = null;
         justActivated = false;
+        tracedPair = null;
         lastAnnouncement = "";
         announcementToken++;
         announce("Dig a face to energize the Flux field.");
@@ -121,9 +147,21 @@
         lastEcho = null;
         justActivated = result.status === "active";
         const noun = result.pairCount === 1 ? "pair" : "pairs";
-        announce(`Flux linked ${result.pairCount} distant ${noun}. Dig one face to reveal its echo.`);
+        announce(`Flux linked ${result.pairCount} distant ${noun}. Activate a face once to trace its pair, then again to open both.`);
         requestUpdate(context, true);
         return result;
+      },
+
+      admitReveal(context) {
+        remember(context);
+        if (!context || context.source !== "direct") return true;
+        const partner = pairs.partnerFor(context.index);
+        if (partner < 0) return true;
+        if (tracedPair && tracedPair.includes(context.index)) return true;
+        tracedPair = [context.index, partner];
+        announce("Pair traced: A here, B across the globe. Rotate to inspect B; activate either again to commit both, or flag one to ground it.");
+        requestUpdate(context, true);
+        return { allowed: false, status: "traced", from: context.index, partner };
       },
 
       reveal(context) {
@@ -131,8 +169,9 @@
         if (!context || context.source !== "direct") return { status: "idle" };
         const game = gameFor(context);
         const cell = game.cells[context.index];
-        if (!cell || cell.isMine) return { status: "idle" };
+        if (!cell) return { status: "idle" };
         const partner = pairs.partnerFor(context.index);
+        tracedPair = null;
         if (partner < 0) {
           announce("This face has no remaining Flux partner.");
           return { status: "unpaired", from: context.index };
@@ -147,14 +186,42 @@
           announce("That Flux link was already resolved.");
           return { status: "resolved", from: context.index, partner };
         }
-        const opened = typeof context.revealSafeFaces === "function"
-          ? context.revealSafeFaces([partner])
-          : [];
-        if (!Array.isArray(opened) || !opened.length) {
+        if (cell.isMine) {
+          const resolution = typeof context.resolveLinkedFaces === "function"
+            ? context.resolveLinkedFaces([partner])
+            : { opened: [], detonated: -1 };
+          const opened = resolution && Array.isArray(resolution.opened) ? resolution.opened : [];
+          lastEcho = { from: context.index, partner, opened: opened.slice(), at: now() };
+          announce("Mine detonated. Its linked endpoint resolved with it.");
+          requestUpdate(context, false);
+          return {
+            status: "detonated",
+            from: context.index,
+            partner,
+            opened,
+            detonated: context.index,
+          };
+        }
+        const resolution = typeof context.resolveLinkedFaces === "function"
+          ? context.resolveLinkedFaces([partner])
+          : { opened: [], detonated: -1 };
+        const opened = resolution && Array.isArray(resolution.opened) ? resolution.opened : [];
+        if (!opened.length) {
           announce("The Flux echo could not open its linked face.");
           return { status: "held", from: context.index, partner };
         }
         lastEcho = { from: context.index, partner, opened: opened.slice(), at: now() };
+        if (resolution.detonated >= 0) {
+          announce("The linked endpoint was a mine. The Flux field collapsed.");
+          requestUpdate(context, false);
+          return {
+            status: "detonated",
+            from: context.index,
+            partner,
+            opened: opened.slice(),
+            detonated: resolution.detonated,
+          };
+        }
         announce(opened.length === 1
           ? "Flux echo opened a linked face."
           : `Flux echo opened ${opened.length} linked faces.`);
@@ -164,6 +231,10 @@
 
       draw(context) {
         remember(context);
+        if (tracedPair) {
+          paintEndpoint(context, tracedPair[0], "A", { stroke: "#00a6b2", fill: "#005a61" });
+          paintEndpoint(context, tracedPair[1], "B", { stroke: "#d97706", fill: "#78350f" });
+        }
         if (!lastEcho) return;
         const frameNow = Number.isFinite(context.now) ? context.now : now();
         if (frameNow - lastEcho.at > ECHO_VISIBLE_MS) {
@@ -182,11 +253,17 @@
       importState(context) {
         remember(context);
         if (!context.saved || typeof context.saved !== "object") return false;
-        const result = pairs.restore(context.saved.pairs, gameFor(context));
+        const game = gameFor(context);
+        const trace = validTrace(context.saved.trace, context.saved.pairs, game);
+        if (trace === false) return false;
+        const result = pairs.restore(context.saved.pairs, game);
         if (result.status === "blocked") return false;
         justActivated = false;
         lastEcho = null;
-        announce(result.status === "active" ? "Flux run restored." : "Dig a face to energize the Flux field.");
+        tracedPair = trace;
+        announce(tracedPair
+          ? "Traced Flux pair restored. Rotate to inspect B, then activate either endpoint to commit."
+          : result.status === "active" ? "Flux run restored." : "Dig a face to energize the Flux field.");
         return true;
       },
 
@@ -195,6 +272,7 @@
         const saved = {
           pairs: pairs.exportState(),
           regenerateOnRestore: justActivated,
+          trace: tracedPair ? tracedPair.slice() : null,
         };
         justActivated = false;
         return saved;
@@ -209,7 +287,11 @@
         if (result.status === "blocked") pairs.reset();
         justActivated = false;
         lastEcho = null;
-        announce("Previous Flux reveal restored.");
+        const trace = validTrace(saved.trace, pairs.exportState(), gameFor(context));
+        tracedPair = trace === false ? null : trace;
+        announce(tracedPair
+          ? "Previous Flux reveal restored with its traced A/B pair. Activating either endpoint now commits both."
+          : "Previous Flux reveal restored.");
         requestUpdate(context, false);
       },
 
@@ -217,9 +299,18 @@
         remember(context);
         lastEcho = null;
         justActivated = false;
+        tracedPair = null;
         announce(context.outcome === "win"
           ? "Flux stabilized. Every safe face is clear."
           : "Mine detonated. The Flux field collapsed.");
+      },
+
+      flag(context) {
+        remember(context);
+        if (!context || !context.flagged) return;
+        if (tracedPair && tracedPair.includes(context.index)) tracedPair = null;
+        announce("Endpoint grounded. Its linked echo will hold while the flag remains.");
+        requestUpdate(context, false);
       },
 
       terminalCopy(context) {

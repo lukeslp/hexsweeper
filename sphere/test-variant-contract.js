@@ -690,6 +690,76 @@ test("refuses invalid, flagged, and mined linked reveal targets", () => {
   assert.strictEqual(api.getState().cells[3].revealed, false);
 });
 
+test("resolves a linked mine inside the direct reveal undo and ends the run", () => {
+  let linkedResult = null;
+  const variant = {
+    id: "flux-sphere",
+    admitReveal: () => true,
+    importState: () => true,
+    reveal(context) {
+      linkedResult = context.resolveLinkedFaces([3]);
+    },
+    useDefaultWin: () => true,
+  };
+  const { api } = createHarness({
+    boot: variantBoot(variant, {
+      storageKey: "hexsweeper-flux-sphere-run-v2",
+      runKind: "flux-sphere",
+      createRunId: () => "run-linked-mine",
+    }),
+  });
+  assert.strictEqual(api.applyRunState(begunRun({
+    kind: "flux-sphere",
+    revealed: [],
+    variant: { v: 2 },
+  })), true);
+
+  assert.strictEqual(api.digAt(2), true);
+  assert.deepStrictEqual(plain(linkedResult), { opened: [3], detonated: 3 });
+  assert.strictEqual(api.getState().cells[3].revealed, true);
+  assert.strictEqual(api.getState().isGameOver, true);
+  assert.strictEqual(api.getState().won, false);
+  assert.strictEqual(api.undo(), true);
+  assert.deepStrictEqual(
+    api.getState().cells.map((cell) => cell.revealed),
+    [false, false, false, false]
+  );
+});
+
+test("lets a mined direct endpoint resolve its linked partner before loss", () => {
+  let linkedResult = null;
+  const variant = {
+    id: "flux-sphere",
+    admitReveal: () => true,
+    importState: () => true,
+    reveal(context) {
+      linkedResult = context.resolveLinkedFaces([2]);
+    },
+    useDefaultWin: () => true,
+  };
+  const { api } = createHarness({
+    boot: variantBoot(variant, {
+      storageKey: "hexsweeper-flux-sphere-run-v1",
+      runKind: "flux-sphere",
+      createRunId: () => "run-direct-linked-mine",
+    }),
+  });
+  assert.strictEqual(api.applyRunState(begunRun({
+    kind: "flux-sphere",
+    mineCount: 2,
+    mines: [2, 3],
+    variant: { v: 2 },
+  })), true);
+
+  assert.strictEqual(api.digAt(3), true);
+  assert.deepStrictEqual(plain(linkedResult), { opened: [2], detonated: 2 });
+  assert.deepStrictEqual(api.getState().cells.map((cell) => cell.revealed), [false, false, true, true]);
+  assert.strictEqual(api.getState().isGameOver, true);
+  assert.strictEqual(api.getState().won, false);
+  assert.strictEqual(api.undo(), true);
+  assert.deepStrictEqual(api.getState().cells.map((cell) => cell.revealed), [false, false, false, false]);
+});
+
 test("keeps an occupied flag attempt out of the board and restores the active adapter save", () => {
   const localStorage = memoryStorage();
   const sessionStorage = memoryStorage();

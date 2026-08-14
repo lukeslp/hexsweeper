@@ -263,6 +263,8 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
       if (typeof fluxSphereRoute !== "undefined") fluxSphereRoute.game.reset();
       localStorage.removeItem("hexsweeper-flux-sphere-run-v1");
       sessionStorage.removeItem("hexsweeper-flux-sphere-run-v1");
+      localStorage.removeItem("hexsweeper-flux-sphere-run-v2");
+      sessionStorage.removeItem("hexsweeper-flux-sphere-run-v2");
     })()`);
   }
   failures.length = 0;
@@ -301,7 +303,8 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     const mapping = fluxSphereRoute.adapter.exportState().pairs.pairFor;
     const pair = mapping.map((partner, index) => [index, partner]).find(([index, partner]) =>
       partner > index && !state.cells[index].revealed && !state.cells[partner].revealed &&
-      !state.cells[index].flagged && !state.cells[partner].flagged
+      !state.cells[index].flagged && !state.cells[partner].flagged &&
+      !state.cells[index].isMine && !state.cells[partner].isMine
     );
     return {
       first: state.isFirstClick,
@@ -347,9 +350,11 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
   const echoed = await evaluate(cdp, sessionId, `(() => {
     const game = fluxSphereRoute.game;
     const pair = ${JSON.stringify(active.pair)};
+    const traced = game.digAt(pair[0]);
     const result = game.digAt(pair[0]);
     const state = game.getState();
     return {
+      traced,
       result,
       from: state.cells[pair[0]].revealed,
       partner: state.cells[pair[1]].revealed,
@@ -360,6 +365,7 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
       afterUndo: [state.cells[pair[0]].revealed, state.cells[pair[1]].revealed],
     };
   })()`);
+  assert.equal(echoed.traced, false);
   assert.equal(echoed.result, true);
   assert.equal(echoed.from, true);
   assert.equal(echoed.partner, true);
@@ -392,10 +398,12 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
   const restored = await evaluate(cdp, sessionId, `(() => ({
     runId: fluxSphereRoute.game.exportRunState().runId,
     active: fluxSphereRoute.adapter.exportState().pairs.active,
+    trace: fluxSphereRoute.adapter.exportState().trace,
     status: document.getElementById("flux-status").textContent,
   }))()`);
   assert.equal(restored.runId, restoredRunId);
   assert.equal(restored.active, true);
+  assert.deepEqual(restored.trace, active.pair);
   assert.match(restored.status, /restored/i);
 
   const terminal = await evaluate(cdp, sessionId, `(async () => {
@@ -404,7 +412,8 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     const base = game.exportRunState();
     const mapping = fluxSphereRoute.adapter.exportState().pairs.pairFor;
     const winPair = mapping.map((partner, index) => [index, partner]).find(([index, partner]) =>
-      partner > index && state.cells[index].neighborMines > 0 && state.cells[partner].neighborMines > 0
+      partner > index && !state.cells[index].isMine && !state.cells[partner].isMine &&
+      state.cells[index].neighborMines > 0 && state.cells[partner].neighborMines > 0
     );
     if (!winPair) throw new Error("no numbered Flux pair for win fixture");
     const winId = "browser-${viewport.name}-win";
@@ -415,9 +424,11 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     winSave.completionEmitted = false;
     winSave.flags = 0;
     winSave.flagged = [];
+    winSave.variant.trace = null;
     winSave.revealed = state.cells.map((cell, index) => !cell.isMine && !winPair.includes(index) ? index : -1).filter((index) => index >= 0);
     winSave.savedAt = Date.now();
     if (!game.applyRunState(winSave)) throw new Error("win fixture rejected");
+    game.digAt(winPair[0]);
     game.digAt(winPair[0]);
     const win = { over: game.getState().isGameOver, won: game.getState().won };
 
@@ -427,12 +438,20 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     lossSave.over = false;
     lossSave.won = false;
     lossSave.completionEmitted = false;
+    lossSave.variant.trace = null;
     lossSave.savedAt = Date.now() + 1;
     if (!game.applyRunState(lossSave)) throw new Error("loss fixture rejected");
     const mine = game.getState().cells.findIndex((cell) => cell.isMine);
+    const partner = mapping[mine];
     game.digAt(mine);
     game.digAt(mine);
-    const loss = { over: game.getState().isGameOver, won: game.getState().won };
+    const loss = {
+      over: game.getState().isGameOver,
+      won: game.getState().won,
+      partnerResolved: partner < 0 || game.getState().cells[partner].revealed,
+      undo: game.undo(),
+      afterUndo: partner < 0 || (!game.getState().cells[mine].revealed && !game.getState().cells[partner].revealed),
+    };
     const counts = Object.fromEntries([winId, lossId].map((runId) => [
       runId,
       window.__fluxCompletions.filter((payload) => payload.runId === runId).length,
@@ -441,7 +460,7 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     return { win, loss, counts, payloads };
   })()`);
   assert.deepEqual(terminal.win, { over: true, won: true });
-  assert.deepEqual(terminal.loss, { over: true, won: false });
+  assert.deepEqual(terminal.loss, { over: true, won: false, partnerResolved: true, undo: true, afterUndo: true });
   assert.deepEqual(terminal.counts, {
     [`browser-${viewport.name}-win`]: 1,
     [`browser-${viewport.name}-loss`]: 1,

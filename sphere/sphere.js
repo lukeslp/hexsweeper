@@ -975,6 +975,7 @@
           persist: () => persistNow(),
           requestDraw: () => scheduleFrame(),
           revealSafeFaces: (indices) => revealSafeFaces(indices),
+          resolveLinkedFaces: (indices) => resolveLinkedFaces(indices),
           projectFace(index, lift) {
             const tile = state.tiles[index];
             return tile
@@ -2554,6 +2555,39 @@
       return Array.from(opened);
     }
 
+    /**
+     * Resolve variant-linked faces inside the current direct-dig undo. Unlike
+     * revealSafeFaces, this path preserves mine semantics: an unflagged linked
+     * mine is revealed and ends the run through the engine-owned terminal path.
+     */
+    function resolveLinkedFaces(indices) {
+      if (!variant || variantRevealMutationDepth < 1 || !Array.isArray(indices)) {
+        return { opened: [], detonated: -1 };
+      }
+      const opened = new Set();
+      let detonated = -1;
+      for (const index of indices) {
+        if (!Number.isInteger(index) || index < 0 || index >= state.cells.length) continue;
+        const cell = state.cells[index];
+        if (!cell || cell.revealed || cell.flagged) continue;
+        if (!variantAdmitsReveal(index, "linked")) continue;
+        cell.revealed = true;
+        scheduleRevealVisual(index, 0);
+        opened.add(index);
+        if (cell.isMine) {
+          cell.animReveal = 1;
+          state.detonatorIdx = index;
+          detonated = index;
+          break;
+        }
+        if (cell.neighborMines === 0) {
+          for (const flooded of floodFrom(index, { notify: false })) opened.add(flooded);
+        }
+      }
+      if (detonated >= 0) gameOver(false);
+      return { opened: Array.from(opened), detonated };
+    }
+
     function reveal(idx) {
       const cell = state.cells[idx];
       if (!cell || cell.revealed || cell.flagged || state.isGameOver) return false;
@@ -2574,7 +2608,7 @@
           index: idx,
           source: "direct",
           revealed: [idx],
-        }, false);
+        }, true);
         gameOver(false);
         return true;
       }

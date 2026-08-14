@@ -1,7 +1,7 @@
 /**
  * File Purpose: Deterministic entangled-pair state for Flux Sphere.
  * Primary Functions: activate, partnerFor, exportState, restore, reset.
- * Inputs: Sphere cells and tile center points. Output: symmetric safe-face pairs.
+ * Inputs: Sphere cells and tile center points. Output: symmetric covered-face pairs.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function attachFluxPairs(root, factory) {
@@ -17,7 +17,7 @@
   let pairFor = [];
 
   function isCellEligible(cell) {
-    return !!cell && !cell.revealed && !cell.flagged && !cell.isMine;
+    return !!cell && !cell.revealed && !cell.flagged;
   }
 
   function separationScore(a, b) {
@@ -91,7 +91,7 @@
 
   function exportState() {
     return {
-      v: 1,
+      v: 2,
       active,
       pairFor: active ? pairFor.slice() : [],
     };
@@ -100,7 +100,7 @@
   function restore(saved, game) {
     const cells = game && Array.isArray(game.cells) ? game.cells : [];
     const tiles = game && Array.isArray(game.tiles) ? game.tiles : [];
-    if (!saved || saved.v !== 1 || typeof saved.active !== "boolean") {
+    if (!saved || ![1, 2].includes(saved.v) || typeof saved.active !== "boolean") {
       return { status: "blocked" };
     }
     if (!saved.active) {
@@ -122,8 +122,14 @@
       }
       if (partner === -1) continue;
       if (partner === index || candidate[partner] !== index) return { status: "blocked" };
-      if (cells[index].isMine || cells[partner].isMine) return { status: "blocked" };
+      if (saved.v === 1 && (cells[index].isMine || cells[partner].isMine)) {
+        return { status: "blocked" };
+      }
     }
+
+    // V1 deliberately omitted mines from the map. Rebuild from the restored
+    // board so a resumed run receives the current all-covered-face rules.
+    if (saved.v === 1) return activate(game);
 
     pairFor = candidate;
     active = true;

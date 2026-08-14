@@ -28,6 +28,10 @@
 !sphere-ux/assets/**/*.png
 !sphere-ux/assets/**/*.jpg
 
+# Flux route-specific screenshot card
+!flux-sphere/assets/
+!flux-sphere/assets/og.png
+
 # Staging frames for tools/shoot-og-cards.sh
 og-frames/
 
