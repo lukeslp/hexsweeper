@@ -16,6 +16,12 @@ function read(name) {
 const html = read("index.html");
 const css = read("flux-sphere.css");
 const adapterSource = read("flux-sphere.js");
+const choices = fs.readFileSync(path.join(__dirname, "..", "choices.html"), "utf8");
+const readme = fs.readFileSync(path.join(__dirname, "..", "README.md"), "utf8");
+const workflow = fs.readFileSync(
+  path.join(__dirname, "..", ".github", "workflows", "ci.yml"),
+  "utf8"
+);
 let FluxSphere = null;
 try {
   FluxSphere = require("./flux-sphere.js");
@@ -309,6 +315,23 @@ test("dispatches completion locally and posts only to a same-origin parent", () 
   FluxSphere.forwardCompletion(payload, cross.root);
   assert.strictEqual(cross.dispatched.length, 1);
   assert.deepStrictEqual(cross.posted, []);
+});
+
+test("is discoverable from the worlds flow, documented, and covered by CI", () => {
+  for (const route of [
+    "flux-sphere/",
+    "monkey-grid/",
+    "monkey-sphere/",
+    "sphere-reflection/",
+    "wheel/",
+    "polyhedron/",
+  ]) {
+    assert.ok(choices.includes(`href="${route}"`), `choices hub omits ${route}`);
+  }
+  assert.match(readme, /## Flux Sphere \(experimental\)/);
+  assert.match(readme, /hexsweeper-flux-sphere-run-v1/);
+  assert.match(workflow, /node flux-sphere\/test-flux-pairs\.js/);
+  assert.match(workflow, /node flux-sphere\/test-integration\.js/);
 });
 
 if (failures) {

@@ -26,6 +26,17 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 
 ## Current status (2026-08-13)
 
+- [x] Flux Sphere implements the archived “Dig one, reveal both” promise as
+      deterministic distant safe-face pairs on the shared Sphere engine.
+- [x] Linked reveals use one reveal-scoped engine API, stay inside canonical
+      flood, undo, persistence, and win handling, and never echo from mines.
+- [x] Flux has isolated save/run identity, keyboard controls, live text,
+      non-color endpoint glyphs, reduced-motion behavior, and normalized
+      exactly-once completion events.
+- [x] Flux pair, route, and Sphere lifecycle contracts cover deterministic
+      pairing, malformed restore rejection, held flagged echoes, first-dig
+      undo regeneration, safe linked floods, and canonical regressions.
+
 - [x] Glitch Sphere experimental route reuses the canonical Sphere engine with
       an isolated moving-hazard state machine and save lane.
 - [x] Deterministic state-machine and integration tests verify eligible spawn,

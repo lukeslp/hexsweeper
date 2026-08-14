@@ -23,6 +23,19 @@ jobs:
       - name: Sphere neighbor + flood closure smoke
         run: node sphere/test-neighbors.js
 
+      - name: Sphere optional variant contract
+        run: node sphere/test-variant-contract.js
+
+      - name: Glitch Sphere state and route contracts
+        run: |
+          node glitch-sphere/test-glitch-hazard.js
+          node glitch-sphere/test-integration.js
+
+      - name: Flux Sphere pair and route contracts
+        run: |
+          node flux-sphere/test-flux-pairs.js
+          node flux-sphere/test-integration.js
+
       - name: Water Wheel effect profile contract
         run: node wheel/test-effects.js
 

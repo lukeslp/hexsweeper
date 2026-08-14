@@ -96,6 +96,7 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 | `tools/app-launcher.html` | Shared web/native launcher source |
 | `tools/export-collection.py` | Regenerates web routes and collection one-pagers |
 | `sphere/` | Canonical closed 3D sphere game (Canvas projection) |
+| `flux-sphere/` | **Experimental** distant paired-reveal route on the shared Sphere engine |
 | `glitch-sphere/` | **Experimental** moving-hazard route on the shared Sphere engine |
 | `monkey-grid/` | **Experimental** flat Catch the Monkey route-blocking game |
 | `monkey-sphere/` | **Experimental** spherical Catch the Monkey portal chase |
@@ -212,6 +213,24 @@ Infinite, Classic, and Sphere are peers on the root launcher. The broader flat
 game remains at `play.html`; old root `?mode=`, `?theme=`, and `?deal=` links
 forward there.
 
+## Flux Sphere (experimental)
+
+[`flux-sphere/`](flux-sphere/) — https://dr.eamer.dev/games/hexsweeper/flux-sphere/
+
+Flux Sphere turns the archived “Dig one, reveal both” study into a complete
+variant on the canonical Sphere engine. After the first safe opening, every
+still-covered safe face receives a deterministic distant partner. A direct dig
+opens its partner through the same reveal and zero-flood logic, inside the same
+undo step. Pair identities stay hidden until triggered, so they do not disclose
+covered safe faces; a flagged partner holds the echo.
+
+The route has isolated `hexsweeper-flux-sphere-run-v1` persistence, reload
+restore, exactly-once completion events, keyboard-centered dig and flag
+controls, live text feedback, non-color linked glyphs, and a static
+reduced-motion treatment. Run `node flux-sphere/test-flux-pairs.js` and
+`node flux-sphere/test-integration.js` for deterministic pair, lifecycle,
+semantics, persistence, keyboard, and completion coverage.
+
 ## Glitch Sphere (experimental)
 
 [`glitch-sphere/`](glitch-sphere/) — https://dr.eamer.dev/games/hexsweeper/glitch-sphere/
@@ -233,8 +252,9 @@ console or local-resource failures. When Chrome is unavailable, the probe runs
 strict static route/resource checks and exits with status 2 so an interactive
 browser run is never reported as successful.
 
-The archive's flat Glitch Sweeper, Chain Reaction, and Flux Sphere pages remain
-archived mechanic studies. They are not shipped features of this route.
+The archive's flat Glitch Sweeper and Chain Reaction pages remain archived
+mechanic studies. The former label-only Flux page is now represented by the
+separate production Flux Sphere route.
 
 ## Catch the Monkey (experimental)
 
@@ -297,9 +317,10 @@ Smoke: `node polyhedron/test-campaign.js` (coverage, planarity, adjacency, 1/5/5
 
 [`choices.html`](choices.html) — https://dr.eamer.dev/games/hexsweeper/choices.html
 
-Curated entry for the three-board production launcher, Glitch Sphere, and ten
-lab skins (play via `choices/lab/` redirects or open from the collection desk).
-Copy HTML for lab pens is on [`collection/`](collection/) only.
+Curated entry for the three-board production launcher, the complete
+experimental game routes, and ten lab skins (play via `choices/lab/` redirects
+or open from the collection desk). Copy HTML for lab pens is on
+[`collection/`](collection/) only.
 Regenerate with `python3 tools/export-collection.py` and
 `python3 tools/export-choices-lab.py` after skin or engine changes. Not linked
 from the production theme switcher.
