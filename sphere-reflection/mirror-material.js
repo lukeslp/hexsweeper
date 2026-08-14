@@ -147,7 +147,7 @@
       shortLabel: "Oculus",
       fallback: ["#030608", "#315f76", "#f0a53c", "#16060a"],
       swatch: "conic-gradient(from 18deg, #ffb32c, #e32d28, #18aee1, #15b86c, #ffdc4b, #ffb32c)",
-      texture: { desktop: "assets/reflections/oculus-1280.webp", mobile: "assets/reflections/oculus-768.webp", speed: 0.00035, exposure: 0.90, saturation: 1.08, backdrop: 0.34, mapping: "hybrid", surfaceMix: 0.72, reflectionStrength: 0.28, roughness: 0.06 },
+      texture: { desktop: "assets/reflections/oculus-1280.webp", mobile: "assets/reflections/oculus-768.webp", speed: 0, exposure: 0.90, saturation: 1.08, backdrop: 0.34, mapping: "hybrid", surfaceMix: 0.72, reflectionStrength: 0.28, roughness: 0.06, motion: 4, motionAmount: 0.009, motionRate: 0.040, pulse: 0.0 },
     },
     {
       id: "galaxy",
@@ -276,6 +276,9 @@ uniform vec4 uTextureParams;
 uniform vec4 uTextureTransform;
 uniform vec4 uTextureMotion;
 uniform vec4 uTextureMapping;
+uniform vec4 uActionOrigin;
+uniform vec4 uActionState;
+uniform vec4 uDynamics;
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -354,6 +357,17 @@ vec3 stormglassEnvironment(vec3 ray) {
   color += warm * crown * (0.9 + cloud * 0.7);
   color += warm * horizon * cloud * 0.14;
 
+  // Stormglass owns a sparse internal flash, not a generic global pulse.
+  // The noise gate keeps strikes irregular while material time freezing keeps
+  // reduced-motion frames completely stable.
+  float flashCycle = floor(uTime * 0.22);
+  float flashSeed = hash21(vec2(flashCycle, 11.7));
+  float flashPhase = fract(uTime * 0.22);
+  float internalFlash = step(0.70, flashSeed) *
+    exp(-pow((flashPhase - 0.80) * 28.0, 2.0));
+  color += mix(vec3(0.55, 0.72, 0.88), vec3(1.0, 0.92, 0.76), uAppearance) *
+    internalFlash * (0.16 + cloud * 0.42);
+
   float abyss = smoothstep(0.22, 0.95, -ray.y);
   color = mix(color, vec3(0.0, 0.025, 0.055), abyss * (0.72 - uAppearance * 0.22));
   return color;
@@ -430,14 +444,15 @@ vec3 imageEnvironment(vec3 ray, float lod) {
   float latitude = asin(clamp(ray.y, -1.0, 1.0)) / 3.14159265 + 0.5;
   vec2 centered = vec2(longitude, latitude) - 0.5;
   vec2 uv = centered * uTextureTransform.xy + 0.5 + uTextureTransform.zw;
-  uv.x = fract(uv.x + uTime * uTextureParams.x);
 
   // Image plates opt into one of three restrained motion families. Motion is
   // applied before sampling so the sphere remains geometrically authoritative:
-  // weather drifts, ink folds around itself, and oil cells gently refract.
+  // weather drifts, ink folds around itself, oil cells merge, and stained
+  // glass separates light while rotating. Quiet plates stay truly still.
   float motionMode = uTextureMotion.x;
   float motionAmount = uTextureMotion.y;
   float motionTime = uTime * uTextureMotion.z;
+  uv.x = fract(uv.x + uTime * uTextureParams.x * step(0.5, motionMode));
   vec2 motionCenter = uv - 0.5;
   if (motionMode > 0.5 && motionMode < 1.5) {
     float cloudX = fbm(motionCenter * 3.2 + vec2(motionTime, -motionTime * 0.57));
@@ -454,19 +469,65 @@ vec3 imageEnvironment(vec3 ray, float lod) {
     ) - 0.5;
     uv = motionCenter + 0.5 + current * motionAmount * 0.12;
   } else if (motionMode > 2.5) {
-    vec2 wobble = vec2(
-      sin((uv.y + motionTime) * 17.0),
-      cos((uv.x - motionTime * 0.73) * 15.0)
-    );
-    float lens = fbm(motionCenter * 4.0 + vec2(motionTime * 0.5, -motionTime * 0.4)) - 0.5;
-    uv += (wobble * 0.55 + lens) * motionAmount;
+    if (motionMode < 3.5) {
+      // Two slow lenses approach, overlap, and part. Sampling bends around
+      // their boundaries, giving the static oil-cell plate a merging cadence.
+      vec2 lensA = vec2(
+        sin(motionTime * 0.83),
+        cos(motionTime * 0.61)
+      ) * 0.18;
+      vec2 lensB = vec2(
+        cos(motionTime * 0.57 + 1.4),
+        sin(motionTime * 0.74 + 0.9)
+      ) * 0.20;
+      vec2 deltaA = motionCenter - lensA;
+      vec2 deltaB = motionCenter - lensB;
+      float fieldA = exp(-dot(deltaA, deltaA) * 24.0);
+      float fieldB = exp(-dot(deltaB, deltaB) * 21.0);
+      vec2 lensFlow =
+        deltaA / max(length(deltaA), 0.035) * fieldA +
+        deltaB / max(length(deltaB), 0.035) * fieldB;
+      float membrane = fbm(motionCenter * 4.2 + vec2(motionTime * 0.42, -motionTime * 0.36)) - 0.5;
+      uv += (lensFlow * 0.72 + membrane * 0.42) * motionAmount;
+    }
   }
 
   uv.x = fract(uv.x);
   uv.y = clamp(uv.y, 0.002, 0.998);
   vec3 sampleColor = textureLod(uEnvironmentMap, uv, lod).rgb;
+  if (motionMode > 3.5) {
+    // The oculus is fixed into the rotating shell, but its channels refract at
+    // slightly different angles. Rotational energy briefly widens the split,
+    // then the image resolves back into one piece as the sphere settles.
+    float prismAngle = uRotation.x + uRotation.y * 0.73 + motionTime;
+    vec2 prismDirection = vec2(cos(prismAngle), sin(prismAngle));
+    float prismWidth = motionAmount * (0.45 + uDynamics.z * 1.9);
+    vec3 warmSample = textureLod(
+      uEnvironmentMap,
+      vec2(fract(uv.x + prismDirection.x * prismWidth), clamp(uv.y + prismDirection.y * prismWidth, 0.002, 0.998)),
+      lod
+    ).rgb;
+    vec3 coolSample = textureLod(
+      uEnvironmentMap,
+      vec2(fract(uv.x - prismDirection.x * prismWidth), clamp(uv.y - prismDirection.y * prismWidth, 0.002, 0.998)),
+      lod
+    ).rgb;
+    sampleColor = vec3(warmSample.r, sampleColor.g, coolSample.b);
+  }
   float luma = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
   sampleColor = mix(vec3(luma), sampleColor, uTextureParams.z) * uTextureParams.y;
+  if (motionMode > 0.5 && motionMode < 1.5) {
+    float flashCycle = floor(uTime * 0.24);
+    float flashSeed = hash21(vec2(flashCycle, uMaterial + 3.1));
+    float flashPhase = fract(uTime * 0.24);
+    float internalFlash = step(0.66, flashSeed) *
+      exp(-pow((flashPhase - 0.82) * 32.0, 2.0));
+    float cloudBody = smoothstep(0.20, 0.78, luma);
+    vec3 lightning = uMaterial > 14.5 && uMaterial < 16.5
+      ? vec3(1.0, 0.66, 0.34)
+      : vec3(0.62, 0.76, 1.0);
+    sampleColor += lightning * internalFlash * (0.18 + cloudBody * 0.48);
+  }
   float breathe = 0.5 + 0.5 * sin(uTime * 0.58 + longitude * 6.28318531);
   sampleColor *= 1.0 + uTextureMotion.w * (breathe - 0.35);
   sampleColor = mix(sampleColor, vec3(luma * 0.72 + 0.26), uAppearance * 0.24);
@@ -548,8 +609,54 @@ void main() {
       ) * 0.012 * normal.z;
       normal = normalize(vec3(normal.xy + liquid, normal.z));
     }
+    // The reflected highlight trails the authoritative Canvas sphere by only
+    // a few degrees. It is enough to communicate mass, while the tile geometry
+    // and hit testing remain exact and immediate.
+    normal = normalize(vec3(
+      normal.xy + vec2(-uDynamics.x, uDynamics.y) * 0.045 * normal.z,
+      normal.z
+    ));
+
+    vec2 actionDelta = orb - uActionOrigin.xy;
+    float actionDistance = length(actionDelta);
+    vec2 actionDirection = actionDelta / max(actionDistance, 0.001);
+    float actionAge = uActionState.x;
+    float actionKind = uActionOrigin.z;
+    float actionStrength = uActionOrigin.w;
+    float reactionGlow = 0.0;
+    float reactionHeat = 0.0;
+    float reactionDistortion = 0.0;
+    if (actionKind > 0.5 && actionKind < 1.5) {
+      float crest = exp(-pow((actionDistance - actionAge * 0.50) * 18.0, 2.0)) *
+        exp(-actionAge * 1.45);
+      float echo = sin(actionDistance * 34.0 - actionAge * 11.0) *
+        exp(-actionDistance * 4.4) * exp(-actionAge * 2.8);
+      reactionDistortion = (crest * 0.016 + echo * 0.0035) * actionStrength;
+      reactionGlow = crest * 0.13 * actionStrength;
+    } else if (actionKind > 1.5 && actionKind < 2.5) {
+      float pinEnvelope = exp(-actionAge * 3.1);
+      float pin = exp(-actionDistance * actionDistance * 115.0) * pinEnvelope;
+      float tension = exp(-pow((actionDistance - 0.13 - actionAge * 0.035) * 27.0, 2.0)) *
+        pinEnvelope;
+      reactionDistortion = (-pin * 0.010 + tension * 0.006) * actionStrength;
+      reactionGlow = tension * 0.09 * abs(actionStrength);
+    } else if (actionKind > 2.5) {
+      float shock = exp(-pow((actionDistance - actionAge * 0.62) * 11.5, 2.0)) *
+        exp(-actionAge * 0.38);
+      reactionDistortion = shock * 0.064 * actionStrength;
+      reactionGlow = shock * 0.48 + exp(-actionAge * 5.2) * 0.62;
+      reactionHeat = shock * 0.52 + exp(-actionAge * 3.4) * 0.34;
+    }
+    normal = normalize(vec3(
+      normal.xy + actionDirection * reactionDistortion * normal.z,
+      normal.z
+    ));
     vec3 reflected = cameraEnvironmentRay(reflect(vec3(0.0, 0.0, -1.0), normal));
-    float fresnel = pow(1.0 - max(normal.z, 0.0), 2.35);
+    float motionEnergy = clamp(uDynamics.z, 0.0, 1.0);
+    float fresnel = pow(
+      1.0 - max(normal.z, 0.0),
+      mix(2.35, 1.92, motionEnergy)
+    );
     vec3 mirror;
     if (uMaterial > 4.5 && uTextureReady > 0.5 && uTextureMapping.x > 0.5) {
       vec3 surfaceRay = inverseSphereRotation(normal);
@@ -581,6 +688,27 @@ void main() {
       fresnel * (0.30 + reflectionStrength * 0.50)
     );
     mirror += vec3(0.72, 0.88, 0.95) * pow(fresnel, 2.0) * 0.2;
+    mirror += materialAccent() * reactionGlow;
+    mirror += mix(vec3(0.78, 0.90, 1.0), vec3(1.0, 0.24, 0.08), reactionHeat) *
+      reactionHeat * 0.72;
+
+    float tableauKind = uActionState.y;
+    float tableauAge = uActionState.z;
+    if (tableauKind > 0.5) {
+      float settle = smoothstep(0.0, 1.45, tableauAge);
+      float flourish = exp(-max(0.0, tableauAge - 0.65) * 0.78);
+      float sweepPhase = atan(orb.y, orb.x) + distanceFromCenter * 3.7 - tableauAge * 0.62;
+      float victorySweep = pow(max(cos(sweepPhase), 0.0), 16.0) * flourish;
+      mirror += materialAccent() * victorySweep * 0.34;
+      mirror *= 1.0 + settle * 0.055;
+      mirror += vec3(0.72, 0.90, 0.96) * pow(fresnel, 1.4) * settle * 0.10;
+    } else if (tableauKind < -0.5) {
+      float aftermath = smoothstep(1.0, 2.45, tableauAge);
+      float mirrorLuma = dot(mirror, vec3(0.2126, 0.7152, 0.0722));
+      mirror = mix(mirror, vec3(mirrorLuma * 0.54), aftermath * 0.34);
+      mirror += vec3(0.42, 0.025, 0.012) * pow(fresnel, 1.25) * aftermath * 0.34;
+      mirror *= 1.0 - aftermath * 0.12;
+    }
 
     float mask = 1.0 - smoothstep(0.986, 1.018, distanceFromCenter);
     color = mix(color, mirror, mask);
@@ -637,6 +765,16 @@ void main() {
       this.appearance = 0;
       this.axes = { field: "dark", shell: "dark", well: "light" };
       this.pointer = { x: 0, y: 0, tx: 0, ty: 0 };
+      this.reflectionRotation = {
+        rotY: 0,
+        rotX: 0,
+        velocityY: 0,
+        velocityX: 0,
+        initialized: false,
+        energy: 0,
+      };
+      this.action = { kind: 0, index: -1, strength: 0, startedAt: 0 };
+      this.tableau = { kind: 0, startedAt: 0 };
       this.startedAt = performance.now();
       this.materialTime = 0;
       this.lastTimeAt = this.startedAt;
@@ -692,6 +830,9 @@ void main() {
           "uTextureTransform",
           "uTextureMotion",
           "uTextureMapping",
+          "uActionOrigin",
+          "uActionState",
+          "uDynamics",
         ].forEach((name) => {
           this.uniforms[name] = gl.getUniformLocation(this.program, name);
         });
@@ -737,9 +878,11 @@ void main() {
         if (document.hidden) this.stop();
         else this.start();
       };
+      this.onSphereAction = (event) => this.handleSphereAction(event.detail || {});
       addEventListener("resize", this.onResize, { passive: true });
       addEventListener("pointermove", this.onPointerMove, { passive: true });
       document.addEventListener("visibilitychange", this.onVisibility);
+      document.addEventListener("hexsweeper:sphere-action", this.onSphereAction);
       this.canvas.addEventListener("webglcontextlost", (event) => {
         event.preventDefault();
         this.stop();
@@ -855,6 +998,16 @@ void main() {
 
     attach(game) {
       this.game = game;
+      const state = typeof game.getState === "function" ? game.getState() : null;
+      if (state) {
+        this.reflectionRotation.rotY = state.rotY || 0;
+        this.reflectionRotation.rotX = state.rotX || 0;
+        this.reflectionRotation.initialized = true;
+        if (state.isGameOver) {
+          this.tableau.kind = state.won ? 1 : -1;
+          this.tableau.startedAt = performance.now() - 2600;
+        }
+      }
       this.resize();
       const material = this;
       const facade = Object.assign({}, game, {
@@ -876,6 +1029,90 @@ void main() {
       });
       this.facade = facade;
       return facade;
+    }
+
+    handleSphereAction(detail) {
+      const now = performance.now();
+      if (detail.type === "reset") {
+        this.action = { kind: 0, index: -1, strength: 0, startedAt: 0 };
+        this.tableau = { kind: 0, startedAt: 0 };
+        return;
+      }
+      if (detail.type === "finish") {
+        this.tableau = { kind: detail.won ? 1 : -1, startedAt: now };
+        return;
+      }
+      const kind = detail.type === "dig"
+        ? 1
+        : detail.type === "flag" || detail.type === "unflag"
+          ? 2
+          : detail.type === "detonate" ? 3 : 0;
+      if (!kind) return;
+      this.action = {
+        kind,
+        index: Number.isInteger(detail.index) ? detail.index : -1,
+        strength: detail.type === "unflag"
+          ? -Math.abs(detail.strength || 1)
+          : Math.abs(detail.strength || 1),
+        startedAt: now,
+      };
+    }
+
+    shortestAngle(from, to) {
+      const tau = Math.PI * 2;
+      return ((to - from + Math.PI) % tau + tau) % tau - Math.PI;
+    }
+
+    updateReflectionDynamics(state, elapsedSeconds, motionReduced) {
+      const motion = this.reflectionRotation;
+      const targetY = state.rotY || 0;
+      const targetX = state.rotX || 0;
+      if (!motion.initialized || motionReduced) {
+        motion.rotY = targetY;
+        motion.rotX = targetX;
+        motion.velocityY = 0;
+        motion.velocityX = 0;
+        motion.energy = 0;
+        motion.initialized = true;
+        return motion;
+      }
+
+      const dt = Math.min(0.05, Math.max(0.001, elapsedSeconds));
+      const stiffness = 92;
+      const drag = Math.exp(-15.5 * dt);
+      motion.velocityY = (motion.velocityY + this.shortestAngle(motion.rotY, targetY) * stiffness * dt) * drag;
+      motion.velocityX = (motion.velocityX + this.shortestAngle(motion.rotX, targetX) * stiffness * dt) * drag;
+      motion.rotY += motion.velocityY * dt;
+      motion.rotX += motion.velocityX * dt;
+      const lagY = this.shortestAngle(motion.rotY, targetY);
+      const lagX = this.shortestAngle(motion.rotX, targetX);
+      const kinetic = Math.hypot(motion.velocityY, motion.velocityX) * 0.26;
+      const displacement = Math.hypot(lagY, lagX) * 1.9;
+      const targetEnergy = Math.min(1, kinetic + displacement);
+      motion.energy += (targetEnergy - motion.energy) * (targetEnergy > motion.energy ? 0.32 : 0.10);
+      motion.lagY = lagY;
+      motion.lagX = lagX;
+      return motion;
+    }
+
+    actionUniform(state, disk, time, motionReduced) {
+      const action = this.action;
+      if (!action.kind || action.index < 0 || motionReduced) return [0, 0, 0, 0, 0];
+      const duration = action.kind === 1 ? 1.55 : action.kind === 2 ? 1.25 : 2.75;
+      const age = Math.max(0, (time - action.startedAt) * 0.001);
+      if (age > duration || !state.tiles || !state.tiles[action.index]) {
+        this.action.kind = 0;
+        return [0, 0, 0, 0, 0];
+      }
+      const projected = this.game.projectTile(
+        state.tiles[action.index],
+        state.rotY || 0,
+        state.rotX || 0
+      );
+      const front = Math.max(0, Math.min(1, (projected.normalZ + 0.08) / 0.32));
+      const x = (projected.center.x - disk.cx) / Math.max(1, disk.r * 0.945);
+      const y = (disk.cy - projected.center.y) / Math.max(1, disk.r * 0.945);
+      return [x, y, action.kind, action.strength * front, age];
     }
 
     setAppearance(mode) {
@@ -978,6 +1215,11 @@ void main() {
 
       const disk = this.game.getSphereScreen();
       const state = this.game.getState();
+      const dynamics = this.updateReflectionDynamics(state, dt * 0.001, motionReduced);
+      const action = this.actionUniform(state, disk, time, motionReduced);
+      const tableauAge = this.tableau.kind
+        ? Math.max(0, (time - this.tableau.startedAt) * 0.001)
+        : 0;
       const sx = this.canvas.width / Math.max(1, this.canvas.clientWidth);
       const sy = this.canvas.height / Math.max(1, this.canvas.clientHeight);
       const radiusScale = (sx + sy) * 0.5;
@@ -1026,7 +1268,28 @@ void main() {
         this.canvas.height - disk.cy * sy
       );
       gl.uniform2f(this.uniforms.uPointer, this.pointer.x, -this.pointer.y);
-      gl.uniform2f(this.uniforms.uRotation, state.rotY || 0, state.rotX || 0);
+      gl.uniform2f(this.uniforms.uRotation, dynamics.rotY, dynamics.rotX);
+      gl.uniform4f(
+        this.uniforms.uActionOrigin,
+        action[0],
+        action[1],
+        action[2],
+        action[3]
+      );
+      gl.uniform4f(
+        this.uniforms.uActionState,
+        action[4],
+        this.tableau.kind,
+        motionReduced && this.tableau.kind ? Math.max(2.6, tableauAge) : tableauAge,
+        0
+      );
+      gl.uniform4f(
+        this.uniforms.uDynamics,
+        dynamics.lagY || 0,
+        dynamics.lagX || 0,
+        dynamics.energy || 0,
+        0
+      );
       gl.uniform1f(this.uniforms.uRadius, disk.r * radiusScale * 0.945);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.texture);

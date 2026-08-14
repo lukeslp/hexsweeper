@@ -798,6 +798,17 @@
       mineDue: null,
     };
 
+    /**
+     * Reflection materials are an optional observer of gameplay. The Canvas
+     * engine remains authoritative; these semantic events add optical response
+     * without replacing reveal, flag, mine, or end-state animation paths.
+     */
+    function emitMaterialAction(type, index, detail) {
+      document.dispatchEvent(new CustomEvent("hexsweeper:sphere-action", {
+        detail: Object.assign({ type, index }, detail || {}),
+      }));
+    }
+
     function freshCell() {
       return {
         isMine: false,
@@ -1616,6 +1627,7 @@
       bakeGlobeTileColors();
       updateUI();
       if (!optsReset.keepPersist) clearPersist();
+      emitMaterialAction("reset", -1);
     }
 
     /**
@@ -2029,6 +2041,7 @@
       END_FX.particles.length = 0;
       END_FX.rings.length = 0;
       state.camShake = state.reduceMotion ? 0 : 14;
+      emitMaterialAction("detonate", detonatorIdx, { strength: 1 });
 
       const distMap = graphDistancesFrom(detonatorIdx);
       END_FX.mineDue = new Map();
@@ -2281,7 +2294,12 @@
         gameOver(false);
         return;
       }
-      if (cell.neighborMines === 0) floodFrom(idx);
+      let openedCount = 1;
+      if (cell.neighborMines === 0) openedCount += floodFrom(idx).size;
+      emitMaterialAction("dig", idx, {
+        strength: Math.min(1.35, 0.72 + openedCount / 18),
+        opened: openedCount,
+      });
       checkWin();
       persistNow();
     }
@@ -2320,6 +2338,9 @@
       if (!cell || cell.revealed || state.isGameOver) return;
       cell.flagged = !cell.flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
+      emitMaterialAction(cell.flagged ? "flag" : "unflag", idx, {
+        strength: 1,
+      });
       updateUI();
       persistNow();
     }
@@ -2339,6 +2360,14 @@
     function gameOver(won) {
       state.isGameOver = true;
       state.won = won;
+      state.ambientSpin = false;
+      if (won && !state.reduceMotion) {
+        state.targetRotY = state.rotY + 0.16;
+        state.targetRotX = state.rotX + angleDelta(state.rotX, 0.18) * 0.28;
+      } else {
+        state.targetRotY = state.rotY;
+        state.targetRotX = state.rotX;
+      }
       stopTimer();
       if (!won) {
         startLoseFx(state.detonatorIdx >= 0 ? state.detonatorIdx : 0);
@@ -2350,6 +2379,7 @@
           meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
         });
       }
+      emitMaterialAction("finish", -1, { won: !!won });
       persistNow();
     }
 
