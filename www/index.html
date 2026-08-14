@@ -98,7 +98,7 @@
     --brand-shadow: rgba(232, 238, 245, .72);
     --hint-shadow: rgba(232, 238, 245, .84);
     --dug-ink: #d9dfe7;
-    --hex-w: clamp(64px, 21vw, 96px);
+    --hex-w: clamp(58px, 19vw, 86px);
     --hex-h: calc(var(--hex-w) * 1.1547);
     --choice-scale: 1.08;
     --board-x: 0px;
@@ -166,7 +166,11 @@
     isolation: isolate;
     overflow: hidden;
   }
-  .field { z-index: 0; pointer-events: none; }
+  .field {
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+  }
   .hex {
     position: absolute;
     left: calc(50% + var(--board-x));
@@ -282,7 +286,7 @@
   .resume-name,
   .theme-name {
     max-width: 92%;
-    font-size: clamp(.7rem, 3.2vw, .84rem);
+    font-size: clamp(.62rem, calc(var(--hex-w) * .145), .84rem);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -.02em;
@@ -362,8 +366,8 @@
   .mode-icon,
   .resume-icon,
   .theme-icon {
-    width: clamp(27px, 7.5vw, 36px);
-    height: clamp(27px, 7.5vw, 36px);
+    width: clamp(22px, calc(var(--hex-w) * .36), 36px);
+    height: clamp(22px, calc(var(--hex-w) * .36), 36px);
     overflow: visible;
   }
   .mode-note,
@@ -372,7 +376,7 @@
     max-width: 92%;
     color: currentColor;
     opacity: .58;
-    font-size: clamp(.5rem, 2.15vw, .62rem);
+    font-size: clamp(.46rem, calc(var(--hex-w) * .105), .62rem);
     font-weight: 600;
     line-height: 1;
     letter-spacing: .025em;
@@ -473,11 +477,11 @@
     z-index: 6;
     cursor: pointer;
     pointer-events: auto;
-    background: var(--control-accent, var(--theme-accent));
-    transform: translate3d(var(--x), var(--y), 0) scale(1.025);
+    background: color-mix(in srgb, var(--control-accent, var(--theme-accent)) 58%, var(--tile-edge));
+    transform: translate3d(var(--x), var(--y), 0) scale(.97);
     filter:
       drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 88%, transparent))
-      drop-shadow(0 0 8px color-mix(in srgb, var(--control-accent, var(--theme-accent)) 28%, transparent));
+      drop-shadow(0 0 6px color-mix(in srgb, var(--control-accent, var(--theme-accent)) 20%, transparent));
   }
   .theme-hub.is-available::before { inset: 3px 4px 7px; }
   .theme-hub.is-available .theme-content { opacity: 1; transform: none; }
@@ -544,11 +548,24 @@
   .size-choice { --control-accent: var(--classic-accent); }
   .style-hub,
   .style-choice { --control-accent: var(--sphere-accent); }
-  .board[data-open-branch="infinite"] { --board-y: clamp(34px, 9vw, 46px); }
-  .board[data-open-branch="size"] { --board-x: clamp(-48px, -11vw, -38px); }
-  .board[data-open-branch="style"] {
-    --board-x: clamp(32px, 9vw, 44px);
-    --board-y: clamp(-36px, -9vw, -28px);
+  .board[data-open-branch] .field { opacity: .56; }
+  .board[data-open-branch] .mode,
+  .board[data-open-branch] .resume,
+  .board[data-open-branch] .theme-hub {
+    opacity: .16;
+    pointer-events: none;
+  }
+  .board[data-open-branch="infinite"] .mode-infinite,
+  .board[data-open-branch="infinite"] .infinite-hub,
+  .board[data-open-branch="size"] .mode-bounded,
+  .board[data-open-branch="size"] .size-hub,
+  .board[data-open-branch="style"] .mode-sphere,
+  .board[data-open-branch="style"] .style-hub {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .board[data-open-branch] .theme-hub.is-expanded {
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
   }
 
   .board[data-phase="clearing"] .starter { animation: hit 220ms cubic-bezier(.22, 1, .36, 1) both; }
@@ -581,7 +598,7 @@
     max-width: calc(100vw - 32px);
     pointer-events: none;
     text-align: center;
-    white-space: nowrap;
+    width: min(30rem, calc(100vw - 32px));
   }
   .brand {
     margin: 0;
@@ -603,6 +620,7 @@
     letter-spacing: .02em;
     text-shadow: 0 1px 8px var(--hint-shadow);
     text-shadow: 0 1px 8px color-mix(in srgb, var(--field) 84%, transparent);
+    text-wrap: balance;
     transition: color 180ms ease;
   }
 
@@ -673,7 +691,7 @@
       opacity: .45;
       transform: translate3d(var(--x), calc(var(--y) + 7px), 0) scale(.9);
     }
-    to { transform: translate3d(var(--x), var(--y), 0) scale(1.025); }
+    to { transform: translate3d(var(--x), var(--y), 0) scale(.97); }
   }
   @keyframes theme-bloom {
     from {
@@ -748,7 +766,7 @@
       </span>
     </a>
 
-    <button class="hex theme-control theme-hub infinite-hub" id="infinite-toggle" type="button" data-branch="infinite" data-q="0" data-r="-2" aria-describedby="menu-status" aria-expanded="false" aria-controls="infinite-light infinite-dark infinite-effects" aria-label="Choose Infinite settings" disabled>
+    <button class="hex theme-control theme-hub infinite-hub" id="infinite-toggle" type="button" data-branch="infinite" data-owner-mode="infinite" data-out-q="0" data-out-r="-1" data-q="0" data-r="-2" aria-describedby="menu-status" aria-expanded="false" aria-controls="infinite-light infinite-dark infinite-effects" aria-label="Choose Infinite settings" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -758,25 +776,25 @@
       </span>
     </button>
 
-    <button class="hex theme-control theme-hub size-hub" id="size-toggle" type="button" data-branch="size" data-q="2" data-r="0" aria-describedby="menu-status" aria-expanded="false" aria-controls="size-small size-medium size-large" aria-label="Choose Classic board settings" disabled>
+    <button class="hex theme-control theme-hub size-hub" id="size-toggle" type="button" data-branch="size" data-owner-mode="bounded" data-out-q="1" data-out-r="0" data-q="2" data-r="0" aria-describedby="menu-status" aria-expanded="false" aria-controls="size-small size-medium size-large" aria-label="Choose Classic board settings" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.8"/>
           <path d="M14 30h4V18h-4m9 12V18l4 7 4-7v12" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="theme-name">Board</span>
+        <span class="theme-name">Settings</span>
         <span class="theme-note" id="size-current">Medium</span>
       </span>
     </button>
 
-    <button class="hex theme-control theme-hub style-hub" id="style-toggle" type="button" data-branch="style" data-q="-2" data-r="2" aria-describedby="menu-status" aria-expanded="false" aria-controls="style-light style-shell style-glow style-invert" aria-label="Choose Sphere settings" disabled>
+    <button class="hex theme-control theme-hub style-hub" id="style-toggle" type="button" data-branch="style" data-owner-mode="sphere" data-out-q="-1" data-out-r="1" data-q="-2" data-r="2" aria-describedby="menu-status" aria-expanded="false" aria-controls="style-light style-shell style-glow style-invert" aria-label="Choose Sphere settings" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
           <circle cx="24" cy="24" r="16" fill="none" stroke="currentColor" stroke-width="1.8"/>
           <path d="M24 8a16 16 0 0 0 0 32Z" fill="currentColor" opacity=".82"/>
           <path d="M8 24h32M24 8c-6 5-8 10-8 16s2 11 8 16" fill="none" stroke="currentColor" stroke-width="1.2"/>
         </svg>
-        <span class="theme-name">Style</span>
+        <span class="theme-name">Settings</span>
         <span class="theme-note" id="style-current">Light</span>
       </span>
     </button>
@@ -851,6 +869,7 @@
 
   var board = document.getElementById("game-menu");
   var field = document.getElementById("menu-field");
+  var masthead = board.querySelector(".masthead");
   var starter = document.getElementById("opening-dig");
   var resume = document.getElementById("resume-game");
   var resumeModeName = document.getElementById("resume-mode-name");
@@ -871,12 +890,13 @@
       })
     };
   });
+  var directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+  layoutBranchChoices();
   var positionedControls = [starter, resume].concat(modes, branchHubs, branchChoices);
   var reservedSeats = {};
   positionedControls.forEach(function (control) {
     reservedSeats[key(Number(control.dataset.q), Number(control.dataset.r))] = true;
   });
-  var directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
   var cells = new Map();
   var mines = new Set();
   var revealed = new Set();
@@ -921,6 +941,103 @@
 
   function key(q, r) { return q + "," + r; }
   function distance(q, r) { return Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)); }
+
+  function axialPoint(q, r) {
+    return { x: q + r / 2, y: .8660254 * r };
+  }
+
+  function layoutBranchChoices() {
+    var fixedSeats = {};
+    [starter, resume].concat(modes, branchHubs).forEach(function (control) {
+      fixedSeats[key(Number(control.dataset.q), Number(control.dataset.r))] = true;
+    });
+    Object.keys(branches).forEach(function (branchName) {
+      var branch = branches[branchName];
+      var hubQ = Number(branch.hub.dataset.q);
+      var hubR = Number(branch.hub.dataset.r);
+      var outward = axialPoint(Number(branch.hub.dataset.outQ), Number(branch.hub.dataset.outR));
+      var candidates = [];
+      for (var radius = 1; radius <= 6; radius += 1) {
+        for (var relR = -radius; relR <= radius; relR += 1) {
+          for (var relQ = -radius; relQ <= radius; relQ += 1) {
+            if (distance(relQ, relR) !== radius) continue;
+            var q = hubQ + relQ;
+            var r = hubR + relR;
+            if (fixedSeats[key(q, r)]) continue;
+            var point = axialPoint(relQ, relR);
+            candidates.push({
+              q: q,
+              r: r,
+              radius: radius,
+              forward: point.x * outward.x + point.y * outward.y,
+              cross: Math.abs(point.x * outward.y - point.y * outward.x)
+            });
+          }
+        }
+      }
+      candidates.sort(function (a, b) {
+        return a.radius - b.radius || b.forward - a.forward || a.cross - b.cross || a.r - b.r || a.q - b.q;
+      });
+      branch.choices.forEach(function (choice, index) {
+        var seat = candidates[index];
+        if (!seat) return;
+        choice.dataset.q = String(seat.q);
+        choice.dataset.r = String(seat.r);
+        choice.dataset.layoutIndex = String(index);
+      });
+    });
+  }
+
+  function layoutControls() {
+    if (activeBranch && branches[activeBranch]) {
+      var branch = branches[activeBranch];
+      var owner = modes.find(function (mode) {
+        return mode.dataset.mode === branch.hub.dataset.ownerMode;
+      });
+      return [owner, branch.hub].concat(branch.choices).filter(Boolean);
+    }
+    if (phase === "covered" || phase === "clearing") return [starter];
+    return [starter]
+      .concat(resume.hidden ? [] : [resume])
+      .concat(modes, branchHubs);
+  }
+
+  function fitLayout() {
+    var viewportWidth = Math.max(280, document.documentElement.clientWidth || innerWidth);
+    var viewportHeight = Math.max(320, document.documentElement.clientHeight || innerHeight);
+    var controls = layoutControls();
+    var minX = Infinity;
+    var maxX = -Infinity;
+    var minY = Infinity;
+    var maxY = -Infinity;
+    controls.forEach(function (control) {
+      var point = axialPoint(Number(control.dataset.q), Number(control.dataset.r));
+      minX = Math.min(minX, point.x - .6);
+      maxX = Math.max(maxX, point.x + .6);
+      minY = Math.min(minY, point.y - .68);
+      maxY = Math.max(maxY, point.y + .68);
+    });
+    if (!Number.isFinite(minX)) return;
+    var top = Math.max(76, masthead.getBoundingClientRect().bottom + 16);
+    var bottom = viewportHeight - 20;
+    var availableWidth = Math.max(240, viewportWidth - 28);
+    var availableHeight = Math.max(200, bottom - top);
+    var maxHexWidth = Math.min(86, viewportWidth * .19);
+    var width = Math.min(
+      maxHexWidth,
+      availableWidth / Math.max(1, maxX - minX),
+      availableHeight / Math.max(1, maxY - minY)
+    );
+    width = Math.max(44, width);
+    var unitsCenterX = (minX + maxX) / 2;
+    var unitsCenterY = (minY + maxY) / 2;
+    var targetCenterY = top + availableHeight / 2;
+    board.style.setProperty("--hex-w", width.toFixed(2) + "px");
+    board.style.setProperty("--board-x", (-unitsCenterX * width).toFixed(2) + "px");
+    board.style.setProperty("--board-y", (targetCenterY - viewportHeight / 2 - unitsCenterY * width).toFixed(2) + "px");
+    buildField();
+  }
+
   function effectsReduced() {
     if (effectsPreference === "reduced") return true;
     if (effectsPreference === "full") return false;
@@ -1071,8 +1188,13 @@
     var probe = starter.getBoundingClientRect();
     var width = probe.width;
     var height = probe.height;
-    var qLimit = Math.ceil(innerWidth / width) + 4;
-    var rLimit = Math.ceil(innerHeight / (height * .75) / 2) + 4;
+    var viewportWidth = document.documentElement.clientWidth || innerWidth;
+    var viewportHeight = document.documentElement.clientHeight || innerHeight;
+    var boardStyles = getComputedStyle(board);
+    var boardShiftX = Math.abs(parseFloat(boardStyles.getPropertyValue("--board-x")) || 0);
+    var boardShiftY = Math.abs(parseFloat(boardStyles.getPropertyValue("--board-y")) || 0);
+    var qLimit = Math.ceil((viewportWidth + boardShiftX * 2) / width) + 4;
+    var rLimit = Math.ceil((viewportHeight + boardShiftY * 2) / (height * .75) / 2) + 4;
     var fragment = document.createDocumentFragment();
 
     for (var r = -Math.ceil(rLimit); r <= Math.ceil(rLimit); r += 1) {
@@ -1081,7 +1203,7 @@
         if (reservedSeats[id]) continue;
         var x = width * (q + r / 2);
         var y = height * .75 * r;
-        if (Math.abs(x) > innerWidth / 2 + width || Math.abs(y) > innerHeight / 2 + height) continue;
+        if (Math.abs(x) > viewportWidth / 2 + boardShiftX + width || Math.abs(y) > viewportHeight / 2 + boardShiftY + height) continue;
         var cell = document.createElement("span");
         var count = countAt(q, r);
         cell.className = "hex cell" + (count ? " count-" + Math.min(4, count) : "");
@@ -1247,6 +1369,7 @@
       choice.classList.add("is-available");
     });
     updateReadyStatus();
+    fitLayout();
     if (event && event.detail === 0) {
       var target = selectedBranchChoice(branchName);
       if (target) target.focus({ preventScroll: true });
@@ -1268,6 +1391,7 @@
       choice.setAttribute("aria-hidden", "true");
     });
     updateReadyStatus();
+    fitLayout();
     if (opts.focus) branch.hub.focus({ preventScroll: true });
   }
 
@@ -1331,6 +1455,7 @@
     });
     refreshResume();
     updateReadyStatus();
+    fitLayout();
     rememberReady();
     keyboardOpening = false;
     pointerOpening = false;
@@ -1462,7 +1587,7 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
       if (phase === "clearing") finishOpening(true);
-      buildField();
+      fitLayout();
     }, 80);
   });
   addEventListener("pageshow", function (event) {
@@ -1490,7 +1615,7 @@
   else if (colorScheme.addListener) colorScheme.addListener(applyAppearance);
 
   buildMines();
-  buildField();
+  fitLayout();
   var alreadyOpened = false;
   try { alreadyOpened = sessionStorage.getItem(SESSION_KEY) === "1"; } catch (_) {}
   if (alreadyOpened) finishOpening(true);

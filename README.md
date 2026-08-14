@@ -11,6 +11,10 @@ open well between each mode. Each mode has its own connected **Settings** face:
 Infinite offers Light / Dark and effects, Classic offers Small / Medium / Large,
 and Sphere offers Light / Shell / Glow plus drag direction. The newest unfinished
 Infinite or Sphere run appears as a mode-colored **Resume** face in the center.
+The launcher fits the complete flower to the current viewport, then recenters
+the active mode and its settings choices when a branch opens. Choice positions
+are generated from branch data, leaving room to add more launch-time materials
+without platform-specific layout work.
 
 | Mode | Board | Source |
 |---|---|---|
