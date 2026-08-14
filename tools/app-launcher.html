@@ -606,7 +606,7 @@
     to { transform: translate3d(var(--x), var(--y), 0) scale(1.045); }
   }
 </style>
-</head>
+{{PLATFORM_HEAD}}</head>
 <body>
 <main>
   <nav class="board" id="game-menu" data-phase="covered" aria-label="Choose a Hexsweeper board">
@@ -627,7 +627,7 @@
       </span>
     </button>
 
-    <a class="hex resume destination" id="resume-game" href="games/infinite.html" data-q="0" data-r="0" data-mode="infinite" aria-describedby="menu-status" aria-label="Resume Infinite Hexsweeper" hidden>
+    <a class="hex resume destination" id="resume-game" href="{{INFINITE_HREF}}" data-q="0" data-r="0" data-mode="infinite" aria-describedby="menu-status" aria-label="Resume Infinite Hexsweeper" hidden>
       <span class="resume-content">
         <svg class="resume-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M13 17H6v-7M7 17a18 18 0 1 1-1 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -638,7 +638,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-infinite destination" href="games/infinite.html" data-mode="infinite" data-q="0" data-r="-1" aria-label="Play Infinite Hexsweeper, endless board">
+    <a class="hex mode mode-infinite destination" href="{{INFINITE_HREF}}" data-mode="infinite" data-q="0" data-r="-1" aria-label="Play Infinite Hexsweeper, endless board">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -648,7 +648,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-bounded destination" href="games/bounded.html" data-mode="bounded" data-q="1" data-r="0" aria-label="Play Classic Hexsweeper, fixed board">
+    <a class="hex mode mode-bounded destination" href="{{BOUNDED_HREF}}" data-mode="bounded" data-q="1" data-r="0" aria-label="Play Classic Hexsweeper, fixed board">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
@@ -659,7 +659,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-sphere destination" href="games/sphere.html" data-mode="sphere" data-q="-1" data-r="1" aria-label="Play Sphere Hexsweeper, 3D globe">
+    <a class="hex mode mode-sphere destination" href="{{SPHERE_HREF}}" data-mode="sphere" data-q="-1" data-r="1" aria-label="Play Sphere Hexsweeper, 3D globe">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -780,7 +780,7 @@
     return {
       mode: "infinite",
       name: "Infinite",
-      href: "games/infinite.html",
+      href: "{{INFINITE_HREF}}",
       savedAt: Number(data.savedAt) || 0
     };
   }
@@ -800,7 +800,7 @@
         var candidate = {
           mode: "sphere",
           name: "Sphere",
-          href: "games/sphere.html",
+          href: "{{SPHERE_HREF}}",
           savedAt: Number(data.savedAt) || 0
         };
         if (!best || candidate.savedAt >= best.savedAt) best = candidate;
@@ -1204,5 +1204,5 @@
   else timers.push(setTimeout(function () { startOpening(); }, 220));
 })();
 </script>
-</body>
+{{PLATFORM_TAIL}}</body>
 </html>

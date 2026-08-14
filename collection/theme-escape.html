@@ -23,6 +23,7 @@
 <meta name="twitter:title" content="Rift Chase Hexagonal Minesweeper">
 <meta name="twitter:description" content="Dig toward an offscreen exit on slate while a glacial rift seeps after your clears, with six neighbors instead of eight.">
 <meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/escape-og.png">
+<link rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/collection/theme-escape.html">
 <meta name="theme-color" content="#d4dce8">
 <style>
 /* skin-chrome.css */
@@ -4416,7 +4417,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     hard: { radius: 10, mines: 70, cellSize: 34 },
   };
 
-  // Bare URL opens Light. Explicit ?mode= deep-links; storage restores last theme.
+  // Bare play.html opens Light. Explicit ?mode= deep-links; storage restores last theme.
   // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome }.
   // allowModes: ["light","dark"] keeps the plate toggle; omit for a single locked theme.
   const ONEPAGER =
@@ -8900,7 +8901,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   function gameModeHref(mode) {
     const inCollection =
       ONEPAGER_ACTIVE && window.HEXSWEEPER_COLLECTION_EXPORT;
-    return inCollection ? `../index.html?mode=${mode}` : `?mode=${mode}`;
+    return inCollection ? `../play.html?mode=${mode}` : `?mode=${mode}`;
   }
 
   const HELP_COPY = {

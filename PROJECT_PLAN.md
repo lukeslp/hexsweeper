@@ -2,14 +2,27 @@
 
 ## Objective
 
-Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, with a clear five-theme product surface (Light / Dark / Fire / Plague / Escape; Water demoted to the collection archive) and a retained skin lab as dormant prior art.
+Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev,
+opening through three structural boards — Infinite, Classic, and Sphere — while
+preserving the five-mode flat game and the skin lab as deeper product surfaces.
 
 ## Architecture
 
 - **Static artifact** under `www/dr.eamer.dev/games/hexsweeper/` (symlink: `~/dr.eamer.dev`).
 - **`core.js`**: axial hex map, finite + endless modes, input (mouse/touch), flood reveal, flags, RAF loop, skin hooks.
-- **`index.html`**: production chrome + declarative product profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes; renderers remain in place.
+- **`tools/app-launcher.html` → `index.html`**: shared native/web safe-opening launcher.
+- **`infinite.html` / `bounded.html`**: generated web product pages from the plate and Classic collection exports.
+- **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
+
+## Current status (2026-08-14)
+
+- [x] Shared safe-opening launcher promoted to the public web root.
+- [x] Infinite, Classic, and Sphere route to first-class web game pages.
+- [x] Infinite/Sphere Resume and launcher-only System/Light/Dark behavior retained.
+- [x] Former root `?mode=`, `?theme=`, and `?deal=` links forward to `play.html`.
+- [x] Generated Infinite/Classic and canonical Sphere expose a 44px Games return.
+- [x] Root launcher retains native links, keyboard focus, reduced motion, forced colors, and a no-script fallback.
 
 ## Current status (2026-08-13)
 
@@ -191,4 +204,10 @@ The archived decorative theme remains at `collection/theme-water.html` and
 
 ## Acceptance (production)
 
-Five themes reachable; Light/Dark/Escape infinite; Fire fits the viewport with a living center boil; Plague reads as a specimen slide with distinguishable tiles; Escape is calm and legible at full-field density with an offscreen finish + edge cue (win on reveal); finite themes default to the large board and only they show the size row; welcome once; BR chrome is Appearance sun/moon (Light/Dark only) · Reset · Menu as matching icon buttons; Menu holds scores, modes, play aids, and outbound links; Fire/Plague/Escape Menu panels match theme materials; input and reduced-motion still work.
+Bare root reveals Infinite / Classic / Sphere from one safe opening; each route
+opens the correct playable board and returns through Games; newest valid
+Infinite or Sphere saves can resume; launcher theme is independent of gameplay;
+old flat-game deep links retain their behavior at `play.html`; keyboard, touch,
+forced colors, reduced motion, safe areas, and no-script navigation remain
+usable. The flat game retains its five-theme acceptance contract: Light / Dark /
+Escape infinite, Fire / Plague finite, matching chrome, persistence, and effects.
