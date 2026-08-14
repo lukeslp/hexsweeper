@@ -6,11 +6,11 @@ are Canvas/vanilla-JS builds from
 for iOS and Android from the same sealed offline payload.
 
 The app opens on an interactive 2D board. Its safe opening auto-digs to reveal
-the three structural modes and three connected option faces. **Board** blooms
-into Small / Medium / Large Classic boards, **Style** into Light / Shell / Glow
-Sphere materials, and **Settings** into appearance, effects, and Sphere drag
-direction. The newest unfinished Infinite or Sphere run appears as a
-mode-colored **Resume** face in the center.
+an alternating six-face ring: **Infinite**, **Classic**, and **Sphere**, with an
+open well between each mode. Each mode has its own connected **Settings** face:
+Infinite offers Light / Dark and effects, Classic offers Small / Medium / Large,
+and Sphere offers Light / Shell / Glow plus drag direction. The newest unfinished
+Infinite or Sphere run appears as a mode-colored **Resume** face in the center.
 
 | Mode | Board | Source |
 |---|---|---|
