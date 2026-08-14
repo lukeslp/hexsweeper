@@ -6875,7 +6875,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Canopy",
       fallback: ["#07100b", "#34563a", "#9ab18d", "#101a13"],
       swatch: "radial-gradient(circle at 62% 24%, #b9c99e 0 8%, #34563a 35%, #07100b 76%)",
-      texture: { desktop: "assets/reflections/canopy-2048.webp", mobile: "assets/reflections/canopy-1024.webp", speed: 0.0012, exposure: 0.74, saturation: 0.86, backdrop: 0.46 },
+      texture: { desktop: "assets/reflections/canopy-2048.webp", mobile: "assets/reflections/canopy-1024.webp", speed: 0.0012, exposure: 0.74, saturation: 0.86, backdrop: 0.46, mapping: "environment", reflectionStrength: 0.24, roughness: 0.12 },
     },
     {
       id: "salon",
@@ -6883,7 +6883,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Bokeh",
       fallback: ["#100b08", "#7c5835", "#d7a45f", "#211610"],
       swatch: "radial-gradient(circle at 32% 42%, #e3b267 0 11%, transparent 12%), radial-gradient(circle at 72% 28%, #ac7744 0 15%, #150d09 42%)",
-      texture: { desktop: "assets/reflections/salon-2048.webp", mobile: "assets/reflections/salon-1024.webp", speed: 0.0018, exposure: 0.82, saturation: 0.88, backdrop: 0.56 },
+      texture: { desktop: "assets/reflections/salon-2048.webp", mobile: "assets/reflections/salon-1024.webp", speed: 0.0018, exposure: 0.82, saturation: 0.88, backdrop: 0.56, mapping: "environment", reflectionStrength: 0.30, roughness: 0.08 },
     },
     {
       id: "paisley",
@@ -6891,7 +6891,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Paisley",
       fallback: ["#030303", "#242424", "#767676", "#0c0c0c"],
       swatch: "radial-gradient(ellipse at 35% 38%, transparent 0 18%, #505050 19% 23%, transparent 24%), repeating-radial-gradient(ellipse at 70% 60%, #090909 0 6px, #292929 7px 9px, #050505 10px 15px)",
-      texture: { desktop: "assets/reflections/paisley-2048.webp", mobile: "assets/reflections/paisley-1024.webp", speed: 0.0007, exposure: 0.70, saturation: 0.42, backdrop: 0.40 },
+      texture: { desktop: "assets/reflections/paisley-2048.webp", mobile: "assets/reflections/paisley-1024.webp", speed: 0.0007, exposure: 0.70, saturation: 0.42, backdrop: 0.40, mapping: "surface", surfaceMix: 0.92, reflectionStrength: 0.24, roughness: 0.14 },
     },
     {
       id: "portoro",
@@ -6899,7 +6899,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Portoro",
       fallback: ["#050403", "#604c2c", "#d4b26f", "#15110a"],
       swatch: "linear-gradient(118deg, #030303 0 34%, #ba9656 35% 38%, #f0dfb2 39%, #090807 41% 68%, #745b35 69% 72%, #020202 73%)",
-      texture: { desktop: "assets/reflections/portoro-2048.webp", mobile: "assets/reflections/portoro-1024.webp", speed: 0.0005, exposure: 0.76, saturation: 0.76, backdrop: 0.44 },
+      texture: { desktop: "assets/reflections/portoro-2048.webp", mobile: "assets/reflections/portoro-1024.webp", speed: 0.0005, exposure: 0.76, saturation: 0.76, backdrop: 0.44, mapping: "surface", surfaceMix: 0.90, reflectionStrength: 0.30, roughness: 0.08 },
     },
     {
       id: "deco",
@@ -6907,7 +6907,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Deco",
       fallback: ["#030303", "#5b492d", "#c4a26b", "#100e0b"],
       swatch: "repeating-conic-gradient(from 315deg at 50% 100%, #080808 0 7deg, #b28d55 8deg 9deg, #080808 10deg 16deg)",
-      texture: { desktop: "assets/reflections/deco-2048.webp", mobile: "assets/reflections/deco-1024.webp", speed: 0.0009, exposure: 0.78, saturation: 0.74, backdrop: 0.44 },
+      texture: { desktop: "assets/reflections/deco-2048.webp", mobile: "assets/reflections/deco-1024.webp", speed: 0.0009, exposure: 0.78, saturation: 0.74, backdrop: 0.44, mapping: "surface", surfaceMix: 0.88, reflectionStrength: 0.28, roughness: 0.10 },
     },
     {
       id: "oculus",
@@ -6915,7 +6915,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Oculus",
       fallback: ["#030608", "#315f76", "#f0a53c", "#16060a"],
       swatch: "conic-gradient(from 18deg, #ffb32c, #e32d28, #18aee1, #15b86c, #ffdc4b, #ffb32c)",
-      texture: { desktop: "assets/reflections/oculus-1280.webp", mobile: "assets/reflections/oculus-768.webp", speed: 0.00035, exposure: 0.90, saturation: 1.08, backdrop: 0.34 },
+      texture: { desktop: "assets/reflections/oculus-1280.webp", mobile: "assets/reflections/oculus-768.webp", speed: 0.00035, exposure: 0.90, saturation: 1.08, backdrop: 0.34, mapping: "hybrid", surfaceMix: 0.72, reflectionStrength: 0.28, roughness: 0.06 },
     },
     {
       id: "galaxy",
@@ -6923,7 +6923,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Galaxy",
       fallback: ["#050714", "#49405c", "#d09a9e", "#08172b"],
       swatch: "radial-gradient(ellipse at 38% 62%, #d7a5a2 0 9%, #65506e 26%, #16345e 52%, #050714 78%)",
-      texture: { desktop: "assets/reflections/galaxy-1280.webp", mobile: "assets/reflections/galaxy-768.webp", speed: 0.00018, exposure: 1.10, saturation: 0.92, backdrop: 0.50 },
+      texture: { desktop: "assets/reflections/galaxy-1280.webp", mobile: "assets/reflections/galaxy-768.webp", speed: 0.00018, exposure: 1.10, saturation: 0.92, backdrop: 0.50, mapping: "environment", reflectionStrength: 0.22, roughness: 0.06 },
     },
     {
       id: "night-cabin",
@@ -6931,7 +6931,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Cabin",
       fallback: ["#01050a", "#112844", "#ffb56b", "#020305"],
       swatch: "radial-gradient(circle at 56% 70%, #ffb56b 0 5%, #15253c 7% 23%, #030912 46%, #010204 76%)",
-      texture: { desktop: "assets/reflections/night-cabin-1280.webp", mobile: "assets/reflections/night-cabin-768.webp", speed: 0.00010, exposure: 1.18, saturation: 0.90, backdrop: 0.54, offsetX: -0.20, offsetY: 0.18 },
+      texture: { desktop: "assets/reflections/night-cabin-1280.webp", mobile: "assets/reflections/night-cabin-768.webp", speed: 0.00010, exposure: 1.18, saturation: 0.90, backdrop: 0.54, mapping: "environment", reflectionStrength: 0.28, roughness: 0.04, offsetX: -0.20, offsetY: 0.18 },
     },
     {
       id: "gilded-ribbon",
@@ -6939,7 +6939,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Ribbon",
       fallback: ["#020103", "#4d3449", "#dfa35f", "#080510"],
       swatch: "repeating-radial-gradient(ellipse at 72% 58%, #060407 0 8px, #c27d38 9px 11px, #16101c 12px 19px, #8c7bb5 20px 21px)",
-      texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00080, exposure: 0.84, saturation: 0.92, backdrop: 0.42 },
+      texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00080, exposure: 0.84, saturation: 0.92, backdrop: 0.42, mapping: "surface", surfaceMix: 0.90, reflectionStrength: 0.30, roughness: 0.08 },
     },
     {
       id: "ion-storm",
@@ -6947,7 +6947,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Ion",
       fallback: ["#06142d", "#175fa2", "#c893dc", "#060a19"],
       swatch: "linear-gradient(135deg, #0a75be 12%, #123866 46%, #d39adb 72%, #100c27 92%)",
-      texture: { desktop: "assets/reflections/ion-storm-1280.webp", mobile: "assets/reflections/ion-storm-768.webp", speed: 0.00018, exposure: 0.98, saturation: 1.04, backdrop: 0.48, motion: 1, motionAmount: 0.018, motionRate: 0.055, pulse: 0.06 },
+      texture: { desktop: "assets/reflections/ion-storm-1280.webp", mobile: "assets/reflections/ion-storm-768.webp", speed: 0.00045, exposure: 0.98, saturation: 1.04, backdrop: 0.48, mapping: "hybrid", surfaceMix: 0.68, reflectionStrength: 0.34, roughness: 0.10, motion: 1, motionAmount: 0.030, motionRate: 0.095, pulse: 0.06 },
     },
     {
       id: "amber-tempest",
@@ -6955,7 +6955,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Tempest",
       fallback: ["#071018", "#70472d", "#f1a14e", "#0c1721"],
       swatch: "radial-gradient(circle at 60% 35%, #ffd082 0 7%, #b6602d 28%, #17232c 62%, #05090d 88%)",
-      texture: { desktop: "assets/reflections/amber-tempest-1280.webp", mobile: "assets/reflections/amber-tempest-768.webp", speed: -0.00012, exposure: 0.94, saturation: 0.92, backdrop: 0.48, motion: 1, motionAmount: 0.014, motionRate: 0.042, pulse: 0.05 },
+      texture: { desktop: "assets/reflections/amber-tempest-1280.webp", mobile: "assets/reflections/amber-tempest-768.webp", speed: -0.00035, exposure: 0.94, saturation: 0.92, backdrop: 0.48, mapping: "hybrid", surfaceMix: 0.64, reflectionStrength: 0.36, roughness: 0.10, motion: 1, motionAmount: 0.026, motionRate: 0.080, pulse: 0.05 },
     },
     {
       id: "heat-lightning",
@@ -6963,7 +6963,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Heat",
       fallback: ["#0d1017", "#7a3f53", "#ffb05b", "#190f16"],
       swatch: "radial-gradient(circle at 53% 44%, #fff1cf 0 5%, #ff9f45 14%, #7e3b5d 34%, #11131d 72%)",
-      texture: { desktop: "assets/reflections/heat-lightning-1280.webp", mobile: "assets/reflections/heat-lightning-768.webp", speed: 0.00008, exposure: 0.96, saturation: 0.98, backdrop: 0.46, motion: 1, motionAmount: 0.012, motionRate: 0.048, pulse: 0.07, offsetY: 0.02 },
+      texture: { desktop: "assets/reflections/heat-lightning-1280.webp", mobile: "assets/reflections/heat-lightning-768.webp", speed: 0.00025, exposure: 0.96, saturation: 0.98, backdrop: 0.46, mapping: "hybrid", surfaceMix: 0.66, reflectionStrength: 0.36, roughness: 0.08, motion: 1, motionAmount: 0.026, motionRate: 0.090, pulse: 0.07, offsetY: 0.02 },
     },
     {
       id: "stratosphere",
@@ -6971,7 +6971,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Sky",
       fallback: ["#e7f2fa", "#74b5df", "#ffffff", "#1d6fa9"],
       swatch: "linear-gradient(180deg, #137ec2 0%, #77c1ec 42%, #ffffff 63%, #dbeef8 100%)",
-      texture: { desktop: "assets/reflections/stratosphere-1280.webp", mobile: "assets/reflections/stratosphere-768.webp", speed: 0.00010, exposure: 0.88, saturation: 0.82, backdrop: 0.50, motion: 1, motionAmount: 0.007, motionRate: 0.026, pulse: 0.0, offsetY: -0.04 },
+      texture: { desktop: "assets/reflections/stratosphere-1280.webp", mobile: "assets/reflections/stratosphere-768.webp", speed: 0.00020, exposure: 0.88, saturation: 0.82, backdrop: 0.50, mapping: "environment", reflectionStrength: 0.20, roughness: 0.16, motion: 1, motionAmount: 0.012, motionRate: 0.045, pulse: 0.0, offsetY: -0.04 },
     },
     {
       id: "chromatic-ink",
@@ -6979,7 +6979,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Ink",
       fallback: ["#132ccb", "#00d9d2", "#f3ef16", "#ff16a8"],
       swatch: "conic-gradient(from 35deg, #1529c9, #04d7c8, #f0ef13, #fe7416, #f014a8, #1529c9)",
-      texture: { desktop: "assets/reflections/chromatic-ink-1280.webp", mobile: "assets/reflections/chromatic-ink-768.webp", speed: 0.00006, exposure: 0.82, saturation: 1.08, backdrop: 0.38, motion: 2, motionAmount: 0.16, motionRate: 0.032, pulse: 0.0, scaleX: 0.86, scaleY: 0.92 },
+      texture: { desktop: "assets/reflections/chromatic-ink-1280.webp", mobile: "assets/reflections/chromatic-ink-768.webp", speed: 0.00015, exposure: 0.82, saturation: 1.08, backdrop: 0.38, mapping: "surface", surfaceMix: 0.94, reflectionStrength: 0.24, roughness: 0.12, motion: 2, motionAmount: 0.22, motionRate: 0.075, pulse: 0.0, scaleX: 0.86, scaleY: 0.92 },
     },
     {
       id: "amber-cells",
@@ -6987,7 +6987,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "canopy";
       shortLabel: "Cells",
       fallback: ["#1c0b02", "#95500e", "#f5bd4e", "#40200a"],
       swatch: "radial-gradient(circle at 28% 32%, #f4bd56 0 16%, #9b5417 17% 21%, transparent 22%), radial-gradient(circle at 68% 61%, #d98724 0 25%, #2b1205 27% 100%)",
-      texture: { desktop: "assets/reflections/amber-cells-1280.webp", mobile: "assets/reflections/amber-cells-768.webp", speed: -0.00005, exposure: 0.88, saturation: 0.90, backdrop: 0.44, motion: 3, motionAmount: 0.010, motionRate: 0.030, pulse: 0.0, scaleX: 0.92, scaleY: 0.96 },
+      texture: { desktop: "assets/reflections/amber-cells-1280.webp", mobile: "assets/reflections/amber-cells-768.webp", speed: -0.00012, exposure: 0.88, saturation: 0.90, backdrop: 0.44, mapping: "surface", surfaceMix: 0.92, reflectionStrength: 0.26, roughness: 0.14, motion: 3, motionAmount: 0.016, motionRate: 0.055, pulse: 0.0, scaleX: 0.92, scaleY: 0.96 },
     },
   ];
   const MATERIAL_INDEX = new Map(
@@ -7043,6 +7043,7 @@ uniform float uTextureReady;
 uniform vec4 uTextureParams;
 uniform vec4 uTextureTransform;
 uniform vec4 uTextureMotion;
+uniform vec4 uTextureMapping;
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -7077,6 +7078,20 @@ mat2 rotate2(float a) {
   float c = cos(a);
   float s = sin(a);
   return mat2(c, -s, s, c);
+}
+
+vec3 cameraEnvironmentRay(vec3 ray) {
+  ray.yz = rotate2(uPointer.y * 0.025) * ray.yz;
+  ray.xz = rotate2(-uPointer.x * 0.025) * ray.xz;
+  return normalize(ray);
+}
+
+vec3 inverseSphereRotation(vec3 direction) {
+  // sphere.js rotates object points around Y first, then X. Undo that exact
+  // transform in reverse so material landmarks remain attached to the tiles.
+  direction.yz = rotate2(uRotation.y) * direction.yz;
+  direction.xz = rotate2(-uRotation.x) * direction.xz;
+  return normalize(direction);
 }
 
 float softRect(vec2 point, vec2 center, vec2 halfSize, float feather) {
@@ -7227,8 +7242,6 @@ vec3 imageEnvironment(vec3 ray, float lod) {
 }
 
 vec3 environment(vec3 ray, float lod) {
-  ray.yz = rotate2(uRotation.y * 0.035 + uPointer.y * 0.055) * ray.yz;
-  ray.xz = rotate2(-uRotation.x * 0.028 - uPointer.x * 0.07) * ray.xz;
   if (uMaterial < 0.5) return stormglassEnvironment(ray);
   if (uMaterial < 1.5) return studioEnvironment(ray);
   if (uMaterial < 2.5) return mercuryEnvironment(ray);
@@ -7272,7 +7285,7 @@ vec3 materialAccent() {
 void main() {
   vec2 screen = (gl_FragCoord.xy - 0.5 * uResolution) / min(uResolution.x, uResolution.y);
   vec3 backgroundRay = normalize(vec3(screen.x * 0.82, screen.y * 0.82, 1.0));
-  vec3 weather = environment(backgroundRay, 5.0);
+  vec3 weather = environment(cameraEnvironmentRay(backgroundRay), 5.0);
   vec3 field = materialField();
   float backdropCloud = uMaterial > 4.5
     ? uTextureParams.w
@@ -7303,13 +7316,38 @@ void main() {
       ) * 0.012 * normal.z;
       normal = normalize(vec3(normal.xy + liquid, normal.z));
     }
-    vec3 reflected = reflect(vec3(0.0, 0.0, -1.0), normal);
-    vec3 mirror = environment(reflected, 0.65);
+    vec3 reflected = cameraEnvironmentRay(reflect(vec3(0.0, 0.0, -1.0), normal));
     float fresnel = pow(1.0 - max(normal.z, 0.0), 2.35);
+    vec3 mirror;
+    if (uMaterial > 4.5 && uTextureReady > 0.5 && uTextureMapping.x > 0.5) {
+      vec3 surfaceRay = inverseSphereRotation(normal);
+      vec3 surfaceColor = imageEnvironment(
+        surfaceRay,
+        0.65 + uTextureMapping.w * 2.0
+      );
+      vec3 reflectionColor = uTextureMapping.x < 1.5
+        ? studioEnvironment(reflected)
+        : imageEnvironment(reflected, 0.65 + uTextureMapping.w * 4.0);
+      float surfaceWeight = clamp(
+        uTextureMapping.y * (1.0 - fresnel * 0.65),
+        0.0,
+        1.0
+      );
+      mirror = mix(reflectionColor, surfaceColor, surfaceWeight);
+    } else {
+      mirror = environment(reflected, 0.65);
+    }
     float crown = pow(max(dot(normal, normalize(vec3(-0.2, 0.8, 0.56))), 0.0), 12.0);
     mirror *= 0.64 + normal.z * 0.24;
-    mirror += materialAccent() * crown * 0.3;
-    mirror = mix(mirror, vec3(0.44, 0.58, 0.64), fresnel * 0.46);
+    float reflectionStrength = uMaterial > 4.5
+      ? uTextureMapping.z
+      : 0.24;
+    mirror += materialAccent() * crown * (0.18 + reflectionStrength * 0.52);
+    mirror = mix(
+      mirror,
+      vec3(0.44, 0.58, 0.64),
+      fresnel * (0.30 + reflectionStrength * 0.50)
+    );
     mirror += vec3(0.72, 0.88, 0.95) * pow(fresnel, 2.0) * 0.2;
 
     float mask = 1.0 - smoothstep(0.986, 1.018, distanceFromCenter);
@@ -7421,6 +7459,7 @@ void main() {
           "uTextureParams",
           "uTextureTransform",
           "uTextureMotion",
+          "uTextureMapping",
         ].forEach((name) => {
           this.uniforms[name] = gl.getUniformLocation(this.program, name);
         });
@@ -7737,6 +7776,16 @@ void main() {
         texture.motionAmount || 0,
         texture.motionRate || 0,
         texture.pulse || 0
+      );
+      const mappingMode = texture.mapping === "surface"
+        ? 1
+        : texture.mapping === "hybrid" ? 2 : 0;
+      gl.uniform4f(
+        this.uniforms.uTextureMapping,
+        mappingMode,
+        texture.surfaceMix || 0,
+        texture.reflectionStrength == null ? 0.24 : texture.reflectionStrength,
+        texture.roughness || 0
       );
       gl.uniform2f(this.uniforms.uResolution, this.canvas.width, this.canvas.height);
       gl.uniform2f(
