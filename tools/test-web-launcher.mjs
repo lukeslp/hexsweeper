@@ -31,6 +31,31 @@ for (const [label, href] of [
   );
 }
 
+for (const [label, selector] of [
+  ["Infinite mode at the top of the ring", 'id="infinite-game" href="infinite.html?mode=light" data-base-href="infinite.html" data-mode="infinite" data-q="0" data-r="-1"'],
+  ["Classic mode at the lower-right of the ring", 'id="classic-game" href="bounded.html?size=medium" data-base-href="bounded.html" data-mode="bounded" data-q="1" data-r="0"'],
+  ["Sphere mode at the lower-left of the ring", 'data-mode="sphere" data-q="-1" data-r="1"'],
+  ["Infinite settings outside its mode", 'id="infinite-toggle" type="button" data-branch="infinite" data-q="0" data-r="-2"'],
+  ["Classic settings outside its mode", 'id="size-toggle" type="button" data-branch="size" data-q="2" data-r="0"'],
+  ["Sphere settings outside its mode", 'id="style-toggle" type="button" data-branch="style" data-q="-2" data-r="2"'],
+]) {
+  expect(launcher.includes(selector), `launcher lost ${label}`);
+}
+expect(
+  launcher.includes('id="resume-game"') && launcher.includes('data-q="0" data-r="0"'),
+  "Resume is no longer centered",
+);
+expect(
+  !launcher.includes('data-branch="settings"'),
+  "launcher brought back a shared settings tile instead of per-mode settings",
+);
+for (const branch of ["infinite", "size", "style"]) {
+  expect(
+    launcher.includes(`data-open-branch="${branch}"`) || template.includes(`data-open-branch="${branch}"`),
+    `launcher is missing the ${branch} settings bloom`,
+  );
+}
+
 expect(
   launcher.includes('location.replace("play.html" + location.search + location.hash)'),
   "legacy root queries do not forward to play.html",

@@ -2,7 +2,7 @@
 <!--
   File Purpose: Native app launcher staged as one authentic Hexsweeper opening.
   Primary Functions/Classes: deterministic mine field, neighbor counts, zero-cell
-    flood reveal, resumable-run routing, and three connected option flowers.
+    flood reveal, resumable-run routing, and per-board option flowers.
   Inputs: viewport, saved runs/preferences, session reveal state. Outputs: game links.
   A11y: native button/links, visible focus, 50px+ targets, live status, keyboard
     reveal bypass, reduced motion, forced colors, and no timing-dependent action.
@@ -489,13 +489,18 @@
   .theme-choice.is-dug::before { inset: 6px 7px 8px; background: var(--well); }
   .theme-choice.is-dug .theme-content { transform: scale(.9); }
 
-  .settings-hub,
-  .settings-choice { --control-accent: var(--settings-accent); }
+  .infinite-hub,
+  .infinite-choice { --control-accent: var(--infinite-accent); }
   .size-hub,
   .size-choice { --control-accent: var(--classic-accent); }
   .style-hub,
   .style-choice { --control-accent: var(--sphere-accent); }
-  .board[data-open-branch="settings"] { --board-x: clamp(40px, 11vw, 48px); }
+  .board[data-open-branch="infinite"] { --board-y: clamp(34px, 9vw, 46px); }
+  .board[data-open-branch="size"] { --board-x: clamp(-48px, -11vw, -38px); }
+  .board[data-open-branch="style"] {
+    --board-x: clamp(32px, 9vw, 44px);
+    --board-y: clamp(-36px, -9vw, -28px);
+  }
 
   .board[data-phase="clearing"] .starter { animation: hit 220ms cubic-bezier(.22, 1, .36, 1) both; }
   .board[data-phase="ready"] .mode.is-available { animation: mode-rise 250ms cubic-bezier(.22, 1, .36, 1) backwards; }
@@ -683,7 +688,7 @@
       </span>
     </a>
 
-    <a class="hex mode mode-infinite destination" href="infinite.html" data-mode="infinite" data-q="0" data-r="-1" aria-label="Play Infinite Hexsweeper, endless board">
+    <a class="hex mode mode-infinite destination" id="infinite-game" href="infinite.html?mode=light" data-base-href="infinite.html" data-mode="infinite" data-q="0" data-r="-1" aria-label="Play Infinite Hexsweeper, endless board">
       <span class="mode-content">
         <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -715,18 +720,17 @@
       </span>
     </a>
 
-    <button class="hex theme-control theme-hub settings-hub" id="settings-toggle" type="button" data-branch="settings" data-q="-1" data-r="0" aria-describedby="menu-status" aria-expanded="false" aria-controls="setting-appearance setting-effects setting-invert" aria-label="Open settings" disabled>
+    <button class="hex theme-control theme-hub infinite-hub" id="infinite-toggle" type="button" data-branch="infinite" data-q="0" data-r="-2" aria-describedby="menu-status" aria-expanded="false" aria-controls="infinite-light infinite-dark infinite-effects" aria-label="Choose Infinite settings" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="2.4"/>
-          <path d="M24 6v6m0 24v6M6 24h6m24 0h6M11.3 11.3l4.2 4.2m17 17 4.2 4.2m0-25.4-4.2 4.2m-17 17-4.2 4.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span class="theme-name">Settings</span>
-        <span class="theme-note">3 options</span>
+        <span class="theme-note" id="infinite-current">Light</span>
       </span>
     </button>
 
-    <button class="hex theme-control theme-hub size-hub" id="size-toggle" type="button" data-branch="size" data-q="1" data-r="-1" aria-describedby="menu-status" aria-expanded="false" aria-controls="size-small size-medium size-large" aria-label="Choose Classic board size" disabled>
+    <button class="hex theme-control theme-hub size-hub" id="size-toggle" type="button" data-branch="size" data-q="2" data-r="0" aria-describedby="menu-status" aria-expanded="false" aria-controls="size-small size-medium size-large" aria-label="Choose Classic board settings" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.8"/>
@@ -737,7 +741,7 @@
       </span>
     </button>
 
-    <button class="hex theme-control theme-hub style-hub" id="style-toggle" type="button" data-branch="style" data-q="0" data-r="1" aria-describedby="menu-status" aria-expanded="false" aria-controls="style-light style-shell style-glow" aria-label="Choose Sphere style" disabled>
+    <button class="hex theme-control theme-hub style-hub" id="style-toggle" type="button" data-branch="style" data-q="-2" data-r="2" aria-describedby="menu-status" aria-expanded="false" aria-controls="style-light style-shell style-glow style-invert" aria-label="Choose Sphere settings" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
           <circle cx="24" cy="24" r="16" fill="none" stroke="currentColor" stroke-width="1.8"/>
@@ -749,19 +753,28 @@
       </span>
     </button>
 
-    <button class="hex theme-control theme-choice settings-choice" id="setting-appearance" type="button" data-branch="settings" data-setting="appearance" data-q="-1" data-r="-1" style="--bloom-delay:0ms" aria-label="Launcher appearance: System. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
+    <a class="hex theme-control theme-choice infinite-choice destination" id="infinite-light" href="infinite.html?mode=light" data-branch="infinite" data-infinite-theme="light" data-destination-name="Light Infinite" data-q="-1" data-r="-2" style="--bloom-delay:0ms" aria-label="Play Infinite with the Light style" aria-hidden="true" tabindex="-1">
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="15" fill="none" stroke="currentColor" stroke-width="2"/>
-          <path d="M24 9a15 15 0 0 0 0 30Z" fill="currentColor" opacity=".88"/>
-          <circle cx="24" cy="24" r="4" fill="var(--tile)"/>
+          <circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M24 7v5m0 24v5M7 24h5m24 0h5M12 12l3.5 3.5m17 17L36 36m0-24-3.5 3.5m-17 17L12 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
-        <span class="theme-name">Appearance</span>
-        <span class="theme-note" id="appearance-current">System</span>
+        <span class="theme-name">Light</span>
+        <span class="theme-note">Porcelain</span>
       </span>
-    </button>
+    </a>
 
-    <button class="hex theme-control theme-choice settings-choice" id="setting-effects" type="button" data-branch="settings" data-setting="effects" data-q="-2" data-r="0" style="--bloom-delay:35ms" aria-label="Effects: Auto. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
+    <a class="hex theme-control theme-choice infinite-choice destination" id="infinite-dark" href="infinite.html?mode=dark" data-branch="infinite" data-infinite-theme="dark" data-destination-name="Dark Infinite" data-q="0" data-r="-3" style="--bloom-delay:35ms" aria-label="Play Infinite with the Dark style" aria-hidden="true" tabindex="-1">
+      <span class="theme-content">
+        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M34.5 34.7A16 16 0 0 1 18 9.2 16 16 0 1 0 34.5 34.7Z" fill="currentColor"/>
+        </svg>
+        <span class="theme-name">Dark</span>
+        <span class="theme-note">Night iron</span>
+      </span>
+    </a>
+
+    <button class="hex theme-control theme-choice infinite-choice" id="infinite-effects" type="button" data-branch="infinite" data-setting="effects" data-q="1" data-r="-3" style="--bloom-delay:70ms" aria-label="Effects: Auto. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="m24 6 2.6 9.4L36 18l-9.4 2.6L24 30l-2.6-9.4L12 18l9.4-2.6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -772,35 +785,35 @@
       </span>
     </button>
 
-    <button class="hex theme-control theme-choice settings-choice" id="setting-invert" type="button" data-branch="settings" data-setting="invert" data-q="-2" data-r="1" style="--bloom-delay:70ms" aria-label="Sphere drag: Natural. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
+    <a class="hex theme-control theme-choice size-choice destination" id="size-small" href="bounded.html?size=easy" data-branch="size" data-classic-size="easy" data-destination-name="Small Classic" data-q="3" data-r="-1" style="--bloom-delay:0ms" aria-label="Play a small Classic board, 10 mines" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><span class="theme-icon" aria-hidden="true">S</span><span class="theme-name">Small</span><span class="theme-note">10 mines</span></span>
+    </a>
+    <a class="hex theme-control theme-choice size-choice destination" id="size-medium" href="bounded.html?size=medium" data-branch="size" data-classic-size="medium" data-destination-name="Medium Classic" data-q="3" data-r="0" style="--bloom-delay:35ms" aria-label="Play a medium Classic board, 35 mines" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><span class="theme-icon" aria-hidden="true">M</span><span class="theme-name">Medium</span><span class="theme-note">35 mines</span></span>
+    </a>
+    <a class="hex theme-control theme-choice size-choice destination" id="size-large" href="bounded.html?size=hard" data-branch="size" data-classic-size="hard" data-destination-name="Large Classic" data-q="2" data-r="1" style="--bloom-delay:70ms" aria-label="Play a large Classic board, 80 mines" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><span class="theme-icon" aria-hidden="true">L</span><span class="theme-name">Large</span><span class="theme-note">80 mines</span></span>
+    </a>
+
+    <a class="hex theme-control theme-choice style-choice destination" id="style-light" href="sphere/?theme=light" data-branch="style" data-sphere-theme="light" data-destination-name="Light Sphere" data-q="-2" data-r="3" style="--bloom-delay:0ms" aria-label="Play Sphere with the Light style" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="theme-name">Light</span><span class="theme-note">White field</span></span>
+    </a>
+    <a class="hex theme-control theme-choice style-choice destination" id="style-shell" href="sphere/?theme=shell" data-branch="style" data-sphere-theme="shell" data-destination-name="Shell Sphere" data-q="-3" data-r="3" style="--bloom-delay:35ms" aria-label="Play Sphere with the Shell style" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="11" fill="var(--tile)"/><circle cx="24" cy="24" r="6" fill="currentColor"/></svg><span class="theme-name">Shell</span><span class="theme-note">Dark field</span></span>
+    </a>
+    <a class="hex theme-control theme-choice style-choice destination" id="style-glow" href="sphere/?theme=glow" data-branch="style" data-sphere-theme="glow" data-destination-name="Glow Sphere" data-q="-3" data-r="2" style="--bloom-delay:70ms" aria-label="Play Sphere with the Glow style" aria-hidden="true" tabindex="-1">
+      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="1" opacity=".45"/></svg><span class="theme-name">Glow</span><span class="theme-note">Luminous</span></span>
+    </a>
+
+    <button class="hex theme-control theme-choice style-choice" id="style-invert" type="button" data-branch="style" data-setting="invert" data-q="-2" data-r="1" style="--bloom-delay:105ms" aria-label="Sphere drag: Natural. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
       <span class="theme-content">
         <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path d="M10 15h28M10 15l6-6m-6 6 6 6M38 33H10m28 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="theme-name">Sphere drag</span>
+        <span class="theme-name">Drag</span>
         <span class="theme-note" id="invert-current">Natural</span>
       </span>
     </button>
-
-    <a class="hex theme-control theme-choice size-choice destination" id="size-small" href="bounded.html?size=easy" data-branch="size" data-classic-size="easy" data-destination-name="Small Classic" data-q="1" data-r="-2" style="--bloom-delay:0ms" aria-label="Play a small Classic board, 10 mines" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><span class="theme-icon" aria-hidden="true">S</span><span class="theme-name">Small</span><span class="theme-note">10 mines</span></span>
-    </a>
-    <a class="hex theme-control theme-choice size-choice destination" id="size-medium" href="bounded.html?size=medium" data-branch="size" data-classic-size="medium" data-destination-name="Medium Classic" data-q="2" data-r="-2" style="--bloom-delay:35ms" aria-label="Play a medium Classic board, 35 mines" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><span class="theme-icon" aria-hidden="true">M</span><span class="theme-name">Medium</span><span class="theme-note">35 mines</span></span>
-    </a>
-    <a class="hex theme-control theme-choice size-choice destination" id="size-large" href="bounded.html?size=hard" data-branch="size" data-classic-size="hard" data-destination-name="Large Classic" data-q="2" data-r="-1" style="--bloom-delay:70ms" aria-label="Play a large Classic board, 80 mines" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><span class="theme-icon" aria-hidden="true">L</span><span class="theme-name">Large</span><span class="theme-note">80 mines</span></span>
-    </a>
-
-    <a class="hex theme-control theme-choice style-choice destination" id="style-light" href="sphere/?theme=light" data-branch="style" data-sphere-theme="light" data-destination-name="Light Sphere" data-q="1" data-r="1" style="--bloom-delay:0ms" aria-label="Play Sphere with the Light style" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="theme-name">Light</span><span class="theme-note">White field</span></span>
-    </a>
-    <a class="hex theme-control theme-choice style-choice destination" id="style-shell" href="sphere/?theme=shell" data-branch="style" data-sphere-theme="shell" data-destination-name="Shell Sphere" data-q="0" data-r="2" style="--bloom-delay:35ms" aria-label="Play Sphere with the Shell style" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="11" fill="var(--tile)"/><circle cx="24" cy="24" r="6" fill="currentColor"/></svg><span class="theme-name">Shell</span><span class="theme-note">Dark field</span></span>
-    </a>
-    <a class="hex theme-control theme-choice style-choice destination" id="style-glow" href="sphere/?theme=glow" data-branch="style" data-sphere-theme="glow" data-destination-name="Glow Sphere" data-q="-1" data-r="2" style="--bloom-delay:70ms" aria-label="Play Sphere with the Glow style" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="1" opacity=".45"/></svg><span class="theme-name">Glow</span><span class="theme-note">Luminous</span></span>
-    </a>
   </nav>
 </main>
 
@@ -813,12 +826,13 @@
   var starter = document.getElementById("opening-dig");
   var resume = document.getElementById("resume-game");
   var resumeModeName = document.getElementById("resume-mode-name");
+  var infiniteGame = document.getElementById("infinite-game");
   var classicGame = document.getElementById("classic-game");
   var status = document.getElementById("menu-status");
   var modes = Array.prototype.slice.call(board.querySelectorAll(".mode"));
   var branchHubs = Array.prototype.slice.call(board.querySelectorAll(".theme-hub[data-branch]"));
   var branchChoices = Array.prototype.slice.call(board.querySelectorAll(".theme-choice[data-branch]"));
-  var settingsChoices = branchChoices.filter(function (choice) { return choice.dataset.branch === "settings"; });
+  var settingChoices = branchChoices.filter(function (choice) { return !!choice.dataset.setting; });
   var destinations = Array.prototype.slice.call(board.querySelectorAll(".destination"));
   var branches = {};
   branchHubs.forEach(function (hub) {
@@ -850,11 +864,13 @@
   var APPEARANCE_KEY = "hexsweeper-appearance-v1";
   var EFFECTS_KEY = "hexsweeper-effects-v1";
   var INVERT_KEY = "hexsweeper-sphere-invert-v1";
+  var INFINITE_THEME_KEY = "hexsweeper-mode-v3";
   var CLASSIC_SIZE_KEY = "hexsweeper-classic-size-v1";
   var SPHERE_THEME_KEY = "hexsweeper-sphere-theme-v6";
   var appearancePreference = "system";
   var effectsPreference = "auto";
   var invertPreference = { x: false, y: false };
+  var infiniteThemePreference = "light";
   var classicSizePreference = "medium";
   var sphereThemePreference = "light";
   var colorScheme = matchMedia("(prefers-color-scheme: dark)");
@@ -920,6 +936,10 @@
     var storedSize = storageValue(localStorage, CLASSIC_SIZE_KEY);
     if (["easy", "medium", "hard"].indexOf(storedSize) >= 0) {
       classicSizePreference = storedSize;
+    }
+    var storedInfiniteTheme = storageValue(localStorage, INFINITE_THEME_KEY);
+    if (["light", "dark"].indexOf(storedInfiniteTheme) >= 0) {
+      infiniteThemePreference = storedInfiniteTheme;
     }
     var storedTheme = storageValue(localStorage, SPHERE_THEME_KEY);
     if (SPHERE_THEME_NAMES[storedTheme]) sphereThemePreference = storedTheme;
@@ -1097,8 +1117,8 @@
 
   function updateReadyStatus() {
     if (phase !== "ready" || leaving) return;
-    if (activeBranch === "settings") {
-      status.textContent = "Change settings";
+    if (activeBranch === "infinite") {
+      status.textContent = "Choose Infinite settings";
     } else if (activeBranch === "size") {
       status.textContent = "Choose a Classic board size";
     } else if (activeBranch === "style") {
@@ -1145,18 +1165,20 @@
   }
 
   function syncPreferences() {
-    var appearanceName = titleCase(appearancePreference);
     var effectsName = titleCase(effectsPreference);
     var inversionName = invertLabel();
-    document.getElementById("appearance-current").textContent = appearanceName;
     document.getElementById("effects-current").textContent = effectsName;
     document.getElementById("invert-current").textContent = inversionName;
+    document.getElementById("infinite-current").textContent = titleCase(infiniteThemePreference);
     document.getElementById("size-current").textContent = CLASSIC_SIZE_NAMES[classicSizePreference];
     document.getElementById("style-current").textContent = SPHERE_THEME_NAMES[sphereThemePreference];
-    document.getElementById("setting-appearance").setAttribute("aria-label", "Launcher appearance: " + appearanceName + ". Activate to cycle.");
-    document.getElementById("setting-effects").setAttribute("aria-label", "Effects: " + effectsName + ". Activate to cycle.");
-    document.getElementById("setting-invert").setAttribute("aria-label", "Sphere drag: " + inversionName + ". Activate to cycle.");
+    document.getElementById("infinite-effects").setAttribute("aria-label", "Effects: " + effectsName + ". Activate to cycle.");
+    document.getElementById("style-invert").setAttribute("aria-label", "Sphere drag: " + inversionName + ". Activate to cycle.");
+    infiniteGame.href = infiniteGame.dataset.baseHref + "?mode=" + infiniteThemePreference;
     classicGame.href = classicGame.dataset.baseHref + "?size=" + classicSizePreference;
+    board.querySelectorAll("[data-infinite-theme]").forEach(function (choice) {
+      setCurrent(choice, choice.dataset.infiniteTheme === infiniteThemePreference);
+    });
     board.querySelectorAll("[data-classic-size]").forEach(function (choice) {
       setCurrent(choice, choice.dataset.classicSize === classicSizePreference);
     });
@@ -1341,6 +1363,10 @@
       classicSizePreference = destination.dataset.classicSize;
       writePreference(CLASSIC_SIZE_KEY, classicSizePreference);
     }
+    if (destination.dataset.infiniteTheme) {
+      infiniteThemePreference = destination.dataset.infiniteTheme;
+      writePreference(INFINITE_THEME_KEY, infiniteThemePreference);
+    }
     if (destination.dataset.sphereTheme) {
       sphereThemePreference = destination.dataset.sphereTheme;
       writePreference(SPHERE_THEME_KEY, sphereThemePreference);
@@ -1385,7 +1411,7 @@
   branchHubs.forEach(function (hub) {
     hub.addEventListener("click", toggleBranch);
   });
-  settingsChoices.forEach(function (choice) {
+  settingChoices.forEach(function (choice) {
     choice.addEventListener("click", cycleSetting);
   });
 
