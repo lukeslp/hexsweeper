@@ -118,12 +118,13 @@
       texture: { desktop: "assets/reflections/salon-2048.webp", mobile: "assets/reflections/salon-1024.webp", speed: 0.0018, exposure: 0.82, saturation: 0.88, backdrop: 0.56, mapping: "environment", reflectionStrength: 0.30, roughness: 0.08 },
     },
     {
-      id: "paisley",
-      label: "Midnight Paisley",
-      shortLabel: "Paisley",
+      // Retired slot. Keep its position so the shader indices for later
+      // materials remain stable across saved selections and one-page exports.
+      retired: true,
+      label: "Retired material slot",
+      shortLabel: "Retired",
       fallback: ["#030303", "#242424", "#767676", "#0c0c0c"],
-      swatch: "radial-gradient(ellipse at 35% 38%, transparent 0 18%, #505050 19% 23%, transparent 24%), repeating-radial-gradient(ellipse at 70% 60%, #090909 0 6px, #292929 7px 9px, #050505 10px 15px)",
-      texture: { desktop: "assets/reflections/paisley-2048.webp", mobile: "assets/reflections/paisley-1024.webp", speed: 0.0007, exposure: 0.92, saturation: 0.34, backdrop: 0.48, mapping: "surface", surfaceMix: 0.92, reflectionStrength: 0.24, roughness: 0.14, gamma: 0.62, lift: 0.012, backdropScale: 1.12 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       id: "portoro",
@@ -223,12 +224,15 @@
     },
   ];
   const MATERIAL_INDEX = new Map(
-    MATERIAL_PRESETS.map((preset, index) => [preset.id, index])
+    MATERIAL_PRESETS
+      .map((preset, index) => [preset.id, index])
+      .filter(([id]) => !!id)
   );
 
   function materialIndex(value) {
     if (Number.isFinite(value)) {
-      return Math.max(0, Math.min(MATERIAL_PRESETS.length - 1, value | 0));
+      const index = Math.max(0, Math.min(MATERIAL_PRESETS.length - 1, value | 0));
+      return MATERIAL_PRESETS[index].retired ? 0 : index;
     }
     return MATERIAL_INDEX.has(value) ? MATERIAL_INDEX.get(value) : 0;
   }
@@ -278,7 +282,6 @@ uniform vec4 uTextureMotion;
 uniform vec4 uTextureMapping;
 uniform vec4 uTextureDisplay;
 uniform vec4 uTextureGrade;
-uniform vec2 uTextureSize;
 uniform vec4 uActionOrigin;
 uniform vec4 uActionState;
 uniform vec4 uDynamics;
@@ -454,7 +457,7 @@ vec3 imageEnvironment(vec3 ray, float lod) {
   vec2 centered = vec2(longitude, latitude) - 0.5;
   vec2 uv = centered * uTextureTransform.xy + 0.5 + uTextureTransform.zw;
 
-  // Image plates opt into one of three restrained motion families. Motion is
+  // Image plates opt into one of four restrained motion families. Motion is
   // applied before sampling so the sphere remains geometrically authoritative:
   // weather drifts, ink folds around itself, oil cells merge, and stained
   // glass separates light while rotating. Quiet plates stay truly still.
@@ -545,22 +548,115 @@ vec3 imageEnvironment(vec3 ray, float lod) {
   return sampleColor;
 }
 
-vec3 imageBackdrop(float lod) {
-  vec2 uv = gl_FragCoord.xy / max(uResolution, vec2(1.0));
-  float screenAspect = uResolution.x / max(uResolution.y, 1.0);
-  float textureAspect = uTextureSize.x / max(uTextureSize.y, 1.0);
-  vec2 cover = textureAspect > screenAspect
-    ? vec2(screenAspect / textureAspect, 1.0)
-    : vec2(1.0, textureAspect / screenAspect);
-  float backdropScale = max(0.5, uTextureDisplay.y);
-  uv = (uv - 0.5) * cover / backdropScale + 0.5 + uTextureDisplay.zw;
-  uv = clamp(uv, vec2(0.002), vec2(0.998));
-  vec3 sampleColor = textureLod(uEnvironmentMap, uv, lod).rgb;
-  sampleColor = pow(max(sampleColor, vec3(0.0)), vec3(max(0.2, uTextureGrade.x))) *
-    uTextureParams.y + uTextureGrade.y;
-  float luma = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
-  sampleColor = mix(vec3(luma), sampleColor, uTextureParams.z * 0.94);
-  return mix(sampleColor, vec3(luma * 0.72 + 0.26), uAppearance * 0.20);
+float atmosphereOrb(vec2 p, vec2 center, float radius, float feather) {
+  return 1.0 - smoothstep(radius - feather, radius + feather, length(p - center));
+}
+
+float atmosphereStars(vec2 p) {
+  vec2 grid = p * 92.0;
+  vec2 cell = floor(grid);
+  vec2 local = fract(grid) - 0.5;
+  vec2 star = vec2(hash21(cell + 2.7), hash21(cell + 7.1)) - 0.5;
+  float seed = hash21(cell + 13.9);
+  return step(0.925, seed) *
+    (1.0 - smoothstep(0.012, 0.072, length(local - star * 0.72)));
+}
+
+vec3 imageAtmosphere(vec2 screen) {
+  float t = uTime;
+  float broad = fbm(screen * 1.35 + vec2(t * 0.012, -t * 0.008));
+  float detail = fbm(rotate2(0.72) * screen * 3.1 + vec2(-t * 0.018, t * 0.014));
+  float radial = length(screen);
+
+  if (uMaterial < 5.5) {
+    // Canopy: deep understory with soft shafts and distant leaf-light.
+    vec3 color = mix(vec3(0.008, 0.028, 0.018), vec3(0.11, 0.24, 0.13), broad);
+    float shaft = pow(max(0.0, 1.0 - abs(screen.x + screen.y * 0.24 + 0.18)), 7.0);
+    color += vec3(0.44, 0.55, 0.29) * shaft * (0.20 + detail * 0.24);
+    color += vec3(0.28, 0.48, 0.23) * atmosphereOrb(screen, vec2(0.52, 0.30), 0.22, 0.28) * 0.22;
+    return color;
+  }
+  if (uMaterial < 6.5) {
+    // Salon: charcoal architecture and defocused pools of amber light.
+    vec3 color = mix(vec3(0.025, 0.016, 0.012), vec3(0.19, 0.10, 0.045), broad * 0.62);
+    color += vec3(0.94, 0.55, 0.19) * atmosphereOrb(screen, vec2(-0.42, 0.18), 0.08, 0.22) * 0.42;
+    color += vec3(0.70, 0.34, 0.12) * atmosphereOrb(screen, vec2(0.48, -0.22), 0.11, 0.28) * 0.34;
+    color += vec3(0.88, 0.68, 0.38) * atmosphereOrb(screen, vec2(0.18, 0.44), 0.04, 0.16) * 0.24;
+    return color;
+  }
+  if (uMaterial < 8.5) {
+    // Portoro: a black room crossed by one broad champagne light vein.
+    float vein = 1.0 - smoothstep(0.035, 0.13, abs(screen.y + screen.x * 0.31 + sin(screen.x * 5.2) * 0.055));
+    return vec3(0.009, 0.007, 0.005) + vec3(0.58, 0.39, 0.16) * vein * (0.42 + detail * 0.38);
+  }
+  if (uMaterial < 9.5) {
+    // Deco: architectural fan light, restrained enough to frame the board.
+    float angle = atan(screen.y + 0.46, screen.x);
+    float fan = pow(max(cos(angle * 7.0 + radial * 2.8), 0.0), 18.0);
+    return mix(vec3(0.006, 0.006, 0.007), vec3(0.24, 0.16, 0.075), broad * 0.35) +
+      vec3(0.68, 0.46, 0.19) * fan * 0.28;
+  }
+  if (uMaterial < 10.5) {
+    // Oculus: cathedral darkness with colored light, never enlarged glass art.
+    float angle = atan(screen.y, screen.x);
+    vec3 spectral = 0.5 + 0.5 * cos(vec3(0.0, 2.1, 4.2) + angle * 2.0 + radial * 8.0);
+    float halo = exp(-pow((radial - 0.62) * 4.2, 2.0));
+    return vec3(0.008, 0.012, 0.022) + spectral * halo * 0.16 +
+      vec3(0.18, 0.10, 0.22) * broad * 0.22;
+  }
+  if (uMaterial < 11.5) {
+    // Galaxy: a quiet star field and low-frequency dust cloud.
+    vec3 nebula = mix(vec3(0.006, 0.012, 0.035), vec3(0.21, 0.08, 0.18), smoothstep(0.30, 0.78, broad));
+    nebula += vec3(0.08, 0.16, 0.32) * detail * 0.30;
+    return nebula + vec3(0.72, 0.82, 1.0) * atmosphereStars(screen) * 0.72;
+  }
+  if (uMaterial < 12.5) {
+    // Cabin: open night, blue-black horizon, and one inhabited warm glow.
+    float horizon = smoothstep(-0.45, -0.05, screen.y) * (1.0 - smoothstep(-0.05, 0.52, screen.y));
+    vec3 color = mix(vec3(0.003, 0.008, 0.018), vec3(0.018, 0.065, 0.13), horizon);
+    color += vec3(1.0, 0.46, 0.13) * atmosphereOrb(screen, vec2(0.18, -0.28), 0.025, 0.12) * 0.34;
+    return color + vec3(0.52, 0.68, 0.92) * atmosphereStars(screen * 0.72) * 0.36;
+  }
+  if (uMaterial < 13.5) {
+    // Ribbon: black-violet space with independent strands of gilt light.
+    float ribbonA = exp(-pow((screen.y - sin(screen.x * 2.8 + t * 0.06) * 0.22) * 18.0, 2.0));
+    float ribbonB = exp(-pow((screen.y + 0.34 - cos(screen.x * 2.2 - t * 0.04) * 0.13) * 24.0, 2.0));
+    return vec3(0.007, 0.004, 0.012) + vec3(0.42, 0.23, 0.12) * broad * 0.16 +
+      vec3(0.86, 0.51, 0.20) * ribbonA * 0.24 + vec3(0.32, 0.26, 0.54) * ribbonB * 0.18;
+  }
+  if (uMaterial < 16.5) {
+    // Storm family: shared cloud volume, individually colored illumination.
+    vec3 low = uMaterial < 14.5 ? vec3(0.018, 0.06, 0.14)
+      : uMaterial < 15.5 ? vec3(0.10, 0.055, 0.025) : vec3(0.08, 0.025, 0.055);
+    vec3 high = uMaterial < 14.5 ? vec3(0.18, 0.38, 0.70)
+      : uMaterial < 15.5 ? vec3(0.62, 0.25, 0.08) : vec3(0.58, 0.18, 0.32);
+    float cloud = smoothstep(0.28, 0.76, broad * 0.70 + detail * 0.44);
+    float flashSeed = hash21(vec2(floor(t * 0.24), uMaterial));
+    float flash = step(0.72, flashSeed) * exp(-pow((fract(t * 0.24) - 0.82) * 28.0, 2.0));
+    return mix(low, high, cloud) + vec3(0.65, 0.76, 1.0) * flash * cloud * 0.42;
+  }
+  if (uMaterial < 17.5) {
+    // Stratosphere: airy blue field and a cloud deck below the sphere.
+    float sky = clamp(screen.y + 0.55, 0.0, 1.0);
+    vec3 color = mix(vec3(0.58, 0.78, 0.92), vec3(0.035, 0.30, 0.62), sky);
+    float cloud = smoothstep(0.48, 0.72, broad + (0.12 - screen.y) * 0.48);
+    return mix(color, vec3(0.88, 0.94, 0.98), cloud * (1.0 - smoothstep(-0.24, 0.42, screen.y)));
+  }
+  if (uMaterial < 18.5) {
+    // Ink: surrounding dye bath, related in palette but not duplicated art.
+    vec2 flow = rotate2(broad * 1.4 + t * 0.018) * screen;
+    float cyanFlow = fbm(flow * 2.3 + vec2(t * 0.018, 1.4));
+    float magentaFlow = fbm(flow.yx * 2.8 + vec2(-t * 0.014, 4.1));
+    return vec3(0.015, 0.025, 0.09) + vec3(0.0, 0.42, 0.52) * cyanFlow * 0.42 +
+      vec3(0.48, 0.02, 0.38) * magentaFlow * 0.34;
+  }
+  // Amber cells: warm oil bath with broad translucent halos.
+  vec3 amber = mix(vec3(0.055, 0.018, 0.004), vec3(0.42, 0.16, 0.025), broad * 0.62);
+  float cellA = atmosphereOrb(screen, vec2(-0.46, 0.18), 0.18, 0.05) -
+    atmosphereOrb(screen, vec2(-0.46, 0.18), 0.13, 0.04);
+  float cellB = atmosphereOrb(screen, vec2(0.48, -0.24), 0.25, 0.06) -
+    atmosphereOrb(screen, vec2(0.48, -0.24), 0.19, 0.05);
+  return amber + vec3(0.92, 0.47, 0.08) * max(cellA + cellB, 0.0) * 0.26;
 }
 
 vec3 environment(vec3 ray, float lod) {
@@ -607,12 +703,12 @@ vec3 materialAccent() {
 void main() {
   vec2 screen = (gl_FragCoord.xy - 0.5 * uResolution) / min(uResolution.x, uResolution.y);
   vec3 backgroundRay = normalize(vec3(screen.x * 0.82, screen.y * 0.82, 1.0));
-  vec3 weather = uMaterial > 4.5 && uTextureReady > 0.5
-    ? imageBackdrop(1.15)
+  vec3 weather = uMaterial > 4.5
+    ? imageAtmosphere(screen)
     : environment(cameraEnvironmentRay(backgroundRay), 5.0);
   vec3 field = materialField();
   float backdropCloud = uMaterial > 4.5
-    ? 0.66 + uTextureParams.w * 0.38
+    ? 0.82 + uTextureParams.w * 0.16
     : 0.12 + uAppearance * 0.12;
   vec3 color = mix(field, weather, backdropCloud);
 
@@ -790,7 +886,6 @@ void main() {
       this.buffer = null;
       this.texture = null;
       this.textureReady = 0;
-      this.textureSize = { width: 1, height: 1 };
       this.textureLoadToken = 0;
       this.uniforms = {};
       this.materialIndex = materialIndex(initialMaterial(options));
@@ -864,7 +959,6 @@ void main() {
           "uTextureMapping",
           "uTextureDisplay",
           "uTextureGrade",
-          "uTextureSize",
           "uActionOrigin",
           "uActionState",
           "uDynamics",
@@ -939,7 +1033,9 @@ void main() {
     }
 
     getMaterials() {
-      return MATERIAL_PRESETS.map((preset) => Object.assign({}, preset));
+      return MATERIAL_PRESETS
+        .filter((preset) => !preset.retired)
+        .map((preset) => Object.assign({}, preset));
     }
 
     textureURL(preset) {
@@ -965,7 +1061,6 @@ void main() {
       const preset = this.getMaterial();
       const url = this.textureURL(preset);
       this.textureReady = 0;
-      this.textureSize = { width: 1, height: 1 };
       if (!url || !this.gl || !this.texture) {
         this.render(performance.now(), true);
         return;
@@ -979,10 +1074,6 @@ void main() {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
         gl.generateMipmap(gl.TEXTURE_2D);
-        this.textureSize = {
-          width: image.naturalWidth || image.width || 1,
-          height: image.naturalHeight || image.height || 1,
-        };
         this.textureReady = 1;
         this.render(performance.now(), true);
       } catch (error) {
@@ -1028,7 +1119,10 @@ void main() {
     }
 
     cycleMaterial(options) {
-      const next = (this.materialIndex + 1) % MATERIAL_PRESETS.length;
+      let next = this.materialIndex;
+      do {
+        next = (next + 1) % MATERIAL_PRESETS.length;
+      } while (MATERIAL_PRESETS[next].retired);
       return this.setMaterial(next, Object.assign({
         persist: true,
         updateURL: true,
@@ -1315,11 +1409,6 @@ void main() {
         0,
         0
       );
-      gl.uniform2f(
-        this.uniforms.uTextureSize,
-        this.textureSize.width,
-        this.textureSize.height
-      );
       gl.uniform2f(this.uniforms.uResolution, this.canvas.width, this.canvas.height);
       gl.uniform2f(
         this.uniforms.uCenter,
@@ -1370,7 +1459,9 @@ void main() {
 
   global.MirrorMaterial = {
     boot,
-    MATERIALS: MATERIAL_PRESETS.map((preset) => Object.assign({}, preset)),
+    MATERIALS: MATERIAL_PRESETS
+      .filter((preset) => !preset.retired)
+      .map((preset) => Object.assign({}, preset)),
     THEME: REFLECTION_THEME,
   };
 })(typeof window !== "undefined" ? window : globalThis);

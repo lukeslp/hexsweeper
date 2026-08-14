@@ -268,27 +268,6 @@ EXPERIMENTS = [
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
-        "id": "sphere-reflection-paisley",
-        "title": "Obsidian Mirror · Midnight Paisley",
-        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Midnight Paisley",
-        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting tone-on-tone black paisley jacquard.",
-        "tag": "Material study · textile",
-        "blurb": "Black jacquard ornament appears only when grazing light catches it—a quiet, formal surface with depth.",
-        "filter": "sphere reflection mirror midnight black paisley jacquard textile classy texture material hexsweeper experiment",
-        "swatch": ("#030303", "#242424", "#767676", "#e5222a"),
-        "file": "sphere-reflection-paisley.html",
-        "href": "sphere-reflection-paisley.html",
-        "liveHref": "../sphere-reflection/?material=paisley",
-        "source": "sphere-reflection",
-        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
-        "boot": "initHexBloom",
-        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
-        "welcomeKey": "hexsweeper-reflection-welcome-v1",
-        "reflectionMaterial": "paisley",
-        "ogImage": f"{OG}/sphere-og.png",
-    },
-    {
         "id": "sphere-reflection-portoro",
         "title": "Obsidian Mirror · Portoro Marble",
         "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Portoro Marble",
@@ -839,10 +818,6 @@ REFLECTION_TEXTURES = {
     "salon": {
         "desktop": "sphere-reflection/assets/reflections/salon-2048.webp",
         "mobile": "sphere-reflection/assets/reflections/salon-1024.webp",
-    },
-    "paisley": {
-        "desktop": "sphere-reflection/assets/reflections/paisley-2048.webp",
-        "mobile": "sphere-reflection/assets/reflections/paisley-1024.webp",
     },
     "portoro": {
         "desktop": "sphere-reflection/assets/reflections/portoro-2048.webp",
