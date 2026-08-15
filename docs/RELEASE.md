@@ -12,8 +12,8 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 36 is the latest processed TestFlight build. The
-checked-in project is set to build 37 for the readable playable-launcher upload.
+this same record. Build 37 is the latest processed TestFlight build and the
+checked-in project matches it.
 
 ## Archive → TestFlight
 
@@ -59,7 +59,7 @@ pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-re
 
 Current Android identity is `versionCode 4`, `versionName 1.0-test`, targeting
 API 36 with minimum API 24. The direct test APK is debug-signed with the same
-certificate as builds 1–3 so testers can upgrade in place. Build 4 is prepared
+certificate as builds 1–3 so testers can upgrade in place. Build 4 is published
 at `https://dr.eamer.dev/downloads/apps/hexsweeper/`. The release AAB remains
 deliberately unsigned. Create and
 retain the Play signing key outside this repository, then use Android Studio's
@@ -95,7 +95,7 @@ Done (updated 2026-08-11, through the App Store Connect API):
       preserved rather than overwritten by the four generated alternatives
 - [x] Build 8 processed, validated, and attached to the 1.0 version. Nothing
       submitted for review
-- [ ] Build 37 uploaded to TestFlight on 2026-08-14 and processed as VALID;
+- [x] Build 37 uploaded to TestFlight on 2026-08-14 and processed as VALID;
       confirm distribution state in App Store Connect before widening access
 
 Still owed:

@@ -32,7 +32,7 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Support, marketing and privacy policy URLs set
 - [x] Age rating answered — every category NONE/false
 - [x] Export compliance: `ITSAppUsesNonExemptEncryption` is `false`
-- [ ] Build 37 uploaded to TestFlight and processed as VALID
+- [x] Build 37 uploaded to TestFlight and processed as VALID; nothing submitted for review
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
