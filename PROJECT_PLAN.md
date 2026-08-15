@@ -17,9 +17,9 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 
 ## Current status (2026-08-14)
 
-- [x] Shared playable launcher promoted to the public web root: drag, dig, flag, flood, and mode-triggered option fields use the real engine.
+- [x] Shared playable launcher promoted to the public web root: drag, dig, flag, flood, and mode-triggered settings blooms use the real engine.
 - [x] Infinite, Classic, and Sphere route to first-class web game pages.
-- [x] Infinite/Sphere Resume and launcher-only System/Light/Dark behavior retained.
+- [x] Infinite/Classic/Sphere Resume and per-mode stateful launch settings retained.
 - [x] Former root `?mode=`, `?theme=`, and `?deal=` links forward to `play.html`.
 - [x] Generated Infinite/Classic and canonical Sphere expose a 44px Games return.
 - [x] Root launcher retains native links, keyboard focus, reduced motion, forced colors, and a no-script fallback.
@@ -218,9 +218,9 @@ The archived decorative theme remains at `collection/theme-water.html` and
 ## Acceptance (production)
 
 Bare root is a movable, playable endless field where digging Infinite / Classic /
-Sphere reveals that mode's connected options; each route opens the correct
-playable board and returns through Games; newest valid
-Infinite or Sphere saves can resume; launcher theme is independent of gameplay;
+Sphere reveals that mode's connected settings hub and its foldable choice bloom;
+each route opens the correct playable board and returns through Games; newest valid
+Infinite, Classic, or Sphere saves can resume; launcher theme is independent of gameplay;
 old flat-game deep links retain their behavior at `play.html`; keyboard, touch,
 forced colors, reduced motion, safe areas, and no-script navigation remain
 usable. The flat game retains its five-theme acceptance contract: Light / Dark /

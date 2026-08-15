@@ -266,14 +266,13 @@
     }
 
     /**
-     * Start a clean board. Endless lanes must drop autosave here — otherwise
-     * S/M/L or Restart would paint a fresh field while the old run still
-     * resurrected on the next load.
+     * Start a clean board. Any persistence-owning surface must drop autosave
+     * here — otherwise S/M/L or Restart would paint a fresh field while the
+     * old run still resurrected on the next load.
      */
     function beginFreshRun(level, { clearPersist = true } = {}) {
       if (
         clearPersist &&
-        state.endless &&
         typeof state.hooks.onClearPersist === "function"
       ) {
         state.hooks.onClearPersist(api);
@@ -404,11 +403,19 @@
           clearPersist: opts.clearPersist !== false,
         });
       },
-      /** Snapshot infinite-field run (mines / revealed / flags / camera). */
+      /** Snapshot any run (mines / revealed / flags / camera). */
+      exportRunState() {
+        return exportRunState();
+      },
+      /** Restore a matching finite or endless snapshot. */
+      applyRunState(data) {
+        return applyRunState(data);
+      },
+      /** Backward-compatible endless-only snapshot adapter. */
       exportEndlessState() {
         return exportEndlessState();
       },
-      /** Restore a snapshot from exportEndlessState / autosave. */
+      /** Backward-compatible endless-only restore adapter. */
       applyEndlessState(data) {
         return applyEndlessState(data);
       },
@@ -1686,12 +1693,11 @@
     }
 
     /**
-     * Pack an endless run for localStorage / file export.
-     * Only stores mines, revealed, flagged, torn — sparse vs full map.
+     * Pack a run for localStorage / file export. Only stores mines, revealed,
+     * flagged, and torn cells — sparse vs the complete board map.
      */
-    function exportEndlessState() {
-      if (!state.endless) return null;
-      ensureFinishStamp();
+    function exportRunState() {
+      if (state.endless) ensureFinishStamp();
       const mines = [];
       const revealed = [];
       const flagged = [];
@@ -1705,7 +1711,7 @@
       });
       return {
         v: 1,
-        endless: true,
+        endless: !!state.endless,
         difficulty: state.currentDifficulty,
         density: state.mineDensity,
         radius: state.mapRadius,
@@ -1725,6 +1731,10 @@
         flagged,
         torn,
       };
+    }
+
+    function exportEndlessState() {
+      return state.endless ? exportRunState() : null;
     }
 
     function buildMapToRadius(radius) {
@@ -1763,13 +1773,11 @@
       }
     }
 
-    /**
-     * Restore an endless snapshot. Returns false if payload is unusable.
-     */
-    function applyEndlessState(data) {
-      if (!data || data.v !== 1 || !data.endless) return false;
+    /** Restore a snapshot for the currently booted topology. */
+    function applyRunState(data) {
+      if (!data || data.v !== 1 || typeof data.endless !== "boolean") return false;
+      if (!!data.endless !== !!state.endless) return false;
       stopTimer();
-      state.endless = true;
       if (data.difficulty && state.config[data.difficulty]) {
         state.currentDifficulty = data.difficulty;
       }
@@ -1825,14 +1833,14 @@
         : Array.isArray(data.mines)
           ? data.mines.length
           : 0;
-      // Escape finish (axial key) — never a mine; stamp after mineCount restore
-      if (typeof data.finish === "string" && data.finish.includes(",")) {
+      // Escape finish (axial key) — never a mine; stamp after mineCount restore.
+      if (state.endless && typeof data.finish === "string" && data.finish.includes(",")) {
         const parts = data.finish.split(",");
         setFinishCell(parseInt(parts[0], 10), parseInt(parts[1], 10));
       } else {
         state.finishKey = null;
       }
-      ensureFinishStamp();
+      if (state.endless) ensureFinishStamp();
       recountNeighbors();
       state.timeElapsed = data.time | 0;
       state.detonator = null;
@@ -1854,9 +1862,14 @@
         startTimer(state.timeElapsed);
       }
       if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
-      // Grow if viewport needs more than the saved radius
-      if (!state.isGameOver) ensureWorldCoverage(true);
+      // Endless restores may need another ring to cover a changed viewport.
+      if (state.endless && !state.isGameOver) ensureWorldCoverage(true);
       return true;
+    }
+
+    function applyEndlessState(data) {
+      if (!data || !data.endless || !state.endless) return false;
+      return applyRunState(data);
     }
 
     function updateUI() {

@@ -26,7 +26,7 @@ for (const [label, href] of [
   ["Classic", "bounded.html"],
   ["Sphere", "sphere/"],
 ]) {
-  expect(launcher.includes(`href="${href}`), `launcher is missing the ${label} route (${href})`);
+  expect(launcher.includes(href), `launcher is missing the ${label} route (${href})`);
 }
 
 for (const [label, selector] of [
@@ -57,6 +57,21 @@ expect(
   "launcher choices are no longer assigned connected seats from branch data",
 );
 expect(
+  template.includes('id="infinite-settings"') &&
+    template.includes('id="classic-settings"') &&
+    template.includes('id="sphere-settings"') &&
+    template.includes("function openBloom(") &&
+    template.includes("activeBranch === branchName"),
+  "launcher lost the per-mode Clex-style settings blooms",
+);
+expect(
+  template.includes('id="classic-medium" type="button"') &&
+    template.includes('data-classic-size="medium"') &&
+    template.includes('aria-pressed="false"') &&
+    template.includes("function applyChoice("),
+  "launcher settings choices are no longer stateful in-place controls",
+);
+expect(
   template.includes("protectedKeys.has(key(cell.q, cell.r))") && template.includes("api.dig(cell)"),
   "preset cells are not guaranteed safe or revealed through the game engine",
 );
@@ -83,8 +98,18 @@ expect(
   "launcher zoom is not explicit, persistent, or isolated from game lanes",
 );
 expect(
-  !template.includes("function fitLayout()") && !template.includes("theme-hub"),
+  !template.includes("function fitLayout()"),
   "launcher brought back the fixed fitted flower menu",
+);
+expect(
+  core.includes("exportRunState()") && core.includes("applyRunState(data)"),
+  "core no longer exposes topology-safe run persistence",
+);
+expect(
+  bounded.includes('CLASSIC_RUN_KEY = "hexsweeper-classic-run-v1"') &&
+    bounded.includes("classicGame.applyRunState(savedClassicRun)") &&
+    launcher.includes("hexsweeper-classic-run-v1"),
+  "Classic active runs no longer feed the centered Resume tile",
 );
 
 expect(

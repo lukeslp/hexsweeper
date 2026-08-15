@@ -7,8 +7,9 @@
 A hexagonal minesweeper in three shapes: an endless plate, a fixed classic
 board, and a closed 3D sphere. The web and native apps share one continuous,
 playable launcher board: drag to explore, dig or flag ordinary cells, and dig a
-mode cell to uncover its connected options. Keyboard and reduced-motion paths
-use the same board state.
+mode cell to uncover its connected settings hub. Each hub blooms settable
+choices into adjacent safe cells; the revealed mode starts the configured game.
+Keyboard and reduced-motion paths use the same board state.
 
 **[Play Hexsweeper on dr.eamer.dev](https://dr.eamer.dev/games/hexsweeper/).**
 
@@ -31,15 +32,16 @@ The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on
 | Choice | Board | Route |
 |------|--------|------|
 | **Infinite** | Endless Light/Dark plate; the run persists | `infinite.html` |
-| **Classic** | Fixed neumorphic board | `bounded.html` |
+| **Classic** | Fixed neumorphic board; the run persists | `bounded.html` |
 | **Sphere** | Closed 3D Goldberg sphere | `sphere/` |
 
-The root launcher also surfaces the newest unfinished Infinite or Sphere run in
-the center. Classic joins Resume only after it gains a finite-board persistence
-contract. Infinite, Classic, and Sphere are protected cells in the live field;
-digging one reveals its own connected options through the same safe-dig and
-flood engine as ordinary play. Option seats are data-placed and mine-safe, so
-new launch-time materials can extend a branch without a fixed menu layout.
+The root launcher surfaces the newest unfinished Infinite, Classic, or Sphere
+run in the center. Infinite, Classic, and Sphere are protected cells in the live
+field; digging one reveals its connected settings hub through the same safe-dig
+and flood engine as ordinary play. Activating that hub blooms stateful choices;
+activating the revealed mode starts a fresh configured run. Choice seats are
+data-placed and mine-safe, so new launch-time materials can extend a branch
+without a fixed menu layout.
 
 The former five-mode flat production surface remains at `play.html` for its
 distinct materials and mechanics:
@@ -167,9 +169,11 @@ safety, animated zero flood, right-click / long-hold flags, drag pan, pinch and
 wheel zoom, keyboard cursor, mine loss, and reset behavior as Hexsweeper itself.
 **Infinite**, **Classic**, and **Sphere** are immediately legible, protected
 cells on the board. Digging a mode uses the engine's reveal path, then uncovers
-that mode's connected choice cells: Infinite themes and effects, Classic
-Small / Medium / Large boards, and Sphere materials plus drag direction. The
-field remains playable and movable while any number of branches stay revealed.
+that mode's connected settings hub. The hub opens and folds a Clex-style bloom:
+Infinite themes and effects, Classic Small / Medium / Large boards, and Sphere
+materials plus drag direction. Choices set preferences in place and remain
+visibly selected; the mode face reflects the current value and starts play. The
+field remains playable and movable, and opening one bloom folds the previous one.
 
 Choice seats are assigned globally from branch direction and data, rather than
 fixed viewport offsets, so additional launch-time materials occupy the next
@@ -177,10 +181,10 @@ connected safe hex. Selecting a value writes the same preference key used by
 its game. Drag gestures beyond the engine threshold pan without activating a
 cell; arrow-key exploration and the Center control provide non-drag routes.
 
-When an unfinished Infinite or Sphere autosave exists, the newest run rises as
-a mode-colored **Resume** face in the center. Launcher preferences never mutate
-those save blobs. Classic is omitted from Resume until its finite board has a
-real persistence contract.
+When an unfinished Infinite, Classic, or Sphere autosave exists, the newest run
+rises as a mode-colored **Resume** face in the center. Launcher preferences never
+mutate those save blobs. Classic snapshots mines, reveals, flags, size, time, and
+view state before the Games transition; only the Resume route restores it.
 
 ## Engine API
 

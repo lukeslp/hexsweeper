@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join, normalize, resolve } from "node:path";
 
@@ -109,6 +109,18 @@ try {
   const send = cdp(socket);
   await send("Runtime.enable");
   await send("Page.enable");
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 2,
+    mobile: true,
+  });
+  if (process.env.HEXSWEEPER_DARK === "1") {
+    await send("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-color-scheme", value: "dark" }],
+    });
+  }
+  await send("Page.reload", { ignoreCache: true });
 
   async function evaluate(expression) {
     const result = await send("Runtime.evaluate", {
@@ -125,6 +137,33 @@ try {
   }
 
   await waitExpression('location.pathname.endsWith("/index.html") && document.readyState === "complete"', "launcher did not load");
+  if (process.env.HEXSWEEPER_LAUNCHER_INITIAL_SCREENSHOT) {
+    const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+    await writeFile(process.env.HEXSWEEPER_LAUNCHER_INITIAL_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
+  }
+  await evaluate('document.getElementById("infinite-game").click()');
+  await waitExpression('document.getElementById("infinite-settings").classList.contains("is-available")', "Infinite settings hub did not dig out");
+  await evaluate('document.getElementById("infinite-settings").click()');
+  await waitExpression('document.getElementById("infinite-dark").classList.contains("is-available")', "Infinite settings did not bloom");
+  await evaluate('document.getElementById("infinite-dark").click()');
+  const bloomOutcome = await evaluate(`(() => ({
+    path: location.pathname,
+    selected: document.getElementById("infinite-dark").getAttribute("aria-pressed"),
+    stored: localStorage.getItem("hexsweeper-mode-v3"),
+    modeSummary: document.getElementById("infinite-mode-current").textContent,
+  }))()`);
+  assert.equal(bloomOutcome.path.endsWith("/index.html"), true, "setting a launcher choice navigated away");
+  assert.equal(bloomOutcome.selected, "true", "the selected launcher setting is not exposed semantically");
+  assert.equal(bloomOutcome.stored, "dark", "the launcher setting did not persist in place");
+  assert.match(bloomOutcome.modeSummary, /Dark.*Play/, "the mode tile does not reflect its selected setting");
+  if (process.env.HEXSWEEPER_LAUNCHER_SCREENSHOT) {
+    await delay(350);
+    const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+    await writeFile(process.env.HEXSWEEPER_LAUNCHER_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
+  }
+  await evaluate('document.getElementById("infinite-dark").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))');
+  await waitExpression('!document.getElementById("infinite-dark").classList.contains("is-available") && document.activeElement.id === "infinite-settings"', "Infinite settings did not fold closed and restore focus");
+
   await evaluate(`
     localStorage.clear();
     sessionStorage.clear();
@@ -200,10 +239,24 @@ try {
   assert.equal(classicOutcome.resumeHidden, false, "Classic Resume is hidden after returning from an active run");
   assert.equal(classicOutcome.resumeMode, "bounded", "Resume does not identify the Classic mode");
   assert.match(classicOutcome.resumeLabel || "", /Resume Classic/, "Classic Resume has no mode-specific accessible name");
+  await evaluate('document.getElementById("resume-game").click()');
+  await waitExpression('location.pathname.endsWith("/games/bounded.html") && document.readyState === "complete"', "Classic Resume did not reopen the game");
+  const restoredClassic = await waitExpression(`(() => {
+    if (typeof classicGame === "undefined" || !classicGame || classicGame.state.isFirstClick) return null;
+    const snapshot = classicGame.exportRunState();
+    return { first: snapshot.first, over: snapshot.over, revealed: snapshot.revealed.length };
+  })()`, "Classic Resume did not restore its board");
+  assert.equal(restoredClassic.first, false, "Classic Resume reopened a pristine board");
+  assert.equal(restoredClassic.over, false, "Classic Resume reopened a terminal board");
+  assert.ok(restoredClassic.revealed > 0, "Classic Resume restored no revealed cells");
   console.log("app resume browser contract: ok");
   socket.close();
 } finally {
-  if (chrome && chrome.exitCode == null) chrome.kill("SIGTERM");
+  if (chrome && chrome.exitCode == null) {
+    const exited = new Promise((resolveExit) => chrome.once("exit", resolveExit));
+    chrome.kill("SIGTERM");
+    await Promise.race([exited, delay(2000)]);
+  }
   if (server) await new Promise((resolveClose) => server.close(resolveClose));
-  if (profile) await rm(profile, { recursive: true, force: true });
+  if (profile) await rm(profile, { recursive: true, force: true, maxRetries: 4, retryDelay: 100 });
 }

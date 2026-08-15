@@ -107,10 +107,12 @@ body {
 })();
 
 const CLASSIC_SIZE_KEY = "hexsweeper-classic-size-v1";
+const CLASSIC_RUN_KEY = "hexsweeper-classic-run-v1";
 const CLASSIC_SIZES = ["easy", "medium", "hard"];
+const classicParams = new URLSearchParams(location.search);
 let classicSize = "medium";
 try {
-  const requested = new URLSearchParams(location.search).get("size");
+  const requested = classicParams.get("size");
   const stored = localStorage.getItem(CLASSIC_SIZE_KEY);
   classicSize = CLASSIC_SIZES.includes(requested)
     ? requested
@@ -118,13 +120,94 @@ try {
   localStorage.setItem(CLASSIC_SIZE_KEY, classicSize);
 } catch (_) {}
 
-Hexsweeper.boot({
+let classicGame = null;
+let classicSaveTimer = 0;
+
+function clearClassicRun() {
+  clearTimeout(classicSaveTimer);
+  classicSaveTimer = 0;
+  try { localStorage.removeItem(CLASSIC_RUN_KEY); } catch (_) {}
+}
+
+function classicSnapshot() {
+  if (!classicGame || classicGame.state.endless || classicGame.state.isFirstClick || classicGame.state.isGameOver) {
+    return null;
+  }
+  const snapshot = classicGame.exportRunState();
+  if (!snapshot || !Array.isArray(snapshot.mines) || !snapshot.mines.length || !Array.isArray(snapshot.revealed) || !snapshot.revealed.length) {
+    return null;
+  }
+  snapshot.kind = "classic";
+  snapshot.savedAt = Date.now();
+  return snapshot;
+}
+
+function flushClassicRun() {
+  clearTimeout(classicSaveTimer);
+  classicSaveTimer = 0;
+  const snapshot = classicSnapshot();
+  if (!snapshot) {
+    if (classicGame && (classicGame.state.isFirstClick || classicGame.state.isGameOver)) clearClassicRun();
+    return;
+  }
+  try { localStorage.setItem(CLASSIC_RUN_KEY, JSON.stringify(snapshot)); } catch (_) {}
+}
+
+function scheduleClassicSave() {
+  clearTimeout(classicSaveTimer);
+  classicSaveTimer = setTimeout(flushClassicRun, 140);
+}
+
+function readClassicRun() {
+  let snapshot = null;
+  try { snapshot = JSON.parse(localStorage.getItem(CLASSIC_RUN_KEY) || "null"); } catch (_) {}
+  const valid = snapshot &&
+    snapshot.v === 1 &&
+    snapshot.kind === "classic" &&
+    snapshot.endless === false &&
+    snapshot.first === false &&
+    snapshot.over === false &&
+    CLASSIC_SIZES.includes(snapshot.difficulty) &&
+    Array.isArray(snapshot.mines) && snapshot.mines.length > 0 &&
+    Array.isArray(snapshot.revealed) && snapshot.revealed.length > 0 &&
+    Array.isArray(snapshot.flagged);
+  if (!valid) {
+    clearClassicRun();
+    return null;
+  }
+  return snapshot;
+}
+
+classicGame = Hexsweeper.boot({
   difficulty: classicSize,
   theme: {
     bg: "#e0e5ec", shadowLight: "#ffffff", shadowDark: "#a3b1c6",
     covered: "#e0e5ec", revealed: "#e0e5ec", flag: "#ef4444",
     text: {1:"#3b82f6",2:"#10b981",3:"#ef4444",4:"#8b5cf6",5:"#f59e0b",6:"#ec4899",mine:"#333"}
+  },
+  hooks: {
+    onReveal: scheduleClassicSave,
+    onFlag: scheduleClassicSave,
+    onPersistTick: scheduleClassicSave,
+    onGameOver: clearClassicRun,
+    onClearPersist: clearClassicRun
   }
+});
+
+if (classicParams.get("resume") === "1") {
+  const savedClassicRun = readClassicRun();
+  if (!savedClassicRun || !classicGame.applyRunState(savedClassicRun)) clearClassicRun();
+} else {
+  clearClassicRun();
+}
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".app-back")) flushClassicRun();
+}, true);
+addEventListener("pagehide", flushClassicRun);
+addEventListener("beforeunload", flushClassicRun);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushClassicRun();
 });
 
 document.getElementById("diff-selector").addEventListener("click", (event) => {

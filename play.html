@@ -4266,6 +4266,12 @@ body[data-mode="escape"] .menu-links {
     if (!api || !th?.endless || !key || typeof api.applyEndlessState !== "function") {
       return false;
     }
+    try {
+      if (new URLSearchParams(location.search).get("fresh") === "1") {
+        clearLanePersist(th);
+        return false;
+      }
+    } catch (_) {}
     let raw;
     try {
       raw = localStorage.getItem(key);
