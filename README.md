@@ -5,9 +5,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
 
 A hexagonal minesweeper in three shapes: an endless plate, a fixed classic
-board, and a closed 3D sphere. The web and native apps share one playable
-safe-opening launcher, with deliberate support for keyboard, touch, and
-reduced-motion play.
+board, and a closed 3D sphere. The web and native apps share one continuous,
+playable launcher board: drag to explore, dig or flag ordinary cells, and dig a
+mode cell to uncover its connected options. Keyboard and reduced-motion paths
+use the same board state.
 
 **[Play Hexsweeper on dr.eamer.dev](https://dr.eamer.dev/games/hexsweeper/).**
 
@@ -33,10 +34,12 @@ The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on
 | **Classic** | Fixed neumorphic board | `bounded.html` |
 | **Sphere** | Closed 3D Goldberg sphere | `sphere/` |
 
-The root launcher also surfaces the newest unfinished Infinite or Sphere run.
-Classic joins Resume only after it gains a finite-board persistence contract.
-Each mode has its own adjacent settings face, so launch-time choices stay tied
-to the board they affect.
+The root launcher also surfaces the newest unfinished Infinite or Sphere run in
+the center. Classic joins Resume only after it gains a finite-board persistence
+contract. Infinite, Classic, and Sphere are protected cells in the live field;
+digging one reveals its own connected options through the same safe-dig and
+flood engine as ordinary play. Option seats are data-placed and mine-safe, so
+new launch-time materials can extend a branch without a fixed menu layout.
 
 The former five-mode flat production surface remains at `play.html` for its
 distinct materials and mechanics:
@@ -86,7 +89,7 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 
 | File | Role |
 |------|------|
-| `index.html` | Generated safe-opening launcher (web landing) |
+| `index.html` | Generated playable endless-board launcher (web landing) |
 | `infinite.html` | Generated endless Light/Dark product page |
 | `bounded.html` | Generated fixed Classic product page |
 | `play.html` | Flat five-mode game source (Light/Dark/Fire/Plague/Escape) |
@@ -158,16 +161,20 @@ pens. The live multi-theme game remains available at `play.html`.
 `python3 tools/export-collection.py --app` stages the sealed Capacitor payload in
 `build/app/`. The public `index.html` and native app launcher are both rendered
 from `tools/app-launcher.html`; route and asset treatment differ by platform.
-One safe opening reveals a connected seven-face menu: direct
-**Infinite**, **Classic**, and **Sphere** entries, one adjacent **Settings** face
-for each mode, and the cleared or resumable center. Infinite settings bloom into
-its visual themes and effects level; Classic into Small / Medium / Large boards;
-Sphere into its curated materials and drag direction. The active branch is
-automatically fitted and centered at narrow widths and browser reflow sizes.
-Choice faces are placed from their branch data rather than fixed viewport
-offsets, so additional launch-time materials can join the next connected hex.
-Selecting a value writes the same preference key used by its game, while the
-primary mode faces remain one-tap entries.
+The launcher boots the real endless `core.js` board. It owns the same first-dig
+safety, animated zero flood, right-click / long-hold flags, drag pan, pinch and
+wheel zoom, keyboard cursor, mine loss, and reset behavior as Hexsweeper itself.
+**Infinite**, **Classic**, and **Sphere** are immediately legible, protected
+cells on the board. Digging a mode uses the engine's reveal path, then uncovers
+that mode's connected choice cells: Infinite themes and effects, Classic
+Small / Medium / Large boards, and Sphere materials plus drag direction. The
+field remains playable and movable while any number of branches stay revealed.
+
+Choice seats are assigned globally from branch direction and data, rather than
+fixed viewport offsets, so additional launch-time materials occupy the next
+connected safe hex. Selecting a value writes the same preference key used by
+its game. Drag gestures beyond the engine threshold pan without activating a
+cell; arrow-key exploration and the Center control provide non-drag routes.
 
 When an unfinished Infinite or Sphere autosave exists, the newest run rises as
 a mode-colored **Resume** face in the center. Launcher preferences never mutate

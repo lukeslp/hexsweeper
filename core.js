@@ -203,7 +203,7 @@
       camTY: 0,
       focusCell: null,
       // Interaction: zoom (multiplies base cell size), dig vs flag, pan locks.
-      viewZoom: 1,
+      viewZoom: Number.isFinite(opts.initialZoom) ? opts.initialZoom : 1,
       flagMode: false,
       panning: false,
       spaceDown: false,
@@ -211,10 +211,13 @@
       _growAfterFlood: false,
     };
 
-    try {
-      const z = parseFloat(localStorage.getItem("hexsweeper-zoom-v1") || "1");
-      if (Number.isFinite(z) && z >= 0.55 && z <= 1.9) state.viewZoom = z;
-    } catch (_) {}
+    if (!Number.isFinite(opts.initialZoom) && opts.zoomStorageKey !== false) {
+      try {
+        const zoomKey = opts.zoomStorageKey || "hexsweeper-zoom-v1";
+        const z = parseFloat(localStorage.getItem(zoomKey) || "1");
+        if (Number.isFinite(z) && z >= 0.55 && z <= 1.9) state.viewZoom = z;
+      } catch (_) {}
+    }
 
     try {
       const storedBest = parseInt(localStorage.getItem("hexsweeper-endless-best") || "0", 10);
@@ -481,6 +484,18 @@
       return !!(state.finishKey && state.finishKey === `${cell.q},${cell.r}`);
     }
 
+    /**
+     * Product surfaces can reserve playable-looking cells for embedded controls
+     * (for example the shared launcher). Protected cells remain part of the
+     * board and can reveal normally, but never receive a mine or a flag.
+     */
+    function isProtectedCell(cell) {
+      if (!cell) return false;
+      if (isFinishCell(cell)) return true;
+      const guard = state.hooks && state.hooks.isProtectedCell;
+      return typeof guard === "function" && !!guard(cell, api);
+    }
+
     /** Mark / clear the Escape finish hex; demines if already present. */
     function setFinishCell(q, r) {
       if (state.finishKey) {
@@ -650,9 +665,10 @@
         worldUnder = { wx, wy };
       }
       state.viewZoom = z;
-      if (persist) {
+      if (persist && opts.zoomStorageKey !== false) {
         try {
-          localStorage.setItem("hexsweeper-zoom-v1", String(Math.round(z * 100) / 100));
+          const zoomKey = opts.zoomStorageKey || "hexsweeper-zoom-v1";
+          localStorage.setItem(zoomKey, String(Math.round(z * 100) / 100));
         } catch (_) {}
       }
       const level = state.currentDifficulty;
@@ -822,7 +838,7 @@
             : ENDLESS_DENSITY.medium;
         for (const key of keys) {
           const cell = state.map.get(key);
-          if (isSafeZone(cell, safeQ, safeR) || isFinishCell(cell)) continue;
+          if (isSafeZone(cell, safeQ, safeR) || isProtectedCell(cell)) continue;
           if (Math.random() < density) {
             cell.isMine = true;
             placed++;
@@ -832,7 +848,7 @@
         if (placed < 3 && keys.length > 12) {
           for (const key of keys) {
             const cell = state.map.get(key);
-            if (cell.isMine || isSafeZone(cell, safeQ, safeR) || isFinishCell(cell)) {
+            if (cell.isMine || isSafeZone(cell, safeQ, safeR) || isProtectedCell(cell)) {
               continue;
             }
             cell.isMine = true;
@@ -845,7 +861,7 @@
         for (const key of keys) {
           if (placed >= target) break;
           const cell = state.map.get(key);
-          if (isSafeZone(cell, safeQ, safeR) || isFinishCell(cell)) continue;
+          if (isSafeZone(cell, safeQ, safeR) || isProtectedCell(cell)) continue;
           cell.isMine = true;
           placed++;
         }
@@ -910,7 +926,7 @@
         // as the frontier expands (safe band would otherwise dilute mines).
         const eligible = [];
         for (const cell of fresh) {
-          if (isFinishCell(cell)) continue;
+          if (isProtectedCell(cell)) continue;
           const touchesOpen = getNeighbors(cell.q, cell.r).some((n) => n.revealed);
           if (!touchesOpen) eligible.push(cell);
         }
@@ -1115,6 +1131,11 @@
       return cellAtPixel(p.x, p.y);
     }
 
+    function cellActionHandled(cell, source, event) {
+      const handler = state.hooks && state.hooks.onCellAction;
+      return typeof handler === "function" && handler(cell, api, { source, event }) === true;
+    }
+
     let lastClickTime = 0;
     let lastClickKey = null;
     let suppressTapReveal = false;
@@ -1231,6 +1252,7 @@
       if (e.button !== 0 || e.ctrlKey || e.metaKey || state.spaceDown) return;
       const cell = getCellAtInput(e);
       if (!cell) return;
+      if (cellActionHandled(cell, "pointer", e)) return;
       const now = Date.now();
       const key = `${cell.q},${cell.r}`;
       if (state.flagMode) {
@@ -1390,6 +1412,14 @@
       if (key && !state.isGameOver) {
         const cell = state.map.get(key);
         if (cell) {
+          if (cellActionHandled(cell, "touch", e)) {
+            state.hoveredKey = null;
+            touchStartPos = null;
+            touchStartKey = null;
+            touchPanOrigin = null;
+            touchMoved = false;
+            return;
+          }
           if (state.flagMode) {
             if (!cell.revealed) toggleFlag(cell);
           } else if (!cell.flagged && !cell.revealed) reveal(cell);
@@ -1551,6 +1581,12 @@
 
     function toggleFlag(cell) {
       if (!cell || cell.revealed || cell._pendingReveal || cell._riftTorn) return;
+      if (isProtectedCell(cell)) {
+        if (typeof state.hooks.onProtectedFlag === "function") {
+          state.hooks.onProtectedFlag(cell, api);
+        }
+        return;
+      }
       cell.flagged = !cell.flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
@@ -2094,7 +2130,13 @@
     }
 
     window.addEventListener("keydown", (e) => {
-      if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+      if (
+        e.target &&
+        (e.target.closest?.("button, a, input, textarea, select, [contenteditable='true']") ||
+          /input|textarea|select/i.test(e.target.tagName))
+      ) {
+        return;
+      }
       if (e.code === "Space") {
         state.spaceDown = true;
         if (!e.repeat) e.preventDefault();

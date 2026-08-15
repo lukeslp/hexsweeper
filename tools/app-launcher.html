@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <!--
-  File Purpose: Native app launcher staged as one authentic Hexsweeper opening.
-  Primary Functions/Classes: deterministic mine field, neighbor counts, zero-cell
-    flood reveal, resumable-run routing, and per-board option flowers.
-  Inputs: viewport, saved runs/preferences, session reveal state. Outputs: game links.
-  A11y: native button/links, visible focus, 50px+ targets, live status, keyboard
-    reveal bypass, reduced motion, forced colors, and no timing-dependent action.
+  File Purpose: Shared web/native launcher built on the real Hexsweeper engine.
+  Primary Functions/Classes: endless playable board, protected preset cells,
+    drag/pinch exploration, mode-triggered option reveals, and saved-run routing.
+  Inputs: pointer/keyboard play, viewport, saved runs/preferences. Outputs: game links.
+  A11y: native preset controls, focusable board cursor, visible focus, live status,
+    non-drag camera controls, reduced motion, forced colors, and reversible reset.
   Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
@@ -13,7 +13,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Hexsweeper</title>
-<meta name="description" content="Choose Infinite, Classic, or Sphere Hexsweeper from one safe opening.">
+<meta name="description" content="Play a live Hexsweeper field and dig out Infinite, Classic, or Sphere options.">
 {{FONTS}}
 <style>
   :root {
@@ -23,37 +23,18 @@
     --field-glow: #f8fafc;
     --tile: #f7f9fc;
     --tile-edge: #aebdce;
-    --tile-shadow: #c8d4e1;
     --well: #8f9db0;
-    --well-ink: #172231;
-    --well-edge: #738397;
-    --well-shadow: #657386;
     --ink: #263240;
     --muted: #68798c;
     --focus: #246da0;
     --infinite-accent: #246da0;
     --classic-accent: #16794f;
     --sphere-accent: #724ab5;
-    --theme-accent: #4e647b;
-    --settings-accent: #4e647b;
     --flag: #e33030;
-    --ambient-strong: rgba(248, 250, 252, .84);
-    --ambient-soft: rgba(248, 250, 252, .28);
-    --edge-haze: rgba(200, 212, 225, .24);
-    --tile-drop: rgba(200, 212, 225, .76);
-    --tile-drop-strong: rgba(200, 212, 225, .94);
-    --well-drop: rgba(255, 255, 255, .38);
-    --focus-drop: rgba(36, 109, 160, .72);
-    --focus-glow: rgba(36, 109, 160, .42);
-    --count-shadow: rgba(248, 250, 252, .60);
-    --brand-shadow: rgba(232, 238, 245, .72);
-    --hint-shadow: rgba(232, 238, 245, .84);
-    --dug-ink: #d9dfe7;
-    --hex-w: clamp(58px, 19vw, 86px);
-    --hex-h: calc(var(--hex-w) * 1.1547);
-    --choice-scale: 1.08;
-    --board-x: 0px;
-    --board-y: 0px;
+    --glass: rgba(248, 250, 252, .82);
+    --glass-edge: rgba(115, 131, 151, .42);
+    --shadow: rgba(77, 94, 114, .24);
+    --cell-size: 34px;
     color-scheme: light dark;
   }
   :root[data-appearance="dark"] {
@@ -61,549 +42,312 @@
     --field-glow: #18212d;
     --tile: #171f29;
     --tile-edge: #536174;
-    --tile-shadow: #070a0f;
     --well: #d7e0eb;
-    --well-ink: #182331;
-    --well-edge: #f2f6fb;
-    --well-shadow: #ffffff;
     --ink: #edf3fb;
     --muted: #a8b6c7;
     --focus: #78c5f4;
     --infinite-accent: #78c5f4;
     --classic-accent: #20a873;
     --sphere-accent: #aa83e8;
-    --theme-accent: #a8b6c7;
-    --settings-accent: #a8b6c7;
-    --ambient-strong: rgba(24, 33, 45, .84);
-    --ambient-soft: rgba(24, 33, 45, .28);
-    --edge-haze: rgba(7, 10, 15, .24);
-    --tile-drop: rgba(7, 10, 15, .76);
-    --tile-drop-strong: rgba(7, 10, 15, .94);
-    --focus-drop: rgba(120, 197, 244, .72);
-    --focus-glow: rgba(120, 197, 244, .42);
-    --count-shadow: rgba(24, 33, 45, .60);
-    --brand-shadow: rgba(12, 17, 24, .72);
-    --hint-shadow: rgba(12, 17, 24, .84);
-    --dug-ink: #1e252f;
+    --glass: rgba(17, 24, 33, .82);
+    --glass-edge: rgba(168, 182, 199, .32);
+    --shadow: rgba(0, 0, 0, .42);
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { width: 100%; height: 100%; }
+  html, body, main, .launcher { width: 100%; height: 100%; }
   body {
     margin: 0;
     min-width: 280px;
     overflow: hidden;
-    touch-action: manipulation;
-    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
     font-family: var(--font-ui);
     color: var(--ink);
     background: var(--field);
+    -webkit-text-size-adjust: 100%;
   }
-  body::before {
-    content: "";
+  .launcher {
     position: fixed;
     inset: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(82% 62% at 50% 48%, var(--ambient-strong), transparent 72%),
-      linear-gradient(180deg, var(--ambient-soft), transparent 24% 76%, var(--edge-haze));
-    background:
-      radial-gradient(82% 62% at 50% 48%, color-mix(in srgb, var(--field-glow) 84%, transparent), transparent 72%),
-      linear-gradient(180deg, color-mix(in srgb, var(--field-glow) 28%, transparent), transparent 24% 76%, color-mix(in srgb, var(--tile-shadow) 24%, transparent));
-  }
-
-  main, .board, .field { position: fixed; inset: 0; }
-  .board {
     isolation: isolate;
     overflow: hidden;
-  }
-  .field {
-    z-index: 0;
-    pointer-events: none;
-    transition: opacity 180ms ease;
-  }
-  .hex {
-    position: absolute;
-    left: calc(50% + var(--board-x));
-    top: calc(50% + var(--board-y));
-    width: var(--hex-w);
-    height: var(--hex-h);
-    margin-left: calc(var(--hex-w) / -2);
-    margin-top: calc(var(--hex-h) / -2);
-    transform: translate3d(var(--x), var(--y), 0);
-    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  }
-  .cell,
-  .starter,
-  .mode,
-  .resume,
-  .theme-control {
-    background: var(--tile-edge);
-    filter: drop-shadow(0 4px 2px var(--tile-drop));
-    filter: drop-shadow(0 4px 2px color-mix(in srgb, var(--tile-shadow) 76%, transparent));
-  }
-  .cell::before,
-  .starter::before,
-  .mode::before,
-  .resume::before,
-  .theme-control::before {
-    content: "";
-    position: absolute;
-    inset: 2px 3px 6px;
-    clip-path: inherit;
     background:
-      radial-gradient(90% 70% at 47% 28%, var(--field-glow), transparent 78%),
-      var(--tile);
-    transition: inset 170ms ease, transform 170ms ease, background 170ms ease;
+      radial-gradient(72% 58% at 50% 47%, color-mix(in srgb, var(--field-glow) 34%, transparent), transparent 78%),
+      var(--field);
   }
-
-  .cell {
+  #launcher-canvas {
+    position: absolute;
     z-index: 0;
-    display: grid;
-    place-items: center;
-    transition:
-      transform 210ms cubic-bezier(.22, 1, .36, 1),
-      filter 180ms ease,
-      opacity 180ms ease;
-  }
-  .cell.is-revealed {
-    z-index: 1;
-    background: var(--well-edge);
-    filter: drop-shadow(0 1px 1px var(--well-drop));
-    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
-    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.93);
-  }
-  .cell.is-revealed::before {
-    inset: 5px 6px 7px;
-    background: var(--well);
-  }
-  .count {
-    position: relative;
-    z-index: 2;
-    opacity: 0;
-    transform: translateY(-2px) scale(.78);
-    color: var(--ink);
-    font: 700 clamp(.78rem, 3.7vw, 1.05rem)/1 var(--font-count);
-    text-shadow: 0 1px 0 var(--count-shadow);
-    text-shadow: 0 1px 0 color-mix(in srgb, var(--field-glow) 60%, transparent);
-    transition: opacity 130ms ease 50ms, transform 170ms cubic-bezier(.22, 1, .36, 1) 35ms;
-  }
-  .cell.is-revealed .count { opacity: 1; transform: none; }
-  .cell.count-1 .count { color: #125cc8; }
-  .cell.count-2 .count { color: #16794f; }
-  .cell.count-3 .count { color: #c43131; }
-  .cell.count-4 .count { color: #724ab5; }
-  :root[data-appearance="dark"] .cell.count-1 .count { color: #438cff; }
-  :root[data-appearance="dark"] .cell.count-2 .count { color: #20a873; }
-  :root[data-appearance="dark"] .cell.count-3 .count { color: #e05a5a; }
-  :root[data-appearance="dark"] .cell.count-4 .count { color: #aa83e8; }
-
-  .starter,
-  .mode,
-  .resume,
-  .theme-control {
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    border: 0;
-    padding: 0;
-    color: var(--ink);
-    text-decoration: none;
-    -webkit-user-select: none;
-    user-select: none;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
     outline: none;
   }
-  .starter {
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: transform 180ms cubic-bezier(.22, 1, .36, 1), filter 180ms ease;
-  }
-  .starter-content,
-  .mode-content,
-  .resume-content,
-  .theme-content {
-    position: relative;
-    z-index: 2;
-    display: grid;
-    justify-items: center;
-    gap: 1px;
-  }
-  .starter-icon {
-    width: clamp(24px, 7vw, 32px);
-    height: clamp(24px, 7vw, 32px);
-  }
-  .starter-label,
-  .mode-name,
-  .resume-name,
-  .theme-name {
-    max-width: 92%;
-    font-size: clamp(.62rem, calc(var(--hex-w) * .145), .84rem);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -.02em;
-    text-align: center;
-  }
-  .starter:focus,
-  .mode:focus,
-  .resume:focus,
-  .theme-control:focus {
-    background: var(--control-accent, var(--focus));
-    filter:
-      drop-shadow(0 5px 2px var(--tile-drop))
-      drop-shadow(0 0 5px var(--focus-drop));
-    filter:
-      drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 80%, transparent))
-      drop-shadow(0 0 5px color-mix(in srgb, var(--control-accent, var(--focus)) 72%, transparent));
-  }
-  .starter:focus::before,
-  .mode:focus::before,
-  .resume:focus::before,
-  .theme-control:focus::before { inset: 4px 5px 8px; }
-  @media (hover: hover) {
-    .starter:hover {
-      background: var(--focus);
-      filter:
-        drop-shadow(0 5px 2px var(--tile-drop))
-        drop-shadow(0 0 5px var(--focus-drop));
-      filter:
-        drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 80%, transparent))
-        drop-shadow(0 0 5px color-mix(in srgb, var(--focus) 72%, transparent));
-    }
-    .starter:hover::before,
-    .mode.is-available:hover::before,
-    .resume.is-available:hover::before,
-    .theme-control.is-available:hover::before { inset: 4px 5px 8px; }
-  }
-  .starter:active {
-    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.94);
-  }
-  .starter.is-hit {
-    pointer-events: none;
-    transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
-  }
-  .starter.is-hit .starter-content { opacity: 0; transform: scale(.72); }
-  .starter.is-cleared {
-    z-index: 1;
-    color: transparent;
-    background: var(--well-edge);
-    filter: drop-shadow(0 1px 1px var(--well-drop));
-    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
-    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.93);
-  }
-  .starter.is-cleared::before {
-    inset: 5px 6px 7px;
-    background: var(--well);
-  }
-  .starter-content {
-    transition: opacity 120ms ease, transform 170ms cubic-bezier(.22, 1, .36, 1);
-  }
-
-  .mode {
-    cursor: default;
-    pointer-events: none;
-    transition:
-      transform 190ms cubic-bezier(.22, 1, .36, 1),
-      filter 180ms ease,
-      opacity 180ms ease;
-  }
-  .mode-content,
-  .resume-content,
-  .theme-content {
-    gap: 2px;
-    opacity: 0;
-    transform: translateY(5px) scale(.78);
-    transition: opacity 170ms ease, transform 230ms cubic-bezier(.22, 1, .36, 1);
-  }
-  .mode-icon,
-  .resume-icon,
-  .theme-icon {
-    width: clamp(22px, calc(var(--hex-w) * .36), 36px);
-    height: clamp(22px, calc(var(--hex-w) * .36), 36px);
-    overflow: visible;
-  }
-  .mode-note,
-  .resume-note,
-  .theme-note {
-    max-width: 92%;
-    color: currentColor;
-    opacity: .58;
-    font-size: clamp(.46rem, calc(var(--hex-w) * .105), .62rem);
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: .025em;
-    text-align: center;
-  }
-  .mode-infinite,
-  .resume[data-mode="infinite"] {
-    --mode-accent: var(--infinite-accent);
-    --control-accent: var(--infinite-accent);
-  }
-  .mode-bounded,
-  .resume[data-mode="bounded"] {
-    --mode-accent: var(--classic-accent);
-    --control-accent: var(--classic-accent);
-  }
-  .mode-sphere,
-  .resume[data-mode="sphere"] {
-    --mode-accent: var(--sphere-accent);
-    --control-accent: var(--sphere-accent);
-  }
-  .mode.is-available {
-    z-index: 6;
-    cursor: pointer;
-    pointer-events: auto;
-    background: var(--mode-accent, var(--focus));
-    transform: translate3d(var(--x), var(--y), 0) scale(var(--choice-scale));
-    filter:
-      drop-shadow(0 7px 3px var(--tile-drop-strong))
-      drop-shadow(0 0 12px var(--focus-glow));
-    filter:
-      drop-shadow(0 7px 3px color-mix(in srgb, var(--tile-shadow) 94%, transparent))
-      drop-shadow(0 0 12px color-mix(in srgb, var(--mode-accent, var(--focus)) 42%, transparent));
-  }
-  .mode.is-available::before { inset: 3px 4px 7px; }
-  .mode.is-available .mode-content { opacity: 1; transform: none; }
-  .mode.is-available .mode-icon { color: var(--mode-accent, var(--focus)); }
-  .mode.is-available:active {
-    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(1);
-  }
-  .mode.is-dug {
-    pointer-events: none;
-    color: var(--dug-ink);
-    color: color-mix(in srgb, var(--ink) 8%, var(--field));
-    background: var(--well-edge);
-    filter: drop-shadow(0 1px 1px var(--well-drop));
-    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
-    transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
-  }
-  .mode.is-dug::before { inset: 6px 7px 8px; background: var(--well); }
-  .mode.is-dug .mode-content { transform: scale(.9); }
-
-  .resume {
-    z-index: 7;
-    cursor: default;
-    pointer-events: none;
-    transition:
-      transform 190ms cubic-bezier(.22, 1, .36, 1),
-      filter 180ms ease,
-      opacity 180ms ease;
-  }
-  .resume[hidden] { display: none; }
-  .resume.is-available {
-    cursor: pointer;
-    pointer-events: auto;
-    background: var(--mode-accent, var(--focus));
-    transform: translate3d(var(--x), var(--y), 0) scale(var(--choice-scale));
-    filter:
-      drop-shadow(0 7px 3px color-mix(in srgb, var(--tile-shadow) 94%, transparent))
-      drop-shadow(0 0 14px color-mix(in srgb, var(--mode-accent, var(--focus)) 50%, transparent));
-  }
-  .resume.is-available::before { inset: 3px 4px 7px; }
-  .resume.is-available .resume-content { opacity: 1; transform: none; }
-  .resume.is-available .resume-icon { color: var(--mode-accent, var(--focus)); }
-  .resume.is-available:active {
-    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(1);
-  }
-  .resume.is-dug {
-    pointer-events: none;
-    background: var(--well-edge);
-    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
-    transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
-  }
-  .resume.is-dug::before { inset: 6px 7px 8px; background: var(--well); }
-
-  .theme-control {
-    --control-accent: var(--theme-accent);
-    z-index: 3;
-    cursor: default;
-    pointer-events: none;
-    transition:
-      transform 210ms cubic-bezier(.22, 1, .36, 1),
-      filter 180ms ease,
-      opacity 180ms ease,
-      background 180ms ease;
-  }
-  .theme-control:disabled { opacity: 1; }
-  .theme-hub.is-available {
-    z-index: 6;
-    cursor: pointer;
-    pointer-events: auto;
-    background: color-mix(in srgb, var(--control-accent, var(--theme-accent)) 58%, var(--tile-edge));
-    transform: translate3d(var(--x), var(--y), 0) scale(.97);
-    filter:
-      drop-shadow(0 5px 2px color-mix(in srgb, var(--tile-shadow) 88%, transparent))
-      drop-shadow(0 0 6px color-mix(in srgb, var(--control-accent, var(--theme-accent)) 20%, transparent));
-  }
-  .theme-hub.is-available::before { inset: 3px 4px 7px; }
-  .theme-hub.is-available .theme-content { opacity: 1; transform: none; }
-  .theme-hub.is-expanded {
-    background: var(--well-edge);
-    color: var(--well-ink);
-    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.95);
-    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
-  }
-  .theme-hub.is-expanded::before { inset: 5px 6px 7px; background: var(--well); }
-  .theme-choice.is-available {
-    z-index: 6;
-    cursor: pointer;
-    pointer-events: auto;
-    background: var(--control-accent, var(--theme-accent));
-    transform: translate3d(var(--x), var(--y), 0) scale(1.045);
-    filter:
-      drop-shadow(0 6px 2px color-mix(in srgb, var(--tile-shadow) 90%, transparent))
-      drop-shadow(0 0 9px color-mix(in srgb, var(--control-accent, var(--theme-accent)) 32%, transparent));
-    animation: theme-bloom 240ms cubic-bezier(.22, 1, .36, 1) var(--bloom-delay, 0ms) backwards;
-  }
-  .theme-choice.is-available::before { inset: 3px 4px 7px; }
-  .theme-choice.is-available .theme-content { opacity: 1; transform: none; }
-  .theme-choice.is-available:active {
-    transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.98);
-  }
-  .theme-choice.is-available[aria-current="true"]::after {
-    content: "✓";
-    position: absolute;
-    z-index: 4;
-    top: 17%;
-    right: 21%;
-    display: grid;
-    place-items: center;
-    width: 15px;
-    height: 15px;
-    border: 1.5px solid currentColor;
-    border-radius: 50%;
-    background: var(--tile);
-    color: var(--control-accent, var(--theme-accent));
-    font: 700 10px/1 var(--font-ui);
-  }
-  .theme-choice.is-available[aria-current="true"] .theme-icon {
-    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--control-accent, var(--theme-accent)) 48%, transparent));
-  }
-  .size-choice .theme-icon {
-    display: grid;
-    place-items: center;
-    font: 700 clamp(1.15rem, 6vw, 1.55rem)/1 var(--font-count);
-  }
-  .theme-choice.is-dug {
-    pointer-events: none;
-    color: var(--dug-ink);
-    background: var(--well-edge);
-    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
-    transform: translate3d(var(--x), calc(var(--y) + 5px), 0) scale(.9);
-  }
-  .theme-choice.is-dug::before { inset: 6px 7px 8px; background: var(--well); }
-  .theme-choice.is-dug .theme-content { transform: scale(.9); }
-
-  .infinite-hub,
-  .infinite-choice { --control-accent: var(--infinite-accent); }
-  .size-hub,
-  .size-choice { --control-accent: var(--classic-accent); }
-  .style-hub,
-  .style-choice { --control-accent: var(--sphere-accent); }
-  .board[data-open-branch] .field { opacity: .56; }
-  .board[data-open-branch] .mode,
-  .board[data-open-branch] .resume,
-  .board[data-open-branch] .theme-hub {
-    opacity: .16;
-    pointer-events: none;
-  }
-  .board[data-open-branch="infinite"] .mode-infinite,
-  .board[data-open-branch="infinite"] .infinite-hub,
-  .board[data-open-branch="size"] .mode-bounded,
-  .board[data-open-branch="size"] .size-hub,
-  .board[data-open-branch="style"] .mode-sphere,
-  .board[data-open-branch="style"] .style-hub {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .board[data-open-branch] .theme-hub.is-expanded {
-    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--well-shadow) 38%, transparent));
-  }
-
-  .board[data-phase="clearing"] .starter { animation: hit 220ms cubic-bezier(.22, 1, .36, 1) both; }
-  .board[data-phase="ready"] .mode.is-available { animation: mode-rise 250ms cubic-bezier(.22, 1, .36, 1) backwards; }
-  .board[data-phase="ready"] .resume.is-available { animation: mode-rise 250ms cubic-bezier(.22, 1, .36, 1) 105ms backwards; }
-  .board[data-phase="ready"] .theme-hub.is-available { animation: utility-rise 230ms cubic-bezier(.22, 1, .36, 1) 125ms backwards; }
-  .board[data-phase="ready"] .cell { opacity: .78; }
-  .board[data-phase="ready"] .cell.is-revealed { opacity: .88; }
-  .board[data-phase="ready"] .starter { opacity: .72; }
-  .board[data-phase="ready"] .mode-bounded { animation-delay: 35ms; }
-  .board[data-phase="ready"] .mode-sphere { animation-delay: 70ms; }
-  .board.is-leaving .mode:not(.is-dug),
-  .board.is-leaving .resume:not(.is-dug),
-  .board.is-leaving .theme-control,
-  .board.is-leaving .cell,
-  .board.is-leaving .starter { opacity: .52; }
-  .board.is-leaving .mode,
-  .board.is-leaving .resume,
-  .board.is-leaving .theme-control { pointer-events: none; }
+  #launcher-canvas:focus-visible + .board-cursor { opacity: 1; }
 
   .masthead {
     position: fixed;
     z-index: 10;
     left: 50%;
-    top: max(18px, calc(env(safe-area-inset-top) + 12px));
+    top: max(15px, calc(env(safe-area-inset-top) + 9px));
+    width: min(32rem, calc(100vw - 104px));
     transform: translateX(-50%);
     display: grid;
     justify-items: center;
-    gap: 2px;
-    max-width: calc(100vw - 32px);
+    gap: 3px;
     pointer-events: none;
     text-align: center;
-    width: min(30rem, calc(100vw - 32px));
   }
   .brand {
     margin: 0;
-    color: var(--ink);
-    font-size: clamp(1.05rem, 5vw, 1.35rem);
+    font-size: clamp(1.05rem, 4.7vw, 1.38rem);
     font-weight: 700;
-    letter-spacing: .055em;
+    letter-spacing: .065em;
     line-height: 1;
     text-transform: uppercase;
-    text-shadow: 0 2px 10px var(--brand-shadow);
-    text-shadow: 0 2px 10px color-mix(in srgb, var(--field) 72%, transparent);
+    text-shadow: 0 2px 12px var(--field), 0 2px 18px var(--field);
   }
   .hint {
     margin: 0;
-    padding: 4px 0 0;
     color: var(--muted);
-    font-size: clamp(.75rem, 3.3vw, .88rem);
+    font-size: clamp(.72rem, 3vw, .86rem);
     font-weight: 600;
-    letter-spacing: .02em;
-    text-shadow: 0 1px 8px var(--hint-shadow);
-    text-shadow: 0 1px 8px color-mix(in srgb, var(--field) 84%, transparent);
+    line-height: 1.25;
+    letter-spacing: .015em;
     text-wrap: balance;
-    transition: color 180ms ease;
+    text-shadow: 0 1px 10px var(--field), 0 1px 14px var(--field);
   }
 
+  .preset-layer {
+    position: absolute;
+    z-index: 4;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .preset,
+  .board-cursor {
+    position: absolute;
+    left: var(--screen-x, 50%);
+    top: var(--screen-y, 50%);
+    width: calc(var(--cell-size) * 1.73205);
+    height: calc(var(--cell-size) * 2);
+    transform: translate(-50%, -50%) scale(var(--preset-scale, 1));
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+  .preset {
+    --accent: var(--focus);
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    border: 0;
+    padding: 0;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    text-decoration: none;
+    pointer-events: none;
+    -webkit-user-select: none;
+    user-select: none;
+    outline: none;
+    transition: opacity 170ms ease, filter 170ms ease, background 170ms ease;
+  }
+  .preset::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    z-index: 0;
+    clip-path: inherit;
+    border-radius: 18%;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .preset:focus-visible {
+    --preset-scale: 1.04;
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 78%, transparent));
+  }
+  .preset:focus-visible::before {
+    inset: 3px;
+    outline: 3px solid var(--accent);
+    outline-offset: -4px;
+  }
+  .preset-content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    justify-items: center;
+    gap: 0;
+    width: 96%;
+    transform: translateY(-1px);
+    text-align: center;
+    text-shadow: 0 1px 5px var(--field), 0 1px 9px var(--field);
+  }
+  .preset-icon {
+    width: calc(var(--cell-size) * .5);
+    height: calc(var(--cell-size) * .5);
+    max-width: 25px;
+    max-height: 25px;
+    overflow: visible;
+    color: var(--accent);
+  }
+  .preset-name {
+    max-width: 100%;
+    font-size: clamp(.78rem, calc(var(--cell-size) * .43), 1.05rem);
+    font-weight: 700;
+    line-height: .98;
+    letter-spacing: -.018em;
+  }
+  .preset-note {
+    max-width: 100%;
+    color: currentColor;
+    opacity: .62;
+    font-size: clamp(.54rem, calc(var(--cell-size) * .28), .72rem);
+    font-weight: 600;
+    line-height: .98;
+    letter-spacing: .015em;
+  }
+  .mode-infinite,
+  .infinite-choice,
+  .resume[data-mode="infinite"] { --accent: var(--infinite-accent); }
+  .mode-classic,
+  .classic-choice,
+  .resume[data-mode="bounded"] { --accent: var(--classic-accent); }
+  .mode-sphere,
+  .sphere-choice,
+  .resume[data-mode="sphere"] { --accent: var(--sphere-accent); }
+  .mode {
+    z-index: 3;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .mode.is-dug {
+    background: color-mix(in srgb, var(--accent) 17%, transparent);
+    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--accent) 28%, transparent));
+  }
+  .mode.is-dug .preset-content { transform: translateY(2px) scale(.96); }
+  .mode[aria-expanded="true"] {
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 44%, transparent));
+  }
+  .resume[hidden] { display: none; }
+  .resume {
+    z-index: 5;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 38%, transparent));
+  }
+  .choice {
+    z-index: 4;
+    visibility: hidden;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.74);
+  }
+  .choice.is-available {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 34%, transparent));
+    animation: option-rise 260ms cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms) backwards;
+  }
+  .choice[aria-current="true"]::after {
+    content: "✓";
+    position: absolute;
+    z-index: 3;
+    top: 18%;
+    right: 20%;
+    display: grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--field);
+    font: 700 9px/1 var(--font-ui);
+  }
+  .size-icon {
+    display: grid;
+    place-items: center;
+    font: 700 calc(var(--cell-size) * .62)/1 var(--font-count);
+  }
+  .is-launching { opacity: .42 !important; }
+
+  .board-cursor {
+    z-index: 7;
+    opacity: 0;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--focus) 18%, transparent);
+    filter: drop-shadow(0 0 6px var(--focus));
+    transition: opacity 120ms ease, left 110ms ease, top 110ms ease;
+  }
+  .board-cursor::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    clip-path: inherit;
+    outline: 3px solid var(--focus);
+    outline-offset: -4px;
+  }
+
+  .board-tools {
+    position: fixed;
+    z-index: 12;
+    right: max(10px, calc(env(safe-area-inset-right) + 8px));
+    bottom: max(10px, calc(env(safe-area-inset-bottom) + 8px));
+    display: flex;
+    gap: 5px;
+    padding: 5px;
+    border: 1px solid var(--glass-edge);
+    border-radius: 999px;
+    background: var(--glass);
+    box-shadow: 0 7px 22px var(--shadow);
+    backdrop-filter: blur(12px) saturate(1.15);
+  }
+  .tool {
+    min-width: 42px;
+    min-height: 42px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    padding: 0 10px;
+    color: var(--ink);
+    background: transparent;
+    font: 700 .72rem/1 var(--font-ui);
+    cursor: pointer;
+  }
+  .tool:hover { background: color-mix(in srgb, var(--focus) 10%, transparent); }
+  .tool:focus-visible { outline: 3px solid var(--focus); outline-offset: -2px; }
+  .tool[aria-pressed="true"] { color: var(--field); background: var(--flag); }
+  .tool-symbol { font: 700 1.05rem/1 var(--font-count); }
+  .sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  @media (max-width: 420px) {
+    .masthead { width: calc(100vw - 82px); }
+    .board-tools { gap: 2px; padding: 4px; }
+    .tool { min-width: 39px; min-height: 39px; padding: 0 8px; }
+  }
   @media (max-height: 480px) and (orientation: landscape) {
-    :root {
-      --hex-w: clamp(56px, 16vh, 68px);
-      --choice-scale: 1.05;
-      --board-y: 28px;
-    }
     .masthead {
-      left: max(18px, calc(env(safe-area-inset-left) + 12px));
-      top: max(12px, calc(env(safe-area-inset-top) + 8px));
+      left: max(14px, calc(env(safe-area-inset-left) + 9px));
+      top: max(10px, calc(env(safe-area-inset-top) + 7px));
+      width: min(17rem, 42vw);
       transform: none;
       justify-items: start;
       text-align: left;
     }
-    .brand { font-size: 1rem; }
-    .hint { font-size: .72rem; }
-    .mode-content,
-    .resume-content,
-    .theme-content { gap: 0; }
-    .mode-icon,
-    .resume-icon,
-    .theme-icon { width: 22px; height: 22px; }
-    .mode-name,
-    .resume-name,
-    .theme-name { font-size: .62rem; }
-    .mode-note,
-    .resume-note,
-    .theme-note { font-size: .45rem; }
+    .brand { font-size: .98rem; }
+    .hint { font-size: .68rem; }
   }
-
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       scroll-behavior: auto !important;
@@ -613,259 +357,143 @@
     }
   }
   @media (forced-colors: active) {
-    body, body::before { background: Canvas; }
-    .cell, .starter, .mode, .resume, .theme-control { color: ButtonText; background: ButtonText; filter: none; }
-    .cell::before, .starter::before, .mode::before, .resume::before, .theme-control::before { background: Canvas; }
-    .cell.is-revealed, .starter.is-cleared, .mode.is-dug, .resume.is-dug, .theme-hub.is-expanded { background: ButtonText; }
-    .cell.is-revealed::before, .starter.is-cleared::before, .mode.is-dug::before,
-    .resume.is-dug::before, .theme-hub.is-expanded::before { background: Canvas; }
-    .count, .cell.count-1 .count, .cell.count-2 .count,
-    .cell.count-3 .count, .cell.count-4 .count { color: CanvasText; text-shadow: none; }
-    .starter:focus, .mode:focus, .resume:focus, .theme-control:focus { outline: 3px solid Highlight; outline-offset: -5px; }
-    .theme-choice.is-available[aria-current="true"] { outline: 3px double Highlight; outline-offset: -7px; }
-    .theme-choice.is-available[aria-current="true"]::after { background: Canvas; color: CanvasText; }
-    .brand, .hint { color: CanvasText; text-shadow: none; }
+    .launcher { background: Canvas; }
+    .preset { color: ButtonText; background: transparent; }
+    .preset::before { background: Canvas; outline: 2px solid ButtonText; outline-offset: -4px; }
+    .preset:focus-visible::before { outline: 4px solid Highlight; }
+    .choice.is-available::before, .mode[aria-expanded="true"]::before { outline-color: Highlight; }
+    .preset-icon, .brand, .hint { color: CanvasText; text-shadow: none; }
+    .board-tools { background: Canvas; border-color: ButtonText; backdrop-filter: none; }
+    .tool { color: ButtonText; }
+    .tool:focus-visible { outline-color: Highlight; }
   }
-  @keyframes hit {
-    45% { transform: translate3d(var(--x), calc(var(--y) + 7px), 0) scale(.86); }
-  }
-  @keyframes mode-rise {
-    from {
-      opacity: .35;
-      transform: translate3d(var(--x), calc(var(--y) + 10px), 0) scale(.88);
-    }
-    72% { transform: translate3d(var(--x), calc(var(--y) - 2px), 0) scale(1.1); }
-    to { transform: translate3d(var(--x), var(--y), 0) scale(var(--choice-scale)); }
-  }
-  @keyframes utility-rise {
-    from {
-      opacity: .45;
-      transform: translate3d(var(--x), calc(var(--y) + 7px), 0) scale(.9);
-    }
-    to { transform: translate3d(var(--x), var(--y), 0) scale(.97); }
-  }
-  @keyframes theme-bloom {
-    from {
-      opacity: .5;
-      transform: translate3d(var(--x), calc(var(--y) + 4px), 0) scale(.84);
-    }
-    74% { transform: translate3d(var(--x), calc(var(--y) - 2px), 0) scale(1.075); }
-    to { transform: translate3d(var(--x), var(--y), 0) scale(1.045); }
+  @keyframes option-rise {
+    from { opacity: .15; transform: translate(-50%, -45%) scale(.72); }
+    70% { transform: translate(-50%, -52%) scale(1.05); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
 </style>
 {{PLATFORM_HEAD}}</head>
 <body>
 <main>
-  <nav class="board" id="game-menu" data-phase="covered" aria-label="Choose a Hexsweeper board">
+  <section class="launcher" id="launcher" aria-labelledby="launcher-title">
+    <canvas id="launcher-canvas" tabindex="0" role="application" aria-roledescription="playable Hexsweeper board" aria-describedby="launcher-status" aria-label="Playable Hexsweeper menu. Drag to explore. Use arrow keys to move the keyboard cursor, Enter to dig, and F to flag."></canvas>
+    <div class="board-cursor" id="board-cursor" aria-hidden="true"></div>
+
     <header class="masthead">
-      <h1 class="brand">Hexsweeper</h1>
-      <p class="hint" id="menu-status" role="status" aria-live="polite">Dig to reveal the games</p>
+      <h1 class="brand" id="launcher-title">Hexsweeper</h1>
+      <p class="hint" id="launcher-status" role="status" aria-live="polite">Dig a mode · drag to explore · hold to flag</p>
     </header>
-    <div class="field" id="menu-field" aria-hidden="true"></div>
 
-    <button class="hex starter" id="opening-dig" type="button" data-q="0" data-r="0" aria-describedby="menu-status" aria-label="Dig the opening tile to reveal the game menu">
-      <span class="starter-content">
-        <svg class="starter-icon" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="m6.5 5.5 5-3.5 4.5 4-4.8 3.8Z" fill="currentColor"/>
-          <path d="m12.4 8.5 8.9 12.9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
-          <path d="M19.3 20.4c3.4-2.1 6.4-.9 8.2 2.1l-7.3 5.3c-2.5-2.2-2.9-5.1-.9-7.4Z" fill="currentColor"/>
-        </svg>
-        <span class="starter-label">Dig</span>
-      </span>
-    </button>
+    <nav class="preset-layer" id="preset-layer" aria-label="Game modes and revealed options">
+      <a class="preset resume destination" id="resume-game" href="{{INFINITE_HREF}}" data-q="0" data-r="0" data-mode="infinite" aria-label="Resume Infinite Hexsweeper" hidden>
+        <span class="preset-content">
+          <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M13 17H6v-7M7 17a18 18 0 1 1-1 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="m21 16 14 8-14 8Z" fill="currentColor"/></svg>
+          <span class="preset-name">Resume</span>
+          <span class="preset-note" id="resume-mode-name">Infinite</span>
+        </span>
+      </a>
 
-    <a class="hex resume destination" id="resume-game" href="{{INFINITE_HREF}}" data-q="0" data-r="0" data-mode="infinite" aria-describedby="menu-status" aria-label="Resume Infinite Hexsweeper" hidden>
-      <span class="resume-content">
-        <svg class="resume-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M13 17H6v-7M7 17a18 18 0 1 1-1 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="m21 16 14 8-14 8Z" fill="currentColor"/>
-        </svg>
-        <span class="resume-name">Resume</span>
-        <span class="resume-note" id="resume-mode-name">Infinite</span>
-      </span>
-    </a>
+      <button class="preset mode mode-infinite" id="infinite-game" type="button" data-mode="infinite" data-branch="infinite" data-out-q="0" data-out-r="-1" data-q="0" data-r="-1" aria-expanded="false" aria-controls="infinite-light infinite-dark infinite-effects" aria-label="Dig out Infinite options">
+        <span class="preset-content">
+          <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="preset-name">Infinite</span>
+          <span class="preset-note">Dig options</span>
+        </span>
+      </button>
 
-    <a class="hex mode mode-infinite destination" id="infinite-game" href="{{INFINITE_HREF}}?mode=light" data-base-href="{{INFINITE_HREF}}" data-mode="infinite" data-q="0" data-r="-1" aria-label="Play Infinite Hexsweeper, endless board">
-      <span class="mode-content">
-        <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="mode-name">Infinite</span>
-        <span class="mode-note">Endless</span>
-      </span>
-    </a>
+      <button class="preset mode mode-classic" id="classic-game" type="button" data-mode="bounded" data-branch="classic" data-out-q="1" data-out-r="0" data-q="1" data-r="0" aria-expanded="false" aria-controls="classic-small classic-medium classic-large" aria-label="Dig out Classic board sizes">
+        <span class="preset-content">
+          <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 35V14m1 2h14l-3.4 4.3L32 25H18m-4 11h9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="preset-name">Classic</span>
+          <span class="preset-note">Dig sizes</span>
+        </span>
+      </button>
 
-    <a class="hex mode mode-bounded destination" id="classic-game" href="{{BOUNDED_HREF}}?size=medium" data-base-href="{{BOUNDED_HREF}}" data-mode="bounded" data-q="1" data-r="0" aria-label="Play Classic Hexsweeper, fixed board">
-      <span class="mode-content">
-        <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-          <path d="M17 35V14m1 2h14l-3.4 4.3L32 25H18m-4 11h9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="mode-name">Classic</span>
-        <span class="mode-note">Fixed</span>
-      </span>
-    </a>
+      <button class="preset mode mode-sphere" id="sphere-game" type="button" data-mode="sphere" data-branch="sphere" data-out-q="-1" data-out-r="1" data-q="-1" data-r="1" aria-expanded="false" aria-controls="sphere-light sphere-shell sphere-glow sphere-invert" aria-label="Dig out Sphere styles">
+        <span class="preset-content">
+          <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M24 6c-7 5-9 12-9 18s2 13 9 18M24 6c7 5 9 12 9 18s-2 13-9 18M6 24h36M9 15c9 4 21 4 30 0M9 33c9-4 21-4 30 0" fill="none" stroke="currentColor" stroke-width="1" opacity=".78"/></svg>
+          <span class="preset-name">Sphere</span>
+          <span class="preset-note">Dig styles</span>
+        </span>
+      </button>
 
-    <a class="hex mode mode-sphere destination" href="{{SPHERE_HREF}}" data-mode="sphere" data-q="-1" data-r="1" aria-label="Play Sphere Hexsweeper, 3D globe">
-      <span class="mode-content">
-        <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/>
-          <path d="M24 6c-7 5-9 12-9 18s2 13 9 18M24 6c7 5 9 12 9 18s-2 13-9 18M6 24h36M9 15c9 4 21 4 30 0M9 33c9-4 21-4 30 0" fill="none" stroke="currentColor" stroke-width="1" opacity=".78"/>
-        </svg>
-        <span class="mode-name">Sphere</span>
-        <span class="mode-note">3D</span>
-      </span>
-    </a>
+      <a class="preset choice infinite-choice destination" id="infinite-light" href="{{INFINITE_HREF}}?mode=light" data-branch="infinite" data-infinite-theme="light" data-destination-name="Light Infinite" aria-label="Play Infinite with the Light style" aria-hidden="true" tabindex="-1">
+        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5M12 12l3.5 3.5m17 17L36 36m0-24-3.5 3.5m-17 17L12 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="preset-name">Light</span><span class="preset-note">Porcelain</span></span>
+      </a>
+      <a class="preset choice infinite-choice destination" id="infinite-dark" href="{{INFINITE_HREF}}?mode=dark" data-branch="infinite" data-infinite-theme="dark" data-destination-name="Dark Infinite" aria-label="Play Infinite with the Dark style" aria-hidden="true" tabindex="-1">
+        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M34.5 34.7A16 16 0 0 1 18 9.2 16 16 0 1 0 34.5 34.7Z" fill="currentColor"/></svg><span class="preset-name">Dark</span><span class="preset-note">Night iron</span></span>
+      </a>
+      <button class="preset choice infinite-choice" id="infinite-effects" type="button" data-branch="infinite" data-setting="effects" aria-label="Effects: Auto. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
+        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="m24 6 2.6 9.4L36 18l-9.4 2.6L24 30l-2.6-9.4L12 18l9.4-2.6Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m36 30 1.5 5.5L43 37l-5.5 1.5L36 44l-1.5-5.5L29 37l5.5-1.5Z" fill="currentColor"/></svg><span class="preset-name">Effects</span><span class="preset-note" id="effects-current">Auto</span></span>
+      </button>
 
-    <button class="hex theme-control theme-hub infinite-hub" id="infinite-toggle" type="button" data-branch="infinite" data-owner-mode="infinite" data-out-q="0" data-out-r="-1" data-q="0" data-r="-2" aria-describedby="menu-status" aria-expanded="false" aria-controls="infinite-light infinite-dark infinite-effects" aria-label="Choose Infinite settings" disabled>
-      <span class="theme-content">
-        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="theme-name">Settings</span>
-        <span class="theme-note" id="infinite-current">Light</span>
-      </span>
-    </button>
+      <a class="preset choice classic-choice destination" id="classic-small" href="{{BOUNDED_HREF}}?size=easy" data-branch="classic" data-classic-size="easy" data-destination-name="Small Classic" aria-label="Play a small Classic board, 10 mines" aria-hidden="true" tabindex="-1"><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">S</span><span class="preset-name">Small</span><span class="preset-note">10 mines</span></span></a>
+      <a class="preset choice classic-choice destination" id="classic-medium" href="{{BOUNDED_HREF}}?size=medium" data-branch="classic" data-classic-size="medium" data-destination-name="Medium Classic" aria-label="Play a medium Classic board, 35 mines" aria-hidden="true" tabindex="-1"><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">M</span><span class="preset-name">Medium</span><span class="preset-note">35 mines</span></span></a>
+      <a class="preset choice classic-choice destination" id="classic-large" href="{{BOUNDED_HREF}}?size=hard" data-branch="classic" data-classic-size="hard" data-destination-name="Large Classic" aria-label="Play a large Classic board, 80 mines" aria-hidden="true" tabindex="-1"><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">L</span><span class="preset-name">Large</span><span class="preset-note">80 mines</span></span></a>
 
-    <button class="hex theme-control theme-hub size-hub" id="size-toggle" type="button" data-branch="size" data-owner-mode="bounded" data-out-q="1" data-out-r="0" data-q="2" data-r="0" aria-describedby="menu-status" aria-expanded="false" aria-controls="size-small size-medium size-large" aria-label="Choose Classic board settings" disabled>
-      <span class="theme-content">
-        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.8"/>
-          <path d="M14 30h4V18h-4m9 12V18l4 7 4-7v12" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="theme-name">Settings</span>
-        <span class="theme-note" id="size-current">Medium</span>
-      </span>
-    </button>
+      <a class="preset choice sphere-choice destination" id="sphere-light" href="{{SPHERE_HREF}}?theme=light" data-branch="sphere" data-sphere-theme="light" data-destination-name="Light Sphere" aria-label="Play Sphere with the Light style" aria-hidden="true" tabindex="-1"><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="preset-name">Light</span><span class="preset-note">White field</span></span></a>
+      <a class="preset choice sphere-choice destination" id="sphere-shell" href="{{SPHERE_HREF}}?theme=shell" data-branch="sphere" data-sphere-theme="shell" data-destination-name="Shell Sphere" aria-label="Play Sphere with the Shell style" aria-hidden="true" tabindex="-1"><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="10" fill="var(--field)"/><circle cx="24" cy="24" r="5" fill="currentColor"/></svg><span class="preset-name">Shell</span><span class="preset-note">Dark field</span></span></a>
+      <a class="preset choice sphere-choice destination" id="sphere-glow" href="{{SPHERE_HREF}}?theme=glow" data-branch="sphere" data-sphere-theme="glow" data-destination-name="Glow Sphere" aria-label="Play Sphere with the Glow style" aria-hidden="true" tabindex="-1"><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" opacity=".45"/></svg><span class="preset-name">Glow</span><span class="preset-note">Luminous</span></span></a>
+      <button class="preset choice sphere-choice" id="sphere-invert" type="button" data-branch="sphere" data-setting="invert" aria-label="Sphere drag: Natural. Activate to cycle." aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 15h28M10 15l6-6m-6 6 6 6M38 33H10m28 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="preset-name">Drag</span><span class="preset-note" id="invert-current">Natural</span></span></button>
+    </nav>
 
-    <button class="hex theme-control theme-hub style-hub" id="style-toggle" type="button" data-branch="style" data-owner-mode="sphere" data-out-q="-1" data-out-r="1" data-q="-2" data-r="2" aria-describedby="menu-status" aria-expanded="false" aria-controls="style-light style-shell style-glow style-invert" aria-label="Choose Sphere settings" disabled>
-      <span class="theme-content">
-        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="16" fill="none" stroke="currentColor" stroke-width="1.8"/>
-          <path d="M24 8a16 16 0 0 0 0 32Z" fill="currentColor" opacity=".82"/>
-          <path d="M8 24h32M24 8c-6 5-8 10-8 16s2 11 8 16" fill="none" stroke="currentColor" stroke-width="1.2"/>
-        </svg>
-        <span class="theme-name">Settings</span>
-        <span class="theme-note" id="style-current">Light</span>
-      </span>
-    </button>
-
-    <a class="hex theme-control theme-choice infinite-choice destination" id="infinite-light" href="{{INFINITE_HREF}}?mode=light" data-branch="infinite" data-infinite-theme="light" data-destination-name="Light Infinite" data-q="-1" data-r="-2" style="--bloom-delay:0ms" aria-label="Play Infinite with the Light style" aria-hidden="true" tabindex="-1">
-      <span class="theme-content">
-        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
-          <path d="M24 7v5m0 24v5M7 24h5m24 0h5M12 12l3.5 3.5m17 17L36 36m0-24-3.5 3.5m-17 17L12 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <span class="theme-name">Light</span>
-        <span class="theme-note">Porcelain</span>
-      </span>
-    </a>
-
-    <a class="hex theme-control theme-choice infinite-choice destination" id="infinite-dark" href="{{INFINITE_HREF}}?mode=dark" data-branch="infinite" data-infinite-theme="dark" data-destination-name="Dark Infinite" data-q="0" data-r="-3" style="--bloom-delay:35ms" aria-label="Play Infinite with the Dark style" aria-hidden="true" tabindex="-1">
-      <span class="theme-content">
-        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M34.5 34.7A16 16 0 0 1 18 9.2 16 16 0 1 0 34.5 34.7Z" fill="currentColor"/>
-        </svg>
-        <span class="theme-name">Dark</span>
-        <span class="theme-note">Night iron</span>
-      </span>
-    </a>
-
-    <button class="hex theme-control theme-choice infinite-choice" id="infinite-effects" type="button" data-branch="infinite" data-setting="effects" data-q="1" data-r="-3" style="--bloom-delay:70ms" aria-label="Effects: Auto. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
-      <span class="theme-content">
-        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="m24 6 2.6 9.4L36 18l-9.4 2.6L24 30l-2.6-9.4L12 18l9.4-2.6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="m36 30 1.5 5.5L43 37l-5.5 1.5L36 44l-1.5-5.5L29 37l5.5-1.5ZM10 28l1.2 4.2 4.3 1.3-4.3 1.2L10 39l-1.2-4.3-4.3-1.2 4.3-1.3Z" fill="currentColor"/>
-        </svg>
-        <span class="theme-name">Effects</span>
-        <span class="theme-note" id="effects-current">Auto</span>
-      </span>
-    </button>
-
-    <a class="hex theme-control theme-choice size-choice destination" id="size-small" href="{{BOUNDED_HREF}}?size=easy" data-branch="size" data-classic-size="easy" data-destination-name="Small Classic" data-q="3" data-r="-1" style="--bloom-delay:0ms" aria-label="Play a small Classic board, 10 mines" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><span class="theme-icon" aria-hidden="true">S</span><span class="theme-name">Small</span><span class="theme-note">10 mines</span></span>
-    </a>
-    <a class="hex theme-control theme-choice size-choice destination" id="size-medium" href="{{BOUNDED_HREF}}?size=medium" data-branch="size" data-classic-size="medium" data-destination-name="Medium Classic" data-q="3" data-r="0" style="--bloom-delay:35ms" aria-label="Play a medium Classic board, 35 mines" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><span class="theme-icon" aria-hidden="true">M</span><span class="theme-name">Medium</span><span class="theme-note">35 mines</span></span>
-    </a>
-    <a class="hex theme-control theme-choice size-choice destination" id="size-large" href="{{BOUNDED_HREF}}?size=hard" data-branch="size" data-classic-size="hard" data-destination-name="Large Classic" data-q="2" data-r="1" style="--bloom-delay:70ms" aria-label="Play a large Classic board, 80 mines" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><span class="theme-icon" aria-hidden="true">L</span><span class="theme-name">Large</span><span class="theme-note">80 mines</span></span>
-    </a>
-
-    <a class="hex theme-control theme-choice style-choice destination" id="style-light" href="{{SPHERE_HREF}}?theme=light" data-branch="style" data-sphere-theme="light" data-destination-name="Light Sphere" data-q="-2" data-r="3" style="--bloom-delay:0ms" aria-label="Play Sphere with the Light style" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="theme-name">Light</span><span class="theme-note">White field</span></span>
-    </a>
-    <a class="hex theme-control theme-choice style-choice destination" id="style-shell" href="{{SPHERE_HREF}}?theme=shell" data-branch="style" data-sphere-theme="shell" data-destination-name="Shell Sphere" data-q="-3" data-r="3" style="--bloom-delay:35ms" aria-label="Play Sphere with the Shell style" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="11" fill="var(--tile)"/><circle cx="24" cy="24" r="6" fill="currentColor"/></svg><span class="theme-name">Shell</span><span class="theme-note">Dark field</span></span>
-    </a>
-    <a class="hex theme-control theme-choice style-choice destination" id="style-glow" href="{{SPHERE_HREF}}?theme=glow" data-branch="style" data-sphere-theme="glow" data-destination-name="Glow Sphere" data-q="-3" data-r="2" style="--bloom-delay:70ms" aria-label="Play Sphere with the Glow style" aria-hidden="true" tabindex="-1">
-      <span class="theme-content"><svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="1" opacity=".45"/></svg><span class="theme-name">Glow</span><span class="theme-note">Luminous</span></span>
-    </a>
-
-    <button class="hex theme-control theme-choice style-choice" id="style-invert" type="button" data-branch="style" data-setting="invert" data-q="-2" data-r="1" style="--bloom-delay:105ms" aria-label="Sphere drag: Natural. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
-      <span class="theme-content">
-        <svg class="theme-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M10 15h28M10 15l6-6m-6 6 6 6M38 33H10m28 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="theme-name">Drag</span>
-        <span class="theme-note" id="invert-current">Natural</span>
-      </span>
-    </button>
-  </nav>
+    <div class="board-tools" role="group" aria-label="Board controls">
+      <button class="tool" id="flag-tool" type="button" aria-pressed="false" aria-keyshortcuts="F" aria-label="Toggle flag mode"><span class="tool-symbol" aria-hidden="true">⚑</span></button>
+      <button class="tool" id="zoom-out-tool" type="button" aria-keyshortcuts="-" aria-label="Zoom out"><span class="tool-symbol" aria-hidden="true">−</span></button>
+      <button class="tool" id="zoom-in-tool" type="button" aria-keyshortcuts="+" aria-label="Zoom in"><span class="tool-symbol" aria-hidden="true">+</span></button>
+      <button class="tool" id="center-tool" type="button" aria-keyshortcuts="Escape" aria-label="Recenter the board"><span class="tool-symbol" aria-hidden="true">⌾</span></button>
+      <button class="tool" id="new-tool" type="button" aria-keyshortcuts="R" aria-label="Start a new launcher field"><span class="tool-symbol" aria-hidden="true">↻</span></button>
+    </div>
+    <p class="sr-only" id="keyboard-help">On the board, use arrow keys to move between hexes, Enter or Space to dig, F to flag, Escape to recenter, and R for a new field.</p>
+  </section>
 </main>
 
+<script>
+{{CORE_JS}}
+</script>
 <script>
 (function () {
   "use strict";
 
-  var board = document.getElementById("game-menu");
-  var field = document.getElementById("menu-field");
-  var masthead = board.querySelector(".masthead");
-  var starter = document.getElementById("opening-dig");
+  var SQRT3 = Math.sqrt(3);
+  var launcher = document.getElementById("launcher");
+  var canvas = document.getElementById("launcher-canvas");
+  var presetLayer = document.getElementById("preset-layer");
+  var cursor = document.getElementById("board-cursor");
+  var status = document.getElementById("launcher-status");
   var resume = document.getElementById("resume-game");
   var resumeModeName = document.getElementById("resume-mode-name");
-  var infiniteGame = document.getElementById("infinite-game");
-  var classicGame = document.getElementById("classic-game");
-  var status = document.getElementById("menu-status");
-  var modes = Array.prototype.slice.call(board.querySelectorAll(".mode"));
-  var branchHubs = Array.prototype.slice.call(board.querySelectorAll(".theme-hub[data-branch]"));
-  var branchChoices = Array.prototype.slice.call(board.querySelectorAll(".theme-choice[data-branch]"));
-  var settingChoices = branchChoices.filter(function (choice) { return !!choice.dataset.setting; });
-  var destinations = Array.prototype.slice.call(board.querySelectorAll(".destination"));
+  var flagTool = document.getElementById("flag-tool");
+  var zoomOutTool = document.getElementById("zoom-out-tool");
+  var zoomInTool = document.getElementById("zoom-in-tool");
+  var centerTool = document.getElementById("center-tool");
+  var newTool = document.getElementById("new-tool");
+  var modes = Array.prototype.slice.call(presetLayer.querySelectorAll(".mode[data-branch]"));
+  var choices = Array.prototype.slice.call(presetLayer.querySelectorAll(".choice[data-branch]"));
+  var destinations = Array.prototype.slice.call(presetLayer.querySelectorAll(".destination"));
   var branches = {};
-  branchHubs.forEach(function (hub) {
-    branches[hub.dataset.branch] = {
-      hub: hub,
-      choices: branchChoices.filter(function (choice) {
-        return choice.dataset.branch === hub.dataset.branch;
-      })
-    };
-  });
-  var directions = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
-  layoutBranchChoices();
-  var positionedControls = [starter, resume].concat(modes, branchHubs, branchChoices);
-  var reservedSeats = {};
-  positionedControls.forEach(function (control) {
-    reservedSeats[key(Number(control.dataset.q), Number(control.dataset.r))] = true;
-  });
-  var cells = new Map();
-  var mines = new Set();
-  var revealed = new Set();
-  var timers = [];
-  var resizeTimer = null;
-  var phase = "covered";
+  var protectedKeys = new Set(["0,0"]);
+  var modeByKey = new Map();
+  var choiceByKey = new Map();
+  var openedBranches = new Set();
+  var revealTimers = [];
+  var resetTimer = 0;
+  var api = null;
+  var geometrySignature = "";
+  var selectedKey = "0,0";
   var leaving = false;
-  var activeBranch = null;
+  var keyboardBranchFocus = null;
   var activeResume = null;
-  var keyboardOpening = false;
-  var pointerOpening = false;
-  var SESSION_KEY = "hexsweeper-launcher-opening-v1";
+  var statusLockUntil = 0;
+
   var APPEARANCE_KEY = "hexsweeper-appearance-v1";
   var EFFECTS_KEY = "hexsweeper-effects-v1";
   var INVERT_KEY = "hexsweeper-sphere-invert-v1";
   var INFINITE_THEME_KEY = "hexsweeper-mode-v3";
   var CLASSIC_SIZE_KEY = "hexsweeper-classic-size-v1";
   var SPHERE_THEME_KEY = "hexsweeper-sphere-theme-v6";
+  var LAUNCHER_ZOOM_KEY = "hexsweeper-launcher-zoom-v1";
   var appearancePreference = "system";
   var effectsPreference = "auto";
   var invertPreference = { x: false, y: false };
@@ -879,46 +507,66 @@
     { x: false, y: true, label: "Invert Y" },
     { x: true, y: true, label: "Invert both" }
   ];
-  var SPHERE_THEME_NAMES = {
-    light: "Light",
-    shell: "Shell",
-    dark: "Dark",
-    ink: "Ink",
-    float: "Float",
-    card: "Card",
-    glow: "Glow"
-  };
-  var CLASSIC_SIZE_NAMES = { easy: "Small", medium: "Medium", hard: "Large" };
 
   function key(q, r) { return q + "," + r; }
   function distance(q, r) { return Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)); }
+  function storageValue(store, storageKey) {
+    try { return store.getItem(storageKey); } catch (_) { return null; }
+  }
+  function writePreference(storageKey, value) {
+    try { localStorage.setItem(storageKey, value); } catch (_) {}
+  }
+  function parseSave(raw) {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (_) { return null; }
+  }
+  function titleCase(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
+  function reducedMotion() { return Hexsweeper.effectsReduced(); }
 
-  function axialPoint(q, r) {
-    return { x: q + r / 2, y: .8660254 * r };
+  function initialLauncherZoom() {
+    var stored = parseFloat(storageValue(localStorage, LAUNCHER_ZOOM_KEY) || "");
+    if (Number.isFinite(stored) && stored >= .55 && stored <= 1.9) return stored;
+    return innerWidth < 500 ? 1.46 : 1.32;
   }
 
-  function layoutBranchChoices() {
-    var fixedSeats = {};
-    [starter, resume].concat(modes, branchHubs).forEach(function (control) {
-      fixedSeats[key(Number(control.dataset.q), Number(control.dataset.r))] = true;
+  modes.forEach(function (mode) {
+    branches[mode.dataset.branch] = {
+      mode: mode,
+      choices: choices.filter(function (choice) { return choice.dataset.branch === mode.dataset.branch; })
+    };
+  });
+
+  function axialPoint(q, r) {
+    return { x: q + r / 2, y: .8660254038 * r };
+  }
+
+  // Branch records own only their semantic direction. Seats are assigned from
+  // the data at boot, globally, so another future material extends the field
+  // without a platform-specific breakpoint or a second overlay menu.
+  function layoutChoiceSeats() {
+    var occupied = new Set(["0,0"]);
+    modes.forEach(function (mode) {
+      occupied.add(key(Number(mode.dataset.q), Number(mode.dataset.r)));
     });
     Object.keys(branches).forEach(function (branchName) {
       var branch = branches[branchName];
-      var hubQ = Number(branch.hub.dataset.q);
-      var hubR = Number(branch.hub.dataset.r);
-      var outward = axialPoint(Number(branch.hub.dataset.outQ), Number(branch.hub.dataset.outR));
+      var modeQ = Number(branch.mode.dataset.q);
+      var modeR = Number(branch.mode.dataset.r);
+      var outward = axialPoint(Number(branch.mode.dataset.outQ), Number(branch.mode.dataset.outR));
       var candidates = [];
-      for (var radius = 1; radius <= 6; radius += 1) {
+      for (var radius = 1; radius <= 7; radius += 1) {
         for (var relR = -radius; relR <= radius; relR += 1) {
           for (var relQ = -radius; relQ <= radius; relQ += 1) {
             if (distance(relQ, relR) !== radius) continue;
-            var q = hubQ + relQ;
-            var r = hubR + relR;
-            if (fixedSeats[key(q, r)]) continue;
+            var q = modeQ + relQ;
+            var r = modeR + relR;
+            var id = key(q, r);
+            if (distance(q, r) <= 1 || occupied.has(id)) continue;
             var point = axialPoint(relQ, relR);
             candidates.push({
               q: q,
               r: r,
+              id: id,
               radius: radius,
               forward: point.x * outward.x + point.y * outward.y,
               cross: Math.abs(point.x * outward.y - point.y * outward.x)
@@ -930,133 +578,110 @@
         return a.radius - b.radius || b.forward - a.forward || a.cross - b.cross || a.r - b.r || a.q - b.q;
       });
       branch.choices.forEach(function (choice, index) {
-        var seat = candidates[index];
+        var seatIndex = candidates.findIndex(function (candidate) { return !occupied.has(candidate.id); });
+        var seat = seatIndex >= 0 ? candidates.splice(seatIndex, 1)[0] : null;
         if (!seat) return;
         choice.dataset.q = String(seat.q);
         choice.dataset.r = String(seat.r);
         choice.dataset.layoutIndex = String(index);
+        choice.style.setProperty("--reveal-delay", (index * 24) + "ms");
+        occupied.add(seat.id);
       });
     });
   }
 
-  function layoutControls() {
-    if (activeBranch && branches[activeBranch]) {
-      var branch = branches[activeBranch];
-      var owner = modes.find(function (mode) {
-        return mode.dataset.mode === branch.hub.dataset.ownerMode;
-      });
-      return [owner, branch.hub].concat(branch.choices).filter(Boolean);
-    }
-    if (phase === "covered" || phase === "clearing") return [starter];
-    return [starter]
-      .concat(resume.hidden ? [] : [resume])
-      .concat(modes, branchHubs);
-  }
-
-  function fitLayout() {
-    var viewportWidth = Math.max(280, document.documentElement.clientWidth || innerWidth);
-    var viewportHeight = Math.max(320, document.documentElement.clientHeight || innerHeight);
-    var controls = layoutControls();
-    var minX = Infinity;
-    var maxX = -Infinity;
-    var minY = Infinity;
-    var maxY = -Infinity;
-    controls.forEach(function (control) {
-      var point = axialPoint(Number(control.dataset.q), Number(control.dataset.r));
-      minX = Math.min(minX, point.x - .6);
-      maxX = Math.max(maxX, point.x + .6);
-      minY = Math.min(minY, point.y - .68);
-      maxY = Math.max(maxY, point.y + .68);
+  function indexPresetSeats() {
+    protectedKeys = new Set(["0,0"]);
+    modeByKey.clear();
+    choiceByKey.clear();
+    modes.forEach(function (mode) {
+      var id = key(Number(mode.dataset.q), Number(mode.dataset.r));
+      protectedKeys.add(id);
+      modeByKey.set(id, mode);
     });
-    if (!Number.isFinite(minX)) return;
-    var top = Math.max(76, masthead.getBoundingClientRect().bottom + 16);
-    var bottom = viewportHeight - 20;
-    var availableWidth = Math.max(240, viewportWidth - 28);
-    var availableHeight = Math.max(200, bottom - top);
-    var maxHexWidth = Math.min(86, viewportWidth * .19);
-    var width = Math.min(
-      maxHexWidth,
-      availableWidth / Math.max(1, maxX - minX),
-      availableHeight / Math.max(1, maxY - minY)
-    );
-    width = Math.max(44, width);
-    var unitsCenterX = (minX + maxX) / 2;
-    var unitsCenterY = (minY + maxY) / 2;
-    var targetCenterY = top + availableHeight / 2;
-    board.style.setProperty("--hex-w", width.toFixed(2) + "px");
-    board.style.setProperty("--board-x", (-unitsCenterX * width).toFixed(2) + "px");
-    board.style.setProperty("--board-y", (targetCenterY - viewportHeight / 2 - unitsCenterY * width).toFixed(2) + "px");
-    buildField();
-  }
-
-  function effectsReduced() {
-    if (effectsPreference === "reduced") return true;
-    if (effectsPreference === "full") return false;
-    return matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }
-
-  function reducedMotion() { return effectsReduced(); }
-
-  function applyEffectsAttribute() {
-    document.documentElement.dataset.effects = effectsReduced() ? "reduced" : "full";
-  }
-
-  function hash(q, r) {
-    var n = Math.imul(q + 37, 374761393) ^ Math.imul(r - 19, 668265263) ^ 0x5f3759df;
-    n = Math.imul(n ^ (n >>> 13), 1274126177);
-    return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
-  }
-
-  function storageValue(store, storageKey) {
-    try { return store.getItem(storageKey); } catch (_) { return null; }
-  }
-
-  function parseSave(raw) {
-    if (!raw) return null;
-    try { return JSON.parse(raw); } catch (_) { return null; }
-  }
-
-  function writePreference(storageKey, value) {
-    try { localStorage.setItem(storageKey, value); } catch (_) {}
+    choices.forEach(function (choice) {
+      var id = key(Number(choice.dataset.q), Number(choice.dataset.r));
+      protectedKeys.add(id);
+      choiceByKey.set(id, choice);
+    });
   }
 
   function loadPreferences() {
-    var storedAppearance = storageValue(localStorage, APPEARANCE_KEY);
-    if (["system", "light", "dark"].indexOf(storedAppearance) >= 0) {
-      appearancePreference = storedAppearance;
-    }
-    var storedEffects = storageValue(localStorage, EFFECTS_KEY);
-    if (["auto", "full", "reduced"].indexOf(storedEffects) >= 0) {
-      effectsPreference = storedEffects;
-    }
-    var storedSize = storageValue(localStorage, CLASSIC_SIZE_KEY);
-    if (["easy", "medium", "hard"].indexOf(storedSize) >= 0) {
-      classicSizePreference = storedSize;
-    }
-    var storedInfiniteTheme = storageValue(localStorage, INFINITE_THEME_KEY);
-    if (["light", "dark"].indexOf(storedInfiniteTheme) >= 0) {
-      infiniteThemePreference = storedInfiniteTheme;
-    }
-    var storedTheme = storageValue(localStorage, SPHERE_THEME_KEY);
-    if (SPHERE_THEME_NAMES[storedTheme]) sphereThemePreference = storedTheme;
+    var appearance = storageValue(localStorage, APPEARANCE_KEY);
+    if (["system", "light", "dark"].indexOf(appearance) >= 0) appearancePreference = appearance;
+    var effects = storageValue(localStorage, EFFECTS_KEY);
+    if (["auto", "full", "reduced"].indexOf(effects) >= 0) effectsPreference = effects;
+    var infinite = storageValue(localStorage, INFINITE_THEME_KEY);
+    if (["light", "dark"].indexOf(infinite) >= 0) infiniteThemePreference = infinite;
+    var size = storageValue(localStorage, CLASSIC_SIZE_KEY);
+    if (["easy", "medium", "hard"].indexOf(size) >= 0) classicSizePreference = size;
+    var sphere = storageValue(localStorage, SPHERE_THEME_KEY);
+    if (sphere) sphereThemePreference = sphere;
     try {
-      var storedInvert = JSON.parse(storageValue(localStorage, INVERT_KEY) || "null");
-      if (storedInvert && typeof storedInvert === "object") {
-        invertPreference = { x: !!storedInvert.x, y: !!storedInvert.y };
-      }
+      var invert = JSON.parse(storageValue(localStorage, INVERT_KEY) || "null");
+      if (invert && typeof invert === "object") invertPreference = { x: !!invert.x, y: !!invert.y };
     } catch (_) {}
+  }
+
+  function currentInvertLabel() {
+    var current = INVERT_OPTIONS.find(function (option) {
+      return option.x === invertPreference.x && option.y === invertPreference.y;
+    });
+    return current ? current.label : "Natural";
+  }
+
+  function setCurrent(choice, current) {
+    if (current) choice.setAttribute("aria-current", "true");
+    else choice.removeAttribute("aria-current");
+  }
+
+  function syncPreferences() {
+    document.getElementById("effects-current").textContent = titleCase(effectsPreference);
+    document.getElementById("invert-current").textContent = currentInvertLabel();
+    document.getElementById("infinite-effects").setAttribute("aria-label", "Effects: " + titleCase(effectsPreference) + ". Activate to cycle.");
+    document.getElementById("sphere-invert").setAttribute("aria-label", "Sphere drag: " + currentInvertLabel() + ". Activate to cycle.");
+    presetLayer.querySelectorAll("[data-infinite-theme]").forEach(function (choice) {
+      setCurrent(choice, choice.dataset.infiniteTheme === infiniteThemePreference);
+    });
+    presetLayer.querySelectorAll("[data-classic-size]").forEach(function (choice) {
+      setCurrent(choice, choice.dataset.classicSize === classicSizePreference);
+    });
+    presetLayer.querySelectorAll("[data-sphere-theme]").forEach(function (choice) {
+      setCurrent(choice, choice.dataset.sphereTheme === sphereThemePreference);
+    });
+  }
+
+  function isDark() {
+    return appearancePreference === "dark" || (appearancePreference === "system" && colorScheme.matches);
+  }
+
+  function engineTheme() {
+    if (isDark()) {
+      return {
+        background: "#0c1118", covered: "#171f29", revealed: "#d7e0eb",
+        shadowLight: "#536174", shadowDark: "#070a0f",
+        pressedLight: "#ffffff", pressedDark: "#9aa8b9", flag: "#ef4444",
+        text: { 1: "#2563eb", 2: "#0f855c", 3: "#c43131", 4: "#724ab5", 5: "#b45309", 6: "#be185d", mine: "#172231" }
+      };
+    }
+    return {
+      background: "#e8eef5", covered: "#f7f9fc", revealed: "#8f9db0",
+      shadowLight: "#ffffff", shadowDark: "#aebdce",
+      pressedLight: "#dbe4ee", pressedDark: "#657386", flag: "#e33030",
+      text: { 1: "#125cc8", 2: "#16794f", 3: "#c43131", 4: "#724ab5", 5: "#9a5b05", 6: "#ad1c5d", mine: "#172231" }
+    };
+  }
+
+  function applyAppearance() {
+    document.documentElement.dataset.appearance = isDark() ? "dark" : "light";
+    if (api) Object.assign(api.state.theme, engineTheme());
   }
 
   function infiniteResumeCandidate() {
     var data = parseSave(storageValue(localStorage, "hexsweeper-endless-plate-v1"));
     if (!data || data.v !== 1 || data.endless !== true) return null;
     if (data.first !== false || data.over !== false || Number(data.cleared) <= 0) return null;
-    return {
-      mode: "infinite",
-      name: "Infinite",
-      href: "{{INFINITE_HREF}}",
-      savedAt: Number(data.savedAt) || 0
-    };
+    return { mode: "infinite", name: "Infinite", href: "{{INFINITE_HREF}}", savedAt: Number(data.savedAt) || 0 };
   }
 
   function sphereResumeCandidate() {
@@ -1071,173 +696,19 @@
         var flagged = Array.isArray(data.flagged) ? data.flagged.length : Number(data.flags) || 0;
         if (data.first && flagged <= 0) return;
         if (!data.first && (!Array.isArray(data.mines) || data.mines.length === 0)) return;
-        var candidate = {
-          mode: "sphere",
-          name: "Sphere",
-          href: "{{SPHERE_HREF}}",
-          savedAt: Number(data.savedAt) || 0
-        };
+        var candidate = { mode: "sphere", name: "Sphere", href: "{{SPHERE_HREF}}", savedAt: Number(data.savedAt) || 0 };
         if (!best || candidate.savedAt >= best.savedAt) best = candidate;
       });
     });
     return best;
   }
 
-  // Adapters keep launcher routing honest. Classic joins this list only when
-  // its finite board gains a real persistence contract.
-  function newestResumeCandidate() {
-    return [infiniteResumeCandidate(), sphereResumeCandidate()]
+  function refreshResume() {
+    activeResume = [infiniteResumeCandidate(), sphereResumeCandidate()]
       .filter(Boolean)
       .sort(function (a, b) { return b.savedAt - a.savedAt; })[0] || null;
-  }
-
-  function buildMines() {
-    mines.clear();
-    for (var r = -14; r <= 14; r += 1) {
-      for (var q = -14; q <= 14; q += 1) {
-        if (distance(q, r) >= 3 && hash(q, r) < .205) mines.add(key(q, r));
-      }
-    }
-    Object.keys(reservedSeats).forEach(function (seat) { mines.delete(seat); });
-    // Every ring-two boundary face gets at least one real outward mine, so
-    // the zero flood always stops in a readable numbered frontier.
-    for (var rr = -2; rr <= 2; rr += 1) {
-      for (var qq = -2; qq <= 2; qq += 1) {
-        if (distance(qq, rr) !== 2) continue;
-        var outward = [];
-        directions.forEach(function (dir) {
-          var nq = qq + dir[0];
-          var nr = rr + dir[1];
-          if (distance(nq, nr) === 3 && !reservedSeats[key(nq, nr)]) outward.push([nq, nr]);
-        });
-        if (!outward.some(function (p) { return mines.has(key(p[0], p[1])); })) {
-          outward.sort(function (a, b) { return hash(a[0], a[1]) - hash(b[0], b[1]); });
-          if (outward[0]) mines.add(key(outward[0][0], outward[0][1]));
-        }
-      }
-    }
-  }
-
-  function countAt(q, r) {
-    var count = 0;
-    directions.forEach(function (dir) {
-      if (mines.has(key(q + dir[0], r + dir[1]))) count += 1;
-    });
-    return count;
-  }
-
-  function place(element, q, r, width, height) {
-    var x = width * (q + r / 2);
-    var y = height * .75 * r;
-    element.style.setProperty("--x", x.toFixed(2) + "px");
-    element.style.setProperty("--y", y.toFixed(2) + "px");
-  }
-
-  function buildField() {
-    field.textContent = "";
-    cells.clear();
-    var probe = starter.getBoundingClientRect();
-    var width = probe.width;
-    var height = probe.height;
-    var viewportWidth = document.documentElement.clientWidth || innerWidth;
-    var viewportHeight = document.documentElement.clientHeight || innerHeight;
-    var boardStyles = getComputedStyle(board);
-    var boardShiftX = Math.abs(parseFloat(boardStyles.getPropertyValue("--board-x")) || 0);
-    var boardShiftY = Math.abs(parseFloat(boardStyles.getPropertyValue("--board-y")) || 0);
-    var qLimit = Math.ceil((viewportWidth + boardShiftX * 2) / width) + 4;
-    var rLimit = Math.ceil((viewportHeight + boardShiftY * 2) / (height * .75) / 2) + 4;
-    var fragment = document.createDocumentFragment();
-
-    for (var r = -Math.ceil(rLimit); r <= Math.ceil(rLimit); r += 1) {
-      for (var q = -qLimit; q <= qLimit; q += 1) {
-        var id = key(q, r);
-        if (reservedSeats[id]) continue;
-        var x = width * (q + r / 2);
-        var y = height * .75 * r;
-        if (Math.abs(x) > viewportWidth / 2 + boardShiftX + width || Math.abs(y) > viewportHeight / 2 + boardShiftY + height) continue;
-        var cell = document.createElement("span");
-        var count = countAt(q, r);
-        cell.className = "hex cell" + (count ? " count-" + Math.min(4, count) : "");
-        cell.dataset.key = id;
-        cell.dataset.count = String(count);
-        place(cell, q, r, width, height);
-        var mark = document.createElement("span");
-        mark.className = "count";
-        mark.textContent = count ? String(count) : "";
-        cell.appendChild(mark);
-        if (revealed.has(id)) cell.classList.add("is-revealed");
-        cells.set(id, cell);
-        fragment.appendChild(cell);
-      }
-    }
-    field.appendChild(fragment);
-    positionedControls.forEach(function (control) {
-      place(control, Number(control.dataset.q), Number(control.dataset.r), width, height);
-    });
-  }
-
-  function floodPlan() {
-    var queue = [{ q: 0, r: 0, step: 0 }];
-    var seen = new Set(["0,0"]);
-    var plan = [];
-    while (queue.length) {
-      var item = queue.shift();
-      var id = key(item.q, item.r);
-      if (!reservedSeats[id]) {
-        plan.push({ key: id, step: item.step, jitter: Math.round(hash(item.q, item.r) * 34) });
-      }
-      if (countAt(item.q, item.r) !== 0 || distance(item.q, item.r) >= 2) continue;
-      directions.forEach(function (dir) {
-        var q = item.q + dir[0];
-        var r = item.r + dir[1];
-        var nextKey = key(q, r);
-        // Reserved controls are guaranteed safe. Traverse through them so the
-        // complete seven-face launcher flower cannot wall off the opening flood.
-        if (seen.has(nextKey) || mines.has(nextKey)) return;
-        seen.add(nextKey);
-        queue.push({ q: q, r: r, step: item.step + 1 });
-      });
-    }
-    return plan;
-  }
-
-  function revealCell(id) {
-    revealed.add(id);
-    var cell = cells.get(id);
-    if (cell) cell.classList.add("is-revealed");
-  }
-
-  function clearTimers() {
-    timers.forEach(clearTimeout);
-    timers.length = 0;
-  }
-
-  function rememberReady() {
-    try { sessionStorage.setItem(SESSION_KEY, "1"); } catch (_) {}
-  }
-
-  function updateReadyStatus() {
-    if (phase !== "ready" || leaving) return;
-    if (activeBranch === "infinite") {
-      status.textContent = "Choose Infinite settings";
-    } else if (activeBranch === "size") {
-      status.textContent = "Choose a Classic board size";
-    } else if (activeBranch === "style") {
-      status.textContent = "Choose a Sphere style";
-    } else if (activeResume) {
-      status.textContent = "Resume " + activeResume.name + ", or choose a board";
-    } else {
-      status.textContent = "Choose a board";
-    }
-  }
-
-  function refreshResume() {
-    activeResume = newestResumeCandidate();
-    resume.classList.remove("is-available", "is-dug");
     if (!activeResume) {
       resume.hidden = true;
-      resume.removeAttribute("data-mode");
-      updateReadyStatus();
       return;
     }
     resume.hidden = false;
@@ -1245,133 +716,123 @@
     resume.dataset.mode = activeResume.mode;
     resumeModeName.textContent = activeResume.name;
     resume.setAttribute("aria-label", "Resume " + activeResume.name + " Hexsweeper");
-    if (phase === "ready") resume.classList.add("is-available");
-    updateReadyStatus();
   }
 
-  function invertLabel() {
-    var current = INVERT_OPTIONS.find(function (option) {
-      return option.x === invertPreference.x && option.y === invertPreference.y;
+  function screenPoint(q, r, state) {
+    return {
+      x: state.canvas.width / 2 - state.camX + state.cellSize * SQRT3 * (q + r / 2),
+      y: state.canvas.height / 2 - state.camY + state.cellSize * 1.5 * r
+    };
+  }
+
+  function syncPresetGeometry(gameApi) {
+    var state = gameApi.state;
+    var signature = [state.canvas.width, state.canvas.height, state.cellSize.toFixed(3), state.camX.toFixed(2), state.camY.toFixed(2), state.map.size].join(":");
+    if (signature === geometrySignature) return;
+    geometrySignature = signature;
+    var originX = state.canvas.width / 2 - state.camX;
+    var originY = state.canvas.height / 2 - state.camY;
+    state.map.forEach(function (cell) { cell.calcGeometry(originX, originY, state.cellSize); });
+    document.documentElement.style.setProperty("--cell-size", state.cellSize.toFixed(2) + "px");
+    [resume].concat(modes, choices).forEach(function (control) {
+      var point = screenPoint(Number(control.dataset.q), Number(control.dataset.r), state);
+      control.style.setProperty("--screen-x", point.x.toFixed(2) + "px");
+      control.style.setProperty("--screen-y", point.y.toFixed(2) + "px");
     });
-    return current ? current.label : "Natural";
+    updateCursor();
   }
 
-  function titleCase(value) {
-    return value.charAt(0).toUpperCase() + value.slice(1);
+  function updateCursor() {
+    if (!api) return;
+    var cell = api.state.map.get(selectedKey);
+    if (!cell) return;
+    var point = screenPoint(cell.q, cell.r, api.state);
+    cursor.style.setProperty("--screen-x", point.x.toFixed(2) + "px");
+    cursor.style.setProperty("--screen-y", point.y.toFixed(2) + "px");
+    var stateName = cell.flagged ? "flagged" : cell.revealed ? (cell.neighborMines ? "revealed, " + cell.neighborMines + " nearby" : "revealed, clear") : "covered";
+    canvas.setAttribute("aria-label", "Playable Hexsweeper menu. Selected tile is " + stateName + ". Arrow keys move, Enter digs, F flags, Escape recenters.");
   }
 
-  function setCurrent(choice, current) {
-    if (current) choice.setAttribute("aria-current", "true");
-    else choice.removeAttribute("aria-current");
+  function revealChoice(choice) {
+    if (choice.classList.contains("is-available")) return;
+    choice.classList.add("is-available");
+    choice.setAttribute("aria-hidden", "false");
+    choice.tabIndex = 0;
+    if (choice.tagName === "BUTTON") choice.disabled = false;
   }
 
-  function syncPreferences() {
-    var effectsName = titleCase(effectsPreference);
-    var inversionName = invertLabel();
-    document.getElementById("effects-current").textContent = effectsName;
-    document.getElementById("invert-current").textContent = inversionName;
-    document.getElementById("infinite-current").textContent = titleCase(infiniteThemePreference);
-    document.getElementById("size-current").textContent = CLASSIC_SIZE_NAMES[classicSizePreference];
-    document.getElementById("style-current").textContent = SPHERE_THEME_NAMES[sphereThemePreference];
-    document.getElementById("infinite-effects").setAttribute("aria-label", "Effects: " + effectsName + ". Activate to cycle.");
-    document.getElementById("style-invert").setAttribute("aria-label", "Sphere drag: " + inversionName + ". Activate to cycle.");
-    infiniteGame.href = infiniteGame.dataset.baseHref + "?mode=" + infiniteThemePreference;
-    classicGame.href = classicGame.dataset.baseHref + "?size=" + classicSizePreference;
-    board.querySelectorAll("[data-infinite-theme]").forEach(function (choice) {
-      setCurrent(choice, choice.dataset.infiniteTheme === infiniteThemePreference);
-    });
-    board.querySelectorAll("[data-classic-size]").forEach(function (choice) {
-      setCurrent(choice, choice.dataset.classicSize === classicSizePreference);
-    });
-    board.querySelectorAll("[data-sphere-theme]").forEach(function (choice) {
-      setCurrent(choice, choice.dataset.sphereTheme === sphereThemePreference);
-    });
+  function branchLabel(branchName) {
+    return branchName === "classic" ? "Classic sizes" : branchName === "sphere" ? "Sphere styles" : "Infinite options";
   }
 
-  function applyAppearance() {
-    document.documentElement.dataset.appearance = appearancePreference === "system"
-      ? (colorScheme.matches ? "dark" : "light")
-      : appearancePreference;
-    document.documentElement.dataset.appearanceChoice = appearancePreference;
-    syncPreferences();
-  }
-
-  function selectedBranchChoice(branchName) {
+  function finishBranchReveal(branchName) {
     var branch = branches[branchName];
-    if (!branch) return null;
-    return branch.choices.find(function (choice) {
-      return choice.getAttribute("aria-current") === "true";
-    }) || branch.choices[0] || null;
-  }
-
-  function openBranch(branchName, event) {
-    if (phase !== "ready") finishOpening(true);
-    if (leaving || activeBranch === branchName || !branches[branchName]) return;
-    if (activeBranch) closeBranch();
-    var branch = branches[branchName];
-    activeBranch = branchName;
-    board.dataset.openBranch = branchName;
-    branch.hub.classList.add("is-expanded");
-    branch.hub.setAttribute("aria-expanded", "true");
+    if (!branch) return;
     branch.choices.forEach(function (choice) {
-      if (choice.tagName === "BUTTON") choice.disabled = false;
-      choice.tabIndex = 0;
-      choice.setAttribute("aria-hidden", "false");
-      choice.classList.add("is-available");
+      var cell = api.state.map.get(key(Number(choice.dataset.q), Number(choice.dataset.r)));
+      if (cell && cell.revealed) revealChoice(choice);
     });
-    updateReadyStatus();
-    fitLayout();
-    if (event && event.detail === 0) {
-      var target = selectedBranchChoice(branchName);
+    status.textContent = branchLabel(branchName) + " revealed · choose one or keep playing";
+    if (keyboardBranchFocus === branchName) {
+      keyboardBranchFocus = null;
+      var target = branch.choices.find(function (choice) { return choice.classList.contains("is-available"); });
       if (target) target.focus({ preventScroll: true });
     }
   }
 
-  function closeBranch(options) {
-    if (!activeBranch) return;
-    var opts = options || {};
-    var branch = branches[activeBranch];
-    activeBranch = null;
-    delete board.dataset.openBranch;
-    branch.hub.classList.remove("is-expanded");
-    branch.hub.setAttribute("aria-expanded", "false");
-    branch.choices.forEach(function (choice) {
-      choice.classList.remove("is-available");
-      if (choice.tagName === "BUTTON") choice.disabled = true;
-      choice.tabIndex = -1;
-      choice.setAttribute("aria-hidden", "true");
+  function openBranch(branchName, focusChoice) {
+    var branch = branches[branchName];
+    if (!branch || leaving) return;
+    if (focusChoice) keyboardBranchFocus = branchName;
+    branch.mode.classList.add("is-dug");
+    branch.mode.setAttribute("aria-expanded", "true");
+    if (openedBranches.has(branchName)) {
+      branch.choices.forEach(revealChoice);
+      finishBranchReveal(branchName);
+      return;
+    }
+    openedBranches.add(branchName);
+    statusLockUntil = performance.now() + (reducedMotion() ? 120 : 1800);
+    status.textContent = "Digging out " + branchLabel(branchName).toLowerCase() + "…";
+    var lastDelay = 0;
+    branch.choices.forEach(function (choice, index) {
+      var delay = reducedMotion() ? 0 : 75 + index * 105;
+      lastDelay = Math.max(lastDelay, delay);
+      revealTimers.push(setTimeout(function () {
+        if (!openedBranches.has(branchName) || leaving) return;
+        var id = key(Number(choice.dataset.q), Number(choice.dataset.r));
+        var cell = api.state.map.get(id);
+        if (cell && !cell.revealed && !cell._pendingReveal) api.dig(cell);
+        if (cell && cell.revealed) revealChoice(choice);
+      }, delay));
     });
-    updateReadyStatus();
-    fitLayout();
-    if (opts.focus) branch.hub.focus({ preventScroll: true });
+    revealTimers.push(setTimeout(function () { finishBranchReveal(branchName); }, lastDelay + (reducedMotion() ? 20 : 190)));
   }
 
-  function toggleBranch(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    var branchName = event.currentTarget.dataset.branch;
-    if (activeBranch === branchName) closeBranch({ focus: event.detail === 0 });
-    else openBranch(branchName, event);
+  function selectMode(mode, focusChoice) {
+    if (!api || leaving) return;
+    var id = key(Number(mode.dataset.q), Number(mode.dataset.r));
+    var cell = api.state.map.get(id);
+    if (!cell) return;
+    if (cell.revealed) {
+      openBranch(mode.dataset.branch, focusChoice);
+      return;
+    }
+    if (focusChoice) keyboardBranchFocus = mode.dataset.branch;
+    api.dig(cell);
   }
 
-  function cycleSetting(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    var setting = event.currentTarget.dataset.setting;
-    if (setting === "appearance") {
-      var appearances = ["system", "light", "dark"];
-      appearancePreference = appearances[(appearances.indexOf(appearancePreference) + 1) % appearances.length];
-      writePreference(APPEARANCE_KEY, appearancePreference);
-      applyAppearance();
-      status.textContent = "Appearance: " + titleCase(appearancePreference);
-    } else if (setting === "effects") {
+  function cycleSetting(choice) {
+    if (choice.dataset.setting === "effects") {
       var effects = ["auto", "full", "reduced"];
       effectsPreference = effects[(effects.indexOf(effectsPreference) + 1) % effects.length];
       writePreference(EFFECTS_KEY, effectsPreference);
-      applyEffectsAttribute();
+      Hexsweeper.applyEffectsAttribute();
       syncPreferences();
       status.textContent = "Effects: " + titleCase(effectsPreference);
-    } else if (setting === "invert") {
+      return;
+    }
+    if (choice.dataset.setting === "invert") {
       var currentIndex = INVERT_OPTIONS.findIndex(function (option) {
         return option.x === invertPreference.x && option.y === invertPreference.y;
       });
@@ -1383,86 +844,8 @@
     }
   }
 
-  function finishOpening(instant) {
-    if (phase === "ready") {
-      refreshResume();
-      return;
-    }
-    var focusFirstMode = keyboardOpening || (!pointerOpening && document.activeElement === starter);
-    clearTimers();
-    floodPlan().forEach(function (item) { revealCell(item.key); });
-    phase = "ready";
-    board.dataset.phase = "ready";
-    board.removeAttribute("aria-busy");
-    starter.classList.remove("is-hit");
-    starter.classList.add("is-cleared");
-    starter.disabled = true;
-    starter.tabIndex = -1;
-    starter.setAttribute("aria-hidden", "true");
-    modes.forEach(function (mode) { mode.classList.add("is-available"); });
-    branchHubs.forEach(function (hub) {
-      hub.disabled = false;
-      hub.classList.add("is-available");
-    });
-    refreshResume();
-    updateReadyStatus();
-    fitLayout();
-    rememberReady();
-    keyboardOpening = false;
-    pointerOpening = false;
-    if (focusFirstMode) {
-      (activeResume ? resume : modes[0]).focus({ preventScroll: true });
-    }
-  }
-
-  function startOpening(event) {
-    if (phase !== "covered") return;
-    clearTimers();
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      keyboardOpening = event.detail === 0;
-      pointerOpening = event.detail > 0;
-    }
-    phase = "clearing";
-    board.dataset.phase = "clearing";
-    board.setAttribute("aria-busy", "true");
-    starter.classList.add("is-hit");
-    status.textContent = "Revealing the game menu…";
-    if (reducedMotion()) {
-      finishOpening(true);
-      return;
-    }
-    var plan = floodPlan();
-    var latest = 0;
-    plan.forEach(function (item) {
-      var delay = 55 + item.step * 82 + Math.round(item.jitter * .72);
-      latest = Math.max(latest, delay);
-      timers.push(setTimeout(function () {
-        if (phase === "clearing") revealCell(item.key);
-      }, delay));
-    });
-    timers.push(setTimeout(function () {
-      if (phase !== "clearing") return;
-      starter.classList.add("is-cleared");
-    }, 70));
-    timers.push(setTimeout(function () { finishOpening(false); }, latest + 110));
-  }
-
-  function chooseDestination(event) {
-    var destination = event.currentTarget;
-    if (phase !== "ready") {
-      event.preventDefault();
-      finishOpening(true);
-      return;
-    }
-    if (leaving || event.defaultPrevented) {
-      event.preventDefault();
-      return;
-    }
-    if (event.button !== undefined && event.button !== 0) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
+  function chooseDestination(destination) {
+    if (leaving) return;
     if (destination.dataset.classicSize) {
       classicSizePreference = destination.dataset.classicSize;
       writePreference(CLASSIC_SIZE_KEY, classicSizePreference);
@@ -1476,102 +859,297 @@
       writePreference(SPHERE_THEME_KEY, sphereThemePreference);
     }
     syncPreferences();
-    closeBranch();
     leaving = true;
-    destination.classList.add("is-dug");
-    board.setAttribute("aria-busy", "true");
-    board.classList.add("is-leaving");
-    var label = destination.querySelector(".mode-name, .theme-name");
-    var modeName = destination === resume
-      ? resumeModeName.textContent
-      : (destination.dataset.destinationName || (label ? label.textContent : "Hexsweeper"));
-    status.textContent = (destination === resume ? "Resuming " : "Opening ") + modeName;
-    var delay = reducedMotion() ? 30 : 230;
-    setTimeout(function () { location.href = destination.href; }, delay);
+    launcher.classList.add("is-launching");
+    destination.classList.add("is-launching");
+    var name = destination === resume ? resumeModeName.textContent : (destination.dataset.destinationName || "Hexsweeper");
+    status.textContent = (destination === resume ? "Resuming " : "Opening ") + name;
+    setTimeout(function () { location.href = destination.href; }, reducedMotion() ? 20 : 190);
   }
 
-  starter.addEventListener("click", startOpening);
-  board.addEventListener("click", function (event) {
-    if (activeBranch && !event.target.closest(".theme-control")) {
-      closeBranch();
-    }
-    if (phase === "covered" && !event.target.closest(".destination") && !event.target.closest(".theme-control") && !event.target.closest(".starter")) {
-      startOpening(event);
+  function hideAllChoices() {
+    openedBranches.clear();
+    revealTimers.forEach(clearTimeout);
+    revealTimers.length = 0;
+    choices.forEach(function (choice) {
+      choice.classList.remove("is-available", "is-launching");
+      choice.setAttribute("aria-hidden", "true");
+      choice.tabIndex = -1;
+      if (choice.tagName === "BUTTON") choice.disabled = true;
+    });
+    modes.forEach(function (mode) {
+      mode.classList.remove("is-dug");
+      mode.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function newField(announce) {
+    clearTimeout(resetTimer);
+    hideAllChoices();
+    leaving = false;
+    launcher.classList.remove("is-launching");
+    api.restart({ clearPersist: false });
+    api.setCamera(0, 0);
+    selectedKey = "0,0";
+    geometrySignature = "";
+    flagTool.setAttribute("aria-pressed", "false");
+    if (announce !== false) status.textContent = "New field · dig a mode or any safe-looking tile";
+    canvas.focus({ preventScroll: true });
+  }
+
+  function activateCellByKey(id, focusChoice) {
+    if (!api) return;
+    if (!resume.hidden && id === "0,0") {
+      chooseDestination(resume);
       return;
     }
-    if (phase === "clearing" && !event.target.closest(".destination") && !event.target.closest(".theme-control") && !event.target.closest(".starter")) {
-      event.preventDefault();
-      finishOpening(true);
+    var choice = choiceByKey.get(id);
+    if (choice && choice.classList.contains("is-available")) {
+      if (choice.dataset.setting) cycleSetting(choice);
+      else chooseDestination(choice);
+      return;
+    }
+    var mode = modeByKey.get(id);
+    if (mode) {
+      selectMode(mode, focusChoice);
+      return;
+    }
+    var cell = api.state.map.get(id);
+    if (cell && !cell.revealed && !cell.flagged) api.dig(cell);
+  }
+
+  layoutChoiceSeats();
+  indexPresetSeats();
+  loadPreferences();
+  applyAppearance();
+  syncPreferences();
+  refreshResume();
+
+  var config = {
+    easy: { radius: 7, mines: 28, cellSize: 30 },
+    medium: { radius: 8, mines: 46, cellSize: 32 },
+    hard: { radius: 10, mines: 80, cellSize: 34 }
+  };
+
+  /**
+   * Launcher count language mirrors Sphere: nested inset hexes get denser as
+   * danger rises. Exact counts remain in the board's spoken status, while the
+   * visual field stays quieter than a screen full of competing digits.
+   */
+  function drawDangerRings(ctx, cell, size, count, color) {
+    var n = Math.max(0, Math.min(6, count | 0));
+    if (!cell.revealed || cell.isMine || n < 1) return;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.globalAlpha = .64;
+    ctx.lineWidth = Math.max(1.05, Math.min(1.7, size * .038));
+    for (var index = 0; index < n; index += 1) {
+      var scale = n === 1
+        ? .34
+        : .52 - index * (.36 / Math.max(1, n - 1));
+      ctx.stroke(cell.hexPath(size, scale));
+    }
+    ctx.restore();
+  }
+
+  api = Hexsweeper.boot({
+    canvasId: "launcher-canvas",
+    difficulty: "medium",
+    endless: true,
+    mineDensity: .17,
+    maxRadius: 54,
+    initialZoom: initialLauncherZoom(),
+    zoomStorageKey: LAUNCHER_ZOOM_KEY,
+    config: config,
+    theme: engineTheme(),
+    hooks: {
+      usePathHitTest: true,
+      layout: function (gameApi) {
+        gameApi.state.canvas.width = Math.max(320, Math.round(innerWidth));
+        gameApi.state.canvas.height = Math.max(320, Math.round(innerHeight));
+      },
+      isProtectedCell: function (cell) {
+        return protectedKeys.has(key(cell.q, cell.r));
+      },
+      beforeFrame: function (_ctx, gameApi) {
+        syncPresetGeometry(gameApi);
+      },
+      drawCell: function (_ctx, cell, size, gameApi) {
+        var count = cell.neighborMines;
+        var protectedCell = protectedKeys.has(key(cell.q, cell.r));
+        cell.neighborMines = 0;
+        gameApi.drawDefaultCell(cell, size);
+        cell.neighborMines = count;
+        if (!protectedCell && count > 0) {
+          drawDangerRings(_ctx, cell, size, count, gameApi.state.theme.text[count] || "#263240");
+        }
+      },
+      onCellAction: function (cell, gameApi) {
+        var id = key(cell.q, cell.r);
+        if (!resume.hidden && id === "0,0") {
+          chooseDestination(resume);
+          return true;
+        }
+        var choice = choiceByKey.get(id);
+        if (choice && choice.classList.contains("is-available")) {
+          if (choice.dataset.setting) cycleSetting(choice);
+          else chooseDestination(choice);
+          return true;
+        }
+        var mode = modeByKey.get(id);
+        if (mode && (cell.revealed || gameApi.state.flagMode)) {
+          selectMode(mode, false);
+          return true;
+        }
+        return false;
+      },
+      onReveal: function (cell, _gameApi, meta) {
+        var id = key(cell.q, cell.r);
+        var mode = modeByKey.get(id);
+        if (mode) {
+          mode.classList.add("is-dug");
+          if (meta && meta.source === "dig") openBranch(mode.dataset.branch, keyboardBranchFocus === mode.dataset.branch);
+        }
+        var choice = choiceByKey.get(id);
+        if (choice && openedBranches.has(choice.dataset.branch)) revealChoice(choice);
+        if (!mode && !choice && !leaving && performance.now() > statusLockUntil) {
+          status.textContent = cell.neighborMines ? "Safe · " + cell.neighborMines + " nearby" : "Clear · the opening is spreading";
+        }
+        updateCursor();
+      },
+      onFlag: function (cell) {
+        status.textContent = cell.flagged ? "Flag placed" : "Flag removed";
+        updateCursor();
+      },
+      onProtectedFlag: function () {
+        status.textContent = "Preset cells stay safe · dig them to reveal their purpose";
+      },
+      onFlagMode: function (on) {
+        flagTool.setAttribute("aria-pressed", on ? "true" : "false");
+        status.textContent = on ? "Flag mode on · tap a covered tile" : "Dig mode on";
+      },
+      onGameOver: function () {
+        status.textContent = "Mine · the launcher will grow a fresh field";
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(function () { newField(false); status.textContent = "Fresh field · modes are still safe"; }, reducedMotion() ? 120 : 1350);
+      },
+      onReset: function () { geometrySignature = ""; },
+      onExpand: function () { geometrySignature = ""; },
+      onRelayout: function () { geometrySignature = ""; }
     }
   });
-  modes.concat(branchHubs).forEach(function (control) {
-    control.addEventListener("focus", function () {
-      if (phase !== "ready") finishOpening(true);
+  geometrySignature = "";
+
+  modes.forEach(function (mode) {
+    mode.addEventListener("click", function (event) {
+      event.preventDefault();
+      selectMode(mode, true);
     });
   });
-  destinations.forEach(function (destination) {
-    destination.addEventListener("click", chooseDestination);
+  choices.forEach(function (choice) {
+    choice.addEventListener("click", function (event) {
+      event.preventDefault();
+      if (!choice.classList.contains("is-available")) return;
+      if (choice.dataset.setting) cycleSetting(choice);
+      else chooseDestination(choice);
+    });
   });
-  branchHubs.forEach(function (hub) {
-    hub.addEventListener("click", toggleBranch);
-  });
-  settingChoices.forEach(function (choice) {
-    choice.addEventListener("click", cycleSetting);
+  resume.addEventListener("click", function (event) {
+    event.preventDefault();
+    chooseDestination(resume);
   });
 
-  addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && activeBranch) {
+  flagTool.addEventListener("click", function () { api.toggleFlagMode(); });
+  function zoomBoard(factor) {
+    var zoom = api.adjustZoom(factor, {
+      x: api.state.canvas.width / 2,
+      y: api.state.canvas.height / 2
+    });
+    geometrySignature = "";
+    status.textContent = "Board zoom: " + Math.round(zoom * 100) + "%";
+    canvas.focus({ preventScroll: true });
+  }
+  zoomOutTool.addEventListener("click", function () { zoomBoard(1 / 1.12); });
+  zoomInTool.addEventListener("click", function () { zoomBoard(1.12); });
+  centerTool.addEventListener("click", function () {
+    api.setCamera(0, 0);
+    selectedKey = "0,0";
+    geometrySignature = "";
+    status.textContent = "Board centered";
+    canvas.focus({ preventScroll: true });
+  });
+  newTool.addEventListener("click", function () { newField(true); });
+
+  canvas.addEventListener("focus", updateCursor);
+  canvas.addEventListener("keydown", function (event) {
+    var directions = {
+      ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]
+    };
+    if (directions[event.key]) {
       event.preventDefault();
-      closeBranch({ focus: true });
+      event.stopPropagation();
+      var current = selectedKey.split(",").map(Number);
+      var nextQ = current[0] + directions[event.key][0];
+      var nextR = current[1] + directions[event.key][1];
+      var next = api.state.map.get(key(nextQ, nextR));
+      if (!next) return;
+      selectedKey = key(nextQ, nextR);
+      var point = screenPoint(nextQ, nextR, api.state);
+      var margin = api.state.cellSize * 2.4;
+      if (point.x < margin || point.x > api.state.canvas.width - margin || point.y < margin || point.y > api.state.canvas.height - margin) {
+        api.focusOnCell(next, false);
+      }
+      geometrySignature = "";
+      updateCursor();
       return;
     }
-    if (!activeBranch || ["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].indexOf(event.key) < 0) return;
-    var choices = branches[activeBranch].choices;
-    var currentIndex = choices.indexOf(document.activeElement);
-    if (currentIndex < 0) return;
-    event.preventDefault();
-    var delta = (event.key === "ArrowRight" || event.key === "ArrowDown") ? 1 : -1;
-    choices[(currentIndex + delta + choices.length) % choices.length].focus({ preventScroll: true });
+    if (event.key === "Enter" || event.code === "Space") {
+      event.preventDefault();
+      event.stopPropagation();
+      activateCellByKey(selectedKey, true);
+      return;
+    }
+    if (event.key === "f" || event.key === "F") {
+      event.preventDefault();
+      event.stopPropagation();
+      var selected = api.state.map.get(selectedKey);
+      if (selected && !protectedKeys.has(selectedKey)) api.toggleFlag(selected);
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      api.setCamera(0, 0);
+      geometrySignature = "";
+      status.textContent = "Board centered";
+      return;
+    }
+    if ((event.key === "r" || event.key === "R") && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      newField(true);
+    }
   });
 
-  addEventListener("resize", function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
-      if (phase === "clearing") finishOpening(true);
-      fitLayout();
-    }, 80);
-  });
   addEventListener("pageshow", function (event) {
     if (!event.persisted) return;
     leaving = false;
-    board.classList.remove("is-leaving");
-    board.removeAttribute("aria-busy");
-    board.querySelectorAll(".destination").forEach(function (destination) {
-      destination.classList.remove("is-dug");
-    });
-    closeBranch();
+    launcher.classList.remove("is-launching");
+    destinations.forEach(function (destination) { destination.classList.remove("is-launching"); });
     loadPreferences();
     applyAppearance();
-    applyEffectsAttribute();
     syncPreferences();
     refreshResume();
-    finishOpening(true);
+    geometrySignature = "";
   });
-
-  loadPreferences();
-  applyAppearance();
-  applyEffectsAttribute();
-  syncPreferences();
   if (colorScheme.addEventListener) colorScheme.addEventListener("change", applyAppearance);
   else if (colorScheme.addListener) colorScheme.addListener(applyAppearance);
 
-  buildMines();
-  fitLayout();
-  var alreadyOpened = false;
-  try { alreadyOpened = sessionStorage.getItem(SESSION_KEY) === "1"; } catch (_) {}
-  if (alreadyOpened) finishOpening(true);
-  else if (reducedMotion()) startOpening();
-  else timers.push(setTimeout(function () { startOpening(); }, 220));
+  status.textContent = activeResume
+    ? "Resume in the center · dig a mode · drag to explore"
+    : "Dig a mode · drag to explore · hold to flag";
 })();
 </script>
 {{PLATFORM_TAIL}}</body>

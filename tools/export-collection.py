@@ -1817,6 +1817,7 @@ def render_launcher(
     template = (ROOT / "tools" / "app-launcher.html").read_text(encoding="utf-8")
     replacements = {
         "{{FONTS}}": fonts,
+        "{{CORE_JS}}": (ROOT / "core.js").read_text(encoding="utf-8"),
         "{{INFINITE_HREF}}": infinite_href,
         "{{BOUNDED_HREF}}": bounded_href,
         "{{SPHERE_HREF}}": sphere_href,
