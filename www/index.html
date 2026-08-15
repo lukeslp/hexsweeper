@@ -160,11 +160,14 @@
   }
   .hint {
     margin: 0;
+    max-width: 100%;
+    min-width: 0;
     color: var(--muted);
     font-size: clamp(.72rem, 3vw, .86rem);
     font-weight: 600;
     line-height: 1.25;
     letter-spacing: .015em;
+    overflow-wrap: anywhere;
     text-wrap: balance;
     text-shadow: 0 1px 10px var(--field), 0 1px 14px var(--field);
   }
@@ -284,12 +287,14 @@
     background: color-mix(in srgb, var(--accent) 18%, transparent);
     filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 38%, transparent));
   }
+  .settings-hub,
   .choice {
     z-index: 4;
     visibility: hidden;
     opacity: 0;
     transform: translate(-50%, -50%) scale(.74);
   }
+  .settings-hub.is-available,
   .choice.is-available {
     visibility: visible;
     opacity: 1;
@@ -298,7 +303,11 @@
     filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 34%, transparent));
     animation: option-rise 260ms cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms) backwards;
   }
-  .choice[aria-current="true"]::after {
+  .settings-hub[aria-expanded="true"] {
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 48%, transparent));
+  }
+  .choice[aria-pressed="true"]::after {
     content: "✓";
     position: absolute;
     z-index: 3;
@@ -410,7 +419,7 @@
     .preset { color: ButtonText; background: transparent; }
     .preset::before { background: Canvas; outline: 2px solid ButtonText; outline-offset: -4px; }
     .preset:focus-visible::before { outline: 4px solid Highlight; }
-    .choice.is-available::before, .mode[aria-expanded="true"]::before { outline-color: Highlight; }
+    .settings-hub.is-available::before, .choice.is-available::before, .mode[aria-expanded="true"]::before { outline-color: Highlight; }
     .preset-icon, .brand, .hint { color: CanvasText; text-shadow: none; }
     .board-tools { background: Canvas; border-color: ButtonText; backdrop-filter: none; }
     .tool { color: ButtonText; }
@@ -443,47 +452,57 @@
         </span>
       </a>
 
-      <button class="preset mode mode-infinite" id="infinite-game" type="button" data-mode="infinite" data-branch="infinite" data-out-q="0" data-out-r="-1" data-q="0" data-r="-1" aria-expanded="false" aria-controls="infinite-light infinite-dark infinite-effects" aria-label="Dig out Infinite options">
+      <button class="preset mode mode-infinite" id="infinite-game" type="button" data-mode="infinite" data-branch="infinite" data-out-q="0" data-out-r="-1" data-q="0" data-r="-1" aria-expanded="false" aria-controls="infinite-settings" aria-label="Dig Infinite to reveal its settings">
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="preset-name">Infinite</span>
-          <span class="preset-note">Dig options</span>
+          <span class="preset-note" id="infinite-mode-current">Dig settings</span>
         </span>
       </button>
 
-      <button class="preset mode mode-classic" id="classic-game" type="button" data-mode="bounded" data-branch="classic" data-out-q="1" data-out-r="0" data-q="1" data-r="0" aria-expanded="false" aria-controls="classic-small classic-medium classic-large" aria-label="Dig out Classic board sizes">
+      <button class="preset mode mode-classic" id="classic-game" type="button" data-mode="bounded" data-branch="classic" data-out-q="1" data-out-r="0" data-q="1" data-r="0" aria-expanded="false" aria-controls="classic-settings" aria-label="Dig Classic to reveal its settings">
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 35V14m1 2h14l-3.4 4.3L32 25H18m-4 11h9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="preset-name">Classic</span>
-          <span class="preset-note">Dig sizes</span>
+          <span class="preset-note" id="classic-mode-current">Dig settings</span>
         </span>
       </button>
 
-      <button class="preset mode mode-sphere" id="sphere-game" type="button" data-mode="sphere" data-branch="sphere" data-out-q="-1" data-out-r="1" data-q="-1" data-r="1" aria-expanded="false" aria-controls="sphere-light sphere-shell sphere-glow sphere-invert" aria-label="Dig out Sphere styles">
+      <button class="preset mode mode-sphere" id="sphere-game" type="button" data-mode="sphere" data-branch="sphere" data-out-q="-1" data-out-r="1" data-q="-1" data-r="1" aria-expanded="false" aria-controls="sphere-settings" aria-label="Dig Sphere to reveal its settings">
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M24 6c-7 5-9 12-9 18s2 13 9 18M24 6c7 5 9 12 9 18s-2 13-9 18M6 24h36M9 15c9 4 21 4 30 0M9 33c9-4 21-4 30 0" fill="none" stroke="currentColor" stroke-width="1" opacity=".78"/></svg>
           <span class="preset-name">Sphere</span>
-          <span class="preset-note">Dig styles</span>
+          <span class="preset-note" id="sphere-mode-current">Dig settings</span>
         </span>
       </button>
 
-      <a class="preset choice infinite-choice destination" id="infinite-light" href="games/infinite.html?mode=light" data-branch="infinite" data-infinite-theme="light" data-destination-name="Light Infinite" aria-label="Play Infinite with the Light style" aria-hidden="true" tabindex="-1">
+      <button class="preset settings-hub infinite-choice" id="infinite-settings" type="button" data-branch="infinite" data-q="0" data-r="-2" aria-expanded="false" aria-controls="infinite-light infinite-dark infinite-effects" aria-label="Infinite settings, Light. Activate to open." aria-hidden="true" tabindex="-1" disabled>
+        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 9v5m0 20v5M9 24h5m20 0h5M13.4 13.4l3.5 3.5m14.2 14.2 3.5 3.5m0-21.2-3.5 3.5m-14.2 14.2-3.5 3.5" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/><circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="2.3"/></svg><span class="preset-name">Style</span><span class="preset-note" id="infinite-settings-current">Light</span></span>
+      </button>
+      <button class="preset settings-hub classic-choice" id="classic-settings" type="button" data-branch="classic" data-q="2" data-r="0" aria-expanded="false" aria-controls="classic-small classic-medium classic-large" aria-label="Classic board settings, Medium. Activate to open." aria-hidden="true" tabindex="-1" disabled>
+        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 15h26M11 24h26M11 33h26" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/><circle cx="19" cy="15" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="24" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="33" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/></svg><span class="preset-name">Board</span><span class="preset-note" id="classic-settings-current">Medium</span></span>
+      </button>
+      <button class="preset settings-hub sphere-choice" id="sphere-settings" type="button" data-branch="sphere" data-q="-2" data-r="2" aria-expanded="false" aria-controls="sphere-light sphere-shell sphere-glow sphere-invert" aria-label="Sphere theme settings, Light. Activate to open." aria-hidden="true" tabindex="-1" disabled>
+        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M12 31c6-15 18-21 25-15 6 6-2 21-15 21-5 0-8-2-10-6Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="27" r="2.7" fill="currentColor"/><circle cx="28" cy="21" r="2.7" fill="currentColor"/><circle cx="34" cy="20" r="2.7" fill="currentColor"/></svg><span class="preset-name">Theme</span><span class="preset-note" id="sphere-settings-current">Light</span></span>
+      </button>
+
+      <button class="preset choice infinite-choice" id="infinite-light" type="button" data-branch="infinite" data-infinite-theme="light" aria-label="Set Infinite style to Light" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
         <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5M12 12l3.5 3.5m17 17L36 36m0-24-3.5 3.5m-17 17L12 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="preset-name">Light</span><span class="preset-note">Porcelain</span></span>
-      </a>
-      <a class="preset choice infinite-choice destination" id="infinite-dark" href="games/infinite.html?mode=dark" data-branch="infinite" data-infinite-theme="dark" data-destination-name="Dark Infinite" aria-label="Play Infinite with the Dark style" aria-hidden="true" tabindex="-1">
+      </button>
+      <button class="preset choice infinite-choice" id="infinite-dark" type="button" data-branch="infinite" data-infinite-theme="dark" aria-label="Set Infinite style to Dark" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
         <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M34.5 34.7A16 16 0 0 1 18 9.2 16 16 0 1 0 34.5 34.7Z" fill="currentColor"/></svg><span class="preset-name">Dark</span><span class="preset-note">Night iron</span></span>
-      </a>
+      </button>
       <button class="preset choice infinite-choice" id="infinite-effects" type="button" data-branch="infinite" data-setting="effects" aria-label="Effects: Auto. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
         <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="m24 6 2.6 9.4L36 18l-9.4 2.6L24 30l-2.6-9.4L12 18l9.4-2.6Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m36 30 1.5 5.5L43 37l-5.5 1.5L36 44l-1.5-5.5L29 37l5.5-1.5Z" fill="currentColor"/></svg><span class="preset-name">Effects</span><span class="preset-note" id="effects-current">Auto</span></span>
       </button>
 
-      <a class="preset choice classic-choice destination" id="classic-small" href="games/bounded.html?size=easy" data-branch="classic" data-classic-size="easy" data-destination-name="Small Classic" aria-label="Play a small Classic board, 10 mines" aria-hidden="true" tabindex="-1"><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">S</span><span class="preset-name">Small</span><span class="preset-note">10 mines</span></span></a>
-      <a class="preset choice classic-choice destination" id="classic-medium" href="games/bounded.html?size=medium" data-branch="classic" data-classic-size="medium" data-destination-name="Medium Classic" aria-label="Play a medium Classic board, 35 mines" aria-hidden="true" tabindex="-1"><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">M</span><span class="preset-name">Medium</span><span class="preset-note">35 mines</span></span></a>
-      <a class="preset choice classic-choice destination" id="classic-large" href="games/bounded.html?size=hard" data-branch="classic" data-classic-size="hard" data-destination-name="Large Classic" aria-label="Play a large Classic board, 80 mines" aria-hidden="true" tabindex="-1"><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">L</span><span class="preset-name">Large</span><span class="preset-note">80 mines</span></span></a>
+      <button class="preset choice classic-choice" id="classic-small" type="button" data-branch="classic" data-classic-size="easy" aria-label="Set Classic board to Small, 10 mines" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">S</span><span class="preset-name">Small</span><span class="preset-note">10 mines</span></span></button>
+      <button class="preset choice classic-choice" id="classic-medium" type="button" data-branch="classic" data-classic-size="medium" aria-label="Set Classic board to Medium, 35 mines" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">M</span><span class="preset-name">Medium</span><span class="preset-note">35 mines</span></span></button>
+      <button class="preset choice classic-choice" id="classic-large" type="button" data-branch="classic" data-classic-size="hard" aria-label="Set Classic board to Large, 80 mines" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">L</span><span class="preset-name">Large</span><span class="preset-note">80 mines</span></span></button>
 
-      <a class="preset choice sphere-choice destination" id="sphere-light" href="games/sphere.html?theme=light" data-branch="sphere" data-sphere-theme="light" data-destination-name="Light Sphere" aria-label="Play Sphere with the Light style" aria-hidden="true" tabindex="-1"><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="preset-name">Light</span><span class="preset-note">White field</span></span></a>
-      <a class="preset choice sphere-choice destination" id="sphere-shell" href="games/sphere.html?theme=shell" data-branch="sphere" data-sphere-theme="shell" data-destination-name="Shell Sphere" aria-label="Play Sphere with the Shell style" aria-hidden="true" tabindex="-1"><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="10" fill="var(--field)"/><circle cx="24" cy="24" r="5" fill="currentColor"/></svg><span class="preset-name">Shell</span><span class="preset-note">Dark field</span></span></a>
-      <a class="preset choice sphere-choice destination" id="sphere-glow" href="games/sphere.html?theme=glow" data-branch="sphere" data-sphere-theme="glow" data-destination-name="Glow Sphere" aria-label="Play Sphere with the Glow style" aria-hidden="true" tabindex="-1"><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" opacity=".45"/></svg><span class="preset-name">Glow</span><span class="preset-note">Luminous</span></span></a>
+      <button class="preset choice sphere-choice" id="sphere-light" type="button" data-branch="sphere" data-sphere-theme="light" aria-label="Set Sphere theme to Light" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="preset-name">Light</span><span class="preset-note">White field</span></span></button>
+      <button class="preset choice sphere-choice" id="sphere-shell" type="button" data-branch="sphere" data-sphere-theme="shell" aria-label="Set Sphere theme to Shell" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="10" fill="var(--field)"/><circle cx="24" cy="24" r="5" fill="currentColor"/></svg><span class="preset-name">Shell</span><span class="preset-note">Dark field</span></span></button>
+      <button class="preset choice sphere-choice" id="sphere-glow" type="button" data-branch="sphere" data-sphere-theme="glow" aria-label="Set Sphere theme to Glow" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" opacity=".45"/></svg><span class="preset-name">Glow</span><span class="preset-note">Luminous</span></span></button>
       <button class="preset choice sphere-choice" id="sphere-invert" type="button" data-branch="sphere" data-setting="invert" aria-label="Sphere drag: Natural. Activate to cycle." aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 15h28M10 15l6-6m-6 6 6 6M38 33H10m28 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="preset-name">Drag</span><span class="preset-note" id="invert-current">Natural</span></span></button>
     </nav>
 
@@ -767,14 +786,13 @@
     }
 
     /**
-     * Start a clean board. Endless lanes must drop autosave here — otherwise
-     * S/M/L or Restart would paint a fresh field while the old run still
-     * resurrected on the next load.
+     * Start a clean board. Any persistence-owning surface must drop autosave
+     * here — otherwise S/M/L or Restart would paint a fresh field while the
+     * old run still resurrected on the next load.
      */
     function beginFreshRun(level, { clearPersist = true } = {}) {
       if (
         clearPersist &&
-        state.endless &&
         typeof state.hooks.onClearPersist === "function"
       ) {
         state.hooks.onClearPersist(api);
@@ -905,11 +923,19 @@
           clearPersist: opts.clearPersist !== false,
         });
       },
-      /** Snapshot infinite-field run (mines / revealed / flags / camera). */
+      /** Snapshot any run (mines / revealed / flags / camera). */
+      exportRunState() {
+        return exportRunState();
+      },
+      /** Restore a matching finite or endless snapshot. */
+      applyRunState(data) {
+        return applyRunState(data);
+      },
+      /** Backward-compatible endless-only snapshot adapter. */
       exportEndlessState() {
         return exportEndlessState();
       },
-      /** Restore a snapshot from exportEndlessState / autosave. */
+      /** Backward-compatible endless-only restore adapter. */
       applyEndlessState(data) {
         return applyEndlessState(data);
       },
@@ -2187,12 +2213,11 @@
     }
 
     /**
-     * Pack an endless run for localStorage / file export.
-     * Only stores mines, revealed, flagged, torn — sparse vs full map.
+     * Pack a run for localStorage / file export. Only stores mines, revealed,
+     * flagged, and torn cells — sparse vs the complete board map.
      */
-    function exportEndlessState() {
-      if (!state.endless) return null;
-      ensureFinishStamp();
+    function exportRunState() {
+      if (state.endless) ensureFinishStamp();
       const mines = [];
       const revealed = [];
       const flagged = [];
@@ -2206,7 +2231,7 @@
       });
       return {
         v: 1,
-        endless: true,
+        endless: !!state.endless,
         difficulty: state.currentDifficulty,
         density: state.mineDensity,
         radius: state.mapRadius,
@@ -2226,6 +2251,10 @@
         flagged,
         torn,
       };
+    }
+
+    function exportEndlessState() {
+      return state.endless ? exportRunState() : null;
     }
 
     function buildMapToRadius(radius) {
@@ -2264,13 +2293,11 @@
       }
     }
 
-    /**
-     * Restore an endless snapshot. Returns false if payload is unusable.
-     */
-    function applyEndlessState(data) {
-      if (!data || data.v !== 1 || !data.endless) return false;
+    /** Restore a snapshot for the currently booted topology. */
+    function applyRunState(data) {
+      if (!data || data.v !== 1 || typeof data.endless !== "boolean") return false;
+      if (!!data.endless !== !!state.endless) return false;
       stopTimer();
-      state.endless = true;
       if (data.difficulty && state.config[data.difficulty]) {
         state.currentDifficulty = data.difficulty;
       }
@@ -2326,14 +2353,14 @@
         : Array.isArray(data.mines)
           ? data.mines.length
           : 0;
-      // Escape finish (axial key) — never a mine; stamp after mineCount restore
-      if (typeof data.finish === "string" && data.finish.includes(",")) {
+      // Escape finish (axial key) — never a mine; stamp after mineCount restore.
+      if (state.endless && typeof data.finish === "string" && data.finish.includes(",")) {
         const parts = data.finish.split(",");
         setFinishCell(parseInt(parts[0], 10), parseInt(parts[1], 10));
       } else {
         state.finishKey = null;
       }
-      ensureFinishStamp();
+      if (state.endless) ensureFinishStamp();
       recountNeighbors();
       state.timeElapsed = data.time | 0;
       state.detonator = null;
@@ -2355,9 +2382,14 @@
         startTimer(state.timeElapsed);
       }
       if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
-      // Grow if viewport needs more than the saved radius
-      if (!state.isGameOver) ensureWorldCoverage(true);
+      // Endless restores may need another ring to cover a changed viewport.
+      if (state.endless && !state.isGameOver) ensureWorldCoverage(true);
       return true;
+    }
+
+    function applyEndlessState(data) {
+      if (!data || !data.endless || !state.endless) return false;
+      return applyRunState(data);
     }
 
     function updateUI() {
@@ -2726,20 +2758,22 @@
   var centerTool = document.getElementById("center-tool");
   var newTool = document.getElementById("new-tool");
   var modes = Array.prototype.slice.call(presetLayer.querySelectorAll(".mode[data-branch]"));
+  var hubs = Array.prototype.slice.call(presetLayer.querySelectorAll(".settings-hub[data-branch]"));
   var choices = Array.prototype.slice.call(presetLayer.querySelectorAll(".choice[data-branch]"));
-  var destinations = Array.prototype.slice.call(presetLayer.querySelectorAll(".destination"));
   var branches = {};
   var protectedKeys = new Set(["0,0"]);
   var modeByKey = new Map();
+  var hubByKey = new Map();
   var choiceByKey = new Map();
-  var openedBranches = new Set();
+  var exposedBranches = new Set();
+  var activeBranch = null;
   var revealTimers = [];
   var resetTimer = 0;
   var api = null;
   var geometrySignature = "";
   var selectedKey = "0,0";
   var leaving = false;
-  var keyboardBranchFocus = null;
+  var keyboardRevealFocus = null;
   var activeResume = null;
   var statusLockUntil = 0;
 
@@ -2794,6 +2828,7 @@
   modes.forEach(function (mode) {
     branches[mode.dataset.branch] = {
       mode: mode,
+      hub: hubs.find(function (hub) { return hub.dataset.branch === mode.dataset.branch; }),
       choices: choices.filter(function (choice) { return choice.dataset.branch === mode.dataset.branch; })
     };
   });
@@ -2810,20 +2845,23 @@
     modes.forEach(function (mode) {
       occupied.add(key(Number(mode.dataset.q), Number(mode.dataset.r)));
     });
+    hubs.forEach(function (hub) {
+      occupied.add(key(Number(hub.dataset.q), Number(hub.dataset.r)));
+    });
     Object.keys(branches).forEach(function (branchName) {
       var branch = branches[branchName];
-      var modeQ = Number(branch.mode.dataset.q);
-      var modeR = Number(branch.mode.dataset.r);
+      var hubQ = Number(branch.hub.dataset.q);
+      var hubR = Number(branch.hub.dataset.r);
       var outward = axialPoint(Number(branch.mode.dataset.outQ), Number(branch.mode.dataset.outR));
       var candidates = [];
       for (var radius = 1; radius <= 7; radius += 1) {
         for (var relR = -radius; relR <= radius; relR += 1) {
           for (var relQ = -radius; relQ <= radius; relQ += 1) {
             if (distance(relQ, relR) !== radius) continue;
-            var q = modeQ + relQ;
-            var r = modeR + relR;
+            var q = hubQ + relQ;
+            var r = hubR + relR;
             var id = key(q, r);
-            if (distance(q, r) <= 1 || occupied.has(id)) continue;
+            if (occupied.has(id)) continue;
             var point = axialPoint(relQ, relR);
             candidates.push({
               q: q,
@@ -2855,11 +2893,17 @@
   function indexPresetSeats() {
     protectedKeys = new Set(["0,0"]);
     modeByKey.clear();
+    hubByKey.clear();
     choiceByKey.clear();
     modes.forEach(function (mode) {
       var id = key(Number(mode.dataset.q), Number(mode.dataset.r));
       protectedKeys.add(id);
       modeByKey.set(id, mode);
+    });
+    hubs.forEach(function (hub) {
+      var id = key(Number(hub.dataset.q), Number(hub.dataset.r));
+      protectedKeys.add(id);
+      hubByKey.set(id, hub);
     });
     choices.forEach(function (choice) {
       var id = key(Number(choice.dataset.q), Number(choice.dataset.r));
@@ -2893,15 +2937,33 @@
   }
 
   function setCurrent(choice, current) {
-    if (current) choice.setAttribute("aria-current", "true");
-    else choice.removeAttribute("aria-current");
+    choice.setAttribute("aria-pressed", current ? "true" : "false");
+  }
+
+  function classicSizeLabel(size) {
+    return size === "easy" ? "Small" : size === "hard" ? "Large" : "Medium";
   }
 
   function syncPreferences() {
+    var infiniteLabel = titleCase(infiniteThemePreference);
+    var classicLabel = classicSizeLabel(classicSizePreference);
+    var sphereLabel = titleCase(sphereThemePreference);
     document.getElementById("effects-current").textContent = titleCase(effectsPreference);
     document.getElementById("invert-current").textContent = currentInvertLabel();
+    document.getElementById("infinite-settings-current").textContent = infiniteLabel;
+    document.getElementById("classic-settings-current").textContent = classicLabel;
+    document.getElementById("sphere-settings-current").textContent = sphereLabel;
+    document.getElementById("infinite-mode-current").textContent = branches.infinite.hub.classList.contains("is-available") ? infiniteLabel + " · Play" : "Dig settings";
+    document.getElementById("classic-mode-current").textContent = branches.classic.hub.classList.contains("is-available") ? classicLabel + " · Play" : "Dig settings";
+    document.getElementById("sphere-mode-current").textContent = branches.sphere.hub.classList.contains("is-available") ? sphereLabel + " · Play" : "Dig settings";
     document.getElementById("infinite-effects").setAttribute("aria-label", "Effects: " + titleCase(effectsPreference) + ". Activate to cycle.");
     document.getElementById("sphere-invert").setAttribute("aria-label", "Sphere drag: " + currentInvertLabel() + ". Activate to cycle.");
+    document.getElementById("infinite-settings").setAttribute("aria-label", "Infinite settings, " + infiniteLabel + ". Activate to " + (activeBranch === "infinite" ? "close." : "open."));
+    document.getElementById("classic-settings").setAttribute("aria-label", "Classic board settings, " + classicLabel + ". Activate to " + (activeBranch === "classic" ? "close." : "open."));
+    document.getElementById("sphere-settings").setAttribute("aria-label", "Sphere theme settings, " + sphereLabel + ". Activate to " + (activeBranch === "sphere" ? "close." : "open."));
+    document.getElementById("infinite-game").setAttribute("aria-label", branches.infinite.hub.classList.contains("is-available") ? "Play Infinite, " + infiniteLabel + " style" : "Dig Infinite to reveal its settings");
+    document.getElementById("classic-game").setAttribute("aria-label", branches.classic.hub.classList.contains("is-available") ? "Play Classic, " + classicLabel + " board" : "Dig Classic to reveal its settings");
+    document.getElementById("sphere-game").setAttribute("aria-label", branches.sphere.hub.classList.contains("is-available") ? "Play Sphere, " + sphereLabel + " theme" : "Dig Sphere to reveal its settings");
     presetLayer.querySelectorAll("[data-infinite-theme]").forEach(function (choice) {
       setCurrent(choice, choice.dataset.infiniteTheme === infiniteThemePreference);
     });
@@ -2946,6 +3008,15 @@
     return { mode: "infinite", name: "Infinite", href: "games/infinite.html", savedAt: Number(data.savedAt) || 0 };
   }
 
+  function classicResumeCandidate() {
+    var data = parseSave(storageValue(localStorage, "hexsweeper-classic-run-v1"));
+    if (!data || data.v !== 1 || data.kind !== "classic" || data.endless !== false) return null;
+    if (data.first !== false || data.over !== false) return null;
+    if (["easy", "medium", "hard"].indexOf(data.difficulty) < 0) return null;
+    if (!Array.isArray(data.mines) || !data.mines.length || !Array.isArray(data.revealed) || !data.revealed.length || !Array.isArray(data.flagged)) return null;
+    return { mode: "bounded", name: "Classic", href: "games/bounded.html?resume=1", savedAt: Number(data.savedAt) || 0 };
+  }
+
   function sphereResumeCandidate() {
     var stores = [sessionStorage, localStorage];
     var keys = ["hexsweeper-sphere-run-v2", "hexsweeper-sphere-run-v1"];
@@ -2966,7 +3037,7 @@
   }
 
   function refreshResume() {
-    activeResume = [infiniteResumeCandidate(), sphereResumeCandidate()]
+    activeResume = [infiniteResumeCandidate(), classicResumeCandidate(), sphereResumeCandidate()]
       .filter(Boolean)
       .sort(function (a, b) { return b.savedAt - a.savedAt; })[0] || null;
     if (!activeResume) {
@@ -2996,7 +3067,7 @@
     var originY = state.canvas.height / 2 - state.camY;
     state.map.forEach(function (cell) { cell.calcGeometry(originX, originY, state.cellSize); });
     document.documentElement.style.setProperty("--cell-size", state.cellSize.toFixed(2) + "px");
-    [resume].concat(modes, choices).forEach(function (control) {
+    [resume].concat(modes, hubs, choices).forEach(function (control) {
       var point = screenPoint(Number(control.dataset.q), Number(control.dataset.r), state);
       control.style.setProperty("--screen-x", point.x.toFixed(2) + "px");
       control.style.setProperty("--screen-y", point.y.toFixed(2) + "px");
@@ -3023,65 +3094,129 @@
     if (choice.tagName === "BUTTON") choice.disabled = false;
   }
 
-  function branchLabel(branchName) {
-    return branchName === "classic" ? "Classic sizes" : branchName === "sphere" ? "Sphere styles" : "Infinite options";
+  function revealHub(hub) {
+    if (!hub || !exposedBranches.has(hub.dataset.branch)) return;
+    hub.classList.add("is-available");
+    hub.setAttribute("aria-hidden", "false");
+    hub.tabIndex = 0;
+    hub.disabled = false;
+    var branch = branches[hub.dataset.branch];
+    branch.mode.classList.add("is-dug");
+    branch.mode.setAttribute("aria-expanded", "true");
+    syncPreferences();
+    if (keyboardRevealFocus === hub.dataset.branch + ":hub") {
+      keyboardRevealFocus = null;
+      hub.focus({ preventScroll: true });
+    }
   }
 
-  function finishBranchReveal(branchName) {
+  function branchLabel(branchName) {
+    return branchName === "classic" ? "Classic board" : branchName === "sphere" ? "Sphere theme" : "Infinite style";
+  }
+
+  function closeBloom(branchName, restoreFocus) {
     var branch = branches[branchName];
     if (!branch) return;
+    branch.choices.forEach(function (choice) {
+      choice.classList.remove("is-available");
+      choice.setAttribute("aria-hidden", "true");
+      choice.tabIndex = -1;
+      choice.disabled = true;
+    });
+    branch.hub.setAttribute("aria-expanded", "false");
+    if (activeBranch === branchName) activeBranch = null;
+    syncPreferences();
+    if (restoreFocus) branch.hub.focus({ preventScroll: true });
+  }
+
+  function finishBloomReveal(branchName) {
+    var branch = branches[branchName];
+    if (!branch || activeBranch !== branchName) return;
     branch.choices.forEach(function (choice) {
       var cell = api.state.map.get(key(Number(choice.dataset.q), Number(choice.dataset.r)));
       if (cell && cell.revealed) revealChoice(choice);
     });
-    status.textContent = branchLabel(branchName) + " revealed · choose one or keep playing";
-    if (keyboardBranchFocus === branchName) {
-      keyboardBranchFocus = null;
+    status.textContent = branchLabel(branchName) + " · choose a tile · tap " + branch.hub.querySelector(".preset-name").textContent + " to close";
+    if (keyboardRevealFocus === branchName + ":choice") {
+      keyboardRevealFocus = null;
       var target = branch.choices.find(function (choice) { return choice.classList.contains("is-available"); });
       if (target) target.focus({ preventScroll: true });
     }
   }
 
-  function openBranch(branchName, focusChoice) {
+  function openBloom(branchName, focusChoice) {
     var branch = branches[branchName];
-    if (!branch || leaving) return;
-    if (focusChoice) keyboardBranchFocus = branchName;
-    branch.mode.classList.add("is-dug");
-    branch.mode.setAttribute("aria-expanded", "true");
-    if (openedBranches.has(branchName)) {
-      branch.choices.forEach(revealChoice);
-      finishBranchReveal(branchName);
+    if (!branch || leaving || !branch.hub.classList.contains("is-available")) return;
+    if (activeBranch === branchName) {
+      closeBloom(branchName, focusChoice);
+      status.textContent = branchLabel(branchName) + " settings closed";
       return;
     }
-    openedBranches.add(branchName);
+    if (activeBranch) closeBloom(activeBranch, false);
+    activeBranch = branchName;
+    branch.hub.setAttribute("aria-expanded", "true");
+    if (focusChoice) keyboardRevealFocus = branchName + ":choice";
+    var hubCell = api.state.map.get(key(Number(branch.hub.dataset.q), Number(branch.hub.dataset.r)));
+    if (hubCell) {
+      api.focusOnCell(hubCell, reducedMotion());
+      geometrySignature = "";
+    }
+    syncPreferences();
     statusLockUntil = performance.now() + (reducedMotion() ? 120 : 1800);
-    status.textContent = "Digging out " + branchLabel(branchName).toLowerCase() + "…";
+    status.textContent = "Blooming " + branchLabel(branchName).toLowerCase() + " settings…";
     var lastDelay = 0;
     branch.choices.forEach(function (choice, index) {
       var delay = reducedMotion() ? 0 : 75 + index * 105;
       lastDelay = Math.max(lastDelay, delay);
       revealTimers.push(setTimeout(function () {
-        if (!openedBranches.has(branchName) || leaving) return;
+        if (activeBranch !== branchName || leaving) return;
         var id = key(Number(choice.dataset.q), Number(choice.dataset.r));
         var cell = api.state.map.get(id);
         if (cell && !cell.revealed && !cell._pendingReveal) api.dig(cell);
         if (cell && cell.revealed) revealChoice(choice);
       }, delay));
     });
-    revealTimers.push(setTimeout(function () { finishBranchReveal(branchName); }, lastDelay + (reducedMotion() ? 20 : 190)));
+    revealTimers.push(setTimeout(function () { finishBloomReveal(branchName); }, lastDelay + (reducedMotion() ? 20 : 190)));
   }
 
-  function selectMode(mode, focusChoice) {
+  function exposeSettingsHub(branchName, focusHub) {
+    var branch = branches[branchName];
+    if (!branch || leaving) return;
+    exposedBranches.add(branchName);
+    branch.mode.classList.add("is-dug");
+    if (focusHub) keyboardRevealFocus = branchName + ":hub";
+    if (branch.hub.classList.contains("is-available")) {
+      if (focusHub) branch.hub.focus({ preventScroll: true });
+      return;
+    }
+    statusLockUntil = performance.now() + (reducedMotion() ? 120 : 900);
+    status.textContent = "Digging out " + branchLabel(branchName).toLowerCase() + " settings…";
+    revealTimers.push(setTimeout(function () {
+      if (leaving) return;
+      var id = key(Number(branch.hub.dataset.q), Number(branch.hub.dataset.r));
+      var cell = api.state.map.get(id);
+      if (cell && !cell.revealed && !cell._pendingReveal) api.dig(cell);
+      if (cell && cell.revealed) revealHub(branch.hub);
+      status.textContent = branch.mode.querySelector(".preset-name").textContent + " ready · tap to play or adjust " + branch.hub.querySelector(".preset-name").textContent;
+    }, reducedMotion() ? 0 : 105));
+  }
+
+  function selectMode(mode, focusHub) {
     if (!api || leaving) return;
     var id = key(Number(mode.dataset.q), Number(mode.dataset.r));
     var cell = api.state.map.get(id);
     if (!cell) return;
-    if (cell.revealed) {
-      openBranch(mode.dataset.branch, focusChoice);
+    if (!cell.revealed) {
+      if (focusHub) keyboardRevealFocus = mode.dataset.branch + ":hub";
+      api.dig(cell);
       return;
     }
-    if (focusChoice) keyboardBranchFocus = mode.dataset.branch;
-    api.dig(cell);
+    var branch = branches[mode.dataset.branch];
+    if (!branch.hub.classList.contains("is-available")) {
+      exposeSettingsHub(mode.dataset.branch, focusHub);
+      return;
+    }
+    launchMode(mode.dataset.branch);
   }
 
   function cycleSetting(choice) {
@@ -3106,48 +3241,85 @@
     }
   }
 
-  function chooseDestination(destination) {
-    if (leaving) return;
-    if (destination.dataset.classicSize) {
-      classicSizePreference = destination.dataset.classicSize;
+  function applyChoice(choice) {
+    if (choice.dataset.setting) {
+      cycleSetting(choice);
+      return;
+    }
+    if (choice.dataset.classicSize) {
+      classicSizePreference = choice.dataset.classicSize;
       writePreference(CLASSIC_SIZE_KEY, classicSizePreference);
+      status.textContent = classicSizeLabel(classicSizePreference) + " set · tap Classic to play";
     }
-    if (destination.dataset.infiniteTheme) {
-      infiniteThemePreference = destination.dataset.infiniteTheme;
+    if (choice.dataset.infiniteTheme) {
+      infiniteThemePreference = choice.dataset.infiniteTheme;
       writePreference(INFINITE_THEME_KEY, infiniteThemePreference);
+      status.textContent = titleCase(infiniteThemePreference) + " set · tap Infinite to play";
     }
-    if (destination.dataset.sphereTheme) {
-      sphereThemePreference = destination.dataset.sphereTheme;
+    if (choice.dataset.sphereTheme) {
+      sphereThemePreference = choice.dataset.sphereTheme;
       writePreference(SPHERE_THEME_KEY, sphereThemePreference);
+      status.textContent = titleCase(sphereThemePreference) + " set · tap Sphere to play";
     }
     syncPreferences();
-    leaving = true;
-    launcher.classList.add("is-launching");
-    destination.classList.add("is-launching");
-    var name = destination === resume ? resumeModeName.textContent : (destination.dataset.destinationName || "Hexsweeper");
-    status.textContent = (destination === resume ? "Resuming " : "Opening ") + name;
-    setTimeout(function () { location.href = destination.href; }, reducedMotion() ? 20 : 190);
   }
 
-  function hideAllChoices() {
-    openedBranches.clear();
+  function beginLaunch(control, name, href, verb) {
+    if (leaving) return;
+    leaving = true;
+    launcher.classList.add("is-launching");
+    control.classList.add("is-launching");
+    status.textContent = verb + " " + name;
+    setTimeout(function () { location.href = href; }, reducedMotion() ? 20 : 190);
+  }
+
+  function launchMode(branchName) {
+    var branch = branches[branchName];
+    if (!branch) return;
+    if (branchName === "infinite") {
+      beginLaunch(branch.mode, "Infinite · " + titleCase(infiniteThemePreference), "games/infinite.html?mode=" + encodeURIComponent(infiniteThemePreference) + "&fresh=1", "Opening");
+      return;
+    }
+    if (branchName === "classic") {
+      beginLaunch(branch.mode, "Classic · " + classicSizeLabel(classicSizePreference), "games/bounded.html?size=" + encodeURIComponent(classicSizePreference) + "&new=1", "Opening");
+      return;
+    }
+    beginLaunch(branch.mode, "Sphere · " + titleCase(sphereThemePreference), "games/sphere.html?theme=" + encodeURIComponent(sphereThemePreference) + "&fresh=1", "Opening");
+  }
+
+  function chooseDestination(destination) {
+    beginLaunch(destination, resumeModeName.textContent, destination.href, "Resuming");
+  }
+
+  function resetBloomControls() {
+    activeBranch = null;
+    exposedBranches.clear();
+    keyboardRevealFocus = null;
     revealTimers.forEach(clearTimeout);
     revealTimers.length = 0;
     choices.forEach(function (choice) {
       choice.classList.remove("is-available", "is-launching");
       choice.setAttribute("aria-hidden", "true");
       choice.tabIndex = -1;
-      if (choice.tagName === "BUTTON") choice.disabled = true;
+      choice.disabled = true;
+    });
+    hubs.forEach(function (hub) {
+      hub.classList.remove("is-available", "is-launching");
+      hub.setAttribute("aria-hidden", "true");
+      hub.setAttribute("aria-expanded", "false");
+      hub.tabIndex = -1;
+      hub.disabled = true;
     });
     modes.forEach(function (mode) {
       mode.classList.remove("is-dug");
       mode.setAttribute("aria-expanded", "false");
     });
+    syncPreferences();
   }
 
   function newField(announce) {
     clearTimeout(resetTimer);
-    hideAllChoices();
+    resetBloomControls();
     leaving = false;
     launcher.classList.remove("is-launching");
     api.restart({ clearPersist: false });
@@ -3167,8 +3339,12 @@
     }
     var choice = choiceByKey.get(id);
     if (choice && choice.classList.contains("is-available")) {
-      if (choice.dataset.setting) cycleSetting(choice);
-      else chooseDestination(choice);
+      applyChoice(choice);
+      return;
+    }
+    var hub = hubByKey.get(id);
+    if (hub && hub.classList.contains("is-available")) {
+      openBloom(hub.dataset.branch, focusChoice);
       return;
     }
     var mode = modeByKey.get(id);
@@ -3258,8 +3434,12 @@
         }
         var choice = choiceByKey.get(id);
         if (choice && choice.classList.contains("is-available")) {
-          if (choice.dataset.setting) cycleSetting(choice);
-          else chooseDestination(choice);
+          applyChoice(choice);
+          return true;
+        }
+        var hub = hubByKey.get(id);
+        if (hub && hub.classList.contains("is-available")) {
+          openBloom(hub.dataset.branch, false);
           return true;
         }
         var mode = modeByKey.get(id);
@@ -3274,11 +3454,13 @@
         var mode = modeByKey.get(id);
         if (mode) {
           mode.classList.add("is-dug");
-          if (meta && meta.source === "dig") openBranch(mode.dataset.branch, keyboardBranchFocus === mode.dataset.branch);
+          if (meta && meta.source === "dig") exposeSettingsHub(mode.dataset.branch, keyboardRevealFocus === mode.dataset.branch + ":hub");
         }
+        var hub = hubByKey.get(id);
+        if (hub && exposedBranches.has(hub.dataset.branch)) revealHub(hub);
         var choice = choiceByKey.get(id);
-        if (choice && openedBranches.has(choice.dataset.branch)) revealChoice(choice);
-        if (!mode && !choice && !leaving && performance.now() > statusLockUntil) {
+        if (choice && activeBranch === choice.dataset.branch) revealChoice(choice);
+        if (!mode && !hub && !choice && !leaving && performance.now() > statusLockUntil) {
           status.textContent = cell.neighborMines ? "Safe · " + cell.neighborMines + " nearby" : "Clear · the opening is spreading";
         }
         updateCursor();
@@ -3312,12 +3494,18 @@
       selectMode(mode, true);
     });
   });
+  hubs.forEach(function (hub) {
+    hub.addEventListener("click", function (event) {
+      event.preventDefault();
+      if (!hub.classList.contains("is-available")) return;
+      openBloom(hub.dataset.branch, true);
+    });
+  });
   choices.forEach(function (choice) {
     choice.addEventListener("click", function (event) {
       event.preventDefault();
       if (!choice.classList.contains("is-available")) return;
-      if (choice.dataset.setting) cycleSetting(choice);
-      else chooseDestination(choice);
+      applyChoice(choice);
     });
   });
   resume.addEventListener("click", function (event) {
@@ -3345,6 +3533,14 @@
     canvas.focus({ preventScroll: true });
   });
   newTool.addEventListener("click", function () { newField(true); });
+
+  addEventListener("keydown", function (event) {
+    if (event.key !== "Escape" || !activeBranch || event.target === canvas) return;
+    event.preventDefault();
+    var closingBranch = activeBranch;
+    closeBloom(closingBranch, true);
+    status.textContent = branchLabel(closingBranch) + " settings closed";
+  });
 
   canvas.addEventListener("focus", updateCursor);
   canvas.addEventListener("keydown", function (event) {
@@ -3385,6 +3581,12 @@
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
+      if (activeBranch) {
+        var closingBranch = activeBranch;
+        closeBloom(closingBranch, true);
+        status.textContent = branchLabel(closingBranch) + " settings closed";
+        return;
+      }
       api.setCamera(0, 0);
       geometrySignature = "";
       status.textContent = "Board centered";
@@ -3401,7 +3603,7 @@
     if (!event.persisted) return;
     leaving = false;
     launcher.classList.remove("is-launching");
-    destinations.forEach(function (destination) { destination.classList.remove("is-launching"); });
+    [resume].concat(modes, hubs).forEach(function (control) { control.classList.remove("is-launching"); });
     loadPreferences();
     applyAppearance();
     syncPreferences();

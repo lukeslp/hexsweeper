@@ -7,10 +7,12 @@ for iOS and Android from the same sealed offline payload.
 
 The app opens on the real endless 2D board. **Infinite**, **Classic**, and
 **Sphere** are protected cells in that field; digging one uncovers its connected
-choices through the same safe-dig and flood engine used by ordinary play.
-Infinite offers Light / Dark and effects, Classic offers Small / Medium / Large,
-and Sphere offers Light / Shell / Glow plus drag direction. The newest unfinished
-Infinite or Sphere run appears as a mode-colored **Resume** cell in the center.
+settings hub through the same safe-dig and flood engine used by ordinary play.
+The hub opens and folds a Clex-style bloom whose choices set in place: Infinite
+offers Light / Dark and effects, Classic offers Small / Medium / Large, and
+Sphere offers Light / Shell / Glow plus drag direction. The mode face reflects
+the selected value and starts a fresh configured run. The newest unfinished
+Infinite, Classic, or Sphere run appears as a mode-colored **Resume** cell in the center.
 Users can keep digging and flagging the surrounding field, drag it to explore,
 or zoom with pinch, wheel, and the visible −/+ controls. Visual danger uses
 nested inset hexes so counts do not compete with the larger launch labels.
@@ -23,12 +25,11 @@ launch-time materials without platform-specific layout work.
 | **Classic** | Fixed flat board, neumorph | `collection/skin-classic.html` |
 | **Sphere** | Closed 3D Goldberg sphere | `sphere/` |
 
-The picker reinforces those choices with the short qualifiers **Endless**, **Fixed**,
-and **3D**. Internal filenames keep `bounded` for compatibility; that is not a
-user-facing mode name. Classic does not offer Resume until its finite board has
-a persistence contract.
+Internal filenames keep `bounded` for compatibility; that is not a user-facing
+mode name. Classic snapshots mines, reveals, flags, size, time, and view state
+before the Games transition; only the centered Resume route restores it.
 
-Web version: <https://dr.eamer.dev/games/hexsweeper/sphere/>
+Web version: <https://dr.eamer.dev/games/hexsweeper/>
 
 ## The names do not match, on purpose
 
