@@ -82,6 +82,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
 | `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
+| `collection/water-wheel.html` | Water Wheel — self-contained dousing-game one-pager with tutorial art |
 | `collection/polyhedron.html` | Dodecahedron campaign — 12 connected panels with 19/37/61 cells per panel |
 | `collection/sphere-reflection*.html` | Obsidian Mirror studies — five procedural environments plus fifteen image-backed surfaces, including animated storm, cloud, ink, and oil-cell plates |
 | `collection/sphere-kimi.html` | Visual take: Moon Ink Orrery |
@@ -183,8 +184,9 @@ Both studies support seeded URLs, complete one-turn undo, mouse and touch input,
 
 - Original sphere gameplay and center-bloom controls, isolated from the native app payload.
 - Pointer-inert WebGL2 reflection beneath the authoritative Canvas 2D mesh.
-- Twenty reflected environments share one renderer and one game state: `?material=stormglass|studio|mercury|aurora|atrium|canopy|salon|paisley|portoro|deco|oculus|galaxy|night-cabin|gilded-ribbon|ion-storm|amber-tempest|heat-lightning|stratosphere|chromatic-ink|amber-cells`. Press **M** to cycle or choose one in Help.
-- The fifteen image-backed environments use responsive, same-origin desktop/mobile WebP plates under `sphere-reflection/assets/reflections/`; collection one-pagers embed both sizes so every surface remains self-contained. Each plate declares `environment`, `surface`, or `hybrid` mapping: surface imagery follows the rotating globe while Fresnel and studio reflections remain world-locked. Select plates also opt into weather drift, ink advection, or oil-cell refraction; reduced-motion mode freezes material animation without breaking surface attachment during direct rotation.
+- Sixteen curated environments share one renderer and one game state: `?material=stormglass|mercury|aurora|atrium|canopy|portoro|deco|oculus|galaxy|gilded-ribbon|ion-storm|amber-tempest|heat-lightning|stratosphere|chromatic-ink|amber-cells`. Press **M** to cycle or choose one in Help. Retired registry slots remain internal so older saved selections do not renumber newer materials.
+- The twelve image-backed environments use responsive, same-origin desktop/mobile WebP plates under `sphere-reflection/assets/reflections/`; collection one-pagers embed both sizes so every surface remains self-contained. Each plate declares `environment`, `surface`, or `hybrid` mapping: surface imagery follows the rotating globe while Fresnel and studio reflections remain world-locked. Select plates opt into distinct weather drift, torsion, parallax, ink advection, or oil-cell refraction; reduced-motion mode freezes ambient material animation without breaking surface attachment during direct rotation.
+- Selected materials expose a seamless inner layer through cleared faces: Amber Cells reveals a finer moving cell swarm, Mercury and Portoro reveal delayed liquid metal. The standard Earth sphere exposes a continuous molten mantle beneath its mapped crust.
 - Covered faces retain the continuous mirror; cleared faces become matte wells; flags stay scarlet.
 - Analytic sphere normals replace a costly raymarch, with a capped backing buffer for mobile.
 - Environmental drift freezes for either operating-system reduced motion or the in-game reduced-effects setting; forced colors uses the flat black/white renderer.

@@ -161,7 +161,9 @@ a transient, non-persisted camera zoom and leave gameplay, saves, effects, and
 the action inventory alone. A three-step illustrated Dig / Menu / Quench tour
 replaces the old introductory modal without hiding the surface-pack choice.
 The archived decorative theme remains at `collection/theme-water.html` and
-`?theme=water` on the sphere.
+`?theme=water` on the sphere. The finished gameplay variant is linked from
+`choices.html`, the parent games catalog, and the generated collection desk;
+`collection/water-wheel.html` keeps its three tutorial illustrations inline.
 
 ## Risks
 

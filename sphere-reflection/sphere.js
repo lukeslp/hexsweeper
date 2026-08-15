@@ -2709,6 +2709,185 @@
     }
 
     /**
+     * Selected shells reveal a continuous material beneath the crust. The
+     * field is drawn in screen coordinates, then clipped per cleared face, so
+     * neighboring digs join without restarting the texture at every hex.
+     */
+    function revealedCoreProfile(cell) {
+      if (!cell || !cell.revealed || cell.flagged || cell.isMine) return null;
+      const material = document.body.dataset.reflectionMaterial || "";
+      if (material === "amber-cells") return "microcells";
+      if (material === "mercury" || material === "portoro") return "metal";
+      if (state.theme && state.theme.globeMap === "earth") return "molten";
+      return null;
+    }
+
+    function coreHash(x, y, seed) {
+      const value = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
+      return value - Math.floor(value);
+    }
+
+    function drawMicrocellCore(proj, now) {
+      const bounds = proj.boundary.reduce(
+        (box, point) => ({
+          minX: Math.min(box.minX, point.x),
+          minY: Math.min(box.minY, point.y),
+          maxX: Math.max(box.maxX, point.x),
+          maxY: Math.max(box.maxY, point.y),
+        }),
+        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+      );
+      const ambientTime = state.reduceMotion ? 0 : now * 0.00014;
+      const base = ctx.createRadialGradient(
+        state.centerX - state.scale * 0.22,
+        state.centerY - state.scale * 0.28,
+        state.scale * 0.04,
+        state.centerX,
+        state.centerY,
+        state.scale * 1.05
+      );
+      base.addColorStop(0, "#d98724");
+      base.addColorStop(0.42, "#71300a");
+      base.addColorStop(1, "#160603");
+      ctx.fillStyle = base;
+      ctx.fillRect(bounds.minX - 2, bounds.minY - 2, bounds.maxX - bounds.minX + 4, bounds.maxY - bounds.minY + 4);
+
+      // A global lattice gives every clipped face the same tiny-cell field.
+      const pitch = Math.max(7, state.scale * 0.025);
+      const minGX = Math.floor((bounds.minX - pitch) / pitch);
+      const maxGX = Math.ceil((bounds.maxX + pitch) / pitch);
+      const minGY = Math.floor((bounds.minY - pitch) / pitch);
+      const maxGY = Math.ceil((bounds.maxY + pitch) / pitch);
+      for (let gy = minGY; gy <= maxGY; gy++) {
+        for (let gx = minGX; gx <= maxGX; gx++) {
+          const seed = coreHash(gx, gy, 1.3);
+          const phase = ambientTime * (0.7 + seed * 0.8) + seed * Math.PI * 2;
+          const px = (gx + 0.5) * pitch + (seed - 0.5) * pitch * 0.55 + Math.sin(phase) * pitch * 0.12;
+          const py = (gy + 0.5) * pitch + (coreHash(gx, gy, 4.7) - 0.5) * pitch * 0.55 + Math.cos(phase * 0.83) * pitch * 0.10;
+          const radius = pitch * (0.23 + coreHash(gx, gy, 8.1) * 0.22);
+          const lens = ctx.createRadialGradient(
+            px - radius * 0.34,
+            py - radius * 0.38,
+            radius * 0.08,
+            px,
+            py,
+            radius
+          );
+          lens.addColorStop(0, "rgba(255,222,133,0.88)");
+          lens.addColorStop(0.36, "rgba(207,117,30,0.72)");
+          lens.addColorStop(0.82, "rgba(92,32,7,0.78)");
+          lens.addColorStop(1, "rgba(28,7,2,0.96)");
+          ctx.beginPath();
+          ctx.arc(px, py, radius, 0, Math.PI * 2);
+          ctx.fillStyle = lens;
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,188,83,0.30)";
+          ctx.lineWidth = Math.max(0.45, radius * 0.10);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function drawMetalCore(proj, now) {
+      const time = state.reduceMotion ? 0 : now * 0.000075;
+      const angle = state.rotY * 0.22 + state.rotX * 0.10 + time;
+      const span = state.scale * 1.55;
+      const dx = Math.cos(angle) * span;
+      const dy = Math.sin(angle) * span;
+      const metal = ctx.createLinearGradient(
+        state.centerX - dx,
+        state.centerY - dy,
+        state.centerX + dx,
+        state.centerY + dy
+      );
+      metal.addColorStop(0, "#030607");
+      metal.addColorStop(0.24, "#424d50");
+      metal.addColorStop(0.43, "#dce7e8");
+      metal.addColorStop(0.49, "#6f7c7f");
+      metal.addColorStop(0.66, "#182023");
+      metal.addColorStop(0.84, "#a8b5b7");
+      metal.addColorStop(1, "#06090a");
+      ctx.fillStyle = metal;
+      ctx.fillRect(
+        state.centerX - state.scale * 1.2,
+        state.centerY - state.scale * 1.2,
+        state.scale * 2.4,
+        state.scale * 2.4
+      );
+
+      // The highlight settles just behind the shell rotation, giving the
+      // exposed metal a little optical inertia rather than a scrolling decal.
+      const hx = state.centerX + Math.cos(angle * 0.73 - 0.8) * state.scale * 0.34;
+      const hy = state.centerY + Math.sin(angle * 0.61 - 1.2) * state.scale * 0.25;
+      const gleam = ctx.createRadialGradient(hx, hy, 0, hx, hy, state.scale * 0.52);
+      gleam.addColorStop(0, "rgba(255,255,255,0.44)");
+      gleam.addColorStop(0.18, "rgba(226,244,246,0.16)");
+      gleam.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gleam;
+      ctx.fillRect(
+        state.centerX - state.scale,
+        state.centerY - state.scale,
+        state.scale * 2,
+        state.scale * 2
+      );
+    }
+
+    function drawMoltenCore(now) {
+      const time = state.reduceMotion ? 0 : now * 0.00016;
+      const mantle = ctx.createRadialGradient(
+        state.centerX - state.scale * 0.16,
+        state.centerY - state.scale * 0.24,
+        state.scale * 0.04,
+        state.centerX,
+        state.centerY,
+        state.scale * 1.08
+      );
+      mantle.addColorStop(0, "#fff0a1");
+      mantle.addColorStop(0.2, "#ff9d16");
+      mantle.addColorStop(0.58, "#a82409");
+      mantle.addColorStop(1, "#240303");
+      ctx.fillStyle = mantle;
+      ctx.fillRect(
+        state.centerX - state.scale * 1.15,
+        state.centerY - state.scale * 1.15,
+        state.scale * 2.3,
+        state.scale * 2.3
+      );
+
+      ctx.globalCompositeOperation = "screen";
+      ctx.lineCap = "round";
+      for (let band = 0; band < 5; band++) {
+        const yBase = state.centerY + (band - 2) * state.scale * 0.28;
+        ctx.beginPath();
+        for (let step = 0; step <= 36; step++) {
+          const x = state.centerX - state.scale * 1.15 + (step / 36) * state.scale * 2.3;
+          const wave = Math.sin(step * 0.43 + band * 1.7 + time * (1.3 + band * 0.08));
+          const y = yBase + wave * state.scale * (0.035 + band * 0.004);
+          if (step === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = band % 2 ? "rgba(255,198,55,0.42)" : "rgba(255,83,13,0.46)";
+        ctx.lineWidth = Math.max(1.2, state.scale * 0.007);
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    function drawRevealedCore(proj, cell, now, profile) {
+      if (!profile || !cell || !cell.revealed || cell.isMine) return;
+      ctx.save();
+      if (!drawHexPath(proj)) {
+        ctx.restore();
+        return;
+      }
+      ctx.clip();
+      if (profile === "microcells") drawMicrocellCore(proj, now);
+      else if (profile === "metal") drawMetalCore(proj, now);
+      else if (profile === "molten") drawMoltenCore(now);
+      ctx.restore();
+    }
+
+    /**
      * Radial center glow clipped to the hex face (Glow theme / wellGlow themes).
      * Empty clears run hotter; numbered wells stay softer so digits stay readable.
      */
@@ -3462,8 +3641,12 @@
         const idx = proj.index;
         const cell = state.cells[idx];
         const tile = state.tiles[idx];
+        const coreProfile = revealedCoreProfile(cell);
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
+        if (coreProfile) {
+          colors = { ...colors, stroke: colors.fill, lineWidth: 0 };
+        }
         const h = heights[idx];
         let drawProj = proj;
         let markLift = 0;
@@ -3491,7 +3674,7 @@
           drawProj = lifted;
           markLift = h;
           if (h < -1e-6) {
-            if (styleId === "borderless") {
+            if (coreProfile || styleId === "borderless") {
               // Seamless valley floor — no per-hex grid (covered tiles keep edges).
               colors = {
                 ...colors,
@@ -3524,6 +3707,7 @@
         }
 
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
+        drawRevealedCore(drawProj, cell, now, coreProfile);
         drawWellCenterGlow(drawProj, cell, now);
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }

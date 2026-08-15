@@ -79,11 +79,13 @@
       swatch: "radial-gradient(circle at 58% 24%, #d99358 0 10%, #53646c 32%, #070d12 72%)",
     },
     {
-      id: "studio",
-      label: "Softbox Orbit",
-      shortLabel: "Studio",
+      // Retired curation slot. Preserve its shader index for saved material
+      // selections and generated pages from earlier studies.
+      retired: true,
+      label: "Retired studio slot",
+      shortLabel: "Retired",
       fallback: ["#05080a", "#65747a", "#dca465", "#10181c"],
-      swatch: "linear-gradient(135deg, #05080a 20%, #dca465 42%, #65747a 58%, #10181c 80%)",
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       id: "mercury",
@@ -112,15 +114,14 @@
       shortLabel: "Canopy",
       fallback: ["#07100b", "#34563a", "#9ab18d", "#101a13"],
       swatch: "radial-gradient(circle at 62% 24%, #b9c99e 0 8%, #34563a 35%, #07100b 76%)",
-      texture: { desktop: "assets/reflections/canopy-2048.webp", mobile: "assets/reflections/canopy-1024.webp", speed: 0.0012, exposure: 0.74, saturation: 0.86, backdrop: 0.46, mapping: "environment", frame: "ambient", reflectionStrength: 0.24, roughness: 0.12, motion: 5, motionAmount: 0.006, motionRate: 0.025 },
+      texture: { desktop: "assets/reflections/canopy-2048.webp", mobile: "assets/reflections/canopy-1024.webp", speed: 0.00025, exposure: 0.74, saturation: 0.88, backdrop: 0.46, mapping: "environment", frame: "ambient", reflectionStrength: 0.24, roughness: 0.12, motion: 6, motionAmount: 0.018, motionRate: 0.055 },
     },
     {
-      id: "salon",
-      label: "Gallery Bokeh",
-      shortLabel: "Bokeh",
+      retired: true,
+      label: "Retired bokeh slot",
+      shortLabel: "Retired",
       fallback: ["#100b08", "#7c5835", "#d7a45f", "#211610"],
-      swatch: "radial-gradient(circle at 32% 42%, #e3b267 0 11%, transparent 12%), radial-gradient(circle at 72% 28%, #ac7744 0 15%, #150d09 42%)",
-      texture: { desktop: "assets/reflections/salon-2048.webp", mobile: "assets/reflections/salon-1024.webp", speed: 0.0018, exposure: 0.82, saturation: 0.88, backdrop: 0.56, mapping: "environment", frame: "ambient", reflectionStrength: 0.30, roughness: 0.08, motion: 5, motionAmount: 0.008, motionRate: 0.022 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       // Retired slot. Keep its position so the shader indices for later
@@ -164,12 +165,11 @@
       texture: { desktop: "assets/reflections/galaxy-1280.webp", mobile: "assets/reflections/galaxy-768.webp", speed: 0.00018, exposure: 1.10, saturation: 0.92, backdrop: 0.50, mapping: "environment", frame: "ambient", reflectionStrength: 0.22, roughness: 0.06, motion: 5, motionAmount: 0.004, motionRate: 0.016 },
     },
     {
-      id: "night-cabin",
-      label: "Night Cabin",
-      shortLabel: "Cabin",
+      retired: true,
+      label: "Retired cabin slot",
+      shortLabel: "Retired",
       fallback: ["#01050a", "#112844", "#ffb56b", "#020305"],
-      swatch: "radial-gradient(circle at 56% 70%, #ffb56b 0 5%, #15253c 7% 23%, #030912 46%, #010204 76%)",
-      texture: { desktop: "assets/reflections/night-cabin-1280.webp", mobile: "assets/reflections/night-cabin-768.webp", speed: 0.00010, exposure: 1.18, saturation: 0.90, backdrop: 0.54, mapping: "environment", frame: "ambient", reflectionStrength: 0.28, roughness: 0.04, offsetX: -0.20, offsetY: 0.18, motion: 5, motionAmount: 0.002, motionRate: 0.010 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       id: "gilded-ribbon",
@@ -177,7 +177,7 @@
       shortLabel: "Ribbon",
       fallback: ["#020103", "#4d3449", "#dfa35f", "#080510"],
       swatch: "repeating-radial-gradient(ellipse at 72% 58%, #060407 0 8px, #c27d38 9px 11px, #16101c 12px 19px, #8c7bb5 20px 21px)",
-      texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00080, exposure: 0.90, saturation: 0.92, backdrop: 0.44, mapping: "surface", frame: "lag", surfaceMix: 0.90, reflectionStrength: 0.30, roughness: 0.08, gamma: 0.78, motion: 5, motionAmount: 0.003, motionRate: 0.018 },
+      texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00020, exposure: 0.90, saturation: 0.94, backdrop: 0.44, mapping: "surface", frame: "lag", surfaceMix: 0.90, reflectionStrength: 0.34, roughness: 0.07, gamma: 0.78, motion: 7, motionAmount: 0.028, motionRate: 0.060 },
     },
     {
       id: "ion-storm",
@@ -185,7 +185,7 @@
       shortLabel: "Ion",
       fallback: ["#06142d", "#175fa2", "#c893dc", "#060a19"],
       swatch: "linear-gradient(135deg, #0a75be 12%, #123866 46%, #d39adb 72%, #100c27 92%)",
-      texture: { desktop: "assets/reflections/ion-storm-1280.webp", mobile: "assets/reflections/ion-storm-768.webp", speed: 0.00045, exposure: 0.98, saturation: 1.04, backdrop: 0.48, mapping: "hybrid", frame: "lag", surfaceMix: 0.68, reflectionStrength: 0.34, roughness: 0.10, motion: 1, motionAmount: 0.030, motionRate: 0.095, pulse: 0.06 },
+      texture: { desktop: "assets/reflections/ion-storm-1280.webp", mobile: "assets/reflections/ion-storm-768.webp", speed: 0.00035, exposure: 0.98, saturation: 1.06, backdrop: 0.48, mapping: "hybrid", frame: "lag", surfaceMix: 0.66, reflectionStrength: 0.38, roughness: 0.08, motion: 8, motionAmount: 0.035, motionRate: 0.085, pulse: 0.10 },
     },
     {
       id: "amber-tempest",
@@ -193,7 +193,7 @@
       shortLabel: "Tempest",
       fallback: ["#071018", "#70472d", "#f1a14e", "#0c1721"],
       swatch: "radial-gradient(circle at 60% 35%, #ffd082 0 7%, #b6602d 28%, #17232c 62%, #05090d 88%)",
-      texture: { desktop: "assets/reflections/amber-tempest-1280.webp", mobile: "assets/reflections/amber-tempest-768.webp", speed: -0.00035, exposure: 0.94, saturation: 0.92, backdrop: 0.48, mapping: "hybrid", frame: "lag", surfaceMix: 0.64, reflectionStrength: 0.36, roughness: 0.10, motion: 1, motionAmount: 0.026, motionRate: 0.080, pulse: 0.05 },
+      texture: { desktop: "assets/reflections/amber-tempest-1280.webp", mobile: "assets/reflections/amber-tempest-768.webp", speed: -0.00018, exposure: 0.94, saturation: 0.94, backdrop: 0.48, mapping: "hybrid", frame: "lag", surfaceMix: 0.58, reflectionStrength: 0.38, roughness: 0.10, motion: 9, motionAmount: 0.024, motionRate: 0.070, pulse: 0.12 },
     },
     {
       id: "heat-lightning",
@@ -209,7 +209,7 @@
       shortLabel: "Sky",
       fallback: ["#e7f2fa", "#74b5df", "#ffffff", "#1d6fa9"],
       swatch: "linear-gradient(180deg, #137ec2 0%, #77c1ec 42%, #ffffff 63%, #dbeef8 100%)",
-      texture: { desktop: "assets/reflections/stratosphere-1280.webp", mobile: "assets/reflections/stratosphere-768.webp", speed: 0.00020, exposure: 0.88, saturation: 0.82, backdrop: 0.50, mapping: "environment", frame: "ambient", reflectionStrength: 0.20, roughness: 0.16, motion: 1, motionAmount: 0.012, motionRate: 0.045, pulse: 0.0, offsetY: -0.04 },
+      texture: { desktop: "assets/reflections/stratosphere-2048.webp", mobile: "assets/reflections/stratosphere-1024.webp", speed: 0.00012, exposure: 0.86, saturation: 0.82, backdrop: 0.50, mapping: "environment", frame: "ambient", reflectionStrength: 0.20, roughness: 0.16, seamSafe: false, seamBlend: 0.055, motion: 10, motionAmount: 0.014, motionRate: 0.035, pulse: 0.0 },
     },
     {
       id: "chromatic-ink",
@@ -225,7 +225,7 @@
       shortLabel: "Cells",
       fallback: ["#1c0b02", "#95500e", "#f5bd4e", "#40200a"],
       swatch: "radial-gradient(circle at 28% 32%, #f4bd56 0 16%, #9b5417 17% 21%, transparent 22%), radial-gradient(circle at 68% 61%, #d98724 0 25%, #2b1205 27% 100%)",
-      texture: { desktop: "assets/reflections/amber-cells-1280.webp", mobile: "assets/reflections/amber-cells-768.webp", speed: -0.00012, exposure: 0.88, saturation: 0.90, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.92, reflectionStrength: 0.26, roughness: 0.14, motion: 3, motionAmount: 0.016, motionRate: 0.055, pulse: 0.0, scaleX: 0.92, scaleY: 0.96 },
+      texture: { desktop: "assets/reflections/amber-cells-2048.webp", mobile: "assets/reflections/amber-cells-1024.webp", speed: -0.00008, exposure: 0.84, saturation: 0.90, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.92, reflectionStrength: 0.28, roughness: 0.12, seamSafe: false, seamBlend: 0.070, motion: 3, motionAmount: 0.012, motionRate: 0.045, pulse: 0.0 },
     },
   ];
   const MATERIAL_INDEX = new Map(
@@ -403,34 +403,55 @@ vec3 studioEnvironment(vec3 ray) {
 }
 
 vec3 mercuryEnvironment(vec3 ray) {
-  float latitude = asin(clamp(ray.y, -1.0, 1.0));
-  float longitude = atan(ray.z, ray.x);
-  float broad = 0.5 + 0.5 * sin(latitude * 5.2 + sin(longitude * 1.5) * 0.8);
-  float shoulder = pow(max(dot(ray, normalize(vec3(-0.64, 0.42, 0.64))), 0.0), 4.5);
+  // Liquid bands inherit a little of the delayed optical rotation, then keep
+  // flowing after the shell settles. The silhouette remains rigid.
+  float latitude = asin(clamp(ray.y, -1.0, 1.0)) + uRotation.y * 0.10;
+  float longitude = atan(ray.z, ray.x) + uRotation.x * 0.16;
+  vec2 liquidUv = vec2(longitude * 0.92, latitude * 2.35);
+  float flow = fbm(liquidUv + vec2(uTime * 0.035, -uTime * 0.022));
+  float counterFlow = fbm(liquidUv.yx * 1.72 + vec2(-uTime * 0.026, uTime * 0.018));
+  float broad = 0.5 + 0.5 * sin(
+    latitude * 5.2 + sin(longitude * 1.5 + uTime * 0.11) * 0.82 +
+    (flow - 0.5) * 1.28
+  );
+  float liquidBand = smoothstep(0.46, 0.78, 0.62 * flow + 0.46 * counterFlow);
+  vec3 shoulderDirection = normalize(vec3(
+    -0.64 + uDynamics.x * 0.34,
+    0.42 + uDynamics.y * 0.22,
+    0.64
+  ));
+  float shoulder = pow(max(dot(ray, shoulderDirection), 0.0), 4.5);
   float edge = pow(max(dot(ray, normalize(vec3(0.72, -0.12, 0.68))), 0.0), 7.0);
   vec3 charcoal = mix(vec3(0.008, 0.012, 0.014), vec3(0.28, 0.30, 0.30), uAppearance);
   vec3 nickel = mix(vec3(0.30, 0.36, 0.37), vec3(0.75, 0.79, 0.78), uAppearance);
   vec3 silver = mix(vec3(0.66, 0.75, 0.76), vec3(0.97), uAppearance);
   vec3 color = mix(charcoal, nickel, smoothstep(0.18, 0.82, broad) * 0.72);
-  color += silver * shoulder * 0.52;
+  color += nickel * liquidBand * 0.16;
+  color += silver * shoulder * (0.48 + uDynamics.z * 0.18);
   color += vec3(0.72, 0.84, 0.86) * edge * 0.2;
   return color;
 }
 
 vec3 auroraEnvironment(vec3 ray) {
-  float longitude = atan(ray.z, ray.x);
-  float latitude = asin(clamp(ray.y, -1.0, 1.0));
-  float fold = fbm(vec2(longitude * 0.72 - uTime * 0.018, latitude * 1.8 + uTime * 0.012));
-  float ribbonCenter = 0.18 * sin(longitude * 1.35 - uTime * 0.08) + (fold - 0.5) * 0.34;
-  float ribbon = exp(-pow((latitude - ribbonCenter) * 2.9, 2.0));
-  float echo = exp(-pow((latitude + 0.62 + 0.08 * sin(longitude * 2.0)) * 6.5, 2.0));
-  float phase = 0.5 + 0.5 * sin(longitude * 1.7 + uTime * 0.04);
+  float longitude = atan(ray.z, ray.x) + uRotation.x * 0.055;
+  float latitude = asin(clamp(ray.y, -1.0, 1.0)) + uRotation.y * 0.035;
+  float fold = fbm(vec2(longitude * 0.72 - uTime * 0.030, latitude * 1.8 + uTime * 0.018));
+  float ribbonCenter = 0.18 * sin(longitude * 1.35 - uTime * 0.11) + (fold - 0.5) * 0.34;
+  float ribbon = exp(-pow((latitude - ribbonCenter) * 3.15, 2.0));
+  float secondCenter = -0.46 + 0.11 * sin(longitude * 1.72 + uTime * 0.065);
+  float secondRibbon = exp(-pow((latitude - secondCenter) * 5.2, 2.0));
+  float curtain = 0.68 + 0.32 * sin(
+    longitude * 22.0 + fold * 7.0 - uTime * 0.72
+  );
+  curtain = smoothstep(0.10, 0.92, curtain);
+  float phase = 0.5 + 0.5 * sin(longitude * 1.7 + uTime * 0.055);
   vec3 midnight = mix(vec3(0.003, 0.012, 0.022), vec3(0.18, 0.23, 0.28), uAppearance);
   vec3 cyan = mix(vec3(0.08, 0.62, 0.62), vec3(0.32, 0.82, 0.79), uAppearance);
   vec3 violet = mix(vec3(0.24, 0.10, 0.38), vec3(0.43, 0.28, 0.58), uAppearance);
   vec3 color = midnight;
-  color += mix(cyan, violet, phase) * ribbon * (0.76 + fold * 0.38);
-  color += cyan * echo * 0.18;
+  color += mix(cyan, violet, phase) * ribbon * curtain * (0.72 + fold * 0.48);
+  color += mix(violet, cyan, phase) * secondRibbon * (0.18 + curtain * 0.18);
+  color += cyan * pow(ribbon, 2.0) * (0.08 + uDynamics.z * 0.18);
   return color;
 }
 
@@ -463,11 +484,10 @@ vec3 imageEnvironment(vec3 ray, float lod) {
   vec2 centered = vec2(longitude, latitude) - 0.5;
   vec2 uv = centered * uTextureTransform.xy + 0.5 + uTextureTransform.zw;
 
-  // Image plates opt into one of five restrained motion families. Motion is
-  // applied before sampling so the sphere remains geometrically authoritative:
-  // weather drifts, ink folds around itself, oil cells merge, stained glass
-  // separates light while rotating, and atmospheric worlds breathe. Quiet
-  // plates stay truly still.
+  // Image plates opt into restrained, material-specific motion families.
+  // Motion is applied before sampling so the sphere remains geometrically
+  // authoritative: weather drifts, ink folds, oil cells merge, glass refracts,
+  // branches sway, ribbons flex, and cloud decks advect. Quiet plates stay still.
   float motionMode = uTextureMotion.x;
   float motionAmount = uTextureMotion.y;
   float motionTime = uTime * uTextureMotion.z;
@@ -487,41 +507,86 @@ vec3 imageEnvironment(vec3 ray, float lod) {
       fbm(motionCenter.yx * 5.3 + vec2(-motionTime * 0.8, 3.1))
     ) - 0.5;
     uv = motionCenter + 0.5 + current * motionAmount * 0.12;
-  } else if (motionMode > 2.5) {
-    if (motionMode < 3.5) {
-      // Two slow lenses approach, overlap, and part. Sampling bends around
-      // their boundaries, giving the static oil-cell plate a merging cadence.
-      vec2 lensA = vec2(
-        sin(motionTime * 0.83),
-        cos(motionTime * 0.61)
-      ) * 0.18;
-      vec2 lensB = vec2(
-        cos(motionTime * 0.57 + 1.4),
-        sin(motionTime * 0.74 + 0.9)
-      ) * 0.20;
-      vec2 deltaA = motionCenter - lensA;
-      vec2 deltaB = motionCenter - lensB;
-      float fieldA = exp(-dot(deltaA, deltaA) * 24.0);
-      float fieldB = exp(-dot(deltaB, deltaB) * 21.0);
-      vec2 lensFlow =
-        deltaA / max(length(deltaA), 0.035) * fieldA +
-        deltaB / max(length(deltaB), 0.035) * fieldB;
-      float membrane = fbm(motionCenter * 4.2 + vec2(motionTime * 0.42, -motionTime * 0.36)) - 0.5;
-      uv += (lensFlow * 0.72 + membrane * 0.42) * motionAmount;
-    } else if (motionMode > 4.5) {
-      // World/ambient plates breathe independently of shell input. This is a
-      // minute optical drift, not a second rotation competing with the board.
-      vec2 ambientDrift = vec2(
-        sin(motionTime * 0.83 + uv.y * 5.0),
-        cos(motionTime * 0.67 + uv.x * 4.2)
-      );
-      uv += ambientDrift * motionAmount;
-    }
+  } else if (motionMode > 2.5 && motionMode < 3.5) {
+    // Two slow lenses approach, overlap, and part. Sampling bends around
+    // their boundaries, giving the oil-cell plate a merging cadence.
+    vec2 lensA = vec2(sin(motionTime * 0.83), cos(motionTime * 0.61)) * 0.18;
+    vec2 lensB = vec2(
+      cos(motionTime * 0.57 + 1.4),
+      sin(motionTime * 0.74 + 0.9)
+    ) * 0.20;
+    vec2 deltaA = motionCenter - lensA;
+    vec2 deltaB = motionCenter - lensB;
+    float fieldA = exp(-dot(deltaA, deltaA) * 24.0);
+    float fieldB = exp(-dot(deltaB, deltaB) * 21.0);
+    vec2 lensFlow =
+      deltaA / max(length(deltaA), 0.035) * fieldA +
+      deltaB / max(length(deltaB), 0.035) * fieldB;
+    float membrane = fbm(
+      motionCenter * 4.2 + vec2(motionTime * 0.42, -motionTime * 0.36)
+    ) - 0.5;
+    uv += (lensFlow * 0.72 + membrane * 0.42) * motionAmount;
+  } else if (motionMode > 4.5 && motionMode < 5.5) {
+    // Generic ambient plates breathe independently of shell input.
+    vec2 ambientDrift = vec2(
+      sin(motionTime * 0.83 + uv.y * 5.0),
+      cos(motionTime * 0.67 + uv.x * 4.2)
+    );
+    uv += ambientDrift * motionAmount;
+  } else if (motionMode > 5.5 && motionMode < 6.5) {
+    // Canopy: different depth bands answer the same soft wind at different
+    // rates, suggesting branch parallax rather than a sliding photograph.
+    float depth = fbm(vec2(uv.y * 3.2, uv.x * 1.4 + motionTime * 0.22));
+    float gust = sin(uv.y * 9.0 + motionTime * 1.15) * 0.55 +
+      sin(uv.y * 17.0 - motionTime * 0.72) * 0.20;
+    uv.x += (gust * (0.35 + uv.y * 0.65) + (depth - 0.5) * 0.55) * motionAmount;
+    uv.y += sin(uv.x * 7.0 + motionTime * 0.48) * motionAmount * 0.12;
+  } else if (motionMode > 6.5 && motionMode < 7.5) {
+    // Ribbon: flex across its long axis while the whole material retains the
+    // delayed frame inherited from the sphere's optical spring.
+    float torsion = sin(motionCenter.y * 11.0 - motionTime * 1.25) * 0.62 +
+      sin(motionCenter.y * 23.0 + motionTime * 0.54) * 0.18;
+    uv.x += torsion * motionAmount;
+    uv.y += sin(motionCenter.x * 8.0 + motionTime * 0.82) * motionAmount * 0.34;
+  } else if (motionMode > 7.5 && motionMode < 8.5) {
+    // Ion storm: two counter-rotating cloud currents charge the violet core.
+    float ionX = fbm(motionCenter * 3.8 + vec2(motionTime, -motionTime * 0.44));
+    float ionY = fbm(motionCenter.yx * 4.4 + vec2(-motionTime * 0.63, motionTime));
+    uv += (vec2(ionX, ionY) - 0.5) * motionAmount;
+    uv += normalize(vec2(-motionCenter.y, motionCenter.x) + 0.001) *
+      (ionX - ionY) * motionAmount * 0.45;
+  } else if (motionMode > 8.5 && motionMode < 9.5) {
+    // Amber tempest: clouds shear above the horizon; the water reflection
+    // below it ripples horizontally instead of sharing the same deformation.
+    float water = smoothstep(0.52, 0.68, uv.y);
+    float cloudFlow = fbm(motionCenter * 3.1 + vec2(motionTime * 0.82, -motionTime * 0.28));
+    uv.x += (cloudFlow - 0.5) * motionAmount * (1.0 - water) * 0.72;
+    uv.x += sin(uv.y * 38.0 + motionTime * 2.2) * motionAmount * water;
+    uv.y += sin(uv.x * 18.0 - motionTime * 1.4) * motionAmount * water * 0.18;
+  } else if (motionMode > 9.5 && motionMode < 10.5) {
+    // Stratosphere: the distant deck advances slowly while high cirrus moves
+    // at another speed, preserving the horizon instead of boiling the image.
+    float deck = smoothstep(0.46, 0.68, uv.y);
+    uv.x += motionAmount * (
+      deck * sin(uv.y * 15.0 + motionTime * 0.72) * 0.42 +
+      (1.0 - deck) * sin(uv.y * 7.0 - motionTime * 0.38) * 0.18
+    );
+    uv.y += deck * sin(uv.x * 10.0 + motionTime * 0.31) * motionAmount * 0.08;
   }
 
   uv.x = fract(uv.x);
   uv.y = clamp(uv.y, 0.002, 0.998);
   vec3 sampleColor = textureLod(uEnvironmentMap, uv, lod).rgb;
+  if (uTextureDisplay.z > 0.0) {
+    // Purpose-built panoramas use their full width. Crossfade corresponding
+    // texels from both boundaries over a narrow band so motion cannot expose
+    // a vertical join even when the source edge match is not mathematically exact.
+    float seamDistance = min(uv.x, 1.0 - uv.x);
+    float seamMix = (1.0 - smoothstep(0.0, uTextureDisplay.z, seamDistance)) * 0.5;
+    vec2 pairedUv = vec2(clamp(1.0 - uv.x, 0.0005, 0.9995), uv.y);
+    vec3 pairedColor = textureLod(uEnvironmentMap, pairedUv, lod).rgb;
+    sampleColor = mix(sampleColor, pairedColor, seamMix);
+  }
   if (motionMode > 3.5 && motionMode < 4.5) {
     // The oculus is fixed into the rotating shell, but its channels refract at
     // slightly different angles. Rotational energy briefly widens the split,
@@ -545,17 +610,28 @@ vec3 imageEnvironment(vec3 ray, float lod) {
     uTextureParams.y + uTextureGrade.y;
   float luma = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
   sampleColor = mix(vec3(luma), sampleColor, uTextureParams.z);
-  if (motionMode > 0.5 && motionMode < 1.5) {
-    float flashCycle = floor(uTime * 0.24);
+  bool stormFlash = (motionMode > 0.5 && motionMode < 1.5) ||
+    (motionMode > 7.5 && motionMode < 9.5);
+  if (stormFlash) {
+    float flashRate = motionMode > 8.5 ? 0.20 : motionMode > 7.5 ? 0.31 : 0.24;
+    float flashGate = motionMode > 8.5 ? 0.70 : motionMode > 7.5 ? 0.58 : 0.66;
+    float flashCycle = floor(uTime * flashRate);
     float flashSeed = hash21(vec2(flashCycle, uMaterial + 3.1));
-    float flashPhase = fract(uTime * 0.24);
-    float internalFlash = step(0.66, flashSeed) *
+    float flashPhase = fract(uTime * flashRate);
+    float internalFlash = step(flashGate, flashSeed) *
       exp(-pow((flashPhase - 0.82) * 32.0, 2.0));
     float cloudBody = smoothstep(0.20, 0.78, luma);
-    vec3 lightning = uMaterial > 14.5 && uMaterial < 16.5
-      ? vec3(1.0, 0.66, 0.34)
-      : vec3(0.62, 0.76, 1.0);
+    vec3 lightning = motionMode > 8.5
+      ? vec3(1.0, 0.62, 0.26)
+      : motionMode > 7.5 ? vec3(0.52, 0.78, 1.0) : vec3(1.0, 0.42, 0.24);
     sampleColor += lightning * internalFlash * (0.18 + cloudBody * 0.48);
+  }
+  if (motionMode > 5.5 && motionMode < 6.5) {
+    float dapple = 0.5 + 0.5 * sin(motionTime * 0.92 + longitude * 5.0);
+    sampleColor += vec3(0.18, 0.28, 0.08) * dapple * 0.035;
+  } else if (motionMode > 6.5 && motionMode < 7.5) {
+    float gilt = smoothstep(0.42, 0.86, luma) * (0.45 + uDynamics.z * 0.55);
+    sampleColor += vec3(0.72, 0.38, 0.10) * gilt * 0.075;
   }
   float breathe = 0.5 + 0.5 * sin(uTime * 0.58 + longitude * 6.28318531);
   sampleColor *= 1.0 + uTextureMotion.w * (breathe - 0.35);
@@ -584,19 +660,15 @@ vec3 imageAtmosphere(vec2 screen) {
   float radial = length(screen);
 
   if (uMaterial < 5.5) {
-    // Canopy: deep understory with soft shafts and distant leaf-light.
+    // Canopy: deep understory, wind-shifted shafts, and a low mist layer.
     vec3 color = mix(vec3(0.008, 0.028, 0.018), vec3(0.11, 0.24, 0.13), broad);
-    float shaft = pow(max(0.0, 1.0 - abs(screen.x + screen.y * 0.24 + 0.18)), 7.0);
+    float wind = sin(t * 0.085) * 0.12 + sin(t * 0.037 + 1.8) * 0.05;
+    float shaft = pow(max(0.0, 1.0 - abs(screen.x + screen.y * 0.24 + 0.18 + wind)), 7.0);
+    float mist = smoothstep(0.34, 0.72, fbm(screen * vec2(1.8, 3.4) + vec2(t * 0.018, 2.7))) *
+      (1.0 - smoothstep(-0.48, 0.18, screen.y));
     color += vec3(0.44, 0.55, 0.29) * shaft * (0.20 + detail * 0.24);
+    color = mix(color, vec3(0.18, 0.29, 0.20), mist * 0.18);
     color += vec3(0.28, 0.48, 0.23) * atmosphereOrb(screen, vec2(0.52, 0.30), 0.22, 0.28) * 0.22;
-    return color;
-  }
-  if (uMaterial < 6.5) {
-    // Salon: charcoal architecture and defocused pools of amber light.
-    vec3 color = mix(vec3(0.025, 0.016, 0.012), vec3(0.19, 0.10, 0.045), broad * 0.62);
-    color += vec3(0.94, 0.55, 0.19) * atmosphereOrb(screen, vec2(-0.42, 0.18), 0.08, 0.22) * 0.42;
-    color += vec3(0.70, 0.34, 0.12) * atmosphereOrb(screen, vec2(0.48, -0.22), 0.11, 0.28) * 0.34;
-    color += vec3(0.88, 0.68, 0.38) * atmosphereOrb(screen, vec2(0.18, 0.44), 0.04, 0.16) * 0.24;
     return color;
   }
   if (uMaterial < 8.5) {
@@ -625,30 +697,43 @@ vec3 imageAtmosphere(vec2 screen) {
     nebula += vec3(0.08, 0.16, 0.32) * detail * 0.30;
     return nebula + vec3(0.72, 0.82, 1.0) * atmosphereStars(screen) * 0.72;
   }
-  if (uMaterial < 12.5) {
-    // Cabin: open night, blue-black horizon, and one inhabited warm glow.
-    float horizon = smoothstep(-0.45, -0.05, screen.y) * (1.0 - smoothstep(-0.05, 0.52, screen.y));
-    vec3 color = mix(vec3(0.003, 0.008, 0.018), vec3(0.018, 0.065, 0.13), horizon);
-    color += vec3(1.0, 0.46, 0.13) * atmosphereOrb(screen, vec2(0.18, -0.28), 0.025, 0.12) * 0.34;
-    return color + vec3(0.52, 0.68, 0.92) * atmosphereStars(screen * 0.72) * 0.36;
-  }
   if (uMaterial < 13.5) {
-    // Ribbon: black-violet space with independent strands of gilt light.
-    float ribbonA = exp(-pow((screen.y - sin(screen.x * 2.8 + t * 0.06) * 0.22) * 18.0, 2.0));
-    float ribbonB = exp(-pow((screen.y + 0.34 - cos(screen.x * 2.2 - t * 0.04) * 0.13) * 24.0, 2.0));
+    // Ribbon: a weighted torsion field echoes the surface without copying it.
+    float lag = uDynamics.x * 0.42 + uDynamics.y * 0.28;
+    float ribbonA = exp(-pow((screen.y - sin(screen.x * 2.8 + t * 0.075 + lag) * 0.22) * 18.0, 2.0));
+    float ribbonB = exp(-pow((screen.y + 0.34 - cos(screen.x * 2.2 - t * 0.052 - lag) * 0.13) * 24.0, 2.0));
     return vec3(0.007, 0.004, 0.012) + vec3(0.42, 0.23, 0.12) * broad * 0.16 +
-      vec3(0.86, 0.51, 0.20) * ribbonA * 0.24 + vec3(0.32, 0.26, 0.54) * ribbonB * 0.18;
+      vec3(0.86, 0.51, 0.20) * ribbonA * (0.22 + uDynamics.z * 0.08) +
+      vec3(0.32, 0.26, 0.54) * ribbonB * 0.18;
+  }
+  if (uMaterial < 14.5) {
+    // Ion: opposing electric currents and brief cold charge blooms.
+    float cloud = smoothstep(0.28, 0.76, broad * 0.70 + detail * 0.44);
+    float chargeLine = exp(-pow((screen.y - sin(screen.x * 3.6 + t * 0.14) * 0.18) * 16.0, 2.0));
+    float flashSeed = hash21(vec2(floor(t * 0.31), 14.0));
+    float flash = step(0.60, flashSeed) * exp(-pow((fract(t * 0.31) - 0.82) * 30.0, 2.0));
+    return mix(vec3(0.012, 0.04, 0.12), vec3(0.22, 0.30, 0.68), cloud) +
+      vec3(0.34, 0.72, 1.0) * chargeLine * (0.05 + flash * 0.46) +
+      vec3(0.48, 0.20, 0.72) * detail * 0.10;
+  }
+  if (uMaterial < 15.5) {
+    // Tempest: amber cloud mass above a dark, horizontally rippling horizon.
+    float cloud = smoothstep(0.27, 0.74, broad * 0.76 + detail * 0.38);
+    float water = 1.0 - smoothstep(-0.28, 0.02, screen.y);
+    float ripple = 0.5 + 0.5 * sin(screen.y * 54.0 + screen.x * 8.0 - t * 0.42);
+    float flashSeed = hash21(vec2(floor(t * 0.20), 15.0));
+    float flash = step(0.70, flashSeed) * exp(-pow((fract(t * 0.20) - 0.82) * 28.0, 2.0));
+    vec3 sky = mix(vec3(0.065, 0.034, 0.018), vec3(0.62, 0.25, 0.055), cloud);
+    sky += vec3(1.0, 0.54, 0.18) * flash * (0.12 + cloud * 0.42);
+    return mix(sky, sky * (0.28 + ripple * 0.18), water * 0.72);
   }
   if (uMaterial < 16.5) {
-    // Storm family: shared cloud volume, individually colored illumination.
-    vec3 low = uMaterial < 14.5 ? vec3(0.018, 0.06, 0.14)
-      : uMaterial < 15.5 ? vec3(0.10, 0.055, 0.025) : vec3(0.08, 0.025, 0.055);
-    vec3 high = uMaterial < 14.5 ? vec3(0.18, 0.38, 0.70)
-      : uMaterial < 15.5 ? vec3(0.62, 0.25, 0.08) : vec3(0.58, 0.18, 0.32);
+    // Heat lightning: slow magenta-orange cloud illumination.
     float cloud = smoothstep(0.28, 0.76, broad * 0.70 + detail * 0.44);
-    float flashSeed = hash21(vec2(floor(t * 0.24), uMaterial));
+    float flashSeed = hash21(vec2(floor(t * 0.24), 16.0));
     float flash = step(0.72, flashSeed) * exp(-pow((fract(t * 0.24) - 0.82) * 28.0, 2.0));
-    return mix(low, high, cloud) + vec3(0.65, 0.76, 1.0) * flash * cloud * 0.42;
+    return mix(vec3(0.08, 0.025, 0.055), vec3(0.58, 0.18, 0.32), cloud) +
+      vec3(1.0, 0.56, 0.30) * flash * cloud * 0.42;
   }
   if (uMaterial < 17.5) {
     // Stratosphere: airy blue field and a cloud deck below the sphere.
@@ -1422,7 +1507,7 @@ void main() {
         this.uniforms.uTextureDisplay,
         texture.seamSafe === false ? 0 : 1,
         textureFrame,
-        0,
+        texture.seamBlend || 0,
         0
       );
       gl.uniform4f(
