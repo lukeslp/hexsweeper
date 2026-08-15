@@ -154,6 +154,12 @@
       opts.theme.text = { ...DEFAULT_THEME.text, ...userOpts.theme.text };
     }
 
+    const requestedMinZoom = Number.isFinite(opts.minZoom) ? opts.minZoom : 0.55;
+    const requestedMaxZoom = Number.isFinite(opts.maxZoom) ? opts.maxZoom : 1.9;
+    const minViewZoom = Math.max(0.1, Math.min(requestedMinZoom, requestedMaxZoom));
+    const maxViewZoom = Math.max(minViewZoom, Math.max(requestedMinZoom, requestedMaxZoom));
+    const clampViewZoom = (value) => Math.max(minViewZoom, Math.min(maxViewZoom, value));
+
     const canvas = document.getElementById(opts.canvasId);
     if (!canvas) throw new Error("Hexsweeper: canvas not found");
     const ctx = canvas.getContext("2d");
@@ -203,7 +209,7 @@
       camTY: 0,
       focusCell: null,
       // Interaction: zoom (multiplies base cell size), dig vs flag, pan locks.
-      viewZoom: Number.isFinite(opts.initialZoom) ? opts.initialZoom : 1,
+      viewZoom: Number.isFinite(opts.initialZoom) ? clampViewZoom(opts.initialZoom) : clampViewZoom(1),
       flagMode: false,
       panning: false,
       spaceDown: false,
@@ -215,7 +221,7 @@
       try {
         const zoomKey = opts.zoomStorageKey || "hexsweeper-zoom-v1";
         const z = parseFloat(localStorage.getItem(zoomKey) || "1");
-        if (Number.isFinite(z) && z >= 0.55 && z <= 1.9) state.viewZoom = z;
+        if (Number.isFinite(z)) state.viewZoom = clampViewZoom(z);
       } catch (_) {}
     }
 
@@ -651,9 +657,7 @@
     }
 
     function applyViewZoom(nextZoom, anchor, { persist = true } = {}) {
-      const lo = 0.55;
-      const hi = 1.9;
-      const z = Math.max(lo, Math.min(hi, nextZoom));
+      const z = clampViewZoom(nextZoom);
       if (Math.abs(z - state.viewZoom) < 0.001) return state.viewZoom;
       const oldSize = state.cellSize || 28;
       let worldUnder = null;
@@ -1842,7 +1846,7 @@
       if (Number.isFinite(data.zoom)) {
         // Restoring a lane's view, not choosing a zoom: leave the shared
         // preference to explicit wheel / pinch / button input.
-        applyViewZoom(Math.max(0.55, Math.min(1.9, data.zoom)), null, { persist: false });
+        applyViewZoom(data.zoom, null, { persist: false });
       }
 
       updateUI();

@@ -74,6 +74,9 @@ expect(
 );
 expect(
   template.includes('LAUNCHER_ZOOM_KEY = "hexsweeper-launcher-zoom-v1"') &&
+    template.includes("LAUNCHER_MIN_ZOOM = 1.28") &&
+    template.includes("minZoom: LAUNCHER_MIN_ZOOM") &&
+    core.includes("const clampViewZoom") &&
     template.includes("zoomStorageKey: LAUNCHER_ZOOM_KEY") &&
     template.includes('id="zoom-out-tool"') &&
     template.includes('id="zoom-in-tool"'),

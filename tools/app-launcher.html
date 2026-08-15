@@ -494,6 +494,8 @@
   var CLASSIC_SIZE_KEY = "hexsweeper-classic-size-v1";
   var SPHERE_THEME_KEY = "hexsweeper-sphere-theme-v6";
   var LAUNCHER_ZOOM_KEY = "hexsweeper-launcher-zoom-v1";
+  var LAUNCHER_MIN_ZOOM = 1.28;
+  var LAUNCHER_MAX_ZOOM = 2.1;
   var appearancePreference = "system";
   var effectsPreference = "auto";
   var invertPreference = { x: false, y: false };
@@ -525,7 +527,11 @@
 
   function initialLauncherZoom() {
     var stored = parseFloat(storageValue(localStorage, LAUNCHER_ZOOM_KEY) || "");
-    if (Number.isFinite(stored) && stored >= .55 && stored <= 1.9) return stored;
+    if (Number.isFinite(stored)) {
+      var readable = Math.max(LAUNCHER_MIN_ZOOM, Math.min(LAUNCHER_MAX_ZOOM, stored));
+      if (readable !== stored) writePreference(LAUNCHER_ZOOM_KEY, String(readable));
+      return readable;
+    }
     return innerWidth < 500 ? 1.46 : 1.32;
   }
 
@@ -961,6 +967,8 @@
     mineDensity: .17,
     maxRadius: 54,
     initialZoom: initialLauncherZoom(),
+    minZoom: LAUNCHER_MIN_ZOOM,
+    maxZoom: LAUNCHER_MAX_ZOOM,
     zoomStorageKey: LAUNCHER_ZOOM_KEY,
     config: config,
     theme: engineTheme(),
