@@ -3108,7 +3108,7 @@
       var cell = api.state.map.get(key(Number(choice.dataset.q), Number(choice.dataset.r)));
       if (cell && cell.revealed) revealChoice(choice);
     });
-    status.textContent = branchLabel(branchName) + " settings open · choose a tile or tap " + branch.hub.querySelector(".preset-name").textContent + " to close";
+    status.textContent = branchLabel(branchName) + " · choose a tile · tap " + branch.hub.querySelector(".preset-name").textContent + " to close";
     if (keyboardRevealFocus === branchName + ":choice") {
       keyboardRevealFocus = null;
       var target = branch.choices.find(function (choice) { return choice.classList.contains("is-available"); });
@@ -3169,7 +3169,7 @@
       var cell = api.state.map.get(id);
       if (cell && !cell.revealed && !cell._pendingReveal) api.dig(cell);
       if (cell && cell.revealed) revealHub(branch.hub);
-      status.textContent = branch.mode.querySelector(".preset-name").textContent + " ready · tap the mode to play or its settings tile to adjust";
+      status.textContent = branch.mode.querySelector(".preset-name").textContent + " ready · tap to play or adjust " + branch.hub.querySelector(".preset-name").textContent;
     }, reducedMotion() ? 0 : 105));
   }
 
