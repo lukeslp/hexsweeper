@@ -5712,6 +5712,68 @@ window.HEXSWEEPER_SPHERE_APP = true;
       ctx.stroke();
     }
 
+    /** Earth clears expose one continuous molten mantle beneath the crust. */
+    function hasMoltenCore(cell) {
+      return !!(
+        cell &&
+        cell.revealed &&
+        !cell.flagged &&
+        !cell.isMine &&
+        state.theme &&
+        state.theme.globeMap === "earth"
+      );
+    }
+
+    function drawMoltenCore(proj, cell, now) {
+      if (!hasMoltenCore(cell)) return;
+      ctx.save();
+      if (!drawHexPath(proj)) {
+        ctx.restore();
+        return;
+      }
+      ctx.clip();
+      const time = state.reduceMotion ? 0 : now * 0.00016;
+      const mantle = ctx.createRadialGradient(
+        state.centerX - state.scale * 0.16,
+        state.centerY - state.scale * 0.24,
+        state.scale * 0.04,
+        state.centerX,
+        state.centerY,
+        state.scale * 1.08
+      );
+      mantle.addColorStop(0, "#fff0a1");
+      mantle.addColorStop(0.2, "#ff9d16");
+      mantle.addColorStop(0.58, "#a82409");
+      mantle.addColorStop(1, "#240303");
+      ctx.fillStyle = mantle;
+      ctx.fillRect(
+        state.centerX - state.scale * 1.15,
+        state.centerY - state.scale * 1.15,
+        state.scale * 2.3,
+        state.scale * 2.3
+      );
+
+      // Screen-space mantle bands remain continuous across every clipped face,
+      // so a chain of digs reads as one exposed layer rather than tiled decals.
+      ctx.globalCompositeOperation = "screen";
+      ctx.lineCap = "round";
+      for (let band = 0; band < 5; band++) {
+        const yBase = state.centerY + (band - 2) * state.scale * 0.28;
+        ctx.beginPath();
+        for (let step = 0; step <= 36; step++) {
+          const x = state.centerX - state.scale * 1.15 + (step / 36) * state.scale * 2.3;
+          const wave = Math.sin(step * 0.43 + band * 1.7 + time * (1.3 + band * 0.08));
+          const y = yBase + wave * state.scale * (0.035 + band * 0.004);
+          if (step === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = band % 2 ? "rgba(255,198,55,0.42)" : "rgba(255,83,13,0.46)";
+        ctx.lineWidth = Math.max(1.2, state.scale * 0.007);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     /**
      * Radial center glow clipped to the hex face (Glow theme / wellGlow themes).
      * Empty clears run hotter; numbered wells stay softer so digits stay readable.
@@ -6416,8 +6478,12 @@ window.HEXSWEEPER_SPHERE_APP = true;
         const idx = proj.index;
         const cell = state.cells[idx];
         const tile = state.tiles[idx];
+        const moltenCore = hasMoltenCore(cell);
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
+        if (moltenCore) {
+          colors = { ...colors, stroke: colors.fill, lineWidth: 0 };
+        }
         const h = heights[idx];
         let drawProj = proj;
         let markLift = 0;
@@ -6445,7 +6511,7 @@ window.HEXSWEEPER_SPHERE_APP = true;
           drawProj = lifted;
           markLift = h;
           if (h < -1e-6) {
-            if (styleId === "borderless") {
+            if (moltenCore || styleId === "borderless") {
               // Seamless valley floor — no per-hex grid (covered tiles keep edges).
               colors = {
                 ...colors,
@@ -6478,6 +6544,7 @@ window.HEXSWEEPER_SPHERE_APP = true;
         }
 
         drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
+        drawMoltenCore(drawProj, cell, now);
         drawWellCenterGlow(drawProj, cell, now);
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
