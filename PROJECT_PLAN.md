@@ -66,7 +66,7 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - [x] Sphere Customize panel + undo (in-run theme/board tweaks, one-step undo)
 - [x] Sphere share card that works — real capture, wired from Customize panel
 - [x] Sphere Glow theme — luminous dig centers
-- [x] Sphere Earth / Moon globe-map themes (`?theme=earth|moon`); daymap textures tracked in `sphere/assets/textures/`
+- [x] Sphere Earth / Moon globe-map themes (`?theme=earth|moon`); Earth uses responsive 4K/2K multi-sample gloss rendering, with textures tracked in `sphere/assets/textures/`
 - [x] Three archived model-authored visual studies on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
 - [x] Free 360° drag tumble (was constrained camera)
 - [x] Autosave discard confirms; red-only flags

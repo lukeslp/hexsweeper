@@ -644,7 +644,7 @@ body.help-open { overflow: hidden; }
     <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Dig a face</span></li>
-      <li><span class="act">Hold</span><span>Flag a face (mobile)</span></li>
+      <li><span class="act">Hold / ⌃-click</span><span>Flag a face</span></li>
       <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
       <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
@@ -683,7 +683,7 @@ body.help-open { overflow: hidden; }
 </div>
 
 <script src="hexasphere.js?v=20260810z11"></script>
-<script src="sphere.js?v=20260810z11"></script>
+<script src="sphere.js?v=20260814a1"></script>
 <script src="hex-bloom.js?v=20260810z11"></script>
 <script>
 const sphereMenu = initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));

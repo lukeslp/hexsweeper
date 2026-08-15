@@ -2959,7 +2959,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
     <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Dig a face</span></li>
-      <li><span class="act">Hold</span><span>Flag a face (mobile)</span></li>
+      <li><span class="act">Hold / ⌃-click</span><span>Flag a face</span></li>
       <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
       <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
@@ -7886,7 +7886,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "chamber";
       if (!touchMoved && state.dragStart) {
         const idx = pickTile(p.x, p.y);
         if (idx >= 0 && !state.isGameOver) {
-          if (state.flagMode || e.button === 2) toggleFlag(idx);
+          if (state.flagMode || e.button === 2 || e.ctrlKey) toggleFlag(idx);
           else reveal(idx);
         } else if (state.isGameOver) {
           requestReset({ force: true });

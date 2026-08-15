@@ -225,7 +225,7 @@
       shortLabel: "Cells",
       fallback: ["#1c0b02", "#95500e", "#f5bd4e", "#40200a"],
       swatch: "radial-gradient(circle at 28% 32%, #f4bd56 0 16%, #9b5417 17% 21%, transparent 22%), radial-gradient(circle at 68% 61%, #d98724 0 25%, #2b1205 27% 100%)",
-      texture: { desktop: "assets/reflections/amber-cells-2048.webp", mobile: "assets/reflections/amber-cells-1024.webp", speed: -0.00008, exposure: 0.84, saturation: 0.90, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.92, reflectionStrength: 0.28, roughness: 0.12, seamSafe: false, seamBlend: 0.070, motion: 3, motionAmount: 0.012, motionRate: 0.045, pulse: 0.0 },
+      texture: { desktop: "assets/reflections/amber-cells-2048.webp", mobile: "assets/reflections/amber-cells-1024.webp", speed: -0.00008, exposure: 0.84, saturation: 0.90, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.92, reflectionStrength: 0.28, roughness: 0.12, seamSafe: false, seamBlend: 0.070, motion: 3, motionAmount: 0.038, motionRate: 0.22, pulse: 0.0 },
     },
   ];
   const MATERIAL_INDEX = new Map(
@@ -403,15 +403,27 @@ vec3 studioEnvironment(vec3 ray) {
 }
 
 vec3 mercuryEnvironment(vec3 ray) {
-  // Liquid bands inherit a little of the delayed optical rotation, then keep
-  // flowing after the shell settles. The silhouette remains rigid.
-  float latitude = asin(clamp(ray.y, -1.0, 1.0)) + uRotation.y * 0.10;
-  float longitude = atan(ray.z, ray.x) + uRotation.x * 0.16;
-  vec2 liquidUv = vec2(longitude * 0.92, latitude * 2.35);
-  float flow = fbm(liquidUv + vec2(uTime * 0.035, -uTime * 0.022));
-  float counterFlow = fbm(liquidUv.yx * 1.72 + vec2(-uTime * 0.026, uTime * 0.018));
+  // Seamless triplanar flow. The earlier longitude field used atan(), so its
+  // non-periodic FBM exposed a hard rear meridian on an otherwise excellent
+  // material. Three Cartesian projections stay continuous over the sphere.
+  vec3 p = normalize(ray);
+  p.xz = rotate2(uTime * 0.012 + uRotation.x * 0.055) * p.xz;
+  p.yz = rotate2(-uTime * 0.008 + uRotation.y * 0.045) * p.yz;
+  vec3 weights = pow(abs(p), vec3(2.4));
+  weights /= max(0.001, weights.x + weights.y + weights.z);
+  vec2 driftA = vec2(uTime * 0.035, -uTime * 0.022);
+  vec2 driftB = vec2(-uTime * 0.026, uTime * 0.018);
+  float flow =
+    fbm(p.yz * 2.85 + driftA) * weights.x +
+    fbm(p.zx * 2.85 + driftA.yx) * weights.y +
+    fbm(p.xy * 2.85 - driftA) * weights.z;
+  float counterFlow =
+    fbm(p.zy * 4.25 + driftB) * weights.x +
+    fbm(p.xz * 4.25 + driftB.yx) * weights.y +
+    fbm(p.yx * 4.25 - driftB) * weights.z;
   float broad = 0.5 + 0.5 * sin(
-    latitude * 5.2 + sin(longitude * 1.5 + uTime * 0.11) * 0.82 +
+    dot(p, vec3(3.8, 5.3, -2.9)) +
+    sin(dot(p, vec3(-2.2, 1.1, 3.4)) + uTime * 0.11) * 0.82 +
     (flow - 0.5) * 1.28
   );
   float liquidBand = smoothstep(0.46, 0.78, 0.62 * flow + 0.46 * counterFlow);

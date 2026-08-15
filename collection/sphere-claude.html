@@ -2338,7 +2338,7 @@ body.help-open { overflow: hidden; }
     <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Dig a face</span></li>
-      <li><span class="act">Hold</span><span>Flag a face (mobile)</span></li>
+      <li><span class="act">Hold / ⌃-click</span><span>Flag a face</span></li>
       <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
       <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
@@ -2828,7 +2828,8 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
   const GLOBE_MAPS = {
     earth: {
       id: "earth",
-      file: "earth_daymap_2k.jpg",
+      file: "earth_gloss_4k.webp",
+      mobileFile: "earth_gloss_2k.webp",
       // Fallback while loading / if sample fails
       fallback: "#2a6a9a",
     },
@@ -2847,6 +2848,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
       chrome: "dark",
       float: true,
       globeMap: spec.mapId,
+      globeGloss: !!spec.gloss,
       pureCovered: false,
       pureRevealed: true,
       accent: spec.accent || "#e8eef8",
@@ -2854,7 +2856,8 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
       bgGlow: "#0a101c",
       covered: GLOBE_MAPS[spec.mapId]?.fallback || "#666666",
       coveredHi: "#ffffff",
-      coveredEdge: "rgba(0,0,0,0.45)",
+      coveredEdge: spec.coveredEdge || "rgba(0,0,0,0.45)",
+      globeEdgeWidth: spec.edgeWidth || 1.15,
       coveredShadow: "#000000",
       tierCovered: GLOBE_MAPS[spec.mapId]?.fallback || "#666666",
       tierFlagged: "#ff2200",
@@ -2900,6 +2903,9 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
     name: "Earth",
     mapId: "earth",
     accent: "#6ec8ff",
+    gloss: true,
+    coveredEdge: "rgba(171,220,245,0.20)",
+    edgeWidth: 0.72,
   });
   const THEME_MOON = globeTheme({
     id: "moon",
@@ -3754,13 +3760,18 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
     function globeUrl(mapId) {
       const meta = GLOBE_MAPS[mapId];
       if (!meta) return null;
+      const compact = !!(
+        global.matchMedia &&
+        global.matchMedia("(max-width: 760px), (max-resolution: 1.25dppx)").matches
+      );
+      const file = compact && meta.mobileFile ? meta.mobileFile : meta.file;
       // Prefer absolute (works in collection/ CodePen); fall back to relative under sphere/.
       try {
         if (/\/sphere\/?$|\/sphere\//.test(location.pathname)) {
-          return new URL(`assets/textures/${meta.file}`, location.href).href;
+          return new URL(`assets/textures/${file}`, location.href).href;
         }
       } catch (_) {}
-      return GLOBE_TEX_BASE + meta.file;
+      return GLOBE_TEX_BASE + file;
     }
 
     function loadGlobeMap(mapId) {
@@ -3865,6 +3876,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
       for (let i = 0; i < state.tiles.length; i++) {
         const t = state.tiles[i];
         t._globeCss = null;
+        t._globeDetail = null;
         tileGlobeColor(t);
       }
     }
@@ -3920,6 +3932,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
       if (state.tiles) {
         for (let i = 0; i < state.tiles.length; i++) {
           state.tiles[i]._globeCss = null;
+          state.tiles[i]._globeDetail = null;
         }
       }
       ensureGlobeForTheme(def);
@@ -5714,40 +5727,122 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
       ctx.stroke();
     }
 
-    /** Earth clears expose one continuous molten mantle beneath the crust. */
-    function hasMoltenCore(cell) {
-      return !!(
-        cell &&
-        cell.revealed &&
-        !cell.flagged &&
-        !cell.isMine &&
-        state.theme &&
-        state.theme.globeMap === "earth"
-      );
+    function sampleGlobePointRgb(point) {
+      const mapId = state.theme && state.theme.globeMap;
+      if (
+        !mapId ||
+        !point ||
+        !global.Hexasphere ||
+        typeof global.Hexasphere.cartesianToSpherical !== "function"
+      ) return null;
+      const spherical = global.Hexasphere.cartesianToSpherical(point);
+      return spherical
+        ? sampleGlobeRgb(mapId, spherical.lat, spherical.lon)
+        : null;
     }
 
-    function drawMoltenCore(proj, cell, now) {
-      if (!hasMoltenCore(cell)) return;
-      ctx.save();
-      if (!drawHexPath(proj)) {
-        ctx.restore();
-        return;
+    function averageRgb(a, b) {
+      if (!a) return b;
+      if (!b) return a;
+      return [
+        Math.round((a[0] + b[0]) * 0.5),
+        Math.round((a[1] + b[1]) * 0.5),
+        Math.round((a[2] + b[2]) * 0.5),
+      ];
+    }
+
+    function globeTileSamples(tile) {
+      const mapId = state.theme && state.theme.globeMap;
+      if (!mapId || !tile) return null;
+      if (tile._globeDetail && tile._globeDetail.mapId === mapId) {
+        return tile._globeDetail;
       }
+      const detail = {
+        mapId,
+        center: sampleGlobePointRgb(tile.centerPoint),
+        edges: tile.boundary.map(sampleGlobePointRgb),
+      };
+      if (!detail.center) return null;
+      tile._globeDetail = detail;
+      return detail;
+    }
+
+    function globeDisplayRgb(rgb, normalZ, isFront) {
+      if (!rgb) return null;
+      const limb = Math.max(0, Math.min(1, 1 - normalZ));
+      let out = shadeRgb(rgb, -limb * 0.44);
+      if (isFront) out = shadeRgb(out, 0.035);
+      return out;
+    }
+
+    /**
+     * Earth uses the 4K map as a continuous-looking faceted skin: each face is
+     * a fan of locally sampled gradients rather than one center-pixel swatch.
+     * Shared screen-space specular and Fresnel layers give the ocean real
+     * gloss while keeping revealed wells untouched.
+     */
+    function drawGlossedGlobeHex(proj, tile, colors, isFront, hoverBoost) {
+      const T = state.theme;
+      if (!T || !T.globeGloss || !tile || !proj.boundary?.length) return false;
+      const samples = globeTileSamples(tile);
+      if (!samples) return false;
+      const centerRgb = samples.center;
+      const centerColor = globeDisplayRgb(centerRgb, proj.normalZ, isFront);
+      const edgeRgb = samples.edges;
+      const n = Math.min(proj.boundary.length, edgeRgb.length);
+      if (n < 3) return false;
+
+      ctx.save();
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        const a = proj.boundary[i];
+        const b = proj.boundary[j];
+        const mx = (a.x + b.x) * 0.5;
+        const my = (a.y + b.y) * 0.5;
+        const edgeColor = globeDisplayRgb(
+          averageRgb(edgeRgb[i], edgeRgb[j]),
+          proj.normalZ,
+          isFront
+        );
+        const gradient = ctx.createLinearGradient(
+          proj.center.x,
+          proj.center.y,
+          mx,
+          my
+        );
+        gradient.addColorStop(0, rgbCss(centerColor));
+        gradient.addColorStop(0.58, rgbCss(averageRgb(centerColor, edgeColor)));
+        gradient.addColorStop(1, rgbCss(edgeColor));
+        ctx.beginPath();
+        ctx.moveTo(proj.center.x, proj.center.y);
+        ctx.lineTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.closePath();
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+      }
+
+      drawHexPath(proj);
       ctx.clip();
-      const time = state.reduceMotion ? 0 : now * 0.00016;
-      const mantle = ctx.createRadialGradient(
-        state.centerX - state.scale * 0.16,
-        state.centerY - state.scale * 0.24,
-        state.scale * 0.04,
-        state.centerX,
-        state.centerY,
-        state.scale * 1.08
+      const ocean = centerRgb[2] > centerRgb[0] * 1.18 &&
+        centerRgb[2] > centerRgb[1] * 1.06;
+      const hx = state.centerX - state.scale * 0.34;
+      const hy = state.centerY - state.scale * 0.38;
+      const sheen = ctx.createRadialGradient(
+        hx,
+        hy,
+        state.scale * 0.015,
+        hx,
+        hy,
+        state.scale * 0.68
       );
-      mantle.addColorStop(0, "#fff0a1");
-      mantle.addColorStop(0.2, "#ff9d16");
-      mantle.addColorStop(0.58, "#a82409");
-      mantle.addColorStop(1, "#240303");
-      ctx.fillStyle = mantle;
+      sheen.addColorStop(0, ocean ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.25)");
+      sheen.addColorStop(0.24, ocean ? "rgba(197,235,255,0.20)" : "rgba(255,244,217,0.10)");
+      sheen.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = sheen;
       ctx.fillRect(
         state.centerX - state.scale * 1.15,
         state.centerY - state.scale * 1.15,
@@ -5755,25 +5850,40 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
         state.scale * 2.3
       );
 
-      // Screen-space mantle bands remain continuous across every clipped face,
-      // so a chain of digs reads as one exposed layer rather than tiled decals.
-      ctx.globalCompositeOperation = "screen";
-      ctx.lineCap = "round";
-      for (let band = 0; band < 5; band++) {
-        const yBase = state.centerY + (band - 2) * state.scale * 0.28;
-        ctx.beginPath();
-        for (let step = 0; step <= 36; step++) {
-          const x = state.centerX - state.scale * 1.15 + (step / 36) * state.scale * 2.3;
-          const wave = Math.sin(step * 0.43 + band * 1.7 + time * (1.3 + band * 0.08));
-          const y = yBase + wave * state.scale * (0.035 + band * 0.004);
-          if (step === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.strokeStyle = band % 2 ? "rgba(255,198,55,0.42)" : "rgba(255,83,13,0.46)";
-        ctx.lineWidth = Math.max(1.2, state.scale * 0.007);
-        ctx.stroke();
+      const rim = ctx.createRadialGradient(
+        state.centerX,
+        state.centerY,
+        state.scale * 0.63,
+        state.centerX,
+        state.centerY,
+        state.scale * 1.04
+      );
+      rim.addColorStop(0, "rgba(96,188,240,0)");
+      rim.addColorStop(0.72, "rgba(96,188,240,0.035)");
+      rim.addColorStop(1, "rgba(207,240,255,0.23)");
+      ctx.fillStyle = rim;
+      ctx.fillRect(
+        state.centerX - state.scale * 1.1,
+        state.centerY - state.scale * 1.1,
+        state.scale * 2.2,
+        state.scale * 2.2
+      );
+      if (hoverBoost) {
+        ctx.fillStyle = `rgba(255,255,255,${Math.min(0.18, hoverBoost)})`;
+        ctx.fillRect(
+          proj.center.x - state.scale * 0.16,
+          proj.center.y - state.scale * 0.16,
+          state.scale * 0.32,
+          state.scale * 0.32
+        );
       }
       ctx.restore();
+
+      drawHexPath(proj);
+      ctx.strokeStyle = colors.stroke;
+      ctx.lineWidth = colors.lineWidth;
+      ctx.stroke();
+      return true;
     }
 
     /**
@@ -6214,7 +6324,9 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
         return {
           fill,
           stroke: T.coveredEdge,
-          lineWidth: tile.isPentagon ? 1.6 : 1.15,
+          lineWidth: tile.isPentagon
+            ? Math.max(0.95, (T.globeEdgeWidth || 1.15) * 1.24)
+            : T.globeEdgeWidth || 1.15,
           showLabel: false,
         };
       }
@@ -6480,12 +6592,8 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
         const idx = proj.index;
         const cell = state.cells[idx];
         const tile = state.tiles[idx];
-        const moltenCore = hasMoltenCore(cell);
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
-        if (moltenCore) {
-          colors = { ...colors, stroke: colors.fill, lineWidth: 0 };
-        }
         const h = heights[idx];
         let drawProj = proj;
         let markLift = 0;
@@ -6513,7 +6621,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
           drawProj = lifted;
           markLift = h;
           if (h < -1e-6) {
-            if (moltenCore || styleId === "borderless") {
+            if (styleId === "borderless") {
               // Seamless valley floor — no per-hex grid (covered tiles keep edges).
               colors = {
                 ...colors,
@@ -6545,8 +6653,13 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
           drawProj = popProjected(drawProj, pop, cell.endPop);
         }
 
-        drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
-        drawMoltenCore(drawProj, cell, now);
+        if (!cell.revealed && !cell.flagged && drawProj.z > 0.02) {
+          if (!drawGlossedGlobeHex(drawProj, tile, colors, true, 0)) {
+            drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
+          }
+        } else {
+          drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
+        }
         drawWellCenterGlow(drawProj, cell, now);
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
@@ -6604,7 +6717,14 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
           }
           // Covered tiles always keep a visible edge (even in borderless mode).
           const edgeW = Math.max(colors.lineWidth || 1.5, 1.8);
-          drawHex(raised, fill, colors.stroke, edgeW);
+          if (!cell.revealed && !cell.flagged) {
+            const globeColors = { ...colors, fill, lineWidth: edgeW };
+            if (!drawGlossedGlobeHex(raised, tile, globeColors, true, 0.10)) {
+              drawHex(raised, fill, colors.stroke, edgeW);
+            }
+          } else {
+            drawHex(raised, fill, colors.stroke, edgeW);
+          }
           paintCountMark(tile, raised, cell, colors, lift);
         }
       }
@@ -6762,7 +6882,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
       if (!touchMoved && state.dragStart) {
         const idx = pickTile(p.x, p.y);
         if (idx >= 0 && !state.isGameOver) {
-          if (state.flagMode || e.button === 2) toggleFlag(idx);
+          if (state.flagMode || e.button === 2 || e.ctrlKey) toggleFlag(idx);
           else reveal(idx);
         } else if (state.isGameOver) {
           requestReset({ force: true });

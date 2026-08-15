@@ -4933,7 +4933,7 @@
       if (!touchMoved && state.dragStart) {
         const idx = pickTile(p.x, p.y);
         if (idx >= 0 && !state.isGameOver) {
-          if (state.flagMode || e.button === 2) toggleFlag(idx);
+          if (state.flagMode || e.button === 2 || e.ctrlKey) toggleFlag(idx);
           else reveal(idx);
         } else if (state.isGameOver) {
           requestReset({ force: true });

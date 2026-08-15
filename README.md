@@ -140,7 +140,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/catch-monkey-garden.html` | Game study: flat route-blocking chase toward the garden rim |
 | `collection/catch-monkey-orbit.html` | Game study: spherical route-blocking chase toward three portals |
 | `sphere/takes/*.json` | Model design specs for the three takes |
-| `sphere/assets/textures/` | Earth & Moon 2k daymaps for globe themes (`?theme=earth\|moon`) |
+| `sphere/assets/textures/` | Responsive Earth 4K/2K gloss maps and Moon 2K daymap (`?theme=earth\|moon`) |
 | `collection/index.html` | Desk tile grid — sphere + takes under Experiments (Open + Copy HTML) |
 
 Regenerate after production or lab skin changes:
@@ -296,7 +296,8 @@ reduced motion, forced-color fallbacks, and route-specific screenshot cards.
 - Pointer-inert WebGL2 reflection beneath the authoritative Canvas 2D mesh.
 - Sixteen curated environments share one renderer and one game state: `?material=stormglass|mercury|aurora|atrium|canopy|portoro|deco|oculus|galaxy|gilded-ribbon|ion-storm|amber-tempest|heat-lightning|stratosphere|chromatic-ink|amber-cells`. Press **M** to cycle or choose one in Help. Retired registry slots remain internal so older saved selections do not renumber newer materials.
 - The twelve image-backed environments use responsive, same-origin desktop/mobile WebP plates under `sphere-reflection/assets/reflections/`; collection one-pagers embed both sizes so every surface remains self-contained. Each plate declares `environment`, `surface`, or `hybrid` mapping: surface imagery follows the rotating globe while Fresnel and studio reflections remain world-locked. Select plates opt into distinct weather drift, torsion, parallax, ink advection, or oil-cell refraction; reduced-motion mode freezes ambient material animation without breaking surface attachment during direct rotation.
-- Selected materials expose a seamless inner layer through cleared faces: Amber Cells reveals a finer moving cell swarm, Mercury and Portoro reveal delayed liquid metal. The standard Earth sphere exposes a continuous molten mantle beneath its mapped crust.
+- Selected materials expose a seamless inner layer through cleared faces: Amber Cells reveals a visibly drifting, breathing cell swarm; Mercury and Portoro reveal delayed liquid metal. Earth instead keeps standard readable wells beneath a responsive 4K/2K faceted map with ocean sheen and a restrained atmospheric rim.
+- Trackpad Ctrl-click and right-click both flag a sphere face; Mercury flags use warm gilded metal so they remain distinct from its cool liquid shell.
 - Covered faces retain the continuous mirror; cleared faces become matte wells; flags stay scarlet.
 - Analytic sphere normals replace a costly raymarch, with a capped backing buffer for mobile.
 - Environmental drift freezes for either operating-system reduced motion or the in-game reduced-effects setting; forced colors uses the flat black/white renderer.
