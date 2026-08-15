@@ -5,16 +5,17 @@ are Canvas/vanilla-JS builds from
 [lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps them
 for iOS and Android from the same sealed offline payload.
 
-The app opens on an interactive 2D board. Its safe opening auto-digs to reveal
-an alternating six-face ring: **Infinite**, **Classic**, and **Sphere**, with an
-open well between each mode. Each mode has its own connected **Settings** face:
+The app opens on the real endless 2D board. **Infinite**, **Classic**, and
+**Sphere** are protected cells in that field; digging one uncovers its connected
+choices through the same safe-dig and flood engine used by ordinary play.
 Infinite offers Light / Dark and effects, Classic offers Small / Medium / Large,
 and Sphere offers Light / Shell / Glow plus drag direction. The newest unfinished
-Infinite or Sphere run appears as a mode-colored **Resume** face in the center.
-The launcher fits the complete flower to the current viewport, then recenters
-the active mode and its settings choices when a branch opens. Choice positions
-are generated from branch data, leaving room to add more launch-time materials
-without platform-specific layout work.
+Infinite or Sphere run appears as a mode-colored **Resume** cell in the center.
+Users can keep digging and flagging the surrounding field, drag it to explore,
+or zoom with pinch, wheel, and the visible −/+ controls. Visual danger uses
+nested inset hexes so counts do not compete with the larger launch labels.
+Choice positions are generated from branch data, leaving room to add more
+launch-time materials without platform-specific layout work.
 
 | Mode | Board | Source |
 |---|---|---|
