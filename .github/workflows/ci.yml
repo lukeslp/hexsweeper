@@ -23,6 +23,22 @@ jobs:
       - name: Sphere neighbor + flood closure smoke
         run: node sphere/test-neighbors.js
 
+      - name: Sphere optional variant contract
+        run: node sphere/test-variant-contract.js
+
+      - name: Glitch Sphere state and route contracts
+        run: |
+          node glitch-sphere/test-glitch-hazard.js
+          node glitch-sphere/test-integration.js
+
+      - name: Flux Sphere pair and route contracts
+        run: |
+          node flux-sphere/test-flux-pairs.js
+          node flux-sphere/test-integration.js
+
+      - name: Catch the Monkey UI and input contract
+        run: node --test tools/test-monkey-ui.mjs
+
       - name: Water Wheel effect profile contract
         run: node wheel/test-effects.js
 
@@ -31,6 +47,9 @@ jobs:
 
       - name: Dodecahedron panel campaign smoke
         run: node polyhedron/test-campaign.js
+
+      - name: Web launcher route contract
+        run: node tools/test-web-launcher.mjs
 
       - name: Collection export drift guard
         run: python3 tools/export-collection.py --check

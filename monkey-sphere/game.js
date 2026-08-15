@@ -35,6 +35,7 @@
   let seed = 1;
   let turnHistory = [];
   let hovered = -1;
+  let keyboardSelected = -1;
   let projected = [];
   let rotation = { x: -0.17, y: 0.38 };
   let zoom = 1;
@@ -176,6 +177,7 @@
     outcome = "";
     turnHistory = [];
     hovered = -1;
+    keyboardSelected = -1;
     hop = null;
     result.hidden = true;
     const startPoint = tiles[monkey].centerPoint;
@@ -200,6 +202,7 @@
     outcome = saved.outcome;
     rotation = saved.rotation;
     hop = null;
+    keyboardSelected = -1;
     result.hidden = !gameOver;
     if (gameOver) showResult(outcome);
     updateUI();
@@ -372,21 +375,23 @@
     ctx.beginPath(); ctx.arc(view.cx, view.cy, view.radius * .93, 0, Math.PI * 2); ctx.fill();
 
     projected = projectTiles(view);
+    if (document.activeElement === canvas) keyboardSelected = pickFace(view.cx, view.cy);
     const search = currentSearch();
     const predicted = search.path && search.path[1];
     projected.forEach((face) => {
       const isWall = walls.has(face.index);
       const isPortal = portals.has(face.index);
       const isHover = face.index === hovered && !isWall && !isPortal && face.index !== monkey && !gameOver;
+      const isKeyboard = document.activeElement === canvas && face.index === keyboardSelected;
       const shade = Math.max(0, Math.min(1, (face.z + .1) / 1.1));
       tracePolygon(face.polygon);
       if (isWall) ctx.fillStyle = `rgb(${Math.round(8 + shade * 8)},${Math.round(10 + shade * 9)},${Math.round(8 + shade * 8)})`;
       else if (isPortal) ctx.fillStyle = `rgb(${Math.round(44 + shade * 28)},${Math.round(16 + shade * 8)},${Math.round(13 + shade * 7)})`;
-      else if (isHover) ctx.fillStyle = "#fffdf6";
-      else ctx.fillStyle = `rgb(${Math.round(190 + shade * 57)},${Math.round(189 + shade * 53)},${Math.round(180 + shade * 50)})`;
+      else if (isHover || isKeyboard) ctx.fillStyle = "#fff8d8";
+      else ctx.fillStyle = `rgb(${Math.round(174 + shade * 55)},${Math.round(191 + shade * 48)},${Math.round(171 + shade * 49)})`;
       ctx.fill();
-      ctx.strokeStyle = isPortal ? "#e45143" : isWall ? "rgba(245,241,230,.24)" : `rgba(16,19,17,${.28 + shade * .52})`;
-      ctx.lineWidth = isPortal ? Math.max(2.5, face.center.depth * 3.5) : Math.max(.8, face.center.depth * 1.15);
+      ctx.strokeStyle = isKeyboard ? "#f4c75d" : isPortal ? "#e45143" : isWall ? "rgba(245,241,230,.24)" : `rgba(9,24,17,${.32 + shade * .5})`;
+      ctx.lineWidth = isKeyboard ? Math.max(3, face.center.depth * 4) : isPortal ? Math.max(2.5, face.center.depth * 3.5) : Math.max(.8, face.center.depth * 1.15);
       ctx.stroke();
 
       if (face.index === predicted && face.index !== monkey && !gameOver) {
@@ -463,7 +468,10 @@
   canvas.addEventListener("pointerup", (event) => {
     if (!drag || drag.id !== event.pointerId) return;
     const point = canvasPoint(event);
-    if (!drag.moved) closeFace(pickFace(point.x, point.y));
+    if (!drag.moved) {
+      keyboardSelected = pickFace(point.x, point.y);
+      closeFace(keyboardSelected);
+    }
     drag = null;
   });
   canvas.addEventListener("pointercancel", () => { drag = null; });
@@ -473,6 +481,8 @@
     zoom = Math.max(.72, Math.min(1.18, zoom - event.deltaY * .0007));
     scheduleDraw();
   }, { passive: false });
+  canvas.addEventListener("focus", scheduleDraw);
+  canvas.addEventListener("blur", scheduleDraw);
 
   undoButton.addEventListener("click", () => {
     if (!turnHistory.length) return;
@@ -488,10 +498,45 @@
   helpDone.addEventListener("click", hideHelp);
   helpOverlay.addEventListener("click", (event) => { if (event.target === helpOverlay) hideHelp(); });
   addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !helpOverlay.hidden) hideHelp();
-    if ((event.key === "u" || event.key === "U") && helpOverlay.hidden) undoButton.click();
-    if ((event.key === "r" || event.key === "R") && helpOverlay.hidden) newButton.click();
-    if (event.key === "?" && helpOverlay.hidden) showHelp();
+    if (event.key === "Escape" && !helpOverlay.hidden) {
+      hideHelp();
+      return;
+    }
+    if (!helpOverlay.hidden) {
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const target = event.shiftKey
+          ? document.activeElement === helpClose ? helpDone : helpClose
+          : document.activeElement === helpDone ? helpClose : helpDone;
+        target.focus();
+      }
+      return;
+    }
+    if ((event.key === "u" || event.key === "U")) undoButton.click();
+    else if ((event.key === "r" || event.key === "R")) newButton.click();
+    else if (event.key === "?") showHelp();
+    else if (document.activeElement === canvas) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        closeFace(keyboardSelected);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        rotation.y -= .13;
+        scheduleDraw();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        rotation.y += .13;
+        scheduleDraw();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        rotation.x = Math.max(-1.45, rotation.x - .13);
+        scheduleDraw();
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        rotation.x = Math.min(1.45, rotation.x + .13);
+        scheduleDraw();
+      }
+    }
   });
   addEventListener("resize", scheduleDraw);
 

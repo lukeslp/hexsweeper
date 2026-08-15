@@ -1,13 +1,48 @@
 # Hexsweeper
 
-Hexagonal minesweeper for [dr.eamer.dev](https://dr.eamer.dev/games/hexsweeper/).
+[![Play Hexsweeper](https://img.shields.io/badge/Play-live-7c3aed?logo=gamepad&logoColor=white)](https://dr.eamer.dev/games/hexsweeper/)
+[![CI](https://github.com/lukeslp/hexsweeper/actions/workflows/ci.yml/badge.svg)](https://github.com/lukeslp/hexsweeper/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
 
-**Live path:** `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/`  
-**Public URL:** https://dr.eamer.dev/games/hexsweeper/
+A hexagonal minesweeper in three shapes: an endless plate, a fixed classic
+board, and a closed 3D sphere. The web and native apps share one continuous,
+playable launcher board: drag to explore, dig or flag ordinary cells, and dig a
+mode cell to uncover its connected options. Keyboard and reduced-motion paths
+use the same board state.
 
-Edits on Drummer are live static deploys (same pattern as `/clocks/`). This folder is its own nested Git worktree (`lukeslp/hexsweeper`). Beast mirror: `/Users/luke/workspace/hexsweeper`. Typography is self-hosted IBM Plex under `fonts/` (SIL OFL 1.1 — see `fonts/OFL.txt`; no Google Fonts CDN).
+**[Play Hexsweeper on dr.eamer.dev](https://dr.eamer.dev/games/hexsweeper/).**
 
-## Modes (production)
+## Run locally
+
+Serve the repository with any static web server, then open `index.html` in a
+modern browser. The generated web routes are committed, so no build is needed
+to play; run the exporter after changing their source files.
+
+```bash
+python3 -m http.server 8080
+```
+
+## Production notes
+
+The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on Drummer. This repository is its own nested Git worktree there; the Beast mirror lives at `/Users/luke/workspace/hexsweeper`. IBM Plex is self-hosted under `fonts/` under the SIL Open Font License 1.1. No Google Fonts CDN is used.
+
+## Boards (production)
+
+| Choice | Board | Route |
+|------|--------|------|
+| **Infinite** | Endless Light/Dark plate; the run persists | `infinite.html` |
+| **Classic** | Fixed neumorphic board | `bounded.html` |
+| **Sphere** | Closed 3D Goldberg sphere | `sphere/` |
+
+The root launcher also surfaces the newest unfinished Infinite or Sphere run in
+the center. Classic joins Resume only after it gains a finite-board persistence
+contract. Infinite, Classic, and Sphere are protected cells in the live field;
+digging one reveals its own connected options through the same safe-dig and
+flood engine as ordinary play. Option seats are data-placed and mine-safe, so
+new launch-time materials can extend a branch without a fixed menu layout.
+
+The former five-mode flat production surface remains at `play.html` for its
+distinct materials and mechanics:
 
 | Theme | Board | Feel |
 |------|--------|------|
@@ -19,7 +54,7 @@ Edits on Drummer are live static deploys (same pattern as `/clocks/`). This fold
 
 Fire and Plague open on the **large** board; board size (S·M·L) lives in Menu and only appears for those two, since the infinite themes have no fixed board.
 
-OG cards: `assets/social/<card>-og.png` for production themes (`home`, `light`, `dark`, `fire`, `plague`, `escape`), lab skins (`skin-<id>`), and `sphere`. Social **title** and **description** live in `tools/export-collection.py` (`ogTitle` / `ogDescription` on `THEMES`), `skins.json` (per lab skin), and `sphere/index.html`; `tools/og-card.html` mirrors them for PNG captions. Example plate title: *Neumorphic Hexagonal Minesweeper*. Older Fire studies stay as `fire-og-alt.png`, `fire-og-bloom.png`. Rebuild PNGs with `tools/shoot-og-cards.sh` (reads card keys from `tools/og-card.html`, shoots headless at 2×, downscales to 1200×630). Requires Chromium + Pillow on Drummer; set `BASE=` to override the live URL. Cycle themes with the theme control or `T`. Deep-link with `?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`); add `?deal=1` to open a starting patch in any mode. Preference key: `hexsweeper-mode-v3`.
+OG cards: `assets/social/<card>-og.png` for production themes (`home`, `light`, `dark`, `fire`, `plague`, `escape`), lab skins (`skin-<id>`), and `sphere`. Social **title** and **description** live in `tools/export-collection.py` (`ogTitle` / `ogDescription` on `THEMES`), `skins.json` (per lab skin), and `sphere/index.html`; `tools/og-card.html` mirrors them for PNG captions. Example plate title: *Neumorphic Hexagonal Minesweeper*. Older Fire studies stay as `fire-og-alt.png`, `fire-og-bloom.png`. Rebuild PNGs with `tools/shoot-og-cards.sh` (reads card keys from `tools/og-card.html`, shoots headless at 2×, downscales to 1200×630). Requires Chromium + Pillow on Drummer; set `BASE=` to override the live URL. Cycle flat-game themes with the theme control or `T`. Deep-link `play.html?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`); add `&deal=1` to open a starting patch. Legacy root query links forward to the same route. Preference key: `hexsweeper-mode-v3`.
 
 First visit asks if you've played minesweeper (`hexsweeper-welcome-v1`). Chrome: lower-right **Appearance (sun/moon) · Reset · Menu** as matching icons — Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
 
@@ -41,7 +76,7 @@ Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Ligh
 
 ### Profiles, materials, and effects
 
-Production choices are composed in `index.html` from four declarative axes:
+Flat-game choices are composed in `play.html` from four declarative axes:
 
 - **Mode profile** — finite/endless topology, camera behavior, rules, and autosave lane.
 - **Material** — the existing Canvas renderer/material record and its color tokens.
@@ -54,13 +89,19 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 
 | File | Role |
 |------|------|
-| `index.html` | Production game (modes, renderer, HUD, help) |
+| `index.html` | Generated playable endless-board launcher (web landing) |
+| `infinite.html` | Generated endless Light/Dark product page |
+| `bounded.html` | Generated fixed Classic product page |
+| `play.html` | Flat five-mode game source (Light/Dark/Fire/Plague/Escape) |
 | `core.js` | Shared engine: hex grid, endless growth, input, hooks |
 | `skin-chrome.css` | Shared nav / settings / overlay chrome (lab + classic) |
 | `fonts/` | Self-hosted IBM Plex Sans/Mono + `OFL.txt` |
 | `collection/` | Production + lab one-pagers; Copy HTML desk (CodePen-ready) |
-| `tools/export-collection.py` | Regenerates `collection/theme-*.html`, `skin-*.html`, and index |
-| `sphere/` | **Experimental** closed hex sphere minesweeper (Canvas projection) |
+| `tools/app-launcher.html` | Shared web/native launcher source |
+| `tools/export-collection.py` | Regenerates web routes and collection one-pagers |
+| `sphere/` | Canonical closed 3D sphere game (Canvas projection) |
+| `flux-sphere/` | **Experimental** distant paired-reveal route on the shared Sphere engine |
+| `glitch-sphere/` | **Experimental** moving-hazard route on the shared Sphere engine |
 | `monkey-grid/` | **Experimental** flat Catch the Monkey route-blocking game |
 | `monkey-sphere/` | **Experimental** spherical Catch the Monkey portal chase |
 | `choices.html` | Curated hub: production, sphere, lab links — not in theme switcher |
@@ -110,17 +151,36 @@ python3 tools/export-collection.py --check   # CI / drift guard
 python3 tools/export-choices-lab.py          # choices/lab redirect stubs
 ```
 
-Production exports inline `core.js`, chrome CSS, and IBM Plex (base64 woff2). Each theme file sets `window.HEXSWEEPER_ONEPAGER` (`allowModes: ["light","dark"]` on the plate; single `mode` on the others). Lab skins boot via `Hexsweeper.boot` in their source files. Welcome stays hidden on production pens. The live multi-theme game remains `index.html`.
+Production exports inline `core.js`, chrome CSS, and IBM Plex (base64 woff2).
+Each theme file sets `window.HEXSWEEPER_ONEPAGER` (`allowModes:
+["light","dark"]` on the plate; single `mode` on the others). Lab skins boot
+via `Hexsweeper.boot` in their source files. Welcome stays hidden on production
+pens. The live multi-theme game remains available at `play.html`.
 
-## Native launcher
+## Shared launcher
 
 `python3 tools/export-collection.py --app` stages the sealed Capacitor payload in
-`build/app/`. The launcher opens a safe patch into the three structural modes.
-Its covered **Theme** face blooms into System / Light / Dark choices for the
-launcher itself; gameplay materials remain owned by each game. When an unfinished
-Infinite or Sphere autosave exists, the newest run rises as a mode-colored
-**Resume** face in the center. Classic is omitted from Resume until its finite
-board has a real persistence contract.
+`build/app/`. The public `index.html` and native app launcher are both rendered
+from `tools/app-launcher.html`; route and asset treatment differ by platform.
+The launcher boots the real endless `core.js` board. It owns the same first-dig
+safety, animated zero flood, right-click / long-hold flags, drag pan, pinch and
+wheel zoom, keyboard cursor, mine loss, and reset behavior as Hexsweeper itself.
+**Infinite**, **Classic**, and **Sphere** are immediately legible, protected
+cells on the board. Digging a mode uses the engine's reveal path, then uncovers
+that mode's connected choice cells: Infinite themes and effects, Classic
+Small / Medium / Large boards, and Sphere materials plus drag direction. The
+field remains playable and movable while any number of branches stay revealed.
+
+Choice seats are assigned globally from branch direction and data, rather than
+fixed viewport offsets, so additional launch-time materials occupy the next
+connected safe hex. Selecting a value writes the same preference key used by
+its game. Drag gestures beyond the engine threshold pan without activating a
+cell; arrow-key exploration and the Center control provide non-drag routes.
+
+When an unfinished Infinite or Sphere autosave exists, the newest run rises as
+a mode-colored **Resume** face in the center. Launcher preferences never mutate
+those save blobs. Classic is omitted from Resume until its finite board has a
+real persistence contract.
 
 ## Engine API
 
@@ -144,7 +204,7 @@ Hexsweeper.boot({
 
 Also exported: `Hexsweeper.DEFAULT_THEME`, `DEFAULT_CONFIG`, `SQRT3`.
 
-## Sphere (experimental)
+## Sphere
 
 Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.dev/games/hexsweeper/sphere/
 
@@ -167,7 +227,54 @@ subdivisions 6, 10, 12) and `node wheel/test-effects.js` (profile/event
 contract plus drawing-surface smoke). `node wheel/test-menu-variants.js`
 guards the Water Wheel menu-profile aliases and projected patch selection.
 
-Flat game remains the default at `index.html`.
+Infinite, Classic, and Sphere are peers on the root launcher. The broader flat
+game remains at `play.html`; old root `?mode=`, `?theme=`, and `?deal=` links
+forward there.
+
+## Flux Sphere (experimental)
+
+[`flux-sphere/`](flux-sphere/) — https://dr.eamer.dev/games/hexsweeper/flux-sphere/
+
+Flux Sphere turns the archived “Dig one, reveal both” study into a complete
+variant on the canonical Sphere engine. After the first safe opening, every
+remaining covered face—including mines—receives a deterministic distant
+partner. Activate once to trace the A/B endpoints without opening them, then
+activate either endpoint again to commit both inside one undo step. A flag
+grounds its endpoint and holds the echo, so deductions across both
+neighborhoods decide whether to take the double reveal or isolate a mine.
+
+The route keeps its isolated `hexsweeper-flux-sphere-run-v1` storage key and
+migrates the pair payload to version 2 without abandoning live runs. Reload
+restore, exactly-once completion events, keyboard-centered dig and flag
+controls, live text feedback, non-color linked glyphs, and a static
+reduced-motion treatment. Run `node flux-sphere/test-flux-pairs.js` and
+`node flux-sphere/test-integration.js` for deterministic pair, lifecycle,
+semantics, persistence, keyboard, and completion coverage.
+
+## Glitch Sphere (experimental)
+
+[`glitch-sphere/`](glitch-sphere/) — https://dr.eamer.dev/games/hexsweeper/glitch-sphere/
+
+Glitch Sphere reuses the canonical Sphere geometry, renderer, controls, themes,
+and assets. After the first safe dig and its flood resolve, a moving Glitch
+occupies one covered safe face. Revealed and flagged faces close routes: trap
+the Glitch to win before it reaches a mine. The occupied face blocks direct
+digs and stays identifiable through a yellow face, an exclamation marker, and
+the live text status.
+
+The canvas supports arrow-key rotation, Enter or Space to dig the centered
+face, and Shift with Enter or Space to flag it. The route has isolated run
+persistence, reload restore, reduced-motion treatment, and normalized
+exactly-once completion events. Run the deterministic browser verification
+with `node glitch-sphere/test-browser.mjs`; it exercises desktop, mobile,
+reduced-motion, keyboard, reset, restore, and terminal fixtures while rejecting
+console or local-resource failures. When Chrome is unavailable, the probe runs
+strict static route/resource checks and exits with status 2 so an interactive
+browser run is never reported as successful.
+
+The archive's flat Glitch Sweeper and Chain Reaction pages remain archived
+mechanic studies. The former label-only Flux page is now represented by the
+separate production Flux Sphere route.
 
 ## Catch the Monkey (experimental)
 
@@ -176,7 +283,10 @@ Two playable studies reuse the hex language without inheriting Minesweeper's rul
 - [`monkey-grid/`](monkey-grid/) is the fast 2D proof. Close one pale tile per turn; the monkey advances one step along a seeded shortest route to the rim.
 - [`monkey-sphere/`](monkey-sphere/) removes the natural edge. Drag to rotate the closed surface and seal all three coral portals before the monkey reaches one; a gold rim cue points toward it while it is behind the horizon.
 
-Both studies support seeded URLs, complete one-turn undo, mouse and touch input, keyboard shortcuts, reduced motion, and self-contained collection exports.
+Both studies use one full-screen, four-control shell over locally bundled jungle
+art. They support seeded URLs, complete one-turn undo, mouse and touch input,
+full keyboard board play (Arrow keys plus Enter or Space), visible focus,
+reduced motion, forced-color fallbacks, and route-specific screenshot cards.
 
 ## Obsidian Mirror (experimental)
 
@@ -231,7 +341,13 @@ Smoke: `node polyhedron/test-campaign.js` (coverage, planarity, adjacency, 1/5/5
 
 [`choices.html`](choices.html) — https://dr.eamer.dev/games/hexsweeper/choices.html
 
-Curated entry for production play, the sphere experiment, and ten lab skins (play via `choices/lab/` redirects or open from the collection desk). Copy HTML for lab pens is on [`collection/`](collection/) only. Regenerate with `python3 tools/export-collection.py` and `python3 tools/export-choices-lab.py` after skin or engine changes. Not linked from the production theme switcher.
+Curated entry for the three-board production launcher, the complete
+experimental game routes, and ten lab skins (play via `choices/lab/` redirects
+or open from the collection desk). Copy HTML for lab pens is on
+[`collection/`](collection/) only.
+Regenerate with `python3 tools/export-collection.py` and
+`python3 tools/export-choices-lab.py` after skin or engine changes. Not linked
+from the production theme switcher.
 
 ## Lab (prior art)
 

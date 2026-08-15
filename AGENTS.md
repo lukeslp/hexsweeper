@@ -11,24 +11,39 @@ Saved edits on Drummer are live on the public site. Prefer: edit → verify loca
 
 ## Product surface
 
-Production is **only** Light / Dark / Fire / Plague / Escape in `index.html`. (Water was demoted 2026-08-10: renderer and `?mode=water` deep link remain, and `collection/theme-water.html` archives it, but it has no button and storage never restores it.) Do not re-expose the skin lab from the main game chrome. Lab files stay for technique reference.
+The public root `index.html` is generated from `tools/app-launcher.html` and
+offers the three structural boards: **Infinite**, **Classic**, and **Sphere**.
+`infinite.html` and `bounded.html` are generated product pages; `sphere/` is
+authored in place. The former flat production surface lives at `play.html` with
+Light / Dark / Fire / Plague / Escape. Old root `?mode=` and `?deal=` links are
+forwarded there by the launcher. Water remains a renderer/deep-link archive.
+Do not re-expose the skin lab from production chrome.
 
 ## Docs to keep in sync
 
-- `README.md` — install-free usage, layout, API
+- `README.md` — install-free usage, launcher/routes, layout, API
 - `PROJECT_PLAN.md` — objectives and outstanding work
 - File banners on `core.js`, `skin-chrome.css`, and other code entrypoints
 
 ## Collection exports
 
-After changing `index.html`, `core.js`, `skin-chrome.css`, `fonts/`, `classic.html`, or `skins/*`, regenerate:
+After changing `play.html`, `tools/app-launcher.html`, `core.js`,
+`skin-chrome.css`, `fonts/`, `classic.html`, or `skins/*`, regenerate:
 
 ```bash
 python3 tools/export-collection.py
 python3 tools/export-collection.py --check   # drift guard
 ```
 
-Do not hand-edit `collection/theme-*.html`, `collection/skin-*.html`, or `collection/sphere.html` — they are generated. The desk UI lives in `tools/export-collection.py` (`write_index`): **Open** + **Copy HTML** on `collection/index.html` only (not on playable pens). Light/Dark ship as `theme-plate.html` with `allowModes`; lab skins ship as `skin-*.html` (game-only: Reset/Menu, no skin nav or Copy bar). **Hexsweeper 3D** ships as `collection/sphere.html` (CodePen-ready inline of `sphere/`) and is listed under Experiments.
+Do not hand-edit root `index.html`, `infinite.html`, `bounded.html`,
+`collection/theme-*.html`, `collection/skin-*.html`, or
+`collection/sphere.html` — they are generated. The desk UI lives in
+`tools/export-collection.py` (`write_index`): **Open** + **Copy HTML** on
+`collection/index.html` only (not on playable pens). Light/Dark ship as
+`theme-plate.html` with `allowModes`; lab skins ship as `skin-*.html`
+(game-only: Reset/Menu, no skin nav or Copy bar). **Hexsweeper 3D** ships as
+`collection/sphere.html` (CodePen-ready inline of `sphere/`) and is listed
+under Experiments.
 
 After changing OG card keys in `tools/og-card.html`, regenerate PNGs: `bash tools/shoot-og-cards.sh` (Chromium + Pillow on Drummer).
 

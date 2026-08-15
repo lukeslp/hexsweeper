@@ -2361,7 +2361,7 @@ body.help-open { overflow: hidden; }
       <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
       <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>
-    <p class="help-more">Also <a href="https://dr.eamer.dev/games/hexsweeper/">flat Hexsweeper</a> · <a href="https://dr.eamer.dev/games/hexsweeper/?mode=fire">Fire</a> · <a href="https://dr.eamer.dev/games/hexsweeper/?mode=plague">Plague</a></p>
+    <p class="help-more">Also <a href="https://dr.eamer.dev/games/hexsweeper/">Games</a> · <a href="https://dr.eamer.dev/games/hexsweeper/infinite.html">Infinite</a> · <a href="https://dr.eamer.dev/games/hexsweeper/bounded.html">Classic</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
@@ -3304,8 +3304,66 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
   /** Loaded equirectangular maps (ImageData cache). */
   const globeCache = Object.create(null);
 
+  /** Build the stable, transport-neutral payload shared by Sphere variants. */
+  function buildRunCompletionPayload(details) {
+    return {
+      type: "hexsweeper:run-complete",
+      schemaVersion: 1,
+      runId: details.runId,
+      variant: details.variant,
+      outcome: details.outcome,
+      elapsedSeconds: details.elapsedSeconds,
+      safeFacesRevealed: details.safeFacesRevealed,
+      mineCount: details.mineCount,
+      difficulty: details.difficulty,
+      completedAt: details.completedAt,
+    };
+  }
+
   function boot(opts) {
     opts = opts || {};
+    const variant =
+      opts.variant && typeof opts.variant === "object" ? opts.variant : null;
+    if (variant) {
+      const storageKeyValid =
+        typeof opts.storageKey === "string" &&
+        opts.storageKey === opts.storageKey.trim() &&
+        opts.storageKey.length > 0 &&
+        opts.storageKey !== RUN_STORAGE_KEY &&
+        opts.storageKey !== RUN_STORAGE_KEY_LEGACY;
+      const runKindValid =
+        typeof opts.runKind === "string" &&
+        opts.runKind === opts.runKind.trim() &&
+        opts.runKind.length > 0 &&
+        opts.runKind !== "sphere";
+      if (!storageKeyValid || !runKindValid) {
+        throw new Error(
+          "SphereSweeper: variant storageKey and runKind must be non-canonical"
+        );
+      }
+    }
+    const runStorageKey =
+      variant ? opts.storageKey : RUN_STORAGE_KEY;
+    const runKind =
+      variant ? opts.runKind : "sphere";
+    const variantId =
+      variant && typeof variant.id === "string" && variant.id
+        ? variant.id
+        : runKind;
+
+    function createRunId() {
+      if (variant && typeof opts.createRunId === "function") {
+        const supplied = opts.createRunId();
+        if (typeof supplied === "string" && supplied) return supplied;
+      }
+      try {
+        if (global.crypto && typeof global.crypto.randomUUID === "function") {
+          return global.crypto.randomUUID();
+        }
+      } catch (_) {}
+      return `sphere-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    }
+
     // Publish the resolved effects preference before first paint so CSS gates
     // apply to the opening frame rather than snapping in after it.
     applyEffectsAttribute();
@@ -3422,6 +3480,10 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       invertDragX: storedInvert.x,
       invertDragY: storedInvert.y,
     };
+    let runId = null;
+    let completionEmitted = false;
+    let lastVariantState = null;
+    const VARIANT_HOOK_FAILED = {};
 
     const END_FX = {
       active: false,
@@ -3524,6 +3586,92 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
      * the one move players want back.
      */
     let undoSnapshot = null;
+    let variantRevealMutationDepth = 0;
+
+    function variantContext(extra) {
+      return Object.assign(
+        {
+          state,
+          cells: state.cells,
+          tiles: state.tiles,
+          canvas,
+          context2d: ctx,
+          runId,
+          endRun(outcome, terminal) {
+            if (state.isGameOver) return false;
+            if (
+              terminal &&
+              Number.isInteger(terminal.detonatorIndex) &&
+              terminal.detonatorIndex >= 0 &&
+              terminal.detonatorIndex < state.cells.length
+            ) {
+              state.detonatorIdx = terminal.detonatorIndex;
+            }
+            gameOver(outcome === true || outcome === "win");
+            return true;
+          },
+          persist: () => persistNow(),
+          requestDraw: () => scheduleFrame(),
+          revealSafeFaces: (indices) => revealSafeFaces(indices),
+          resolveLinkedFaces: (indices) => resolveLinkedFaces(indices),
+          projectFace(index, lift) {
+            const tile = state.tiles[index];
+            return tile
+              ? projectTile(tile, state.rotY, state.rotX, lift || 0)
+              : null;
+          },
+        },
+        extra || {}
+      );
+    }
+
+    function callVariant(hook, extra, fallback) {
+      if (!variant || typeof variant[hook] !== "function") return undefined;
+      try {
+        return variant[hook](variantContext(extra));
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function notifyVariantReveal(extra, allowLinkedReveal) {
+      if (!allowLinkedReveal) return callVariant("reveal", extra);
+      variantRevealMutationDepth++;
+      try {
+        return callVariant("reveal", extra);
+      } finally {
+        variantRevealMutationDepth--;
+      }
+    }
+
+    function exportVariantState() {
+      if (!variant || typeof variant.exportState !== "function") {
+        return lastVariantState;
+      }
+      try {
+        const exported = variant.exportState(variantContext());
+        lastVariantState = exported === undefined ? null : exported;
+      } catch (_) {}
+      return lastVariantState;
+    }
+
+    function variantAdmitsReveal(index, source) {
+      const result = callVariant("admitReveal", { index, source }, false);
+      return !(
+        result === false ||
+        (result && result.allowed === false) ||
+        (result && result.status === "blocked")
+      );
+    }
+
+    function variantAdmitsFlag(index, flagged) {
+      const result = callVariant("admitFlag", { index, flagged }, false);
+      return !(
+        result === false ||
+        (result && result.allowed === false) ||
+        (result && result.status === "blocked")
+      );
+    }
 
     function captureUndo() {
       const n = state.cells.length;
@@ -3539,13 +3687,19 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
         flagsPlaced: state.flagsPlaced,
         isFirstClick: state.isFirstClick,
         timeElapsed: state.timeElapsed,
+        runId,
+        completionEmitted,
       };
+      if (variant) undoSnapshot.variant = callVariant("captureUndo");
     }
 
     function restoreUndo() {
       if (!undoSnapshot) return false;
       const snap = undoSnapshot;
+      const startsContinuation =
+        !!variant && state.isGameOver && completionEmitted;
       undoSnapshot = null;
+      clearEndFx();
       for (let i = 0; i < state.cells.length; i++) {
         const c = state.cells[i];
         c.revealed = !!snap.revealed[i];
@@ -3561,6 +3715,13 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       state.isGameOver = false;
       state.won = false;
       state.detonatorIdx = -1;
+      if (variant) {
+        runId = startsContinuation ? createRunId() : snap.runId || runId;
+        completionEmitted = startsContinuation
+          ? false
+          : !!snap.completionEmitted;
+      }
+      if (variant) callVariant("restoreUndo", { saved: snap.variant });
       hideBanner();
       if (!state.isFirstClick) startTimer();
       updateUI();
@@ -3846,6 +4007,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
 
     let releaseFocusTrap = null;
     let markWelcomeSeen = false;
+    let helpLifecycleHeld = false;
 
     let syncHelpControls = null;
 
@@ -3911,6 +4073,12 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
 
     function openHelp(fromWelcome) {
       if (!helpOverlay) return;
+      if (!helpLifecycleHeld) {
+        helpLifecycleHeld = true;
+        try {
+          if (typeof opts.onHelpOpen === "function") opts.onHelpOpen();
+        } catch (_) {}
+      }
       if (fromWelcome) markWelcomeSeen = true;
       helpFocusReturn =
         document.activeElement && document.activeElement !== document.body
@@ -3926,6 +4094,12 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
 
     function closeHelp() {
       if (!helpOverlay) return;
+      if (helpLifecycleHeld) {
+        helpLifecycleHeld = false;
+        try {
+          if (typeof opts.onHelpClose === "function") opts.onHelpClose();
+        } catch (_) {}
+      }
       if (markWelcomeSeen) {
         try {
           localStorage.setItem(WELCOME_KEY, "1");
@@ -4134,8 +4308,16 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
     }
 
     function computeAllCounts() {
-      for (let i = 0; i < state.cells.length; i++) {
-        state.cells[i].neighborMines = countNeighborMines(i);
+      computeCountsFor(state.tiles, state.cells);
+    }
+
+    function computeCountsFor(tiles, cells) {
+      for (let i = 0; i < cells.length; i++) {
+        let count = 0;
+        for (const neighbor of tiles[i].neighborIndices) {
+          if (cells[neighbor].isMine) count++;
+        }
+        cells[i].neighborMines = count;
       }
     }
 
@@ -4232,6 +4414,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       optsReset = optsReset || {};
       stopTimer();
       clearEndFx();
+      undoSnapshot = null;
       const cfg = CONFIG[state.difficulty];
       if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
         throw new Error("SphereSweeper: Hexasphere not loaded");
@@ -4249,6 +4432,9 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       state.hovered = -1;
       state.pressed = -1;
       state.camShake = 0;
+      runId = variant ? createRunId() : null;
+      completionEmitted = false;
+      lastVariantState = null;
       // Fresh board: resume idle spin until the player touches the canvas again.
       state.ambientSpin = !state.reduceMotion;
       state.mineCount = mineTargetForDifficulty(state.tiles.length);
@@ -4256,6 +4442,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       ensureGlobeForTheme(state.theme);
       bakeGlobeTileColors();
       updateUI();
+      callVariant("reset");
       if (!optsReset.keepPersist) clearPersist();
     }
 
@@ -4387,9 +4574,9 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
         if (c.flagged) flagged.push(i);
       }
       // Pre-first-dig with only flags: still persist flags + camera.
-      return {
+      const data = {
         v: 2,
-        kind: "sphere",
+        kind: runKind,
         difficulty: state.difficulty,
         first: !!state.isFirstClick,
         over: !!state.isGameOver,
@@ -4405,32 +4592,49 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
         flagged,
         savedAt: Date.now(),
       };
+      if (variant) {
+        data.runId = runId;
+        data.completionEmitted = !!completionEmitted;
+        data.variant = exportVariantState();
+      }
+      return data;
     }
 
     /** Explicit clear only — Reset button / size change / invalid save. */
     function clearPersist() {
-      storageRemove(localStorage, RUN_STORAGE_KEY);
-      storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
-      storageRemove(sessionStorage, RUN_STORAGE_KEY);
-      storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+      if (variant) {
+        storageRemove(localStorage, runStorageKey);
+        storageRemove(sessionStorage, runStorageKey);
+      } else {
+        storageRemove(localStorage, RUN_STORAGE_KEY);
+        storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
+        storageRemove(sessionStorage, RUN_STORAGE_KEY);
+        storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+      }
     }
 
     function writePersistPayload(json) {
       // Dual-write: session for same-tab reload resilience, local for return visits.
-      const a = storageSet(localStorage, RUN_STORAGE_KEY, json);
-      const b = storageSet(sessionStorage, RUN_STORAGE_KEY, json);
-      return a || b;
+      return {
+        local: storageSet(localStorage, runStorageKey, json),
+        session: storageSet(sessionStorage, runStorageKey, json),
+      };
     }
 
-    function flushPersist() {
-      if (persistSuspended) return false;
+    function flushPersistResult() {
+      if (persistSuspended) return { local: false, session: false };
       const data = exportRunState();
       if (!data) {
         // Fresh board: do NOT wipe an existing save here. Only clearPersist()
         // (Reset / size) should drop a stored run. Avoids races wiping progress.
-        return false;
+        return { local: false, session: false };
       }
       return writePersistPayload(JSON.stringify(data));
+    }
+
+    function flushPersist() {
+      const result = flushPersistResult();
+      return result.local || result.session;
     }
 
     function schedulePersist() {
@@ -4448,30 +4652,12 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
     }
 
     function applyRunState(data) {
-      if (!data || data.kind !== "sphere") return false;
+      if (!data || data.kind !== runKind) return false;
       if (data.v !== 1 && data.v !== 2) return false;
       if (!SIZE_ORDER.includes(data.difficulty)) return false;
       if (!global.Hexasphere || typeof global.Hexasphere.generateHexasphere !== "function") {
         return false;
       }
-
-      persistSuspended = true;
-      stopTimer();
-      clearEndFx();
-      hideBanner();
-
-      state.difficulty = data.difficulty;
-      syncSizeChrome();
-      try {
-        localStorage.setItem(SIZE_STORAGE_KEY, data.difficulty);
-      } catch (_) {}
-
-      const cfg = CONFIG[state.difficulty];
-      state.sphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
-      state.tiles = state.sphere.tiles;
-      attachEdgeNeighbors();
-      state.cells = state.tiles.map(() => freshCell());
-      const n = state.cells.length;
 
       const mineList = Array.isArray(data.mines) ? data.mines : [];
       const revealedList = Array.isArray(data.revealed) ? data.revealed : [];
@@ -4479,16 +4665,27 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
 
       // Started game with no mines recorded = corrupt save (post-first-dig always has mines).
       if (!data.first && mineList.length === 0 && !data.over) {
-        persistSuspended = false;
         return false;
       }
 
+      // Build and validate a candidate board before mutating the active run.
+      // Variant import is therefore a preflight: rejection or an exception
+      // leaves the current board, timer, banner, and persistence untouched.
+      const cfg = CONFIG[data.difficulty];
+      const candidateSphere = Hexasphere.generateHexasphere(1, cfg.subdivisions);
+      const candidateTiles = candidateSphere.tiles;
+      attachEdgeNeighbors(candidateTiles);
+      const candidateCells = candidateTiles.map(() => freshCell());
+      const n = candidateCells.length;
+
       for (const idx of mineList) {
-        if ((idx | 0) === idx && idx >= 0 && idx < n) state.cells[idx].isMine = true;
+        if ((idx | 0) === idx && idx >= 0 && idx < n) {
+          candidateCells[idx].isMine = true;
+        }
       }
       for (const idx of revealedList) {
         if ((idx | 0) !== idx || idx < 0 || idx >= n) continue;
-        const c = state.cells[idx];
+        const c = candidateCells[idx];
         c.revealed = true;
         c.animReveal = 1;
         c.visualDue = 0;
@@ -4497,42 +4694,105 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       let flags = 0;
       for (const idx of flaggedList) {
         if ((idx | 0) !== idx || idx < 0 || idx >= n) continue;
-        const c = state.cells[idx];
+        const c = candidateCells[idx];
         if (c.revealed) continue;
         c.flagged = true;
         flags++;
       }
-      computeAllCounts();
+      computeCountsFor(candidateTiles, candidateCells);
 
-      state.isFirstClick = !!data.first;
-      state.isGameOver = !!data.over;
-      state.won = !!data.won;
-      state.detonatorIdx = -1;
-      state.flagsPlaced =
-        Number.isFinite(data.flags) ? data.flags | 0 : flags;
-      state.mineCount = Number.isFinite(data.mineCount)
+      const candidateFlags = Number.isFinite(data.flags) ? data.flags | 0 : flags;
+      const candidateMineCount = Number.isFinite(data.mineCount)
         ? data.mineCount | 0
-        : mineList.length || mineTargetForDifficulty(n);
-      state.timeElapsed = data.time | 0;
-      state.hovered = -1;
-      state.pressed = -1;
-      state.camShake = 0;
-      // Fresh-ish (flags only, no dig yet): allow ambient spin again.
-      state.ambientSpin = !!data.first && !state.reduceMotion && flags === 0;
+        : mineList.length || Math.max(1, Math.round(n * cfg.minePct));
+      const candidateRotY = Number.isFinite(data.rotY) ? data.rotY : state.rotY;
+      const candidateRotX = Number.isFinite(data.rotX) ? data.rotX : state.rotX;
+      const candidateZoom = Number.isFinite(data.zoom)
+        ? Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, data.zoom))
+        : state.zoomFactor;
+      const restoredRunId =
+        variant && typeof data.runId === "string" && data.runId
+          ? data.runId
+          : null;
+      const candidateState = Object.assign({}, state, {
+        difficulty: data.difficulty,
+        sphere: candidateSphere,
+        tiles: candidateTiles,
+        cells: candidateCells,
+        isFirstClick: !!data.first,
+        isGameOver: !!data.over,
+        won: !!data.won,
+        detonatorIdx: -1,
+        flagsPlaced: candidateFlags,
+        mineCount: candidateMineCount,
+        timeElapsed: data.time | 0,
+        hovered: -1,
+        pressed: -1,
+        camShake: 0,
+        ambientSpin: !!data.first && !state.reduceMotion && flags === 0,
+        rotY: candidateRotY,
+        rotX: candidateRotX,
+        targetRotY: candidateRotY,
+        targetRotX: candidateRotX,
+        zoomFactor: candidateZoom,
+        scale: state.baseScale * candidateZoom,
+      });
+      if (
+        variant &&
+        callVariant(
+          "importState",
+          {
+            saved: data.variant,
+            state: candidateState,
+            cells: candidateCells,
+            tiles: candidateTiles,
+            runId: restoredRunId,
+            endRun: () => false,
+            persist: () => false,
+            requestDraw: () => {},
+            projectFace: () => null,
+          },
+          false
+        ) === false
+      ) {
+        return false;
+      }
 
-      if (Number.isFinite(data.rotY)) {
-        state.rotY = data.rotY;
-        state.targetRotY = data.rotY;
-      }
-      if (Number.isFinite(data.rotX)) {
-        state.rotX = data.rotX;
-        state.targetRotX = data.rotX;
-      }
-      if (Number.isFinite(data.zoom)) {
-        state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, data.zoom));
-        state.scale = state.baseScale * state.zoomFactor;
-      }
+      persistSuspended = true;
+      stopTimer();
+      clearEndFx();
+      hideBanner();
 
+      state.difficulty = candidateState.difficulty;
+      state.sphere = candidateSphere;
+      state.tiles = candidateTiles;
+      state.cells = candidateCells;
+      state.isFirstClick = candidateState.isFirstClick;
+      state.isGameOver = candidateState.isGameOver;
+      state.won = candidateState.won;
+      state.detonatorIdx = candidateState.detonatorIdx;
+      state.flagsPlaced = candidateFlags;
+      state.mineCount = candidateMineCount;
+      state.timeElapsed = candidateState.timeElapsed;
+      state.hovered = candidateState.hovered;
+      state.pressed = candidateState.pressed;
+      state.camShake = candidateState.camShake;
+      state.ambientSpin = candidateState.ambientSpin;
+      state.rotY = candidateRotY;
+      state.rotX = candidateRotX;
+      state.targetRotY = candidateRotY;
+      state.targetRotX = candidateRotX;
+      state.zoomFactor = candidateZoom;
+      state.scale = candidateState.scale;
+      runId = variant ? restoredRunId || createRunId() : null;
+      completionEmitted = variant && !!data.completionEmitted;
+      if (variant) lastVariantState = data.variant === undefined ? null : data.variant;
+      undoSnapshot = null;
+
+      syncSizeChrome();
+      try {
+        localStorage.setItem(SIZE_STORAGE_KEY, data.difficulty);
+      } catch (_) {}
       invalidateProjection();
       ensureGlobeForTheme(state.theme);
       bakeGlobeTileColors();
@@ -4542,45 +4802,38 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
         startTimer(state.timeElapsed);
       }
       if (state.isGameOver) {
-        if (state.won) {
-          showBanner("Cleared the sphere!", {
-            share: true,
-            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
-          });
-        } else {
-          showBanner("Mine detonated.", { share: false });
-        }
+        showTerminalBanner(state.won);
       }
 
       persistSuspended = false;
       // Re-write under v2 key so legacy saves migrate.
-      flushPersist();
+      flushPersistResult();
       return true;
     }
 
-    function readStoredRun() {
-      const keys = [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY];
+    function readStoredRuns() {
+      const keys = variant
+        ? [runStorageKey]
+        : [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY];
       const stores = [sessionStorage, localStorage];
-      let best = null;
-      let bestAt = -1;
+      const candidates = [];
+      let order = 0;
       for (const store of stores) {
         for (const key of keys) {
           const raw = storageGet(store, key);
           if (!raw) continue;
           try {
             const data = JSON.parse(raw);
-            if (!data || data.kind !== "sphere") continue;
+            if (!data || data.kind !== runKind) continue;
             const at = Number(data.savedAt) || 0;
-            if (at >= bestAt) {
-              best = data;
-              bestAt = at;
-            }
+            candidates.push({ data, at, order: order++ });
           } catch (_) {
             /* skip bad payload */
           }
         }
       }
-      return best;
+      candidates.sort((a, b) => b.at - a.at || b.order - a.order);
+      return candidates.map((candidate) => candidate.data);
     }
 
     function tryRestoreRun() {
@@ -4592,27 +4845,28 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
         }
       } catch (_) {}
 
-      const data = readStoredRun();
-      if (!data) return false;
-      const ok = applyRunState(data);
-      if (!ok) {
-        // Corrupt for current build — drop so we do not loop-fail.
-        clearPersist();
-        return false;
+      const candidates = readStoredRuns();
+      if (!candidates.length) return false;
+      for (const data of candidates) {
+        if (!applyRunState(data)) continue;
+        if (typeof showCountStyleToast === "function") {
+          const cleared = Array.isArray(data.revealed) ? data.revealed.length : 0;
+          showCountStyleToast(
+            data.over
+              ? data.won
+                ? "Restored · cleared"
+                : "Restored · ended"
+              : cleared > 0
+                ? `Restored · ${cleared} open`
+                : "Restored"
+          );
+        }
+        return true;
       }
-      if (typeof showCountStyleToast === "function") {
-        const cleared = Array.isArray(data.revealed) ? data.revealed.length : 0;
-        showCountStyleToast(
-          data.over
-            ? data.won
-              ? "Restored · cleared"
-              : "Restored · ended"
-            : cleared > 0
-              ? `Restored · ${cleared} open`
-              : "Restored"
-        );
-      }
-      return true;
+      // Every parseable candidate was corrupt for this build. Explicitly
+      // clear the lane only after exhausting older copies.
+      clearPersist();
+      return false;
     }
 
     function clearEndFx() {
@@ -4885,7 +5139,8 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
      * Flood zeros with logic immediate (revealed=true) and paint staggered by
      * graph distance — mirrors flat core.js BFS wave, capped ~880ms.
      */
-    function floodFrom(startIdx) {
+    function floodFrom(startIdx, optsFlood) {
+      optsFlood = optsFlood || {};
       const opened = new Set();
       const queue = [{ idx: startIdx, dist: 0 }];
       const visited = new Set([startIdx]);
@@ -4896,19 +5151,87 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
           visited.add(n);
           const c = state.cells[n];
           if (c.revealed || c.flagged || c.isMine) continue;
+          if (!variantAdmitsReveal(n, "flood")) continue;
           c.revealed = true;
           scheduleRevealVisual(n, dist + 1);
           opened.add(n);
           if (c.neighborMines === 0) queue.push({ idx: n, dist: dist + 1 });
         }
       }
+      if (variant && optsFlood.notify !== false && opened.size) {
+        notifyVariantReveal({
+          index: startIdx,
+          source: "flood",
+          revealed: Array.from(opened),
+        }, false);
+      }
       return opened;
+    }
+
+    /**
+     * Reveal variant-requested safe faces inside the current direct-dig undo.
+     * The window guard keeps import/reset/tick/draw hooks from mutating a board,
+     * and notify:false prevents an echo from recursively creating another echo.
+     */
+    function revealSafeFaces(indices) {
+      if (!variant || variantRevealMutationDepth < 1 || !Array.isArray(indices)) {
+        return [];
+      }
+      const opened = new Set();
+      for (const index of indices) {
+        if (!Number.isInteger(index) || index < 0 || index >= state.cells.length) continue;
+        const cell = state.cells[index];
+        if (!cell || cell.revealed || cell.flagged || cell.isMine) continue;
+        if (!variantAdmitsReveal(index, "linked")) continue;
+        cell.revealed = true;
+        scheduleRevealVisual(index, 0);
+        opened.add(index);
+        if (cell.neighborMines === 0) {
+          for (const flooded of floodFrom(index, { notify: false })) opened.add(flooded);
+        }
+      }
+      return Array.from(opened);
+    }
+
+    /**
+     * Resolve variant-linked faces inside the current direct-dig undo. Unlike
+     * revealSafeFaces, this path preserves mine semantics: an unflagged linked
+     * mine is revealed and ends the run through the engine-owned terminal path.
+     */
+    function resolveLinkedFaces(indices) {
+      if (!variant || variantRevealMutationDepth < 1 || !Array.isArray(indices)) {
+        return { opened: [], detonated: -1 };
+      }
+      const opened = new Set();
+      let detonated = -1;
+      for (const index of indices) {
+        if (!Number.isInteger(index) || index < 0 || index >= state.cells.length) continue;
+        const cell = state.cells[index];
+        if (!cell || cell.revealed || cell.flagged) continue;
+        if (!variantAdmitsReveal(index, "linked")) continue;
+        cell.revealed = true;
+        scheduleRevealVisual(index, 0);
+        opened.add(index);
+        if (cell.isMine) {
+          cell.animReveal = 1;
+          state.detonatorIdx = index;
+          detonated = index;
+          break;
+        }
+        if (cell.neighborMines === 0) {
+          for (const flooded of floodFrom(index, { notify: false })) opened.add(flooded);
+        }
+      }
+      if (detonated >= 0) gameOver(false);
+      return { opened: Array.from(opened), detonated };
     }
 
     function reveal(idx) {
       const cell = state.cells[idx];
-      if (!cell || cell.revealed || cell.flagged || state.isGameOver) return;
-      if (state.isFirstClick) {
+      if (!cell || cell.revealed || cell.flagged || state.isGameOver) return false;
+      if (!variantAdmitsReveal(idx, "direct")) return false;
+      const isFirstResolvedDig = state.isFirstClick;
+      if (isFirstResolvedDig) {
         placeMines(idx);
         state.isFirstClick = false;
         startTimer();
@@ -4919,12 +5242,36 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       if (cell.isMine) {
         cell.animReveal = 1;
         state.detonatorIdx = idx;
+        notifyVariantReveal({
+          index: idx,
+          source: "direct",
+          revealed: [idx],
+        }, true);
         gameOver(false);
-        return;
+        return true;
       }
-      if (cell.neighborMines === 0) floodFrom(idx);
-      checkWin();
+      const opened =
+        cell.neighborMines === 0 ? floodFrom(idx, { notify: false }) : new Set();
+      const revealed = [idx, ...opened];
+      notifyVariantReveal({ index: idx, source: "direct", revealed }, true);
+      if (isFirstResolvedDig) {
+        const result = callVariant(
+          "firstResolvedDig",
+          { index: idx, revealed },
+          VARIANT_HOOK_FAILED
+        );
+        if (result === VARIANT_HOOK_FAILED) {
+          resetGame();
+          scheduleFrame();
+          return false;
+        }
+        if (variant && undoSnapshot) {
+          undoSnapshot.variant = callVariant("captureUndo");
+        }
+      }
+      if (!state.isGameOver) checkWin();
       persistNow();
+      return true;
     }
 
     function tickRevealAnim(now) {
@@ -4958,11 +5305,15 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
 
     function toggleFlag(idx) {
       const cell = state.cells[idx];
-      if (!cell || cell.revealed || state.isGameOver) return;
-      cell.flagged = !cell.flagged;
+      if (!cell || cell.revealed || state.isGameOver) return false;
+      const flagged = !cell.flagged;
+      if (!variantAdmitsFlag(idx, flagged)) return false;
+      cell.flagged = flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
+      callVariant("flag", { index: idx, flagged: cell.flagged });
       persistNow();
+      return true;
     }
 
     function checkWin() {
@@ -4974,24 +5325,89 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
           if (state.cells[i].revealed) safeRevealed++;
         }
       }
+      if (
+        variant &&
+        callVariant(
+          "useDefaultWin",
+          {
+            safeFacesRevealed: safeRevealed,
+            safeFaceCount: safeTotal,
+          },
+          false
+        ) === false
+      ) {
+        return;
+      }
       if (safeRevealed === safeTotal) gameOver(true);
     }
 
     function gameOver(won) {
+      if (state.isGameOver) return false;
       state.isGameOver = true;
       state.won = won;
       stopTimer();
+      callVariant("terminal", { won, outcome: won ? "win" : "loss" });
       if (!won) {
         startLoseFx(state.detonatorIdx >= 0 ? state.detonatorIdx : 0);
-        showBanner("Mine detonated.", { share: false });
       } else {
         startWinFx();
-        showBanner("Cleared the sphere!", {
-          share: true,
-          meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
-        });
       }
+      showTerminalBanner(won);
+      emitRunCompletion(won);
       persistNow();
+      return true;
+    }
+
+    function terminalCopy(won) {
+      const defaults = won
+        ? {
+            message: "Cleared the sphere!",
+            share: true,
+            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
+          }
+        : { message: "Mine detonated.", share: false };
+      const custom = callVariant("terminalCopy", {
+        won,
+        outcome: won ? "win" : "loss",
+        defaultCopy: Object.assign({}, defaults),
+      });
+      return custom && typeof custom === "object"
+        ? Object.assign({}, defaults, custom)
+        : defaults;
+    }
+
+    function showTerminalBanner(won) {
+      const copy = terminalCopy(won);
+      showBanner(copy.message, copy);
+    }
+
+    function emitRunCompletion(won) {
+      if (
+        !variant ||
+        completionEmitted ||
+        typeof opts.onRunComplete !== "function"
+      ) {
+        return false;
+      }
+      let safeFacesRevealed = 0;
+      for (const cell of state.cells) {
+        if (!cell.isMine && cell.revealed) safeFacesRevealed++;
+      }
+      const payload = buildRunCompletionPayload({
+        runId,
+        variant: variantId,
+        outcome: won ? "win" : "loss",
+        elapsedSeconds: state.timeElapsed | 0,
+        safeFacesRevealed,
+        mineCount: state.mineCount | 0,
+        difficulty: state.difficulty,
+        completedAt: new Date().toISOString(),
+      });
+      completionEmitted = true;
+      try {
+        opts.onRunComplete(payload);
+      } catch (_) {}
+      return true;
     }
 
     function showBanner(msg, opts) {
@@ -5505,13 +5921,14 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
     }
 
     /** Map each boundary edge → neighbor tile index (for valley perimeter skirts). */
-    function attachEdgeNeighbors() {
+    function attachEdgeNeighbors(tiles) {
+      tiles = tiles || state.tiles;
       const pointKey = (p) =>
         `${p.x.toFixed(6)},${p.y.toFixed(6)},${p.z.toFixed(6)}`;
       const edgeMap = new Map();
-      for (let ti = 0; ti < state.tiles.length; ti++) {
-        const b = state.tiles[ti].boundary;
-        state.tiles[ti].edgeNeighbors = new Array(b.length).fill(-1);
+      for (let ti = 0; ti < tiles.length; ti++) {
+        const b = tiles[ti].boundary;
+        tiles[ti].edgeNeighbors = new Array(b.length).fill(-1);
         for (let i = 0; i < b.length; i++) {
           const j = (i + 1) % b.length;
           const key = [pointKey(b[i]), pointKey(b[j])].sort().join("|");
@@ -5522,8 +5939,8 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       edgeMap.forEach((ends) => {
         if (ends.length !== 2) return;
         const [a, b] = ends;
-        state.tiles[a.ti].edgeNeighbors[a.ei] = b.ti;
-        state.tiles[b.ti].edgeNeighbors[b.ei] = a.ti;
+        tiles[a.ti].edgeNeighbors[a.ei] = b.ti;
+        tiles[b.ti].edgeNeighbors[b.ei] = a.ti;
       });
     }
 
@@ -6192,6 +6609,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
         }
       }
 
+      callVariant("draw", { now, projected });
       drawEndFxOverlay(now);
       ctx.restore();
     }
@@ -6223,6 +6641,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       const now = ts || performance.now();
       tickAmbientSpin(now);
       tickRevealAnim(now);
+      if (!state.isGameOver) callVariant("tick", { now });
       tickEndFx(now);
       draw();
       state.lastFrameAt = now;
@@ -6604,6 +7023,8 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
       undo: () => restoreUndo(),
       canUndo: () => !!undoSnapshot,
       floodFrom,
+      digAt: (index) => reveal(index),
+      flagAt: (index) => toggleFlag(index),
       getState: () => state,
       pickTile,
       projectTile,
@@ -6665,6 +7086,7 @@ window.HEXSWEEPER_SPHERE_TAKE = "kimi-moon-ink-orrery";
     EFFECTS_KEY,
     effectsReduced,
     applyEffectsAttribute,
+    buildRunCompletionPayload,
   };
 })(typeof window !== "undefined" ? window : global);
 

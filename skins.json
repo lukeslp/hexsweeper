@@ -1,10 +1,10 @@
 {
   "title": "Hexsweeper Lab",
-  "note": "Dormant prior art: experimental skins over core.js. Production play is index.html with five themes (Light / Dark / Fire / Plague / Escape; Water demoted to ?mode=water + collection) — not this catalog.",
+  "note": "Dormant prior art: experimental skins over core.js. The five-theme flat game lives at play.html (Light / Dark / Fire / Plague / Escape; Water demoted to ?mode=water + collection) — not this catalog.",
   "production": {
-    "file": "index.html",
+    "file": "play.html",
     "modes": ["light", "dark", "fire", "plague", "escape"],
-    "url": "https://dr.eamer.dev/games/hexsweeper/"
+    "url": "https://dr.eamer.dev/games/hexsweeper/play.html"
   },
   "skins": [
     {
@@ -44,7 +44,7 @@
       "ogTitle": "Parallax Ring Hexagonal Minesweeper",
       "ogDescription": "Classic Minesweeper with ring depth and pointer parallax that tilts the honeycomb as you hunt mines.",
       "tag": "depth",
-      "blurb": "Lab copy of ring-depth + pointer parallax. Production Fire mode lives in index.html.",
+      "blurb": "Lab copy of ring-depth + pointer parallax. Production Fire mode lives in play.html.",
       "techniques": ["ring depth", "pointer parallax", "theme cycle", "sorted draw order"]
     },
     {

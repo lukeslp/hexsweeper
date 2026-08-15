@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # File Purpose: Build CodePen-ready Hexsweeper one-pagers under collection/.
 # Primary Functions/Classes: export_theme, export_skin, inline_assets, write_collection_index.
-# Inputs: ../index.html, ../core.js, ../skin-chrome.css, ../fonts/*, ../skins.json, ../skins/*.
-# Outputs: collection/theme-*.html, collection/skin-*.html + regenerates collection/index.html.
+# Inputs: ../play.html, ../core.js, ../skin-chrome.css, ../fonts/*, ../skins.json, ../skins/*.
+# Outputs: web launcher/game routes plus collection/theme-*.html,
+#   collection/skin-*.html, and collection/index.html.
 
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ COLLECTION = ROOT / "collection"
 # collection desk and never deployed to the live site). Vendored into the
 # hexsweeper-app Capacitor shell as its www/ payload.
 APP_BUILD = ROOT / "build" / "app"
+SITE_BASE = "https://dr.eamer.dev/games/hexsweeper"
 PUBLIC_BASE = "https://dr.eamer.dev/games/hexsweeper/collection"
 OG = "https://dr.eamer.dev/games/hexsweeper/assets/social"
 
@@ -1056,6 +1058,14 @@ def export_theme(theme: dict, source: str) -> str:
         markup,
         count=1,
     )
+    theme_canonical = f'{PUBLIC_BASE}/theme-{theme["id"]}.html'
+    markup = re.sub(r'\n?<link rel="canonical" href="[^"]+">', "", markup)
+    markup = re.sub(
+        r'(<meta name="description" content="[^"]*">)',
+        rf'\1\n<link rel="canonical" href="{theme_canonical}">',
+        markup,
+        count=1,
+    )
 
     # Drop production OG/Twitter tags, then attach theme cards when provided.
     markup = re.sub(r'\n?<meta property="og:[^"]+" content="[^"]*">', "", markup)
@@ -1291,6 +1301,18 @@ def export_sphere(exp: dict) -> str:
     boot_fn = exp.get("boot") or "initDevChrome"
 
     markup = (source_dir / "index.html").read_text(encoding="utf-8")
+    markup = re.sub(
+        r"/\* WEB_GAMES_BACK_START.*?WEB_GAMES_BACK_END \*/\s*",
+        "",
+        markup,
+        flags=re.S,
+    )
+    markup = re.sub(
+        r"<!-- WEB_GAMES_BACK_START -->.*?<!-- WEB_GAMES_BACK_END -->\s*",
+        "",
+        markup,
+        flags=re.S,
+    )
     title = exp.get("ogTitle", exp["title"])
     description = exp.get("ogDescription", exp["blurb"])
     file_name = exp["file"]
@@ -1484,15 +1506,23 @@ def export_sphere(exp: dict) -> str:
         'href="../?mode=plague"',
         'href="https://dr.eamer.dev/games/hexsweeper/?mode=plague"',
     )
+    markup = markup.replace(
+        'href="../infinite.html"',
+        'href="https://dr.eamer.dev/games/hexsweeper/infinite.html"',
+    )
+    markup = markup.replace(
+        'href="../bounded.html"',
+        'href="https://dr.eamer.dev/games/hexsweeper/bounded.html"',
+    )
 
     return markup
 
 
-# Back affordance shared by every game page. Top-left on purpose: all four
-# surfaces already own the bottom-right corner for their own chrome, and the
-# WebView has no browser back. White-on-dark glass is the one treatment that
-# stays legible over both the porcelain plate and the night-iron one.
-APP_BACK_PILL = """<style>
+# Back affordance shared by native and generated web game pages. Top-left on
+# purpose: the game surfaces already own the bottom-right corner for chrome.
+# White-on-dark glass stays legible over both the porcelain and night-iron
+# boards. __MENU_HREF__ is replaced per output surface.
+GAME_MENU_PILL = """<style>
 .app-back{position:fixed;z-index:9999;
  top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));
  display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 15px 0 12px;
@@ -1506,9 +1536,12 @@ APP_BACK_PILL = """<style>
 @media (prefers-reduced-motion: no-preference){.app-back{transition:transform .18s ease}
  .app-back:active{transform:scale(.96)}}
 </style>
-<a class="app-back" href="../index.html">
+<a class="app-back" href="__MENU_HREF__">
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
 """
+
+APP_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "../index.html")
+WEB_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "index.html")
 
 # Keeps the native launch screen up until the first painted frame; without it
 # the storyboard drops the moment the WebView mounts and the player watches a
@@ -1586,12 +1619,8 @@ def appify(markup: str, *, back: bool = True, lock_zoom: bool = True, label: str
     return markup
 
 
-def export_flat_app(collection_file: str, label: str) -> str:
-    """Adapt an already-generated flat one-pager into a native-app game page."""
-    src = COLLECTION / collection_file
-    if not src.is_file():
-        raise SystemExit(f"export_flat_app: {collection_file} not built yet — run without --app first")
-    markup = src.read_text(encoding="utf-8")
+def prepare_flat_product(markup: str, label: str) -> str:
+    """Remove collection-only chrome from a flat structural game page."""
     display_name = {"infinite": "Infinite", "bounded": "Classic"}.get(label, label.title())
     markup = re.sub(
         r"<title>.*?</title>",
@@ -1612,8 +1641,68 @@ def export_flat_app(collection_file: str, label: str) -> str:
         flags=re.S,
     )
     if 'id="help-modes"' in markup:
-        raise SystemExit(f"export_flat_app({label}): unshipped mode links survived")
+        raise SystemExit(f"prepare_flat_product({label}): unshipped mode links survived")
+    return markup
+
+
+def export_flat_app(collection_file: str, label: str) -> str:
+    """Adapt an already-generated flat one-pager into a native-app game page."""
+    src = COLLECTION / collection_file
+    if not src.is_file():
+        raise SystemExit(f"export_flat_app: {collection_file} not built yet — run without --app first")
+    markup = prepare_flat_product(src.read_text(encoding="utf-8"), label)
+    # Web product metadata and routing must not perturb the vendored iOS
+    # payload. Keep this transform explicit so --app remains byte-stable while
+    # the public source can use its new play.html route and canonical URL.
+    markup = re.sub(r'\n<link rel="canonical" href="[^"]+">', "", markup, count=1)
+    markup = markup.replace("// Bare play.html opens Light.", "// Bare URL opens Light.")
+    markup = markup.replace(
+        "return inCollection ? `../play.html?mode=${mode}` : `?mode=${mode}`;",
+        "return inCollection ? `../index.html?mode=${mode}` : `?mode=${mode}`;",
+    )
     return appify(markup, label=label)
+
+
+def export_flat_web(markup: str, label: str, route: str) -> str:
+    """Adapt a generated collection page into a first-class web game route."""
+    markup = prepare_flat_product(markup, label)
+    # Collection pages may be appified elsewhere. Public browser routes must
+    # always retain pinch zoom and text enlargement.
+    markup = re.sub(
+        r'(<meta name="viewport" content=")([^"]*)(">)',
+        lambda m: m.group(1)
+        + ", ".join(
+            part.strip()
+            for part in m.group(2).split(",")
+            if not part.strip().startswith(("maximum-scale=", "user-scalable="))
+        )
+        + m.group(3),
+        markup,
+        count=1,
+    )
+    canonical = f"{SITE_BASE}/{route}"
+    if re.search(r'<link rel="canonical" href="[^"]+">', markup):
+        markup = re.sub(
+            r'<link rel="canonical" href="[^"]+">',
+            f'<link rel="canonical" href="{canonical}">',
+            markup,
+            count=1,
+        )
+    else:
+        markup = re.sub(
+            r'(<meta name="description" content="[^"]*">)',
+            rf'\1\n<link rel="canonical" href="{canonical}">',
+            markup,
+            count=1,
+        )
+    markup = re.sub(
+        r'<meta property="og:url" content="[^"]+">',
+        f'<meta property="og:url" content="{canonical}">',
+        markup,
+        count=1,
+    )
+    markup = markup.replace("</body>", f"{WEB_BACK_PILL}</body>", 1)
+    return markup
 
 
 def export_sphere_app(exp: dict) -> str:
@@ -1666,31 +1755,105 @@ def export_sphere_app(exp: dict) -> str:
     return appify(markup, label="sphere")
 
 
-def export_app_launcher() -> str:
-    """The picker: three structural choices — infinite, classic, sphere.
-
-    Gameplay theme, board size and count style remain settings inside each game,
-    not peer modes. The launcher's System/Light/Dark flower only changes the
-    launcher's own appearance; Resume routes to a real persisted game lane.
-    """
+def render_launcher(
+    *, fonts: str, infinite_href: str, bounded_href: str, sphere_href: str,
+    platform_head: str = "", platform_tail: str = ""
+) -> str:
+    """Render the shared three-board launcher for one platform."""
     template = (ROOT / "tools" / "app-launcher.html").read_text(encoding="utf-8")
+    replacements = {
+        "{{FONTS}}": fonts,
+        "{{CORE_JS}}": (ROOT / "core.js").read_text(encoding="utf-8"),
+        "{{INFINITE_HREF}}": infinite_href,
+        "{{BOUNDED_HREF}}": bounded_href,
+        "{{SPHERE_HREF}}": sphere_href,
+        "{{PLATFORM_HEAD}}": platform_head,
+        "{{PLATFORM_TAIL}}": platform_tail,
+    }
+    markup = template
+    for placeholder, value in replacements.items():
+        markup = markup.replace(placeholder, value)
+    unresolved = sorted(set(re.findall(r"\{\{[A-Z_]+\}\}", markup)))
+    if unresolved:
+        raise SystemExit("render_launcher: unresolved placeholder(s): " + ", ".join(unresolved))
+    return markup
+
+
+def export_app_launcher() -> str:
+    """The native picker: three structural choices — infinite, classic, sphere."""
     fonts_css = inline_css_urls(
         (ROOT / "fonts" / "fonts.css").read_text(encoding="utf-8"), ROOT / "fonts"
     )
-    markup = template.replace(
-        "{{FONTS}}",
-        f"<style>\n/* fonts/fonts.css (woff2 inlined) */\n{fonts_css}\n</style>",
-        1,
+    markup = render_launcher(
+        fonts=f"<style>\n/* fonts/fonts.css (woff2 inlined) */\n{fonts_css}\n</style>",
+        infinite_href="games/infinite.html",
+        bounded_href="games/bounded.html",
+        sphere_href="games/sphere.html",
     )
-    if "{{FONTS}}" in markup:
-        raise SystemExit("export_app_launcher: font placeholder not replaced")
     # The launcher is the top of the stack; it has nowhere to go back to, and
     # unlike the games it stays pinch-zoomable — it is text and targets, not a
     # canvas with its own gesture handling.
     return appify(markup, back=False, lock_zoom=False, label="launcher")
 
 
-# webDir layout: index.html is the picker, each mode lives under games/.
+WEB_LAUNCHER_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Hexsweeper">
+<meta property="og:description" content="Choose an endless plate, a fixed classic board, or a 3D sphere from one safe opening.">
+<meta property="og:url" content="{SITE_BASE}/">
+<meta property="og:image" content="{SITE_BASE}/assets/social/home-og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hexsweeper">
+<meta name="twitter:description" content="Infinite, Classic, and Sphere Hexsweeper from one safe opening.">
+<meta name="twitter:image" content="{SITE_BASE}/assets/social/home-og.png">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#e8eef5">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c1118">
+<script>
+/* Preserve bookmarks from when the flat game lived at the web root. */
+(function () {{
+  var params = new URLSearchParams(location.search);
+  if (params.has("mode") || params.has("theme") || params.has("deal")) {{
+    location.replace("play.html" + location.search + location.hash);
+  }}
+}})();
+</script>
+"""
+
+WEB_LAUNCHER_TAIL = """<noscript>
+<style>
+.launcher-fallback{position:fixed;z-index:99;inset:0;display:grid;place-content:center;
+ gap:12px;padding:24px;background:#e8eef5;color:#263240;text-align:center;
+ font:600 1rem/1.4 "IBM Plex Sans",system-ui,sans-serif}
+.launcher-fallback h2{margin:0 0 4px;font-size:1.3rem}
+.launcher-fallback a{display:block;min-width:220px;padding:13px 18px;border:2px solid currentColor;
+ border-radius:999px;color:inherit;text-decoration:none}
+@media(prefers-color-scheme:dark){.launcher-fallback{background:#0c1118;color:#edf3fb}}
+</style>
+<nav class="launcher-fallback" aria-label="Choose a Hexsweeper board">
+  <h2>Choose a board</h2>
+  <a href="infinite.html">Infinite · Endless</a>
+  <a href="bounded.html">Classic · Fixed</a>
+  <a href="sphere/">Sphere · 3D</a>
+</nav>
+</noscript>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+"""
+
+
+def export_web_launcher() -> str:
+    """The public landing: the native launcher's spatial menu, with web routes."""
+    return render_launcher(
+        fonts='<link rel="stylesheet" href="fonts/fonts.css">',
+        infinite_href="infinite.html",
+        bounded_href="bounded.html",
+        sphere_href="sphere/",
+        platform_head=WEB_LAUNCHER_HEAD,
+        platform_tail=WEB_LAUNCHER_TAIL,
+    )
+
+
+# Native Capacitor webDir: index.html is the picker; games live under games/.
 APP_GAMES = [
     ("games/infinite.html", "theme-plate.html", "infinite"),
     ("games/bounded.html", "skin-classic.html", "bounded"),
@@ -1882,9 +2045,9 @@ def main() -> int:
             print(f"wrote {path.relative_to(ROOT)} ({path.stat().st_size:,} bytes)")
         return 0
 
-    source = (ROOT / "index.html").read_text(encoding="utf-8")
+    source = (ROOT / "play.html").read_text(encoding="utf-8")
     if "allowModes" not in source or "ONEPAGER_MODES" not in source:
-        print("error: index.html missing HEXSWEEPER_ONEPAGER allowModes support", file=sys.stderr)
+        print("error: play.html missing HEXSWEEPER_ONEPAGER allowModes support", file=sys.stderr)
         return 2
 
     registry_errors = reflection_registry_errors()
@@ -1906,6 +2069,13 @@ def main() -> int:
         if exp.get("file"):
             planned[COLLECTION / exp["file"]] = export_sphere(exp)
     planned[COLLECTION / "index.html"] = write_index(THEMES, skins, EXPERIMENTS)
+    planned[ROOT / "index.html"] = export_web_launcher()
+    planned[ROOT / "infinite.html"] = export_flat_web(
+        planned[COLLECTION / "theme-plate.html"], "infinite", "infinite.html"
+    )
+    planned[ROOT / "bounded.html"] = export_flat_web(
+        planned[COLLECTION / "skin-classic.html"], "bounded", "bounded.html"
+    )
 
     expected_theme = {f"theme-{t['id']}.html" for t in THEMES}
     expected_skin = {f"skin-{s['id']}.html" for s in skins}

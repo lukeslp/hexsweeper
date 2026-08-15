@@ -2,14 +2,57 @@
 
 ## Objective
 
-Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, with a clear five-theme product surface (Light / Dark / Fire / Plague / Escape; Water demoted to the collection archive) and a retained skin lab as dormant prior art.
+Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev,
+opening through three structural boards — Infinite, Classic, and Sphere — while
+preserving the five-mode flat game and the skin lab as deeper product surfaces.
 
 ## Architecture
 
 - **Static artifact** under `www/dr.eamer.dev/games/hexsweeper/` (symlink: `~/dr.eamer.dev`).
 - **`core.js`**: axial hex map, finite + endless modes, input (mouse/touch), flood reveal, flags, RAF loop, skin hooks.
-- **`index.html`**: production chrome + declarative product profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes; renderers remain in place.
+- **`tools/app-launcher.html` → `index.html`**: shared native/web playable endless-board launcher using `core.js`.
+- **`infinite.html` / `bounded.html`**: generated web product pages from the plate and Classic collection exports.
+- **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
+
+## Current status (2026-08-14)
+
+- [x] Shared playable launcher promoted to the public web root: drag, dig, flag, flood, and mode-triggered option fields use the real engine.
+- [x] Infinite, Classic, and Sphere route to first-class web game pages.
+- [x] Infinite/Sphere Resume and launcher-only System/Light/Dark behavior retained.
+- [x] Former root `?mode=`, `?theme=`, and `?deal=` links forward to `play.html`.
+- [x] Generated Infinite/Classic and canonical Sphere expose a 44px Games return.
+- [x] Root launcher retains native links, keyboard focus, reduced motion, forced colors, and a no-script fallback.
+
+## Current status (2026-08-13)
+
+- [x] Flux Sphere implements the archived “Dig one, reveal both” promise as
+      deterministic distant safe-face pairs on the shared Sphere engine.
+- [x] Linked reveals use one reveal-scoped engine API, stay inside canonical
+      flood, undo, persistence, and win handling, and never echo from mines.
+- [x] Flux has isolated save/run identity, keyboard controls, live text,
+      non-color endpoint glyphs, reduced-motion behavior, and normalized
+      exactly-once completion events.
+- [x] Flux pair, route, and Sphere lifecycle contracts cover deterministic
+      pairing, malformed restore rejection, held flagged echoes, first-dig
+      undo regeneration, safe linked floods, and canonical regressions.
+
+- [x] Glitch Sphere experimental route reuses the canonical Sphere engine with
+      an isolated moving-hazard state machine and save lane.
+- [x] Deterministic state-machine and integration tests verify eligible spawn,
+      one-second movement, route blocking, trap win, mine loss, occupied-face
+      admission, pause/resume timing, persistence validation, keyboard wiring,
+      and same-origin completion forwarding.
+- [x] Desktop and mobile Chrome verification exercises first dig, active hazard,
+      keyboard rotation/dig/flag, reset, reload restore, deterministic win/loss
+      fixtures, and one completion event per terminal run with no console or
+      local-resource failures.
+- [x] Reduced-motion Chrome verification keeps the occupied-face marker and
+      movement cadence while removing transition motion.
+- [x] Glitch Sphere is discoverable from the README and Choices hub without
+      entering the five-theme production switcher.
+- [ ] Deployment: re-vendor the regenerated offline Sphere payload into the
+      separate `hexsweeper-app` repository after this web change is integrated.
 
 ## Current status (2026-08-10)
 
@@ -24,7 +67,7 @@ Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev, wit
 - [x] Sphere share card that works — real capture, wired from Customize panel
 - [x] Sphere Glow theme — luminous dig centers
 - [x] Sphere Earth / Moon globe-map themes (`?theme=earth|moon`); daymap textures tracked in `sphere/assets/textures/`
-- [x] Three AI model-take variants on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
+- [x] Three archived model-authored visual studies on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
 - [x] Free 360° drag tumble (was constrained camera)
 - [x] Autosave discard confirms; red-only flags
 - [x] `sphere/dev/` dev-chrome overlay (grid/debug HUD) alongside prod `sphere/index.html`
@@ -121,7 +164,7 @@ Five-theme production cut is **landed**, plus chrome/UX polish:
 - [x] Lab skins + classic: same BR Reset · Menu; scores + outbound links in Menu (no BL rail / gear)
 - [x] CI (`.github/workflows/ci.yml`): sphere neighbor smoke + Wheel effect-profile contract + `export-collection.py --check` + `export-choices-lab.py --check` on every push/PR to `main` — catches export drift before it ships (this is what would have caught the dev-chrome inlining gap)
 - [ ] Optional: prune or archive lab skins that no longer inform the renderer
-- [ ] Optional: browser probes (desktop/mobile) in CI — sphere neighbor test is covered; visual/interaction smoke still manual
+- [ ] Optional: add browser probes to CI — Glitch Sphere has a local deterministic desktop/mobile/reduced-motion probe; the wider visual surface remains manual
 - [ ] Phase next: full / comprehensive / impressive cut beyond the collection scaffold
 
 ### Water Wheel — water as a mechanic, not a theme (Luke, 2026-08-10)
@@ -174,4 +217,11 @@ The archived decorative theme remains at `collection/theme-water.html` and
 
 ## Acceptance (production)
 
-Five themes reachable; Light/Dark/Escape infinite; Fire fits the viewport with a living center boil; Plague reads as a specimen slide with distinguishable tiles; Escape is calm and legible at full-field density with an offscreen finish + edge cue (win on reveal); finite themes default to the large board and only they show the size row; welcome once; BR chrome is Appearance sun/moon (Light/Dark only) · Reset · Menu as matching icon buttons; Menu holds scores, modes, play aids, and outbound links; Fire/Plague/Escape Menu panels match theme materials; input and reduced-motion still work.
+Bare root is a movable, playable endless field where digging Infinite / Classic /
+Sphere reveals that mode's connected options; each route opens the correct
+playable board and returns through Games; newest valid
+Infinite or Sphere saves can resume; launcher theme is independent of gameplay;
+old flat-game deep links retain their behavior at `play.html`; keyboard, touch,
+forced colors, reduced motion, safe areas, and no-script navigation remain
+usable. The flat game retains its five-theme acceptance contract: Light / Dark /
+Escape infinite, Fire / Plague finite, matching chrome, persistence, and effects.
