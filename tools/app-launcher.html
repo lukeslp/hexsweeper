@@ -86,6 +86,37 @@
     outline: none;
   }
   #launcher-canvas:focus-visible + .board-cursor { opacity: 1; }
+  /* Board stays fully playable; this scrim only drops its contrast under the
+     bloom so the menu never competes with revealed/covered mottling. Sits
+     above the canvas (z 0) and below the preset layer (z 4); never hit-tests. */
+  /* Masthead band: keeps the title and status line legible wherever the board
+     happens to be light or dark under them. Same layer as the bloom scrim. */
+  .launcher::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0 0 auto;
+    height: max(148px, calc(env(safe-area-inset-top) + 132px));
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      var(--field) 0%,
+      color-mix(in srgb, var(--field) 72%, transparent) 46%,
+      transparent 100%);
+  }
+  .launcher::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      62% 44% at 50% 50%,
+      var(--field) 0%,
+      color-mix(in srgb, var(--field) 88%, transparent) 34%,
+      color-mix(in srgb, var(--field) 52%, transparent) 58%,
+      transparent 76%);
+  }
 
   .masthead {
     position: fixed;
@@ -140,75 +171,94 @@
     transform: translate(-50%, -50%) scale(var(--preset-scale, 1));
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   }
+  /* Flat high-contrast tiles. A hexagon is clip-path'd, so a real `border`
+     can't follow the shape: the element background IS the edge and ::before,
+     inset by --preset-edge, is the fill. Solid fill => field-coloured ink;
+     hollow fill (unselected choices) => accent ink. No bevels, no glows. */
   .preset {
     --accent: var(--focus);
+    --preset-edge: 2px;
     z-index: 2;
     display: grid;
     place-items: center;
     border: 0;
     padding: 0;
-    color: var(--ink);
-    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    color: var(--field);
+    background: var(--accent);
     text-decoration: none;
     pointer-events: none;
     -webkit-user-select: none;
     user-select: none;
     outline: none;
-    transition: opacity 170ms ease, filter 170ms ease, background 170ms ease;
+    transition: opacity 140ms ease, transform 140ms ease;
   }
   .preset::before {
     content: "";
     position: absolute;
-    inset: 4px;
+    inset: var(--preset-edge);
     z-index: 0;
     clip-path: inherit;
-    border-radius: 18%;
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    background: var(--accent);
   }
+  /* Hollow variant: the edge shows through as a crisp accent ring. Used for
+     unselected choices so pressed vs unpressed is legible without a glow. */
+  .preset.choice:not([aria-pressed="true"]) { color: var(--accent); }
+  .preset.choice:not([aria-pressed="true"])::before { background: var(--field); }
   .preset:focus-visible {
-    --preset-scale: 1.04;
-    background: color-mix(in srgb, var(--accent) 24%, transparent);
-    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 78%, transparent));
+    --preset-scale: 1.06;
+    --preset-edge: 5px;
   }
   .preset:focus-visible::before {
-    inset: 3px;
-    outline: 3px solid var(--accent);
-    outline-offset: -4px;
+    outline: 2px solid var(--field);
+    outline-offset: -2px;
   }
+  /* On a hollow tile the fill IS --field, so a --field ring would vanish. */
+  .preset.choice:not([aria-pressed="true"]):focus-visible::before {
+    outline-color: var(--accent);
+  }
+  /* A pointy-top hexagon is only full width between 25% and 75% of its height.
+     Content is capped to that 50% band and never wraps, so a note can no longer
+     spill into the tapering point (the "Dig / settings" break). */
   .preset-content {
     position: relative;
     z-index: 1;
     display: grid;
     justify-items: center;
-    gap: 0;
+    align-content: center;
+    gap: calc(var(--cell-size) * .015);
     width: 96%;
-    transform: translateY(-1px);
+    max-height: 50%;
+    overflow: hidden;
     text-align: center;
-    text-shadow: 0 1px 5px var(--field), 0 1px 9px var(--field);
   }
   .preset-icon {
-    width: calc(var(--cell-size) * .5);
-    height: calc(var(--cell-size) * .5);
-    max-width: 25px;
-    max-height: 25px;
+    width: calc(var(--cell-size) * .34);
+    height: calc(var(--cell-size) * .34);
+    max-width: 18px;
+    max-height: 18px;
     overflow: visible;
-    color: var(--accent);
+    color: currentColor;
   }
-  .preset-name {
-    max-width: 100%;
-    font-size: clamp(.78rem, calc(var(--cell-size) * .43), 1.05rem);
-    font-weight: 700;
-    line-height: .98;
-    letter-spacing: -.018em;
-  }
+  .preset-name,
   .preset-note {
     max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .preset-name {
+    font-size: clamp(.62rem, calc(var(--cell-size) * .34), .95rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  .preset-note {
     color: currentColor;
-    opacity: .62;
-    font-size: clamp(.54rem, calc(var(--cell-size) * .28), .72rem);
+    opacity: .78;
+    font-size: clamp(.46rem, calc(var(--cell-size) * .23), .66rem);
     font-weight: 600;
-    line-height: .98;
-    letter-spacing: .015em;
+    line-height: 1;
+    letter-spacing: .01em;
   }
   .mode-infinite,
   .infinite-choice,
@@ -219,25 +269,14 @@
   .mode-sphere,
   .sphere-choice,
   .resume[data-mode="sphere"] { --accent: var(--sphere-accent); }
-  .mode {
-    z-index: 3;
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-  }
-  .mode.is-dug {
-    background: color-mix(in srgb, var(--accent) 17%, transparent);
-    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--accent) 28%, transparent));
-  }
-  .mode.is-dug .preset-content { transform: translateY(2px) scale(.96); }
-  .mode[aria-expanded="true"] {
-    background: color-mix(in srgb, var(--accent) 24%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 44%, transparent));
-  }
+  /* Mode tiles read as solid buttons from first paint. "Dug" and "open" are
+     shown by a thickening field-coloured ring (--preset-edge), not by a bloom. */
+  .mode { z-index: 3; }
+  .mode.is-dug { --preset-edge: 3px; }
+  .mode.is-dug .preset-content { transform: scale(.96); }
+  .mode[aria-expanded="true"] { --preset-edge: 6px; }
   .resume[hidden] { display: none; }
-  .resume {
-    z-index: 5;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 38%, transparent));
-  }
+  .resume { z-index: 5; }
   .settings-hub,
   .choice {
     z-index: 4;
@@ -250,27 +289,23 @@
     visibility: visible;
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
-    background: color-mix(in srgb, var(--accent) 20%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 34%, transparent));
     animation: option-rise 260ms cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms) backwards;
   }
-  .settings-hub[aria-expanded="true"] {
-    background: color-mix(in srgb, var(--accent) 28%, transparent);
-    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 48%, transparent));
-  }
+  .settings-hub[aria-expanded="true"] { --preset-edge: 6px; }
+  /* Badge inverts against the now-solid accent fill. */
   .choice[aria-pressed="true"]::after {
     content: "✓";
     position: absolute;
     z-index: 3;
-    top: 18%;
-    right: 20%;
+    top: 20%;
+    right: 21%;
     display: grid;
     place-items: center;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     border-radius: 50%;
-    background: var(--accent);
-    color: var(--field);
+    background: var(--field);
+    color: var(--accent);
     font: 700 9px/1 var(--font-ui);
   }
   .size-icon {
@@ -407,7 +442,7 @@
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="preset-name">Infinite</span>
-          <span class="preset-note" id="infinite-mode-current">Dig settings</span>
+          <span class="preset-note" id="infinite-mode-current">Settings</span>
         </span>
       </button>
 
@@ -415,7 +450,7 @@
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 35V14m1 2h14l-3.4 4.3L32 25H18m-4 11h9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="preset-name">Classic</span>
-          <span class="preset-note" id="classic-mode-current">Dig settings</span>
+          <span class="preset-note" id="classic-mode-current">Settings</span>
         </span>
       </button>
 
@@ -423,7 +458,7 @@
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M24 6c-7 5-9 12-9 18s2 13 9 18M24 6c7 5 9 12 9 18s-2 13-9 18M6 24h36M9 15c9 4 21 4 30 0M9 33c9-4 21-4 30 0" fill="none" stroke="currentColor" stroke-width="1" opacity=".78"/></svg>
           <span class="preset-name">Sphere</span>
-          <span class="preset-note" id="sphere-mode-current">Dig settings</span>
+          <span class="preset-note" id="sphere-mode-current">Settings</span>
         </span>
       </button>
 
@@ -684,9 +719,9 @@
     document.getElementById("infinite-settings-current").textContent = infiniteLabel;
     document.getElementById("classic-settings-current").textContent = classicLabel;
     document.getElementById("sphere-settings-current").textContent = sphereLabel;
-    document.getElementById("infinite-mode-current").textContent = branches.infinite.hub.classList.contains("is-available") ? infiniteLabel + " · Play" : "Dig settings";
-    document.getElementById("classic-mode-current").textContent = branches.classic.hub.classList.contains("is-available") ? classicLabel + " · Play" : "Dig settings";
-    document.getElementById("sphere-mode-current").textContent = branches.sphere.hub.classList.contains("is-available") ? sphereLabel + " · Play" : "Dig settings";
+    document.getElementById("infinite-mode-current").textContent = branches.infinite.hub.classList.contains("is-available") ? infiniteLabel : "Settings";
+    document.getElementById("classic-mode-current").textContent = branches.classic.hub.classList.contains("is-available") ? classicLabel : "Settings";
+    document.getElementById("sphere-mode-current").textContent = branches.sphere.hub.classList.contains("is-available") ? sphereLabel : "Settings";
     document.getElementById("infinite-effects").setAttribute("aria-label", "Effects: " + titleCase(effectsPreference) + ". Activate to cycle.");
     document.getElementById("sphere-invert").setAttribute("aria-label", "Sphere drag: " + currentInvertLabel() + ". Activate to cycle.");
     document.getElementById("infinite-settings").setAttribute("aria-label", "Infinite settings, " + infiniteLabel + ". Activate to " + (activeBranch === "infinite" ? "close." : "open."));
