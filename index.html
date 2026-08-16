@@ -86,6 +86,37 @@
     outline: none;
   }
   #launcher-canvas:focus-visible + .board-cursor { opacity: 1; }
+  /* Board stays fully playable; this scrim only drops its contrast under the
+     bloom so the menu never competes with revealed/covered mottling. Sits
+     above the canvas (z 0) and below the preset layer (z 4); never hit-tests. */
+  /* Masthead band: keeps the title and status line legible wherever the board
+     happens to be light or dark under them. Same layer as the bloom scrim. */
+  .launcher::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0 0 auto;
+    height: max(148px, calc(env(safe-area-inset-top) + 132px));
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      var(--field) 0%,
+      color-mix(in srgb, var(--field) 72%, transparent) 46%,
+      transparent 100%);
+  }
+  .launcher::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      62% 44% at 50% 50%,
+      var(--field) 0%,
+      color-mix(in srgb, var(--field) 88%, transparent) 34%,
+      color-mix(in srgb, var(--field) 52%, transparent) 58%,
+      transparent 76%);
+  }
 
   .masthead {
     position: fixed;
@@ -140,75 +171,114 @@
     transform: translate(-50%, -50%) scale(var(--preset-scale, 1));
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   }
+  /* Flat high-contrast tiles. A hexagon is clip-path'd, so a real `border`
+     can't follow the shape: the element background IS the edge and ::before,
+     inset by --preset-edge, is the fill. Solid fill => field-coloured ink;
+     hollow fill (unselected choices) => accent ink. No bevels, no glows. */
   .preset {
     --accent: var(--focus);
+    --preset-edge: 2px;
     z-index: 2;
     display: grid;
     place-items: center;
     border: 0;
     padding: 0;
-    color: var(--ink);
-    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    color: var(--field);
+    background: var(--accent);
     text-decoration: none;
     pointer-events: none;
     -webkit-user-select: none;
     user-select: none;
     outline: none;
-    transition: opacity 170ms ease, filter 170ms ease, background 170ms ease;
+    transition: opacity 140ms ease, transform 140ms ease;
   }
   .preset::before {
     content: "";
     position: absolute;
-    inset: 4px;
+    inset: var(--preset-edge);
     z-index: 0;
     clip-path: inherit;
-    border-radius: 18%;
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    background: var(--accent);
+  }
+  /* Hollow variant: the edge shows through as a crisp accent ring. Used for
+     unselected choices so pressed vs unpressed is legible without a glow.
+     Swatches opt out — they carry their own two-tone theme paint. */
+  .preset.choice:not([aria-pressed="true"]):not(.is-swatch) { color: var(--accent); }
+  .preset.choice:not([aria-pressed="true"]):not(.is-swatch)::before { background: var(--field); }
+
+  /* Theme swatch: the tile itself is the preview. Edge = the theme's field,
+     fill = its shell, label = an ink chosen to sit on that shell. Selection is
+     shown by the edge thickening, so the paint is never overridden. */
+  .preset.choice.is-swatch {
+    color: var(--sw-ink);
+    background: var(--sw-field);
+  }
+  .preset.choice.is-swatch::before { background: var(--sw-shell); }
+  .preset.choice.is-swatch[aria-pressed="true"] { --preset-edge: 5px; }
+  .preset.choice.is-swatch[aria-pressed="true"]::after {
+    background: var(--sw-ink);
+    color: var(--sw-shell);
+  }
+  .preset.choice.is-swatch:focus-visible::before { outline-color: var(--sw-ink); }
+  /* No icon row, so the name gets the whole band and can run larger. */
+  .preset.choice.is-swatch .preset-name {
+    font-size: clamp(.58rem, calc(var(--cell-size) * .3), .82rem);
   }
   .preset:focus-visible {
-    --preset-scale: 1.04;
-    background: color-mix(in srgb, var(--accent) 24%, transparent);
-    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 78%, transparent));
+    --preset-scale: 1.06;
+    --preset-edge: 5px;
   }
   .preset:focus-visible::before {
-    inset: 3px;
-    outline: 3px solid var(--accent);
-    outline-offset: -4px;
+    outline: 2px solid var(--field);
+    outline-offset: -2px;
   }
+  /* On a hollow tile the fill IS --field, so a --field ring would vanish. */
+  .preset.choice:not([aria-pressed="true"]):focus-visible::before {
+    outline-color: var(--accent);
+  }
+  /* A pointy-top hexagon is only full width between 25% and 75% of its height.
+     Content is capped to that 50% band and never wraps, so a note can no longer
+     spill into the tapering point (the "Dig / settings" break). */
   .preset-content {
     position: relative;
     z-index: 1;
     display: grid;
     justify-items: center;
-    gap: 0;
+    align-content: center;
+    gap: calc(var(--cell-size) * .015);
     width: 96%;
-    transform: translateY(-1px);
+    max-height: 50%;
+    overflow: hidden;
     text-align: center;
-    text-shadow: 0 1px 5px var(--field), 0 1px 9px var(--field);
   }
   .preset-icon {
-    width: calc(var(--cell-size) * .5);
-    height: calc(var(--cell-size) * .5);
-    max-width: 25px;
-    max-height: 25px;
+    width: calc(var(--cell-size) * .34);
+    height: calc(var(--cell-size) * .34);
+    max-width: 18px;
+    max-height: 18px;
     overflow: visible;
-    color: var(--accent);
+    color: currentColor;
   }
-  .preset-name {
-    max-width: 100%;
-    font-size: clamp(.78rem, calc(var(--cell-size) * .43), 1.05rem);
-    font-weight: 700;
-    line-height: .98;
-    letter-spacing: -.018em;
-  }
+  .preset-name,
   .preset-note {
     max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .preset-name {
+    font-size: clamp(.62rem, calc(var(--cell-size) * .34), .95rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  .preset-note {
     color: currentColor;
-    opacity: .62;
-    font-size: clamp(.54rem, calc(var(--cell-size) * .28), .72rem);
+    opacity: .78;
+    font-size: clamp(.46rem, calc(var(--cell-size) * .23), .66rem);
     font-weight: 600;
-    line-height: .98;
-    letter-spacing: .015em;
+    line-height: 1;
+    letter-spacing: .01em;
   }
   .mode-infinite,
   .infinite-choice,
@@ -219,25 +289,14 @@
   .mode-sphere,
   .sphere-choice,
   .resume[data-mode="sphere"] { --accent: var(--sphere-accent); }
-  .mode {
-    z-index: 3;
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-  }
-  .mode.is-dug {
-    background: color-mix(in srgb, var(--accent) 17%, transparent);
-    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--accent) 28%, transparent));
-  }
-  .mode.is-dug .preset-content { transform: translateY(2px) scale(.96); }
-  .mode[aria-expanded="true"] {
-    background: color-mix(in srgb, var(--accent) 24%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 44%, transparent));
-  }
+  /* Mode tiles read as solid buttons from first paint. "Dug" and "open" are
+     shown by a thickening field-coloured ring (--preset-edge), not by a bloom. */
+  .mode { z-index: 3; }
+  .mode.is-dug { --preset-edge: 3px; }
+  .mode.is-dug .preset-content { transform: scale(.96); }
+  .mode[aria-expanded="true"] { --preset-edge: 6px; }
   .resume[hidden] { display: none; }
-  .resume {
-    z-index: 5;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 38%, transparent));
-  }
+  .resume { z-index: 5; }
   .settings-hub,
   .choice {
     z-index: 4;
@@ -250,27 +309,23 @@
     visibility: visible;
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
-    background: color-mix(in srgb, var(--accent) 20%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 34%, transparent));
     animation: option-rise 260ms cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms) backwards;
   }
-  .settings-hub[aria-expanded="true"] {
-    background: color-mix(in srgb, var(--accent) 28%, transparent);
-    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 48%, transparent));
-  }
+  .settings-hub[aria-expanded="true"] { --preset-edge: 6px; }
+  /* Badge inverts against the now-solid accent fill. */
   .choice[aria-pressed="true"]::after {
     content: "✓";
     position: absolute;
     z-index: 3;
-    top: 18%;
-    right: 20%;
+    top: 20%;
+    right: 21%;
     display: grid;
     place-items: center;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     border-radius: 50%;
-    background: var(--accent);
-    color: var(--field);
+    background: var(--field);
+    color: var(--accent);
     font: 700 9px/1 var(--font-ui);
   }
   .size-icon {
@@ -428,7 +483,7 @@
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="preset-name">Infinite</span>
-          <span class="preset-note" id="infinite-mode-current">Dig settings</span>
+          <span class="preset-note" id="infinite-mode-current">Settings</span>
         </span>
       </button>
 
@@ -436,7 +491,7 @@
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 35V14m1 2h14l-3.4 4.3L32 25H18m-4 11h9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span class="preset-name">Classic</span>
-          <span class="preset-note" id="classic-mode-current">Dig settings</span>
+          <span class="preset-note" id="classic-mode-current">Settings</span>
         </span>
       </button>
 
@@ -444,7 +499,7 @@
         <span class="preset-content">
           <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M24 6c-7 5-9 12-9 18s2 13 9 18M24 6c7 5 9 12 9 18s-2 13-9 18M6 24h36M9 15c9 4 21 4 30 0M9 33c9-4 21-4 30 0" fill="none" stroke="currentColor" stroke-width="1" opacity=".78"/></svg>
           <span class="preset-name">Sphere</span>
-          <span class="preset-note" id="sphere-mode-current">Dig settings</span>
+          <span class="preset-note" id="sphere-mode-current">Settings</span>
         </span>
       </button>
 
@@ -454,7 +509,7 @@
       <button class="preset settings-hub classic-choice" id="classic-settings" type="button" data-branch="classic" data-q="2" data-r="0" aria-expanded="false" aria-controls="classic-small classic-medium classic-large" aria-label="Classic board settings, Medium. Activate to open." aria-hidden="true" tabindex="-1" disabled>
         <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 15h26M11 24h26M11 33h26" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/><circle cx="19" cy="15" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="24" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="33" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/></svg><span class="preset-name">Board</span><span class="preset-note" id="classic-settings-current">Medium</span></span>
       </button>
-      <button class="preset settings-hub sphere-choice" id="sphere-settings" type="button" data-branch="sphere" data-q="-2" data-r="2" aria-expanded="false" aria-controls="sphere-light sphere-shell sphere-glow sphere-invert" aria-label="Sphere theme settings, Light. Activate to open." aria-hidden="true" tabindex="-1" disabled>
+      <button class="preset settings-hub sphere-choice" id="sphere-settings" type="button" data-branch="sphere" data-q="-2" data-r="2" aria-expanded="false" aria-controls="sphere-light sphere-shell sphere-dark sphere-ink sphere-float sphere-card sphere-glow sphere-earth sphere-moon sphere-take-kimi sphere-take-claude sphere-take-muse sphere-invert" aria-label="Sphere theme settings, Light. Activate to open." aria-hidden="true" tabindex="-1" disabled>
         <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M12 31c6-15 18-21 25-15 6 6-2 21-15 21-5 0-8-2-10-6Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="27" r="2.7" fill="currentColor"/><circle cx="28" cy="21" r="2.7" fill="currentColor"/><circle cx="34" cy="20" r="2.7" fill="currentColor"/></svg><span class="preset-name">Theme</span><span class="preset-note" id="sphere-settings-current">Light</span></span>
       </button>
 
@@ -472,9 +527,25 @@
       <button class="preset choice classic-choice" id="classic-medium" type="button" data-branch="classic" data-classic-size="medium" aria-label="Set Classic board to Medium, 35 mines" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">M</span><span class="preset-name">Medium</span><span class="preset-note">35 mines</span></span></button>
       <button class="preset choice classic-choice" id="classic-large" type="button" data-branch="classic" data-classic-size="hard" aria-label="Set Classic board to Large, 80 mines" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">L</span><span class="preset-name">Large</span><span class="preset-note">80 mines</span></span></button>
 
-      <button class="preset choice sphere-choice" id="sphere-light" type="button" data-branch="sphere" data-sphere-theme="light" aria-label="Set Sphere theme to Light" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="preset-name">Light</span><span class="preset-note">White field</span></span></button>
-      <button class="preset choice sphere-choice" id="sphere-shell" type="button" data-branch="sphere" data-sphere-theme="shell" aria-label="Set Sphere theme to Shell" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="10" fill="var(--field)"/><circle cx="24" cy="24" r="5" fill="currentColor"/></svg><span class="preset-name">Shell</span><span class="preset-note">Dark field</span></span></button>
-      <button class="preset choice sphere-choice" id="sphere-glow" type="button" data-branch="sphere" data-sphere-theme="glow" aria-label="Set Sphere theme to Glow" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" opacity=".45"/></svg><span class="preset-name">Glow</span><span class="preset-note">Luminous</span></span></button>
+      <!-- Theme swatches. The hex IS the preview: the tile edge paints the
+           theme's field and the inner fill paints its shell, so the fan reads
+           as a palette rather than a list. Colours mirror the THEMES entries in
+           sphere/sphere.js and the palettes in sphere/takes/*.json — keep them
+           in step. `data-sphere-kind="take"` routes to ?take= instead of
+           ?theme=; `data-sphere-globe` marks the two network-fetching themes
+           that native app builds drop. -->
+      <button class="preset choice sphere-choice is-swatch" id="sphere-light" type="button" data-branch="sphere" data-sphere-theme="light" style="--sw-field:#cfdae6;--sw-shell:#ffffff;--sw-ink:#263240" aria-label="Set Sphere theme to Light" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Light</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-shell" type="button" data-branch="sphere" data-sphere-theme="shell" style="--sw-field:#10151c;--sw-shell:#ffffff;--sw-ink:#263240" aria-label="Set Sphere theme to Shell" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Shell</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-dark" type="button" data-branch="sphere" data-sphere-theme="dark" style="--sw-field:#10151c;--sw-shell:#232b36;--sw-ink:#edf3fb" aria-label="Set Sphere theme to Dark" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Dark</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-ink" type="button" data-branch="sphere" data-sphere-theme="ink" style="--sw-field:#f4f7fa;--sw-shell:#12171f;--sw-ink:#edf3fb" aria-label="Set Sphere theme to Ink" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Ink</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-float" type="button" data-branch="sphere" data-sphere-theme="float" style="--sw-field:#cfdae6;--sw-shell:#fbfdff;--sw-ink:#263240" aria-label="Set Sphere theme to Float" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Float</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-card" type="button" data-branch="sphere" data-sphere-theme="card" style="--sw-field:#ffffff;--sw-shell:#171f29;--sw-ink:#edf3fb" aria-label="Set Sphere theme to Card" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Card</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-glow" type="button" data-branch="sphere" data-sphere-theme="glow" style="--sw-field:#0d1219;--sw-shell:#45c7e0;--sw-ink:#05222b" aria-label="Set Sphere theme to Glow" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Glow</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-earth" type="button" data-branch="sphere" data-sphere-theme="earth" data-sphere-globe="true" style="--sw-field:#0b1a2a;--sw-shell:#2a6a9a;--sw-ink:#eaf4ff" aria-label="Set Sphere theme to Earth" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Earth</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-moon" type="button" data-branch="sphere" data-sphere-theme="moon" data-sphere-globe="true" style="--sw-field:#0d0f14;--sw-shell:#9aa3ad;--sw-ink:#14181e" aria-label="Set Sphere theme to Moon" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Moon</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-take-kimi" type="button" data-branch="sphere" data-sphere-theme="kimi-moon-ink-orrery" data-sphere-kind="take" style="--sw-field:#0c0f1d;--sw-shell:#e8e4d8;--sw-ink:#1a2033" aria-label="Set Sphere theme to Moon Ink Orrery" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Moon Ink</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-take-claude" type="button" data-branch="sphere" data-sphere-theme="claude-amber-codex" data-sphere-kind="take" style="--sw-field:#1c1f2b;--sw-shell:#4a3f2f;--sw-ink:#e8dcc8" aria-label="Set Sphere theme to Amber Codex" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Amber</span></span></button>
+      <button class="preset choice sphere-choice is-swatch" id="sphere-take-muse" type="button" data-branch="sphere" data-sphere-theme="muse-constellation-void" data-sphere-kind="take" style="--sw-field:#0b1020;--sw-shell:#2e3a52;--sw-ink:#d8e2ff" aria-label="Set Sphere theme to Constellation Void" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-name">Void</span></span></button>
       <button class="preset choice sphere-choice" id="sphere-invert" type="button" data-branch="sphere" data-setting="invert" aria-label="Sphere drag: Natural. Activate to cycle." aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 15h28M10 15l6-6m-6 6 6 6M38 33H10m28 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="preset-name">Drag</span><span class="preset-note" id="invert-current">Natural</span></span></button>
     </nav>
 
@@ -2732,6 +2803,17 @@
   var modes = Array.prototype.slice.call(presetLayer.querySelectorAll(".mode[data-branch]"));
   var hubs = Array.prototype.slice.call(presetLayer.querySelectorAll(".settings-hub[data-branch]"));
   var choices = Array.prototype.slice.call(presetLayer.querySelectorAll(".choice[data-branch]"));
+  // Native app builds drop the globe-map themes, mirroring the THEMES filter in
+  // sphere/sphere.js — their daymaps are the only assets fetched over the
+  // network, so offering them offline would launch into a silent fallback.
+  // Removed before seats are assigned so the fan closes up rather than gapping.
+  if (window.HEXSWEEPER_SPHERE_APP) {
+    choices = choices.filter(function (choice) {
+      if (!choice.dataset.sphereGlobe) return true;
+      choice.remove();
+      return false;
+    });
+  }
   var branches = {};
   var protectedKeys = new Set(["0,0"]);
   var modeByKey = new Map();
@@ -2916,18 +2998,43 @@
     return size === "easy" ? "Small" : size === "hard" ? "Large" : "Medium";
   }
 
+  // Take ids are slugs ("kimi-moon-ink-orrery"), so titleCase would surface
+  // them raw. Anything absent falls back to titleCase, which covers the plain
+  // single-word theme ids without needing an entry each.
+  var SPHERE_THEME_LABELS = {
+    "kimi-moon-ink-orrery": "Moon Ink",
+    "claude-amber-codex": "Amber",
+    "muse-constellation-void": "Void"
+  };
+
+  function sphereThemeTile(id) {
+    return presetLayer.querySelector('[data-sphere-theme="' + id + '"]');
+  }
+
+  function sphereThemeLabel() {
+    return SPHERE_THEME_LABELS[sphereThemePreference] || titleCase(sphereThemePreference);
+  }
+
+  // Takes are a separate axis in sphere.js (SPHERE_TAKES / ?take=) from the
+  // THEMES roster (?theme=), so the tile carries which query it launches with.
+  function sphereLaunchQuery() {
+    var tile = sphereThemeTile(sphereThemePreference);
+    var param = tile && tile.dataset.sphereKind === "take" ? "take" : "theme";
+    return param + "=" + encodeURIComponent(sphereThemePreference);
+  }
+
   function syncPreferences() {
     var infiniteLabel = titleCase(infiniteThemePreference);
     var classicLabel = classicSizeLabel(classicSizePreference);
-    var sphereLabel = titleCase(sphereThemePreference);
+    var sphereLabel = sphereThemeLabel();
     document.getElementById("effects-current").textContent = titleCase(effectsPreference);
     document.getElementById("invert-current").textContent = currentInvertLabel();
     document.getElementById("infinite-settings-current").textContent = infiniteLabel;
     document.getElementById("classic-settings-current").textContent = classicLabel;
     document.getElementById("sphere-settings-current").textContent = sphereLabel;
-    document.getElementById("infinite-mode-current").textContent = branches.infinite.hub.classList.contains("is-available") ? infiniteLabel + " · Play" : "Dig settings";
-    document.getElementById("classic-mode-current").textContent = branches.classic.hub.classList.contains("is-available") ? classicLabel + " · Play" : "Dig settings";
-    document.getElementById("sphere-mode-current").textContent = branches.sphere.hub.classList.contains("is-available") ? sphereLabel + " · Play" : "Dig settings";
+    document.getElementById("infinite-mode-current").textContent = branches.infinite.hub.classList.contains("is-available") ? infiniteLabel : "Settings";
+    document.getElementById("classic-mode-current").textContent = branches.classic.hub.classList.contains("is-available") ? classicLabel : "Settings";
+    document.getElementById("sphere-mode-current").textContent = branches.sphere.hub.classList.contains("is-available") ? sphereLabel : "Settings";
     document.getElementById("infinite-effects").setAttribute("aria-label", "Effects: " + titleCase(effectsPreference) + ". Activate to cycle.");
     document.getElementById("sphere-invert").setAttribute("aria-label", "Sphere drag: " + currentInvertLabel() + ". Activate to cycle.");
     document.getElementById("infinite-settings").setAttribute("aria-label", "Infinite settings, " + infiniteLabel + ". Activate to " + (activeBranch === "infinite" ? "close." : "open."));
@@ -3231,7 +3338,7 @@
     if (choice.dataset.sphereTheme) {
       sphereThemePreference = choice.dataset.sphereTheme;
       writePreference(SPHERE_THEME_KEY, sphereThemePreference);
-      status.textContent = titleCase(sphereThemePreference) + " set · tap Sphere to play";
+      status.textContent = sphereThemeLabel() + " set · tap Sphere to play";
     }
     syncPreferences();
   }
@@ -3256,7 +3363,7 @@
       beginLaunch(branch.mode, "Classic · " + classicSizeLabel(classicSizePreference), "bounded.html?size=" + encodeURIComponent(classicSizePreference) + "&new=1", "Opening");
       return;
     }
-    beginLaunch(branch.mode, "Sphere · " + titleCase(sphereThemePreference), "sphere/?theme=" + encodeURIComponent(sphereThemePreference) + "&fresh=1", "Opening");
+    beginLaunch(branch.mode, "Sphere · " + sphereThemeLabel(), "sphere/?" + sphereLaunchQuery() + "&fresh=1", "Opening");
   }
 
   function chooseDestination(destination) {
