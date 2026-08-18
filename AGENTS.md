@@ -1,9 +1,10 @@
 # Hexsweeper (native) — agent notes
 
 Capacitor shell around hexsweeper's sphere game on iOS and Android. The app opens
-straight into the sphere; a corner Menu glyph opens the flower (theme, size,
-undo, flag, reset), a corner Help glyph opens the help sheet. Infinite and
-Classic are web-only. Read `README.md` first; it
+straight into the sphere; a quiet bar (Undo · New sphere · Flag · ?) is the
+only fixed chrome and the ? sheet holds theme, size, best times, invert,
+effects and the tutorial. `www/wheel.html` is the hidden Water Wheel, reached
+by holding the mine count. Infinite and Classic are web-only. Read `README.md` first; it
 explains why the bundle id says `hexodus` and why the build number starts at 7.
 
 ## The one rule

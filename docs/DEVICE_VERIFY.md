@@ -24,7 +24,10 @@ and any network dependency is a defect.
 | 1c | Themed interiors | Spin the sphere with faces cleared: on Mercury/Gold/Heat/Storm the interior turns with the shell (only the sheen stays put); on Sky/Aurora/Galaxy cleared faces are holes onto the concave inside of the shell (sky facets, curtains, stars) that also turns; flags plant in that theme's metal/light; holding a face flags it visibly during the hold on every theme | |
 | 1c′ | Textured materials | Stratosphere shows the drifting sky on the mirror (light chrome, dark glass wells); Ion Storm shows the storm cloud trailing the rotation; Galaxy, Gilded Ribbon, Heat Lightning show their textures; Aurora its curtains — all offline, in airplane mode | |
 | 1d | Mercury | Mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
-| 2 | Sphere size | On a phone in portrait the sphere spans roughly 85% of the width; margins above and below still open the flower on tap | |
+| 2 | Sphere size | On a phone in portrait the sphere spans roughly 85% of the width | |
+| 2a | Mercury clears | On Mercury, clear a face and keep playing: brushed-steel interior turns with the shell, the sphere keeps answering drag and tap (build 51 froze here) | |
+| 2b | Best times | Win an XS sphere: banner reads *First clear at this size*; ? shows *Best …* under XS; a slower win keeps the old best | |
+| 2c | Water Wheel | Hold the mine count at the top: water rises through it; keep holding → the Water Wheel opens with its own tutorial and a Sphere pill top-left clear of the status bar; Sphere returns to the resumed run | |
 | 3 | Settings sheet | ? opens wide enough to read (≥340 pt on a phone), no keyboard hints; Theme grid (nine), Board size (XS–XL, new sphere on change), Invert, Effects all apply live and read pressed; no Warnings group (themes own depth/seams/marks: Light/Dark depth+seams, metals depth no seams, hollow shells flush); Done ≥ 44 pt; "Show the tutorial again" reopens the tutorial; closes with × / Done / outside tap and never blocks the board afterwards | |
 | 6 | Sphere render | Sphere is centred and fully visible; no clipping at any edge | |
 | 7 | Sphere dig | Single tap reveals the intended tile — not a neighbour | |
@@ -42,8 +45,8 @@ and any network dependency is a defect.
 | 19 | Reduced Motion | Launcher and endgame effects become instant states | |
 | 20 | Outbound links | Credits open in the system browser and return cleanly; the game is never replaced in-place | |
 | 20a | Share | On game end, Share opens the iOS share sheet with the card **as an image** — Messages, Instagram, Bluesky, Photos appear (not a Files-only sheet); cancelling returns cleanly; the banner reads Share · Undo · New sphere | |
-| 21 | Rotation | Portrait ↔ landscape reflows without losing the run or hiding the corner glyphs or the open flower | |
-| 22 | Android Back | System Back closes the flower or help sheet when open, otherwise exits or follows documented platform behaviour without losing the run | |
+| 21 | Rotation | Portrait ↔ landscape reflows without losing the run or hiding the quiet bar or the open sheet | |
+| 22 | Android Back | System Back closes the sheet when open, returns from the Water Wheel to the sphere, otherwise exits or follows documented platform behaviour without losing the run | |
 | 23 | Android system bars | Content clears status/navigation/gesture insets in both orientations | |
 
 ## iPad gates

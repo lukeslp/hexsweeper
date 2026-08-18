@@ -6,12 +6,16 @@ sphere. The game is the Canvas/vanilla-JS build from
 repo wraps it for iOS and Android as one sealed offline page.
 
 The app opens straight into the sphere, which restores its own unfinished run
-without asking. Two quiet corner glyphs are the only fixed chrome: **Menu**
-(bottom left) opens the center flower — reset, undo, flag mode, board size,
-theme (Light · Dark · then Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning), warning style, drag inversion — and
-**Help** (bottom right) opens the touch-sized help sheet. Tapping anywhere
-outside the sphere also opens the flower. Infinite and Classic are web-only;
-they are not in this binary.
+without asking. The fixed chrome is a quiet bar: **Undo · New sphere · Flag**
+(red while armed) bottom left, **?** bottom right, and a small mines-left ·
+seconds readout at the top. Everything else — theme (Light · Dark ·
+Stratosphere · Mercury · Ion Storm · Aurora · Galaxy · Gilded Ribbon · Heat
+Lightning), board size with your best time per size, drag inversion, effects,
+the tutorial — lives behind **?**. Hold the mine count and water rises through
+it: keep holding and you drop into the **Water Wheel**, a hidden second sphere
+(`www/wheel.html`) where armed mines have to be spun beneath the waterline;
+its Sphere pill brings you back and the run resumes. Infinite and Classic are
+web-only; they are not in this binary.
 
 Web version: <https://dr.eamer.dev/games/hexsweeper/>
 
