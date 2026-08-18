@@ -10,7 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` is 37 for the readable playable-launcher archive
+- [x] `CURRENT_PROJECT_VERSION` is 45 for the release candidate (splash + sphere-only payload)
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [x] Archive signs cleanly under team `596T7J7FB6`
@@ -27,8 +27,8 @@ The record was inherited from a different app, but it was found **empty**
 rather than contaminated — every field was null, so this was fill-in.
 
 - [x] App name set — **Hexsweeper 3D** (`Hexsweeper` itself is taken)
-- [x] Description, keywords, subtitle, and promotional text written
-- [x] Screenshots — five 6.9" captures from the real build
+- [x] Description, keywords, subtitle, and promotional text rewritten 2026-08-18 for the sphere-only app
+- [x] Screenshots — six 6.9" iPhone + six 13" iPad captures of the sealed sphere, uploaded 2026-08-18
 - [x] Support, marketing and privacy policy URLs set
 - [x] Age rating answered — every category NONE/false
 - [x] Export compliance: `ITSAppUsesNonExemptEncryption` is `false`
@@ -39,7 +39,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Build 41 uploaded to TestFlight 2026-08-18: sphere-only, corner Menu, Theme tile → Mercury, touch help sheet
 - [x] Build 42 uploaded to TestFlight 2026-08-18: Stratosphere + Amber Cells themes (textures sealed), Glow out of the cycle
 - [x] Build 43 uploaded to TestFlight 2026-08-18: Ion Storm replaces Amber Cells
-- [x] Build 44 uploaded to TestFlight 2026-08-18: nine-theme flower cycle (Aurora, Galaxy, Gilded Ribbon, Heat Lightning added); confirm it processes as VALID
+- [x] Build 44 uploaded to TestFlight 2026-08-18: nine-theme flower cycle (Aurora, Galaxy, Gilded Ribbon, Heat Lightning added)
+- [x] Build 45 uploaded 2026-08-18: sphere launch image; attached to 1.0 as the release candidate
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
@@ -48,14 +49,13 @@ rather than contaminated — every field was null, so this was fill-in.
 The record was found **empty**, not filled with the retired app's content —
 worth knowing if you ever inherit another bundle id this way.
 
-Before submission, replace the ASC **device capture** `02-sphere.png`: its HUD
-was captured mid-render and shows “left” and “s” without their numbers. That
-file exists only in App Store Connect — the repo's `02-sphere-ink.png` is a
-separate captioned composite with no HUD and is not the one at fault.
+Screenshots (iPhone 6.9" and iPad 13") and copy were fully replaced on
+2026-08-18; the mid-render `02-sphere.png` device capture is gone with them.
 
-Also still owed: **iPad screenshots at 2064×2752**. The app declares
-`TARGETED_DEVICE_FAMILY = "1,2"`, and ASC will not accept an iPad-supporting
-listing with iPhone screenshots alone.
+**What is left before Submit for Review is yours alone:** the App Privacy
+labels in the ASC web UI (Data Not Collected throughout), and the Submit
+button. Everything else — build, metadata, screenshots, What's New — is
+staged.
 
 ## Licensing
 

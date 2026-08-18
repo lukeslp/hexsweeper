@@ -34,7 +34,7 @@ for (filename, size) in slots {
         space: CGColorSpaceCreateDeviceRGB(),
         bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
     )!
-    context.setFillColor(NSColor(hex: 0xF3F4F6).cgColor)
+    context.setFillColor(NSColor(hex: 0xFFFFFF).cgColor)
     context.fill(CGRect(x: 0, y: 0, width: size, height: size))
     context.interpolationQuality = .high
     context.draw(crop, in: CGRect(x: 0, y: 0, width: size, height: size))

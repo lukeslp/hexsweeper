@@ -1,1 +1,1 @@
-minesweeper,hexagon,puzzle,logic,mines,sweeper,offline,classic,hex,strategy,board game,globe
+minesweeper,hexagon,hex,mines,sweeper,puzzle,logic,sphere,3d,globe,offline,board game,strategy

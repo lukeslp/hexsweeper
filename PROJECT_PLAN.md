@@ -54,53 +54,30 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 - [x] Android native build added (`versionCode 1`, unsigned, never uploaded)
 - [x] Screenshot pipeline parameterised per device family (2026-08-11);
       `05-picker` generated, closing the set the script always declared
-- [ ] **iPad screenshots (2064×2752) — submission blocker.**
-      `TARGETED_DEVICE_FAMILY = "1,2"` claims iPad support, and App Store
-      Connect rejects an iPad-supporting listing that carries only iPhone
-      screenshots. Either generate the set
-      (`python3 scripts/generate-store-screenshots.py --ipad`) **or** drop to
-      `TARGETED_DEVICE_FAMILY = 1` and ship iPhone-only. Not previously tracked
-      anywhere.
+- [x] iPad screenshots (2064×2752) generated and uploaded 2026-08-18 alongside a
+      new 6.9" iPhone set — six per family, real captures of the sealed sphere
+      (`scripts/store-shots.mjs` + `scripts/generate-store-screenshots.py`)
 - [ ] App Privacy nutrition labels — no API endpoint, must be clicked through
       in the ASC web UI. Answer is "Data Not Collected" throughout
 - [ ] Device verification (`docs/DEVICE_VERIFY.md`) — 21 gates, none filled in
 - [ ] Capacitor 8.3.1 → 8.5.0 available (splash-screen 8.0.1 → 8.0.2). Minor
       bump; regenerates native projects, so it wants its own build + smoke run
 
-### Screenshot pipeline: what it can and cannot do
+### Screenshot pipeline (rewritten 2026-08-18)
 
-Verified 2026-08-11. Every render is a ~2-minute headless-Chrome gamble against
-a fixed `--virtual-time-budget`, with no signal that the page has actually
-settled. Consequences, all reproduced:
+`scripts/store-shots.mjs` boots the sealed `www/index.html` in headless Chrome
+with SwiftShader WebGL at exact device metrics (6.9" iPhone 440×956@3,
+13" iPad 1032×1376@2), seeds a deterministic mid-game (mines, a connected dug
+patch, a few flags, a fixed rotation) per shot, sets the theme, and captures the
+full frame — the flower shot opens the menu first. `generate-store-screenshots.py`
+runs it per family and lays a Futura Bold caption band over the empty field
+above the sphere. Every pixel is the shipped game; nothing is mocked. The old
+square-render + virtual-time approach and its timeouts are gone. Toasts and
+live regions are hidden by injected CSS so stills stay clean. `--recompose`
+re-captions existing raws without re-rendering.
 
-- **Sphere shots render reliably.** Both iPhone and iPad sets come from these.
-- **`infinite.html` now times out** (120s × 2 attempts) under payload
-  `466709c`. The committed phone shots were rendered 2026-08-10 against
-  `0db0f2b`, so this is a regression in renderability, not a config problem.
-  `bounded.html` is untested since the run never reaches it.
-- **`05-picker` has never rendered at all** — the opening auto-dig never
-  settles.
-- **A faint `?` (`#help-btn`) survives into every sphere shot.** CSS
-  `display:none !important` does not suppress it, and `crop_to_sphere` then
-  widens the crop box to include it. Removing the node in JS *does* clear it
-  but stops the page settling, so the render times out — strictly worse. Left
-  in deliberately; a slightly blemished screenshot beats none.
-
-The real fix is settle-detection — wait on a concrete DOM or canvas signal
-instead of a fixed time budget — which would likely unblock the flat games and
-the picker together. Until then, treat asset regeneration as unreliable and
-never delete a good screenshot before its replacement exists.
-
-### Screenshot naming, clarified
-
-The repo holds **generated marketing shots** — `01-sphere-shell`,
-`02-sphere-ink`, `03-infinite`, `04-bounded`, `05-picker` — all captioned
-composites at 1320×2868. The **device captures uploaded to ASC are a separate,
-older set that does not live in this repo.** The long-standing "re-shoot
-`02-sphere.png`" note refers to one of *those*, not to `02-sphere-ink.png`
-here, which has no HUD at all and is fine. Whether to replace the ASC device
-captures with these generated ones is still an open call.
-
+Shots: 01 Mercury (hero) · 02 Stratosphere · 03 Light with the flower open ·
+04 Ion Storm · 05 Heat Lightning · 06 Dark. Same set for both families.
 ## Outstanding decisions
 
 - **Name is settled: the listing is "Hexsweeper 3D".** Every bare form is

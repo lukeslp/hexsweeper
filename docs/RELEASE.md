@@ -85,14 +85,16 @@ Done (updated 2026-08-11, through the App Store Connect API):
 - [x] Name **Hexsweeper 3D** — `Hexsweeper`, `Hexsweep`, `Hex Sweeper`,
       `Hex Sweep`, `Hexasweeper`, `Hivesweeper` and `Hexhive` are all taken.
       Every bare form is gone; `Hexsweeper` + any qualifier was free.
-- [x] Subtitle `Hex minesweeper, flat or round` (30/30 chars — at the limit)
-- [x] Description, keywords (87/100), and promotional text
+- [x] Subtitle `Minesweeper on a sphere` (was `Hex minesweeper, flat or round`)
+- [x] Description, keywords (94/100), and promotional text — rewritten 2026-08-18
+      for the sphere-only app (nine looks, undo, autosave, offline)
 - [x] Support + marketing URLs → the live web game
 - [x] Privacy policy → `privacy.html`, added to the hexsweeper repo and
       deployed to Drummer
 - [x] Age rating — every content question NONE, every behaviour flag false
-- [x] Screenshots — five 6.9" real-device captures (1320×2868), all COMPLETE;
-      preserved rather than overwritten by the four generated alternatives
+- [x] Screenshots — replaced 2026-08-18 with six 6.9" iPhone (1320×2868) and
+      six 13" iPad (2064×2752) captures of the sealed sphere, captioned;
+      the old picker-era device captures are gone from ASC
 - [x] Build 8 processed, validated, and attached to the 1.0 version. Nothing
       submitted for review
 - [x] Build 37 uploaded to TestFlight on 2026-08-14 and processed as VALID
@@ -118,8 +120,10 @@ Done (updated 2026-08-11, through the App Store Connect API):
       Cells as the dark material (payload 679KB)
 - [x] Build 44 uploaded to TestFlight on 2026-08-18: Aurora, Galaxy, Gilded
       Ribbon, Heat Lightning join the flower cycle (nine themes; payload
-      857KB); confirm distribution state in App Store Connect before widening
-      access
+      857KB)
+- [x] Build 45 uploaded 2026-08-18: launch image is now a still of the Light
+      sphere at first-frame size (was a dug Infinite plate); payload unchanged.
+      Attached to 1.0 with What's New once processed
 
 Still owed:
 
@@ -127,16 +131,9 @@ Still owed:
       API has no endpoint for them (`appPrivacyDetails` → "URL path is not
       valid"). Answer: no data collected, of any kind.
 - [ ] `docs/DEVICE_VERIFY.md` signed on hardware
-- [ ] **iPad screenshots (2064×2752) — blocker.** The app ships
-      `TARGETED_DEVICE_FAMILY = "1,2"`, and ASC rejects an iPad-supporting
-      listing that carries only iPhone screenshots. Generate with
-      `python3 scripts/generate-store-screenshots.py --ipad`, or drop iPad
-      support and ship iPhone-only. Set type is `APP_IPAD_PRO_3GEN_129`.
-- [ ] Decide whether the generated composites replace the ASC device captures.
-      The **device capture** called `02-sphere.png` lives only in ASC, not in
-      this repo, and is the one that caught the HUD mid-render showing “left”
-      and “s” without their numbers. The repo's `02-sphere-ink.png` is a
-      different, captioned composite with no HUD and is unaffected.
+- [x] iPad screenshots — done 2026-08-18 (six at 2064×2752, uploaded)
+- [x] The ASC device capture `02-sphere.png` (HUD caught mid-render) is gone
+      with the old set
 
 Export compliance is already answered: `ITSAppUsesNonExemptEncryption = false`.
 

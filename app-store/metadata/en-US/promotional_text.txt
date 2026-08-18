@@ -1,1 +1,1 @@
-Sweep a hexagonal minefield wrapped around a 3D sphere — or keep it classic on flat boards. Plays entirely offline: no account, no ads, nothing watching you play.
+Minesweeper on a hexagonal 3D sphere. Spin it, read the numbers, clear it. Nine mirrored looks, undo, autosave. Offline: no account, no ads, no tracking.
