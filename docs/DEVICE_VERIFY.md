@@ -19,14 +19,12 @@ and any network dependency is a defect.
 | # | Check | Pass criteria | Result |
 |---|---|---|---|
 | 1 | Cold launch | Launch screen hands off to Sphere with no blank frame between and no prompt; an unfinished sphere run restores in place | |
-| 1a | Dock first tap | After dragging the sphere (dock receded to a ghost), one tap on Undo / Menu / Flag acts immediately — no second tap needed | |
-| 1b | Mercury | Theme cycles to Mercury: mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
-| 2 | Launcher | **‹ Games** on Sphere opens the launcher: Infinite, Classic, and Sphere are three clear hexes; each caption shows the setting that will load | |
-| 3 | Launcher routes | Each hex opens the right game with its last-used settings; **‹ Games** returns to the launcher; the Sphere hex returns to the root without the dialog | |
-| 3a | Launcher Resume | An unfinished Infinite, Classic, or Sphere run appears in the center with that mode's name and accent; the newest run opens intact, while pristine and finished boards leave the center empty | |
-| 3b | Launcher appearance | Launcher follows the system light/dark setting, or the appearance chosen inside a game, on the next visit | |
-| 4 | Infinite | Dig, flag, chord, pan, pinch, Light/Dark, and run persistence work | |
-| 5 | Classic | Fixed board opens; S/M/L, dig, flag, chord, reset, and completion work | |
+| 1a | Corner glyphs | Menu (bottom left) and Help (bottom right) are visible on the closed board, at least 44 pt each, clear of the home indicator; no Games pill anywhere | |
+| 1b | Menu first tap | One tap on the corner Menu opens the center flower; one tap on a flower tile (Undo, Flag, Size…) acts — no second tap needed; the corner glyph reads × while open and closes it | |
+| 1c | Theme tile | The flower's swatch tile cycles Light → Dark → Glow → Mercury; the choice persists across relaunch | |
+| 1d | Mercury | Mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
+| 2 | Sphere size | On a phone in portrait the sphere spans roughly 85% of the width; margins above and below still open the flower on tap | |
+| 3 | Help sheet | Help opens wide enough to read (≥340 pt on a phone), no keyboard hints, Settings pills and Done at least 44 pt tall, closes with × / Done / outside tap and never blocks the board afterwards | |
 | 6 | Sphere render | Sphere is centred and fully visible; no clipping at any edge | |
 | 7 | Sphere dig | Single tap reveals the intended tile — not a neighbour | |
 | 8 | Sphere flag | Long-press flags; flag stands proud of the shell | |
@@ -42,8 +40,8 @@ and any network dependency is a defect.
 | 18 | Backgrounding | Background 30s and return; no blank WebView, no reset | |
 | 19 | Reduced Motion | Launcher and endgame effects become instant states | |
 | 20 | Outbound links | Credits open in the system browser and return cleanly; the game is never replaced in-place | |
-| 21 | Rotation | Portrait ↔ landscape reflows without losing the run or obscuring the mode, Resume, or expanded theme choices | |
-| 22 | Android Back | From a game, **‹ Games** returns to the launcher; system Back exits or follows documented platform behaviour without losing state | |
+| 21 | Rotation | Portrait ↔ landscape reflows without losing the run or hiding the corner glyphs or the open flower | |
+| 22 | Android Back | System Back closes the flower or help sheet when open, otherwise exits or follows documented platform behaviour without losing the run | |
 | 23 | Android system bars | Content clears status/navigation/gesture insets in both orientations | |
 
 ## iPad gates
@@ -54,7 +52,7 @@ and Apple reviews it as one. These gates were missing entirely until
 
 | # | Check | Pass criteria | Result |
 |---|---|---|---|
-| 22 | iPad launch | Launch screen and launcher fill the display; no letterboxing or phone-sized layout stranded in a corner | |
+| 22 | iPad launch | Launch screen and sphere fill the display; no letterboxing or phone-sized layout stranded in a corner | |
 | 23 | iPad sphere | Sphere scales to the larger canvas rather than staying phone-sized; still centred and unclipped | |
 | 24 | Split View / Slide Over | Resizing does not break the canvas or lose the run | |
 | 25 | iPad rotation | All four orientations reflow (iPad allows upside-down, unlike iPhone) | |

@@ -1,25 +1,17 @@
 # Hexsweeper (iOS + Android)
 
-Native Capacitor shell for **Hexsweeper** — hex minesweeper in three shapes. The games
-are Canvas/vanilla-JS builds from
-[lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps them
-for iOS and Android from the same sealed offline payload.
+Native Capacitor shell for **Hexsweeper 3D** — hex minesweeper on a closed
+sphere. The game is the Canvas/vanilla-JS build from
+[lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper) (`sphere/`); this
+repo wraps it for iOS and Android as one sealed offline page.
 
-The app opens straight into **Sphere**, which restores its own unfinished run
-without asking. The **‹ Games** pill opens the three-hex launcher — **Infinite**, **Classic**,
-**Sphere**, each captioned with the setting it will load, with the newest saved
-run in the center as a mode-colored **Resume** hex. Style, size, and theme are
-changed inside each game.
-
-| Mode | Board | Source |
-|---|---|---|
-| **Infinite** | Endless flat board; Light/Dark keeps the run | `collection/theme-plate.html` |
-| **Classic** | Fixed flat board, neumorph | `collection/skin-classic.html` |
-| **Sphere** | Closed 3D Goldberg sphere | `sphere/` |
-
-Internal filenames keep `bounded` for compatibility; that is not a user-facing
-mode name. Classic snapshots mines, reveals, flags, size, time, and view state
-before the Games transition; only the centered Resume route restores it.
+The app opens straight into the sphere, which restores its own unfinished run
+without asking. Two quiet corner glyphs are the only fixed chrome: **Menu**
+(bottom left) opens the center flower — reset, undo, flag mode, board size,
+theme (Light · Dark · Glow · Mercury), warning style, drag inversion — and
+**Help** (bottom right) opens the touch-sized help sheet. Tapping anywhere
+outside the sphere also opens the flower. Infinite and Classic are web-only;
+they are not in this binary.
 
 Web version: <https://dr.eamer.dev/games/hexsweeper/>
 
@@ -56,20 +48,17 @@ App Store Connect app and abandoning this one.
 | `scripts/android-build.sh` | JDK-21 Gradle wrapper for APK/AAB builds |
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
-the sealed Sphere game; `www/games/launcher.html` is the
-three-hex launcher, and each `www/games/*.html` is one self-contained file with fonts,
-CSS, and all JS already inlined; the only shared asset is the sphere help
-screen's history image under `www/assets/`. Navigation between them is plain
-links, and every game carries a top-left **‹ Games** pill — the WebView has no
-browser back, and the bottom-right corner is already spoken for by each game's
-own chrome. `capacitor.config` is
+the sealed Sphere game — one self-contained file with fonts, CSS, and all JS
+(engine, Mercury's WebGL renderer, flower menu) inlined; the only other asset is
+the help sheet's history image under `www/assets/`. There is nothing to
+navigate to and no back affordance to need. `capacitor.config` is
 `.js` because `@capacitor/cli` requires a full `typescript` install purely to
 read a `.ts` config, which is not worth a toolchain in a repo with no TS source.
 
 ## Updating the games
 
-The payload is a pinned snapshot, not a live dependency. To pull in changes to
-any of the three games, or to the launcher, from a `hexsweeper` checkout:
+The payload is a pinned snapshot, not a live dependency. To pull in sphere
+changes from a `hexsweeper` checkout:
 
 ```bash
 python3 tools/export-collection.py --app     # writes build/app/

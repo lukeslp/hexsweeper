@@ -2,15 +2,16 @@
 
 ## Objective
 
-Ship Hexsweeper's Infinite, Classic, and Sphere boards as native iOS and Android
-apps: a thin Capacitor shell around a sealed, offline Canvas payload, reusing
+Ship Hexsweeper's sphere board as native iOS and Android apps: a thin
+Capacitor shell around a sealed, offline Canvas + WebGL payload, reusing
 the App Store Connect record already held under `app.hexodus.ios`.
 
 ## Architecture
 
-Prebuilt payload, not a build. `www/index.html` (Sphere)
-and `www/games/*` arrive fully inlined from hexsweeper's
-`export-collection.py --app`; this repo adds only the native shell.
+Prebuilt payload, not a build. `www/index.html` (the sphere, sealed) arrives
+fully inlined from hexsweeper's `export-collection.py --app`; this repo adds
+only the native shell. Infinite, Classic, and the launcher left the payload
+on 2026-08-17 (sphere-only front door).
 That keeps the game single-source in hexsweeper and this repo dependency-light
 (4 runtime packages).
 
@@ -119,8 +120,8 @@ captures with these generated ones is still an open call.
 
 ## Acceptance
 
-Launcher and all three games render and are playable in the native shell with no
-network; dig, flag, chord, pan, and camera drag work by touch where applicable;
+The sphere renders and is playable in the native shell with no
+network; the corner Menu opens the flower and its Theme tile reaches Mercury; dig, flag, chord, pan, and camera drag work by touch where applicable;
 safe-area insets are respected on a notched device; launch screen hands off to
 the first painted frame without a blank gap; smoke gates are green; build
 number exceeds the latest uploaded build.

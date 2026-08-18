@@ -1,8 +1,9 @@
 # Hexsweeper (native) — agent notes
 
-Capacitor shell around three of hexsweeper's games — infinite, bounded, sphere —
-on iOS and Android. The app opens straight into Sphere; a three-hex launcher
-(Infinite, Classic, Sphere) sits behind the Games pill. Read `README.md` first; it
+Capacitor shell around hexsweeper's sphere game on iOS and Android. The app opens
+straight into the sphere; a corner Menu glyph opens the flower (theme, size,
+undo, flag, reset), a corner Help glyph opens the help sheet. Infinite and
+Classic are web-only. Read `README.md` first; it
 explains why the bundle id says `hexodus` and why the build number starts at 7.
 
 ## The one rule
