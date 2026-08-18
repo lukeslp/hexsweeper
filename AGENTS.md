@@ -1,7 +1,9 @@
 # Hexsweeper (native) — agent notes
 
 Capacitor shell around three of hexsweeper's games — infinite, bounded, sphere —
-behind a three-hex launcher (Resume in the center) on iOS and Android. Read `README.md` first; it
+on iOS and Android. The app opens straight into Sphere; a resume gate asks about
+saved runs, and a three-hex launcher (Infinite, Classic, Sphere) sits behind the
+Games pill. Read `README.md` first; it
 explains why the bundle id says `hexodus` and why the build number starts at 7.
 
 ## The one rule

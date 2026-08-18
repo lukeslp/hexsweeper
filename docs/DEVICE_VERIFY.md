@@ -18,9 +18,11 @@ and any network dependency is a defect.
 
 | # | Check | Pass criteria | Result |
 |---|---|---|---|
-| 1 | Cold launch | Launch screen hands off to the three-hex launcher with no blank frame between | |
-| 2 | Launcher | Infinite, Classic, and Sphere are three clear hexes; each caption shows the setting that will load | |
-| 3 | Launcher routes | Each hex opens the right game with its last-used settings; **‹ Games** returns to the launcher | |
+| 1 | Cold launch | Launch screen hands off to Sphere with no blank frame between; no dialog when nothing is saved | |
+| 1a | Resume gate | With an unfinished Infinite, Classic, or Sphere run saved, cold launch shows the resume dialog naming the newest run; Resume reopens it, the other button dismisses and stays on Sphere; Escape / outside tap dismiss | |
+| 1b | Mercury | Theme cycles to Mercury: mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
+| 2 | Launcher | **‹ Games** on Sphere opens the launcher: Infinite, Classic, and Sphere are three clear hexes; each caption shows the setting that will load | |
+| 3 | Launcher routes | Each hex opens the right game with its last-used settings; **‹ Games** returns to the launcher; the Sphere hex returns to the root without the dialog | |
 | 3a | Launcher Resume | An unfinished Infinite, Classic, or Sphere run appears in the center with that mode's name and accent; the newest run opens intact, while pristine and finished boards leave the center empty | |
 | 3b | Launcher appearance | Launcher follows the system light/dark setting, or the appearance chosen inside a game, on the next visit | |
 | 4 | Infinite | Dig, flag, chord, pan, pinch, Light/Dark, and run persistence work | |

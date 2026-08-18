@@ -5,13 +5,12 @@ are Canvas/vanilla-JS builds from
 [lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps them
 for iOS and Android from the same sealed offline payload.
 
-The app opens on a three-hex launcher: **Infinite**, **Classic**, and
-**Sphere**, each captioned with the setting it will load (Light / Medium / Glow
-and so on). Tapping a hex opens that game straight away; style, size, and theme
-are changed inside the game. When an unfinished Infinite, Classic, or Sphere run
-exists, the newest one fills the center seat as a mode-colored **Resume** hex.
-Appearance follows the system unless the player has chosen light or dark in a
-game.
+The app opens straight into **Sphere**. If an unfinished Infinite, Classic, or
+Sphere run is saved, a small dialog asks first: resume it, or play Sphere. The
+**‹ Games** pill opens the three-hex launcher — **Infinite**, **Classic**,
+**Sphere**, each captioned with the setting it will load, with the newest saved
+run in the center as a mode-colored **Resume** hex. Style, size, and theme are
+changed inside each game.
 
 | Mode | Board | Source |
 |---|---|---|
@@ -58,8 +57,8 @@ App Store Connect app and abandoning this one.
 | `scripts/android-build.sh` | JDK-21 Gradle wrapper for APK/AAB builds |
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
-the three-hex launcher (Infinite, Classic, Sphere, Resume in the center), and
-each `www/games/*.html` is one self-contained file with fonts,
+the sealed Sphere game (with the resume gate); `www/games/launcher.html` is the
+three-hex launcher, and each `www/games/*.html` is one self-contained file with fonts,
 CSS, and all JS already inlined; the only shared asset is the sphere help
 screen's history image under `www/assets/`. Navigation between them is plain
 links, and every game carries a top-left **‹ Games** pill — the WebView has no
@@ -112,5 +111,7 @@ upload, pricing, and publication remain manual release steps. See
 fetch anything at runtime — `globeUrl()` in `sphere.js` only resolves textures
 relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
 back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
-network. Their daymap provenance is also unrecorded. The seven offline themes
-(Light, Shell, Dark, Ink, Float, Card, Glow) ship; the web build keeps all nine.
+network. Their daymap provenance is also unrecorded. The eight offline themes
+(Light, Shell, Dark, Ink, Float, Card, Glow, Mercury) ship; the web build keeps
+all ten. Mercury's mirrored body is a WebGL2 shader with no texture asset, so it
+seals offline; without WebGL it falls back to a plain metal field.

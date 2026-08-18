@@ -8,8 +8,9 @@ the App Store Connect record already held under `app.hexodus.ios`.
 
 ## Architecture
 
-Prebuilt payload, not a build. `www/index.html` arrives fully inlined from
-hexsweeper's `export-collection.py --app`; this repo adds only the native shell.
+Prebuilt payload, not a build. `www/index.html` (Sphere, with the resume gate)
+and `www/games/*` arrive fully inlined from hexsweeper's
+`export-collection.py --app`; this repo adds only the native shell.
 That keeps the game single-source in hexsweeper and this repo dependency-light
 (4 runtime packages).
 

@@ -33,7 +33,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Age rating answered — every category NONE/false
 - [x] Export compliance: `ITSAppUsesNonExemptEncryption` is `false`
 - [x] Build 37 uploaded to TestFlight and processed as VALID; nothing submitted for review
-- [x] Build 38 uploaded to TestFlight 2026-08-17 with the three-hex launcher (Infinite, Classic, Sphere, Resume in the center); confirm it processes as VALID
+- [x] Build 38 uploaded to TestFlight 2026-08-17 with the three-hex launcher at the root
+- [x] Build 39 uploaded to TestFlight 2026-08-17: Sphere-first root with the resume gate, launcher behind Games, Mercury theme; confirm it processes as VALID
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
