@@ -20,8 +20,8 @@ and any network dependency is a defect.
 |---|---|---|---|
 | 1 | Cold launch | Launch screen hands off to Sphere with no blank frame between and no prompt; an unfinished sphere run restores in place | |
 | 1a | Corner glyphs | Menu (bottom left) and Help (bottom right) are visible on the closed board, at least 44 pt each, clear of the home indicator; no Games pill anywhere | |
-| 1b | Menu first tap | One tap on the corner Menu opens the flower **below the sphere** (beside it in landscape) with the board left sharp — no blur; one tap on a flower tile (Undo, Flag, Size…) acts — no second tap needed; the corner glyph reads × while open and closes it | |
-| 1c | Theme tile | The flower's swatch tile cycles Light → Dark → Stratosphere → Mercury → Ion Storm → Aurora → Galaxy → Gilded Ribbon → Heat Lightning, each previewing on the visible sphere as you tap; the choice persists across relaunch | |
+| 1b | Menu first tap | One tap on the corner Menu seats the menu **on the sphere's own faces** (seven labelled tiles: Theme, Warn, Undo, Reset, Flag, Invert, Size), board sharp — no blur; one tap on a tile acts — no second tap needed; dragging the board while open spins it and the menu rides along, re-seating if it nears the rim; a still tap on the board or the × glyph closes | |
+| 1c | Theme tile | The flower's swatch tile cycles Light → Dark → Stratosphere → Mercury → Ion Storm → Aurora → Galaxy → Gilded Ribbon → Heat Lightning, each previewing on the sphere around the menu as you tap; the choice persists across relaunch | |
 | 1c′ | Textured materials | Stratosphere shows the drifting sky on the mirror (light chrome, dark glass wells); Ion Storm shows the storm cloud trailing the rotation; Galaxy, Gilded Ribbon, Heat Lightning show their textures; Aurora its curtains — all offline, in airplane mode | |
 | 1d | Mercury | Mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
 | 2 | Sphere size | On a phone in portrait the sphere spans roughly 85% of the width; margins above and below still open the flower on tap | |

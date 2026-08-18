@@ -123,7 +123,7 @@ try {
     await delay(1400);
     if (shot.flower) {
       await ev('document.querySelector(".is-menu-corner .is-dock").click()');
-      await waitFor(() => ev('document.getElementById("hex-bloom").dataset.phase === "open" && (() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]"); return el && el.getBoundingClientRect().width >= 60; })()'), "flower");
+      await waitFor(() => ev('document.getElementById("hex-bloom").dataset.phase === "open" && (() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]"); return el && el.getBoundingClientRect().width >= 48; })()'), "flower");
       await delay(700);
     }
     const png = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });

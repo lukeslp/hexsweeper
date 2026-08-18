@@ -44,7 +44,7 @@ DEVICES = {
 SHOTS = [
     ("01-mercury", "Minesweeper on a\nmirrored sphere", "#f4fbff", "#000000"),
     ("02-stratosphere", "Every face has six\nneighbors. No edges.", "#ffffff", "#0b3a5c"),
-    ("03-flower", "One tap: undo, flag,\nsize, theme, reset", "#111111", None),
+    ("03-flower", "The menu lives\non the sphere", "#111111", None),
     ("04-ion-storm", "Long-press to flag.\nUndo a bad tap.", "#f1e8ff", "#000000"),
     ("05-heat-lightning", "Nine looks, from\npaper to storm", "#fff2e2", "#000000"),
     ("06-dark", "Offline. No account,\nno ads, no tracking.", "#ffffff", None),

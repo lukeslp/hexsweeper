@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 46 is the latest uploaded TestFlight build, attached to 1.0, and the
+this same record. Build 47 is the latest uploaded TestFlight build, attached to 1.0, and the
 checked-in project matches it.
 
 ## Archive → TestFlight
@@ -128,6 +128,10 @@ Done (updated 2026-08-11, through the App Store Connect API):
       taps preview on the live board (vendored from hexsweeper `e7585a0`).
       Screenshot 03 regenerated to match. ASC has no What's New on a first
       version; release notes stay drafted in app-store/metadata
+- [x] Build 47 uploaded and attached to 1.0 on 2026-08-18: the menu is seated
+      on the sphere's own faces (Face Takeover, productionised — labelled,
+      finger-sized, board rotatable while open); vendored from hexsweeper
+      `8a8e925`. Screenshot 03 recaptioned "The menu lives on the sphere"
 
 Still owed:
 

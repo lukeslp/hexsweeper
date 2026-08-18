@@ -10,7 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` is 46 for the release candidate (splash + sphere-only payload + off-sphere flower)
+- [x] `CURRENT_PROJECT_VERSION` is 47 for the release candidate (splash + sphere-only payload + on-sphere face menu)
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [x] Archive signs cleanly under team `596T7J7FB6`
@@ -41,7 +41,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Build 43 uploaded to TestFlight 2026-08-18: Ion Storm replaces Amber Cells
 - [x] Build 44 uploaded to TestFlight 2026-08-18: nine-theme flower cycle (Aurora, Galaxy, Gilded Ribbon, Heat Lightning added)
 - [x] Build 45 uploaded 2026-08-18: sphere launch image
-- [x] Build 46 uploaded 2026-08-18: flower off the sphere, no scrim blur; attached to 1.0 as the release candidate
+- [x] Build 46 uploaded 2026-08-18: flower off the sphere, no scrim blur
+- [x] Build 47 uploaded 2026-08-18: menu on the sphere's faces (Face Takeover); attached to 1.0 as the release candidate
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
