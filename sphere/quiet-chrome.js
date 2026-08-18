@@ -134,6 +134,50 @@
       if (b) b.click();
     });
 
+    // Hidden second sphere. Hold the mine count and the readout fills with
+    // water; keep holding and you drop into the Water Wheel (the sphere where
+    // armed mines must be spun below the waterline). The sphere autosaves on
+    // pagehide, so nothing is lost by leaving. Screen-reader users get the
+    // same door as a named (visually hidden) button rather than a gesture.
+    const wheelHref = global.HEXSWEEPER_WHEEL_HREF || "../wheel/";
+    const HOLD_MS = 1200;
+    let holdTimer = null;
+    let hintTimer = null;
+    function openWheel() {
+      announce("Opening the Water Wheel");
+      if (typeof game.pauseTimer === "function") game.pauseTimer();
+      window.location.href = wheelHref;
+    }
+    function cancelHold() {
+      clearTimeout(holdTimer);
+      clearTimeout(hintTimer);
+      holdTimer = null;
+      hintTimer = null;
+      mines.classList.remove("is-holding", "is-hinting");
+    }
+    function startHold(e) {
+      if (e.type === "pointerdown" && e.button !== 0) return;
+      cancelHold();
+      mines.classList.add("is-holding");
+      hintTimer = setTimeout(() => mines.classList.add("is-hinting"), 300);
+      holdTimer = setTimeout(() => {
+        cancelHold();
+        openWheel();
+      }, HOLD_MS);
+    }
+    mines.classList.add("qc-egg-door");
+    mines.addEventListener("pointerdown", startHold);
+    ["pointerup", "pointercancel", "pointerleave"].forEach((type) => mines.addEventListener(type, cancelHold));
+    mines.addEventListener("contextmenu", (e) => e.preventDefault());
+    const eggBtn = el("button", "sr-only qc-egg-btn", "Open the Water Wheel, a hidden sphere where mines are quenched underwater");
+    eggBtn.type = "button";
+    eggBtn.id = "qc-wheel";
+    eggBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      openWheel();
+    });
+    root.appendChild(eggBtn);
+
     setInterval(paint, 250);
     paint();
 

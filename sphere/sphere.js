@@ -814,6 +814,7 @@
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v2";
   const RUN_STORAGE_KEY_LEGACY = "hexsweeper-sphere-run-v1";
+  const BEST_STORAGE_KEY = "hexsweeper-sphere-best-v1";
   /** History-tile accent — mark only, never well fill. */
   const YELLOW_COUNT = "#facc15";
   const COUNT_STYLES = [
@@ -3267,11 +3268,54 @@
       if (safeRevealed === safeTotal) gameOver(true);
     }
 
+    /**
+     * Best times per board size — the canonical sphere only (variants
+     * decide their own wins), keyed by difficulty id. A run revived by
+     * Undo still counts: Undo is a feature, not a cheat, and the timer
+     * kept running through it.
+     */
+    function readBestTimes() {
+      try {
+        const raw = localStorage.getItem(BEST_STORAGE_KEY);
+        const data = raw ? JSON.parse(raw) : null;
+        if (!data || typeof data !== "object") return {};
+        const out = {};
+        SIZE_ORDER.forEach((id) => {
+          const entry = data[id];
+          if (entry && Number.isFinite(entry.seconds) && entry.seconds >= 0) {
+            out[id] = { seconds: entry.seconds | 0, at: typeof entry.at === "string" ? entry.at : null };
+          }
+        });
+        return out;
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function recordBestTime() {
+      if (variant) return null;
+      const seconds = Math.max(0, state.timeElapsed | 0);
+      const size = state.difficulty;
+      const best = readBestTimes();
+      const previous = best[size] ? best[size].seconds : null;
+      const isNew = previous == null || seconds < previous;
+      if (isNew) {
+        best[size] = { seconds, at: new Date().toISOString() };
+        try {
+          localStorage.setItem(BEST_STORAGE_KEY, JSON.stringify(best));
+        } catch (_) {}
+      }
+      state.lastBest = { size, seconds, previous, isNew, best: isNew ? seconds : previous };
+      return state.lastBest;
+    }
+
     function gameOver(won) {
       if (state.isGameOver) return false;
       state.isGameOver = true;
       state.won = won;
       stopTimer();
+      state.lastBest = null;
+      if (won) recordBestTime();
       callVariant("terminal", { won, outcome: won ? "win" : "loss" });
       if (!won) {
         startLoseFx(state.detonatorIdx >= 0 ? state.detonatorIdx : 0);
@@ -3286,11 +3330,17 @@
     }
 
     function terminalCopy(won) {
+      const lb = state.lastBest;
+      const bestNote = !won || !lb
+        ? ""
+        : lb.isNew
+          ? (lb.previous == null ? " · First clear at this size" : ` · New best (was ${formatTime(lb.previous)})`)
+          : ` · Best ${formatTime(lb.best)}`;
       const defaults = won
         ? {
-            message: "Cleared the sphere!",
+            message: lb && lb.isNew && lb.previous != null ? "New best time!" : "Cleared the sphere!",
             share: true,
-            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
+            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}${bestNote}`,
           }
         : { message: "Mine detonated.", share: false };
       const custom = callVariant("terminalCopy", {
@@ -5568,6 +5618,8 @@
       digAt: (index) => reveal(index),
       flagAt: (index) => toggleFlag(index),
       getState: () => state,
+      getBestTimes: () => readBestTimes(),
+      formatTime,
       pickTile,
       projectTile,
       mineTargetForDifficulty,

@@ -782,6 +782,52 @@ body.quiet-chrome-ui .hud-help-fixed {
 .qc-stat svg { width: 14px; height: 14px; opacity: 0.8; }
 .qc-stat b { font-weight: 600; min-width: 2ch; }
 
+/* The mine count is a door: hold it and water rises through the readout;
+   hold through the fill and the Water Wheel opens (quiet-chrome.js). */
+.qc-egg-door {
+  position: relative;
+  padding: 0.35rem 0.55rem;
+  margin: -0.35rem -0.55rem;
+  border-radius: 999px;
+  pointer-events: auto;
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+.qc-egg-door::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(to top, rgba(28, 120, 150, 0.55), rgba(143, 233, 242, 0.35));
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 0.9s linear;
+}
+.qc-egg-door.is-hinting::after { transform: scaleY(1); }
+.qc-egg-door.is-hinting { color: var(--qc-ink); opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .qc-egg-door::after { transition: none; }
+}
+.qc-egg-btn {
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  pointer-events: auto;
+}
+.qc-egg-btn:focus-visible {
+  position: fixed !important;
+  top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translate(-50%, 2.2rem);
+  width: auto; height: auto; padding: 0.4rem 0.8rem; margin: 0; clip: auto;
+  border-radius: 999px; background: var(--qc-halo); color: var(--qc-ink);
+  outline: 2px solid var(--qc-ink); font: inherit;
+}
+
 .qc-bar {
   position: absolute;
   left: max(10px, calc(env(safe-area-inset-left, 0px) + 8px));
@@ -1413,6 +1459,9 @@ body.help-open { overflow: hidden; }
 .help-size { display: grid; place-items: center; line-height: 1.05; }
 .help-size b { font-size: 0.86rem; }
 .help-size small { font-size: 0.56rem; font-weight: 500; opacity: 0.7; }
+.help-egg-hint { margin: -0.35rem 0 0.9rem; font-size: 0.68rem; opacity: 0.55; font-style: italic; }
+.help-size .help-size-best { opacity: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+.help-size .help-size-best[hidden] { display: none; }
 .help-size[aria-pressed="true"], .help-warn[aria-pressed="true"] {
   border-color: var(--text-main);
   background: color-mix(in srgb, var(--text-main) 8%, transparent);
@@ -1581,9 +1630,10 @@ body.help-open { overflow: hidden; }
       <div class="help-theme-grid" id="help-theme-grid"></div>
     </div>
     <div class="help-sizes" id="help-sizes" role="group" aria-label="Board size">
-      <span class="help-packs-cap">Board size <em>· starts a new sphere</em></span>
+      <span class="help-packs-cap">Board size <em>· starts a new sphere · best times live here</em></span>
       <div class="help-size-grid" id="help-size-grid"></div>
     </div>
+    <p class="help-egg-hint" id="help-egg-hint">There is a second sphere. Patience with the mine count finds it.</p>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
       <span class="help-packs-cap">Settings</span>
       <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
@@ -1626,6 +1676,7 @@ try {
 window.HEXSWEEPER_SPHERE_COLLECTION = true;
 window.HEXSWEEPER_SPHERE_TAKE = "claude-amber-codex";
 window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweeper/sphere/";
+window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
 </script>
 <script>
 /* hexasphere.js */
@@ -2695,6 +2746,7 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v2";
   const RUN_STORAGE_KEY_LEGACY = "hexsweeper-sphere-run-v1";
+  const BEST_STORAGE_KEY = "hexsweeper-sphere-best-v1";
   /** History-tile accent — mark only, never well fill. */
   const YELLOW_COUNT = "#facc15";
   const COUNT_STYLES = [
@@ -5148,11 +5200,54 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
       if (safeRevealed === safeTotal) gameOver(true);
     }
 
+    /**
+     * Best times per board size — the canonical sphere only (variants
+     * decide their own wins), keyed by difficulty id. A run revived by
+     * Undo still counts: Undo is a feature, not a cheat, and the timer
+     * kept running through it.
+     */
+    function readBestTimes() {
+      try {
+        const raw = localStorage.getItem(BEST_STORAGE_KEY);
+        const data = raw ? JSON.parse(raw) : null;
+        if (!data || typeof data !== "object") return {};
+        const out = {};
+        SIZE_ORDER.forEach((id) => {
+          const entry = data[id];
+          if (entry && Number.isFinite(entry.seconds) && entry.seconds >= 0) {
+            out[id] = { seconds: entry.seconds | 0, at: typeof entry.at === "string" ? entry.at : null };
+          }
+        });
+        return out;
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function recordBestTime() {
+      if (variant) return null;
+      const seconds = Math.max(0, state.timeElapsed | 0);
+      const size = state.difficulty;
+      const best = readBestTimes();
+      const previous = best[size] ? best[size].seconds : null;
+      const isNew = previous == null || seconds < previous;
+      if (isNew) {
+        best[size] = { seconds, at: new Date().toISOString() };
+        try {
+          localStorage.setItem(BEST_STORAGE_KEY, JSON.stringify(best));
+        } catch (_) {}
+      }
+      state.lastBest = { size, seconds, previous, isNew, best: isNew ? seconds : previous };
+      return state.lastBest;
+    }
+
     function gameOver(won) {
       if (state.isGameOver) return false;
       state.isGameOver = true;
       state.won = won;
       stopTimer();
+      state.lastBest = null;
+      if (won) recordBestTime();
       callVariant("terminal", { won, outcome: won ? "win" : "loss" });
       if (!won) {
         startLoseFx(state.detonatorIdx >= 0 ? state.detonatorIdx : 0);
@@ -5167,11 +5262,17 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     }
 
     function terminalCopy(won) {
+      const lb = state.lastBest;
+      const bestNote = !won || !lb
+        ? ""
+        : lb.isNew
+          ? (lb.previous == null ? " · First clear at this size" : ` · New best (was ${formatTime(lb.previous)})`)
+          : ` · Best ${formatTime(lb.best)}`;
       const defaults = won
         ? {
-            message: "Cleared the sphere!",
+            message: lb && lb.isNew && lb.previous != null ? "New best time!" : "Cleared the sphere!",
             share: true,
-            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}`,
+            meta: `${formatTime(state.timeElapsed)} · ${state.mineCount} mines · ${SIZE_LABEL[state.difficulty] || "M"}${bestNote}`,
           }
         : { message: "Mine detonated.", share: false };
       const custom = callVariant("terminalCopy", {
@@ -7449,6 +7550,8 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
       digAt: (index) => reveal(index),
       flagAt: (index) => toggleFlag(index),
       getState: () => state,
+      getBestTimes: () => readBestTimes(),
+      formatTime,
       pickTile,
       projectTile,
       mineTargetForDifficulty,
@@ -9259,6 +9362,50 @@ void main() {
       if (b) b.click();
     });
 
+    // Hidden second sphere. Hold the mine count and the readout fills with
+    // water; keep holding and you drop into the Water Wheel (the sphere where
+    // armed mines must be spun below the waterline). The sphere autosaves on
+    // pagehide, so nothing is lost by leaving. Screen-reader users get the
+    // same door as a named (visually hidden) button rather than a gesture.
+    const wheelHref = global.HEXSWEEPER_WHEEL_HREF || "../wheel/";
+    const HOLD_MS = 1200;
+    let holdTimer = null;
+    let hintTimer = null;
+    function openWheel() {
+      announce("Opening the Water Wheel");
+      if (typeof game.pauseTimer === "function") game.pauseTimer();
+      window.location.href = wheelHref;
+    }
+    function cancelHold() {
+      clearTimeout(holdTimer);
+      clearTimeout(hintTimer);
+      holdTimer = null;
+      hintTimer = null;
+      mines.classList.remove("is-holding", "is-hinting");
+    }
+    function startHold(e) {
+      if (e.type === "pointerdown" && e.button !== 0) return;
+      cancelHold();
+      mines.classList.add("is-holding");
+      hintTimer = setTimeout(() => mines.classList.add("is-hinting"), 300);
+      holdTimer = setTimeout(() => {
+        cancelHold();
+        openWheel();
+      }, HOLD_MS);
+    }
+    mines.classList.add("qc-egg-door");
+    mines.addEventListener("pointerdown", startHold);
+    ["pointerup", "pointercancel", "pointerleave"].forEach((type) => mines.addEventListener(type, cancelHold));
+    mines.addEventListener("contextmenu", (e) => e.preventDefault());
+    const eggBtn = el("button", "sr-only qc-egg-btn", "Open the Water Wheel, a hidden sphere where mines are quenched underwater");
+    eggBtn.type = "button";
+    eggBtn.id = "qc-wheel";
+    eggBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      openWheel();
+    });
+    root.appendChild(eggBtn);
+
     setInterval(paint, 250);
     paint();
 
@@ -9356,7 +9503,7 @@ const sphereChrome = initQuietChrome(sphereGame);
       b.dataset.size = id;
       b.setAttribute("aria-pressed", "false");
       b.setAttribute("aria-label", "Board size " + letter + ", " + faces + ". Starts a new sphere.");
-      b.innerHTML = "<b>" + letter + "</b><small>" + faces + "</small>";
+      b.innerHTML = "<b>" + letter + "</b><small>" + faces + '</small><small class="help-size-best" data-best></small>';
       b.addEventListener("click", () => {
         if (sphereGame.getState().difficulty === id) return;
         sphereGame.setSize(id);
@@ -9368,7 +9515,15 @@ const sphereChrome = initQuietChrome(sphereGame);
   }
   function syncSizes() {
     const d = sphereGame.getState().difficulty;
-    sizeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === d)));
+    const best = (sphereGame.getBestTimes && sphereGame.getBestTimes()) || {};
+    sizeButtons.forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.size === d));
+      const slot = b.querySelector("[data-best]");
+      if (!slot) return;
+      const entry = best[b.dataset.size];
+      slot.textContent = entry ? "Best " + sphereGame.formatTime(entry.seconds) : "";
+      slot.hidden = !entry;
+    });
   }
 
   function syncAll() { sync(); syncSizes(); }

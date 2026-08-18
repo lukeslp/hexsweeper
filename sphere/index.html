@@ -607,6 +607,9 @@ body.help-open { overflow: hidden; }
 .help-size { display: grid; place-items: center; line-height: 1.05; }
 .help-size b { font-size: 0.86rem; }
 .help-size small { font-size: 0.56rem; font-weight: 500; opacity: 0.7; }
+.help-egg-hint { margin: -0.35rem 0 0.9rem; font-size: 0.68rem; opacity: 0.55; font-style: italic; }
+.help-size .help-size-best { opacity: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+.help-size .help-size-best[hidden] { display: none; }
 .help-size[aria-pressed="true"], .help-warn[aria-pressed="true"] {
   border-color: var(--text-main);
   background: color-mix(in srgb, var(--text-main) 8%, transparent);
@@ -811,9 +814,10 @@ body.help-open { overflow: hidden; }
       <div class="help-theme-grid" id="help-theme-grid"></div>
     </div>
     <div class="help-sizes" id="help-sizes" role="group" aria-label="Board size">
-      <span class="help-packs-cap">Board size <em>· starts a new sphere</em></span>
+      <span class="help-packs-cap">Board size <em>· starts a new sphere · best times live here</em></span>
       <div class="help-size-grid" id="help-size-grid"></div>
     </div>
+    <p class="help-egg-hint" id="help-egg-hint">There is a second sphere. Patience with the mine count finds it.</p>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
       <span class="help-packs-cap">Settings</span>
       <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
@@ -935,7 +939,7 @@ const sphereChrome = initQuietChrome(sphereGame);
       b.dataset.size = id;
       b.setAttribute("aria-pressed", "false");
       b.setAttribute("aria-label", "Board size " + letter + ", " + faces + ". Starts a new sphere.");
-      b.innerHTML = "<b>" + letter + "</b><small>" + faces + "</small>";
+      b.innerHTML = "<b>" + letter + "</b><small>" + faces + '</small><small class="help-size-best" data-best></small>';
       b.addEventListener("click", () => {
         if (sphereGame.getState().difficulty === id) return;
         sphereGame.setSize(id);
@@ -947,7 +951,15 @@ const sphereChrome = initQuietChrome(sphereGame);
   }
   function syncSizes() {
     const d = sphereGame.getState().difficulty;
-    sizeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === d)));
+    const best = (sphereGame.getBestTimes && sphereGame.getBestTimes()) || {};
+    sizeButtons.forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.size === d));
+      const slot = b.querySelector("[data-best]");
+      if (!slot) return;
+      const entry = best[b.dataset.size];
+      slot.textContent = entry ? "Best " + sphereGame.formatTime(entry.seconds) : "";
+      slot.hidden = !entry;
+    });
   }
 
   function syncAll() { sync(); syncSizes(); }

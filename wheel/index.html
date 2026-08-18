@@ -867,6 +867,18 @@ button, a, input[type="range"] { touch-action: manipulation; }
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
+<!-- WEB_GAMES_BACK_START --><style>
+/* Web-only return to the canonical sphere at the site root; collection and
+   native exports drop this block (the native bundle adds its own pill). */
+.web-games-back{position:fixed;z-index:9999;top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));
+ display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 15px 0 12px;border:1px solid rgba(255,255,255,.22);
+ border-radius:999px;background:rgba(18,22,30,.62);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;
+ font:600 .78rem/1 "IBM Plex Sans",system-ui,sans-serif;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.web-games-back:focus-visible{outline:3px solid #7fc4f2;outline-offset:2px}
+.web-games-back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+</style><a class="web-games-back" href="../">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Sphere
+</a><!-- WEB_GAMES_BACK_END -->
 <div class="canvas-container">
   <canvas id="gameCanvas" tabindex="0" aria-label="Hex sphere minesweeper board" aria-describedby="wheel-instructions"></canvas>
 </div>

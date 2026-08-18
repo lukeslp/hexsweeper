@@ -1485,9 +1485,12 @@ def export_sphere(exp: dict) -> str:
     elif source_name == "sphere":
         # Pens live under collection/ (or on CodePen); reach the canonical
         # sphere theme textures on the live site. Web root and app narrow this.
+        # The hidden Water Wheel likewise points at the live page from a pen;
+        # the web root and the app rewrite it to their own copy.
         reflection_texture_line = (
             'window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = '
             f'"{SITE_BASE}/sphere/";\n'
+            f'window.HEXSWEEPER_WHEEL_HREF = "{SITE_BASE}/wheel/";\n'
         )
     else:
         reflection_texture_line = ""
@@ -1762,6 +1765,14 @@ def export_sphere_app(exp: dict) -> str:
     markup = markup.replace(
         f'window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "{SITE_BASE}/sphere/";\n', "", 1
     )
+    # The hidden Water Wheel ships beside index.html as a second sealed page.
+    markup = markup.replace(
+        f'window.HEXSWEEPER_WHEEL_HREF = "{SITE_BASE}/wheel/";\n',
+        'window.HEXSWEEPER_WHEEL_HREF = "wheel.html";\n',
+        1,
+    )
+    if 'HEXSWEEPER_WHEEL_HREF = "wheel.html"' not in markup:
+        raise SystemExit("export_sphere_app: Water Wheel href not rewritten")
 
     # Sphere is the app root (www/index.html); bundle assets sit beside it.
     markup = markup.replace(
@@ -1781,6 +1792,51 @@ def export_sphere_app(exp: dict) -> str:
     # globeUrl is only called for themes carrying `globeMap`, and the THEMES
     # filter drops every one of those under HEXSWEEPER_SPHERE_APP.
     return appify(markup, label="sphere")
+
+
+# The Wheel's way home inside the app: same glass pill as the old Games
+# affordance, pointing at the sphere it was opened from.
+APP_WHEEL_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "index.html").replace(
+    "</svg>Games</a>", "</svg>Sphere</a>", 1
+)
+
+
+def export_wheel_app() -> str:
+    """The Water Wheel as the app's hidden second sphere (www/wheel.html).
+
+    Reached only by holding the mine count on the canonical sphere. Sealed the
+    same way as index.html: fonts, chrome, scripts and the tutorial's SVGs are
+    inlined by export_sphere; the globe daymaps (the Wheel's only network
+    fetch) are dropped by the same HEXSWEEPER_SPHERE_APP filter the canonical
+    engine uses; the Wheel's own tutorial shows on first visit because it is
+    the only place quenching is explained.
+    """
+    exp = next(e for e in EXPERIMENTS if e["id"] == "water-wheel")
+    markup = export_sphere(exp)
+    markup = re.sub(
+        r"<title>.*?</title>",
+        "<title>Hexsweeper · Water Wheel</title>",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    welcome_key = exp.get("welcomeKey", "hexsweeper-sphere-welcome-v1")
+    markup = markup.replace(
+        f"  localStorage.setItem({json.dumps(welcome_key)}, '1');\n", "", 1
+    )
+    if f"localStorage.setItem({json.dumps(welcome_key)}" in markup:
+        raise SystemExit("export_wheel_app: tutorial key is still pre-set")
+    markup = markup.replace(
+        "window.HEXSWEEPER_SPHERE_COLLECTION = true;",
+        "window.HEXSWEEPER_SPHERE_APP = true;",
+        1,
+    )
+    if "HEXSWEEPER_SPHERE_APP" not in markup:
+        raise SystemExit("export_wheel_app: app flag not injected")
+    markup = markup.replace("</body>", f"{APP_WHEEL_BACK_PILL}</body>", 1)
+    if 'class="app-back" href="index.html"' not in markup:
+        raise SystemExit("export_wheel_app: Sphere pill missing")
+    return appify(markup, label="wheel")
 
 
 WEB_ROOT_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
@@ -1823,6 +1879,14 @@ def export_sphere_web() -> str:
     )
     if 'HEXSWEEPER_REFLECTION_TEXTURE_BASE = "sphere/"' not in markup:
         raise SystemExit("export_sphere_web: texture base not narrowed")
+    # The Water Wheel is served from wheel/ beside the root page.
+    markup = markup.replace(
+        f'window.HEXSWEEPER_WHEEL_HREF = "{SITE_BASE}/wheel/";',
+        'window.HEXSWEEPER_WHEEL_HREF = "wheel/";',
+        1,
+    )
+    if 'HEXSWEEPER_WHEEL_HREF = "wheel/"' not in markup:
+        raise SystemExit("export_sphere_web: Water Wheel href not narrowed")
     # Root social card: the product, not the pen.
     markup = re.sub(
         r'<meta name="description" content="[^"]*">',
@@ -1949,6 +2013,11 @@ def write_app_build() -> list[Path]:
     sphere = APP_BUILD / "index.html"
     sphere.write_text(export_sphere_app(sphere_exp), encoding="utf-8")
     written.append(sphere)
+
+    # Hidden second sphere: hold the mine count on index.html to reach it.
+    wheel = APP_BUILD / "wheel.html"
+    wheel.write_text(export_wheel_app(), encoding="utf-8")
+    written.append(wheel)
 
     # The sphere's help lightbox reads this from the bundle, beside index.html.
     history = APP_BUILD / "assets" / "classic-minesweeper.png"

@@ -358,7 +358,12 @@
     THEME_EARTH,
     THEME_MOON,
     THEME_WATER,
-  ];
+  ].filter((t) => {
+    // Sealed native builds carry the Wheel as a hidden second sphere. Its
+    // globe daymaps are the only network fetch here, so they stay web-only —
+    // same rule as the canonical engine.
+    return !(window.HEXSWEEPER_SPHERE_APP && t.globeMap);
+  });
   const DEFAULT_THEME = THEME_LIGHT;
 
   /**

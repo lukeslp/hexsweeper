@@ -321,6 +321,87 @@ try {
   assert.equal(mercury.material, "mercury", "reflection renderer is not on the Mercury material");
   assert.equal(mercury.chrome, "dark", "Mercury did not switch chrome to dark");
   assert.equal(mercury.stored, "mercury", "Mercury theme did not persist");
+  // Best times: a win on XS records the size's best, the banner says so, and
+  // the size pill on the sheet shows it. A slower second win leaves it alone.
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "light")); void 0;');
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setSize("xsmall"); void 0;');
+  await delay(250);
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await delay(60);
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await waitExpression('!window.HEXSWEEPER_SPHERE_GAME.getState().isFirstClick', "XS first clear did not resolve");
+  await evaluate('(() => { const g = window.HEXSWEEPER_SPHERE_GAME; g.getState().timeElapsed = 42; g.getState().cells.forEach((c, i) => { if (!c.isMine && !c.revealed) g.digAt(i); }); })()');
+  await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().won === true', "clearing every safe face did not win");
+  const win = await evaluate(`(() => ({
+    best: JSON.parse(localStorage.getItem("hexsweeper-sphere-best-v1") || "{}"),
+    msg: document.getElementById("banner-msg").textContent.trim(),
+    meta: document.getElementById("banner-meta").textContent.trim(),
+  }))()`);
+  assert.equal(win.best.xsmall && win.best.xsmall.seconds, 42, `XS best not recorded: ${JSON.stringify(win.best)}`);
+  assert.match(win.meta, /First clear at this size/, `first-win banner meta is "${win.meta}"`);
+  await evaluate('document.getElementById("qc-help").click()');
+  await waitExpression('!document.getElementById("help-overlay").hidden', "help did not open after the win");
+  assert.equal(await evaluate('document.querySelector("#help-size-grid .help-size[data-size=xsmall] [data-best]").textContent.trim()'), "Best 42s", "XS pill does not show the best time");
+  assert.equal(await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium] [data-best]").hidden'), true, "M pill shows a best it never earned");
+  assert.match(await evaluate('document.getElementById("help-egg-hint").textContent'), /second sphere/i, "the settings sheet lost its Wheel hint");
+  await evaluate('document.getElementById("help-done-btn").click()');
+  await waitExpression('document.getElementById("help-overlay").hidden', "help did not close after the win");
+  await evaluate('document.getElementById("qc-reset").click()');
+  await delay(250);
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await delay(60);
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await waitExpression('!window.HEXSWEEPER_SPHERE_GAME.getState().isFirstClick', "XS second first-clear did not resolve");
+  await evaluate('(() => { const g = window.HEXSWEEPER_SPHERE_GAME; g.getState().timeElapsed = 90; g.getState().cells.forEach((c, i) => { if (!c.isMine && !c.revealed) g.digAt(i); }); })()');
+  await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().won === true', "second XS clear did not win");
+  const slower = await evaluate(`(() => ({ best: JSON.parse(localStorage.getItem("hexsweeper-sphere-best-v1")).xsmall.seconds, meta: document.getElementById("banner-meta").textContent.trim() }))()`);
+  assert.equal(slower.best, 42, "a slower win overwrote the best");
+  assert.match(slower.meta, /Best 42s/, `slower-win banner meta is "${slower.meta}"`);
+  await evaluate('document.getElementById("qc-reset").click()');
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setSize("medium"); void 0;');
+  await delay(250);
+
+  // The Water Wheel door: hold the mine count; the payload carries wheel.html
+  // (sealed, app-flagged, its own tutorial, a Sphere pill home); the sphere
+  // resumes where it was on the way back.
+  assert.equal(await evaluate('window.HEXSWEEPER_WHEEL_HREF'), "wheel.html", "app payload does not point the door at wheel.html");
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await delay(60);
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await waitExpression('!window.HEXSWEEPER_SPHERE_GAME.getState().isFirstClick', "pre-wheel clear did not resolve");
+  const revealedBeforeWheel = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length');
+  const door = await evaluate('(() => { const r = document.querySelector(".qc-mines").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()');
+  await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: door.x, y: door.y }] });
+  await delay(600);
+  assert.equal(await evaluate('document.querySelector(".qc-mines").classList.contains("is-hinting")'), true, "holding the mine count shows no water rising");
+  await delay(1000);
+  await waitExpression('location.pathname.endsWith("/wheel.html") && document.readyState === "complete"', "holding the mine count did not open the Water Wheel");
+  await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }).catch(() => {});
+  await delay(600);
+  const wheel = await evaluate(`(() => ({
+    app: window.HEXSWEEPER_SPHERE_APP === true,
+    alert: !!document.getElementById("wheel-alert"),
+    canvas: !!document.getElementById("gameCanvas"),
+    back: (document.querySelector(".app-back") || {}).getAttribute && document.querySelector(".app-back").getAttribute("href"),
+    backText: (document.querySelector(".app-back") || {}).textContent,
+    globe: !!(window.SphereSweeper && SphereSweeper.THEMES && SphereSweeper.THEMES.some(t => t.globeMap)),
+    remote: Array.from(document.querySelectorAll("img[src], script[src], link[href]")).map(e => e.src || e.href).filter(u => /^https?:/.test(u)),
+  }))()`);
+  assert.equal(wheel.app, true, "wheel.html is not app-flagged");
+  assert.ok(wheel.alert && wheel.canvas, "wheel.html is not the Water Wheel");
+  assert.equal(wheel.back, "index.html", `Wheel's Sphere pill points at ${wheel.back}`);
+  assert.match(wheel.backText || "", /Sphere/, "Wheel's back pill is not labelled Sphere");
+  assert.equal(wheel.globe, false, "Wheel still lists a globe (network) theme in the app");
+  assert.deepEqual(wheel.remote, [], `wheel.html reaches off-device: ${wheel.remote.join(", ")}`);
+  await evaluate('document.querySelector(".app-back").click()');
+  await waitExpression('location.pathname.endsWith("/index.html") && document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "Sphere pill did not return to the sphere");
+  await delay(500);
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length'), revealedBeforeWheel, "the sphere did not resume its run after the Wheel");
+  await evaluate('document.getElementById("qc-reset").click()');
+  await delay(250);
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "mercury")); void 0;');
+  await delay(400);
+
   if (process.env.HEXSWEEPER_APP_SCREENSHOT) {
     const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
     await writeFile(process.env.HEXSWEEPER_APP_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
