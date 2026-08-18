@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 48 is the latest uploaded TestFlight build, attached to 1.0, and the
+this same record. Build 49 is the latest uploaded TestFlight build, attached to 1.0, and the
 checked-in project matches it.
 
 ## Archive → TestFlight
@@ -135,6 +135,10 @@ Done (updated 2026-08-11, through the App Store Connect API):
 - [x] Build 48 uploaded and attached to 1.0 on 2026-08-18: legible labels on
       the face-menu tiles and a nine-swatch Theme grid in the Help sheet
       (vendored from hexsweeper `008e18b`)
+- [x] Build 49 uploaded and attached to 1.0 on 2026-08-18: the sphere zooms
+      in when the menu opens (real faces at finger size, labelled) and Theme
+      fans nine swatch faces across the surrounding ring; zoom restores on
+      close (vendored from hexsweeper `184058d`)
 
 Still owed:
 
