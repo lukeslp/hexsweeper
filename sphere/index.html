@@ -4,7 +4,7 @@
   Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
   Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
   Chrome: quiet bar (Undo · Reset · Flag · Help) from sphere/quiet-chrome.js; the
-  Help overlay doubles as the settings sheet (theme, size, warnings, invert, effects);
+  Help overlay doubles as the settings sheet, tabbed Play · Themes · Board · Settings;
   the shipped HUD stays hidden in the DOM so sphere.js wiring is untouched.
   Notes: Starts zoomed out. Author: Luke Steuber <luke@lukesteuber.com>
 -->
@@ -608,6 +608,36 @@ body.help-open { overflow: hidden; }
 .help-size b { font-size: 0.86rem; }
 .help-size small { font-size: 0.56rem; font-weight: 500; opacity: 0.7; }
 .help-egg-hint { margin: -0.35rem 0 0.9rem; font-size: 0.68rem; opacity: 0.55; font-style: italic; }
+/* Sheet tabs — Play · Themes · Board · Settings. Title, ×, Done and credits stay put. */
+.help-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.2rem 0 0.9rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+}
+.help-tab {
+  appearance: none;
+  flex: 1 1 0;
+  min-height: 44px;
+  padding: 0.4rem 0.2rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-sub);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+.help-tab[aria-selected="true"] { color: var(--text-main); border-bottom-color: var(--text-main); }
+.help-tab:hover, .help-tab:focus-visible { background: color-mix(in srgb, var(--text-main) 6%, transparent); outline: none; }
+.help-tab:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text-main) 45%, transparent); }
+.help-tabpanel[hidden] { display: none; }
+.help-tabpanel { min-height: 9rem; }
+.help-tabpanel .help-themes, .help-tabpanel .help-sizes, .help-tabpanel .help-packs { margin-top: 0.1rem; }
 .help-size .help-size-best { opacity: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
 .help-size .help-size-best[hidden] { display: none; }
 .help-size[aria-pressed="true"], .help-warn[aria-pressed="true"] {
@@ -788,6 +818,13 @@ body.help-open { overflow: hidden; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hexsweeper 3D <span class="help-title-sub">settings</span></h2>
+    <div class="help-tabs" role="tablist" aria-label="Sheet sections" id="help-tabs">
+      <button type="button" role="tab" class="help-tab" id="help-tab-play" aria-controls="help-panel-play" aria-selected="true" data-tab="play">Play</button>
+      <button type="button" role="tab" class="help-tab" id="help-tab-themes" aria-controls="help-panel-themes" aria-selected="false" data-tab="themes" tabindex="-1">Themes</button>
+      <button type="button" role="tab" class="help-tab" id="help-tab-board" aria-controls="help-panel-board" aria-selected="false" data-tab="board" tabindex="-1">Board</button>
+      <button type="button" role="tab" class="help-tab" id="help-tab-settings" aria-controls="help-panel-settings" aria-selected="false" data-tab="settings" tabindex="-1">Settings</button>
+    </div>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-play" aria-labelledby="help-tab-play" data-tab="play">
     <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Clear a face; place a flag where you think a mine is. Your first clear is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Clear a face</span></li>
@@ -798,7 +835,7 @@ body.help-open { overflow: hidden; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Flags mark where you think a mine is.</p>
-      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet: theme, board size, drag inversion and effects — each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
+      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet — Themes, Board (size and your best times) and Settings (drag inversion, effects) are the tabs above; each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
     </div>
     <p class="help-keys"><kbd>C</kbd> menu · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -809,21 +846,28 @@ body.help-open { overflow: hidden; }
         Riding on the original — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
       </p>
     </div>
+    <p class="help-more">Also <a href="../launcher.html">Games</a> · <a href="../infinite.html">Infinite</a> · <a href="../bounded.html">Classic</a></p>
+    </section>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-themes" aria-labelledby="help-tab-themes" data-tab="themes" hidden>
     <div class="help-themes" id="help-themes" role="group" aria-label="Theme">
       <span class="help-packs-cap">Theme</span>
       <div class="help-theme-grid" id="help-theme-grid"></div>
     </div>
+    </section>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-board" aria-labelledby="help-tab-board" data-tab="board" hidden>
     <div class="help-sizes" id="help-sizes" role="group" aria-label="Board size">
       <span class="help-packs-cap">Board size <em>· starts a new sphere · best times live here</em></span>
       <div class="help-size-grid" id="help-size-grid"></div>
     </div>
     <p class="help-egg-hint" id="help-egg-hint">There is a second sphere. Patience with the mine count finds it.</p>
+    </section>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-settings" aria-labelledby="help-tab-settings" data-tab="settings" hidden>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
       <span class="help-packs-cap">Settings</span>
       <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
       <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>
-    <p class="help-more">Also <a href="../launcher.html">Games</a> · <a href="../infinite.html">Infinite</a> · <a href="../bounded.html">Classic</a></p>
+    </section>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
@@ -966,6 +1010,38 @@ const sphereChrome = initQuietChrome(sphereGame);
   syncAll();
   if (helpBtn) helpBtn.addEventListener("click", syncAll);
   window.HEXSWEEPER_SYNC_SETTINGS = syncAll;
+
+  // Tabs: Play · Themes · Board · Settings. The last tab is remembered so a
+  // player who lives in Themes lands there; roving tabindex + arrow keys.
+  const TAB_KEY = "hexsweeper-sphere-sheet-tab-v1";
+  const tabs = Array.from(document.querySelectorAll("#help-tabs .help-tab"));
+  const panels = Array.from(document.querySelectorAll(".help-tabpanel"));
+  function showTab(id, focus) {
+    if (!tabs.some((t) => t.dataset.tab === id)) id = "play";
+    tabs.forEach((t) => {
+      const on = t.dataset.tab === id;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      if (on && focus) t.focus();
+    });
+    panels.forEach((p) => { p.hidden = p.dataset.tab !== id; });
+    try { localStorage.setItem(TAB_KEY, id); } catch (_) {}
+    const panel = document.getElementById("help-panel");
+    if (panel) panel.scrollTop = 0;
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => showTab(t.dataset.tab));
+    t.addEventListener("keydown", (e) => {
+      const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : e.key === "Home" ? -i : e.key === "End" ? tabs.length - 1 - i : 0;
+      if (!dir) return;
+      e.preventDefault();
+      showTab(tabs[(i + dir + tabs.length) % tabs.length].dataset.tab, true);
+    });
+  });
+  let stored = "play";
+  try { stored = localStorage.getItem(TAB_KEY) || "play"; } catch (_) {}
+  showTab(stored);
+  window.HEXSWEEPER_SHOW_SHEET_TAB = showTab;
 })();
 (function () {
   const lb = document.getElementById("history-lightbox");

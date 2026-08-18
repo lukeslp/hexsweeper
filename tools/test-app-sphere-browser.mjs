@@ -200,6 +200,19 @@ try {
   assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);
   assert.equal(await evaluate('!!document.getElementById("help-warn-grid")'), false, "Warnings group is still on the sheet (themes own it now)");
   assert.ok(help.invert && help.effects, "invert / effects pills missing from the sheet");
+  // The sheet is tabbed: Play · Themes · Board · Settings; one panel at a time; last tab remembered.
+  const tabs = await evaluate('Array.from(document.querySelectorAll("#help-tabs [role=tab]")).map(t => t.dataset.tab + ":" + t.getAttribute("aria-selected") + ":" + Math.round(t.getBoundingClientRect().height))');
+  assert.deepEqual(tabs.map(t => t.split(":")[0]), ["play", "themes", "board", "settings"], `sheet tabs are ${tabs.join(",")}`);
+  assert.ok(tabs.every(t => Number(t.split(":")[2]) >= 44), `sheet tabs under 44pt: ${tabs.join(",")}`);
+  assert.equal(await evaluate('Array.from(document.querySelectorAll(".help-tabpanel")).filter(p => !p.hidden).map(p => p.dataset.tab).join(",")'), "play", "sheet did not open on the Play tab");
+  await evaluate('document.getElementById("help-tab-themes").click()');
+  assert.equal(await evaluate('Array.from(document.querySelectorAll(".help-tabpanel")).filter(p => !p.hidden).map(p => p.dataset.tab).join(",")'), "themes", "Themes tab did not show only the themes panel");
+  assert.equal(await evaluate('document.getElementById("help-theme-grid").getBoundingClientRect().height > 40'), true, "theme grid is not visible on the Themes tab");
+  await evaluate('document.getElementById("help-tab-board").click()');
+  assert.equal(await evaluate('document.getElementById("help-size-grid").getBoundingClientRect().height > 30 && document.getElementById("help-theme-grid").getBoundingClientRect().height === 0'), true, "Board tab did not swap themes for sizes");
+  await evaluate('document.getElementById("help-tab-settings").click()');
+  assert.equal(await evaluate('document.querySelector("#help-controls [data-ctl=invert]").getBoundingClientRect().height > 30'), true, "Settings tab does not show Invert");
+  await evaluate('document.getElementById("help-tab-themes").click()');
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "theme grid did not apply Galaxy");
   assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "galaxy", "theme grid did not mark Galaxy pressed");
@@ -341,6 +354,8 @@ try {
   assert.match(win.meta, /First clear at this size/, `first-win banner meta is "${win.meta}"`);
   await evaluate('document.getElementById("qc-help").click()');
   await waitExpression('!document.getElementById("help-overlay").hidden', "help did not open after the win");
+  assert.equal(await evaluate('localStorage.getItem("hexsweeper-sphere-sheet-tab-v1")'), "themes", "sheet did not remember the last tab");
+  await evaluate('document.getElementById("help-tab-board").click()');
   assert.equal(await evaluate('document.querySelector("#help-size-grid .help-size[data-size=xsmall] [data-best]").textContent.trim()'), "Best 42s", "XS pill does not show the best time");
   assert.equal(await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium] [data-best]").hidden'), true, "M pill shows a best it never earned");
   assert.match(await evaluate('document.getElementById("help-egg-hint").textContent'), /second sphere/i, "the settings sheet lost its Wheel hint");
