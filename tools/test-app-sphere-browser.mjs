@@ -184,7 +184,7 @@ try {
   assert.ok(help.doneH >= 44, `Done button is ${help.doneH}px tall`);
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /menu button/i, "help copy does not mention the menu button");
-  assert.match(help.text, /Mercury/, "help copy does not mention the theme cycle");
+  assert.match(help.text, /Stratosphere, Mercury, Amber Cells/, "help copy does not name the theme cycle");
   await evaluate('document.getElementById("help-done-btn").click()');
   await waitExpression('document.getElementById("help-overlay").hidden', "help did not close");
 
@@ -227,7 +227,7 @@ try {
   const themeTile = '#hex-bloom-stage .hb-hex[data-cat=theme]';
   assert.equal(await evaluate(`!!document.querySelector('${themeTile}')`), true, "flower has no Theme tile");
   const seen = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     if ((await evaluate('document.getElementById("hex-bloom").dataset.phase')) !== "open") {
       await evaluate('document.querySelector(".is-menu-corner .is-dock").click()');
       await waitExpression('document.getElementById("hex-bloom").dataset.phase === "open" && !!document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]")', "flower did not reopen for the next theme");
@@ -236,8 +236,20 @@ try {
     await delay(150);
     seen.push(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'));
   }
-  assert.deepEqual(seen, ["dark", "glow", "mercury", "light"], `theme cycle was ${seen.join(" → ")}`);
-  await evaluate('const g = window.HEXSWEEPER_SPHERE_GAME; g.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "mercury")); void 0;');
+  assert.deepEqual(seen, ["dark", "stratosphere", "mercury", "amber-cells", "light"], `theme cycle was ${seen.join(" → ")}`);
+  // Textured materials: the sealed data URI must actually load into the renderer.
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "amber-cells")); void 0;');
+  const amber = await waitExpression(`(() => {
+    const c = document.getElementById("reflectionCanvas");
+    if (!c || c.style.display === "none") return null;
+    if (document.body.dataset.reflectionMaterial !== "amber-cells") return null;
+    return { chrome: document.body.dataset.sphereChrome };
+  })()`, "Amber Cells did not switch the renderer");
+  assert.equal(amber.chrome, "dark", "Amber Cells did not switch chrome to dark");
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "stratosphere")); void 0;');
+  const strato = await waitExpression(`(() => document.body.dataset.reflectionMaterial === "stratosphere" ? { chrome: document.body.dataset.sphereChrome } : null)()`, "Stratosphere did not switch the renderer");
+  assert.equal(strato.chrome, "light", "Stratosphere did not switch chrome to light");
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "mercury")); void 0;');
   const mercury = await waitExpression(`(() => {
     const c = document.getElementById("reflectionCanvas");
     if (!c || c.style.display === "none" || !c.width) return null;

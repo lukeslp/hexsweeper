@@ -406,6 +406,58 @@
     revealGlow: "#9ee8ff",
   };
 
+  /**
+   * Two more materials from the reflection studio, chosen for different drift
+   * mechanisms from Mercury's analytic environment + liquid-metal wells:
+   *  - Stratosphere: a bright sky environment map drifting across the mirror
+   *    (mapping "environment", ambient frame, kernel 10). Light chrome.
+   *  - Amber Cells: a surface-mapped cell swarm on the shell (mapping
+   *    "surface", shell frame, kernel 3) and the "microcells" inner core —
+   *    breathing oil cells and caustic bands beneath dug faces. Dark chrome.
+   * Both are texture-backed: sphere/assets/reflections/*.webp on the web,
+   * data URIs sealed into the app by the exporter.
+   */
+  function reflectionTheme(overrides) {
+    return Object.assign({}, THEME_MERCURY, overrides);
+  }
+  const THEME_STRATOSPHERE = reflectionTheme({
+    id: "stratosphere",
+    name: "Stratosphere",
+    chrome: "light",
+    material: "stratosphere",
+    accent: "#1d6fa9",
+    fallbackBg: "#e7f2fa",
+    fallbackBgGlow: "#ffffff",
+    fallbackCore: "#74b5df",
+    hoverRing: "#1d6fa9",
+    activeRing: "#0f4f80",
+    flagEdge: "#ffd6d8",
+  });
+  const THEME_AMBER_CELLS = reflectionTheme({
+    id: "amber-cells",
+    name: "Amber Cells",
+    chrome: "dark",
+    material: "amber-cells",
+    accent: "#f5bd4e",
+    fallbackBg: "#1c0b02",
+    fallbackBgGlow: "#95500e",
+    fallbackCore: "#40200a",
+    coveredEdge: "rgba(255,214,140,0.22)",
+    pentagonEdge: "rgba(255,226,170,0.3)",
+    hoverRing: "#ffd98a",
+    activeRing: "#f5bd4e",
+    revealGlow: "#f5bd4e",
+    text: {
+      1: "#fff3dc",
+      2: "#ffd98a",
+      3: "#f5bd4e",
+      4: "#ffb27a",
+      5: "#ff8f6b",
+      6: "#ff6f7a",
+    },
+    label: "#fff3dc",
+  });
+
   const THEMES = [
     THEME_LIGHT,
     THEME_SHELL,
@@ -417,6 +469,8 @@
     THEME_MOON,
     THEME_GLOW,
     THEME_MERCURY,
+    THEME_STRATOSPHERE,
+    THEME_AMBER_CELLS,
   ].filter((t) => {
     // Native app builds ship without the globe-map themes. Their daymaps are
     // the only assets fetched over the network (globeUrl falls back to an
@@ -739,6 +793,10 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.35"></circle><circle cx="12" cy="12" r="7"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path></svg>',
     mercury:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M7.5 9.5a5 5 0 0 1 6-2.5" opacity="0.9"></path><path d="M9 15.5c1.8 1.6 4.4 1.4 6-.4" opacity="0.5"></path></svg>',
+    stratosphere:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M6 12.5h4a2 2 0 0 0 0-4 3 3 0 0 0-5.6 1" opacity="0.9"></path><path d="M11 16h6a1.6 1.6 0 0 0 0-3.2 2.4 2.4 0 0 0-4.5-.6" opacity="0.7"></path></svg>',
+    "amber-cells":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><circle cx="9.5" cy="10" r="1.6"></circle><circle cx="14.5" cy="9" r="1.1" opacity="0.8"></circle><circle cx="13.5" cy="14.5" r="1.9" opacity="0.9"></circle><circle cx="8.5" cy="14.8" r="1" opacity="0.6"></circle></svg>',
   };
 
   /** Loaded equirectangular maps (ImageData cache). */
@@ -901,6 +959,9 @@
         reflection.resize();
         reflection.start();
       }
+      // The renderer stamps body chrome for its own appearance mode; the
+      // theme owns page chrome here (Stratosphere is a light-chrome material).
+      document.body.dataset.sphereChrome = T.chrome || "dark";
     }
 
     function readStoredThemeId() {
@@ -1445,7 +1506,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Amber Cells.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -3494,7 +3555,99 @@
       const T = state.theme;
       if (!T || !T.reflectionSurface) return null;
       if (T.material === "mercury") return "metal";
+      if (T.material === "amber-cells") return "microcells";
       return null;
+    }
+    function coreHash(x, y, seed) {
+      const value = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
+      return value - Math.floor(value);
+    }
+    function drawMicrocellCore(proj, now) {
+      const bounds = proj.boundary.reduce(
+        (box, point) => ({
+          minX: Math.min(box.minX, point.x),
+          minY: Math.min(box.minY, point.y),
+          maxX: Math.max(box.maxX, point.x),
+          maxY: Math.max(box.maxY, point.y),
+        }),
+        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+      );
+      const ambientTime = state.reduceMotion ? 0 : now * 0.001;
+      const base = ctx.createRadialGradient(
+        state.centerX - state.scale * 0.22,
+        state.centerY - state.scale * 0.28,
+        state.scale * 0.04,
+        state.centerX,
+        state.centerY,
+        state.scale * 1.05
+      );
+      base.addColorStop(0, "#d98724");
+      base.addColorStop(0.42, "#71300a");
+      base.addColorStop(1, "#160603");
+      ctx.fillStyle = base;
+      ctx.fillRect(bounds.minX - 2, bounds.minY - 2, bounds.maxX - bounds.minX + 4, bounds.maxY - bounds.minY + 4);
+      // A global field gives every clipped face the same moving sub-surface.
+      // Scale, speed, eccentricity, and orbit all vary so this reads as living
+      // oil cells rather than stationary stipple.
+      const pitch = Math.max(11, state.scale * 0.039);
+      const minGX = Math.floor((bounds.minX - pitch) / pitch);
+      const maxGX = Math.ceil((bounds.maxX + pitch) / pitch);
+      const minGY = Math.floor((bounds.minY - pitch) / pitch);
+      const maxGY = Math.ceil((bounds.maxY + pitch) / pitch);
+      for (let gy = minGY; gy <= maxGY; gy++) {
+        for (let gx = minGX; gx <= maxGX; gx++) {
+          const seed = coreHash(gx, gy, 1.3);
+          const secondSeed = coreHash(gx, gy, 4.7);
+          const phase = ambientTime * (0.34 + seed * 0.42) + seed * Math.PI * 2;
+          const currentX = Math.sin(ambientTime * 0.19 + gy * 0.31) * pitch * 0.34;
+          const currentY = Math.cos(ambientTime * 0.15 + gx * 0.27) * pitch * 0.26;
+          const px = (gx + 0.5) * pitch + (seed - 0.5) * pitch * 0.48 +
+            currentX + Math.sin(phase) * pitch * (0.24 + secondSeed * 0.12);
+          const py = (gy + 0.5) * pitch + (secondSeed - 0.5) * pitch * 0.48 +
+            currentY + Math.cos(phase * 0.79) * pitch * (0.18 + seed * 0.10);
+          const breathe = 0.84 + Math.sin(phase * 1.37 + secondSeed * 4.0) * 0.16;
+          const radius = pitch * (0.27 + coreHash(gx, gy, 8.1) * 0.24) * breathe;
+          const radiusY = radius * (0.74 + secondSeed * 0.46);
+          const lens = ctx.createRadialGradient(
+            px - radius * 0.34,
+            py - radius * 0.38,
+            radius * 0.08,
+            px,
+            py,
+            Math.max(radius, radiusY)
+          );
+          lens.addColorStop(0, "rgba(255,222,133,0.88)");
+          lens.addColorStop(0.36, "rgba(207,117,30,0.72)");
+          lens.addColorStop(0.82, "rgba(92,32,7,0.78)");
+          lens.addColorStop(1, "rgba(28,7,2,0.96)");
+          ctx.beginPath();
+          ctx.ellipse(px, py, radius, radiusY, phase * 0.11, 0, Math.PI * 2);
+          ctx.fillStyle = lens;
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,188,83,0.30)";
+          ctx.lineWidth = Math.max(0.55, radius * 0.11);
+          ctx.stroke();
+        }
+      }
+      // Slow caustic bands make the entire field advect as one fluid layer.
+      ctx.globalCompositeOperation = "screen";
+      ctx.lineCap = "round";
+      for (let band = 0; band < 3; band++) {
+        const yBase = state.centerY + (band - 1) * state.scale * 0.38;
+        ctx.beginPath();
+        for (let step = 0; step <= 30; step++) {
+          const x = state.centerX - state.scale * 1.15 + (step / 30) * state.scale * 2.3;
+          const y = yBase + Math.sin(step * 0.46 + ambientTime * (0.72 + band * 0.11)) * state.scale * 0.055;
+          if (step === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = band === 1
+          ? "rgba(255,218,128,0.18)"
+          : "rgba(255,139,42,0.11)";
+        ctx.lineWidth = Math.max(1.2, state.scale * 0.012);
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
     }
     function drawMetalCore(proj, now) {
       const time = state.reduceMotion ? 0 : now * 0.000075;
@@ -3546,7 +3699,8 @@
         return;
       }
       ctx.clip();
-      if (profile === "metal") drawMetalCore(proj, now);
+      if (profile === "microcells") drawMicrocellCore(proj, now);
+      else if (profile === "metal") drawMetalCore(proj, now);
       ctx.restore();
     }
     /**

@@ -2531,6 +2531,7 @@ body.help-open { overflow: hidden; }
   <img src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
+<script>window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "../sphere/";</script>
 <script>
 /* collection / CodePen boot */
 try {
@@ -8405,8 +8406,13 @@ void main() {
       if (!preset.texture) return null;
       const embedded = global.HEXSWEEPER_REFLECTION_TEXTURES &&
         global.HEXSWEEPER_REFLECTION_TEXTURES[preset.id];
-      const source = embedded || preset.texture;
-      return this.mobile ? source.mobile : source.desktop;
+      if (embedded) return this.mobile ? embedded.mobile : embedded.desktop;
+      // Preset paths are relative to sphere/ (the renderer's home). Pages
+      // elsewhere set HEXSWEEPER_REFLECTION_TEXTURE_BASE to reach them.
+      const base = typeof global.HEXSWEEPER_REFLECTION_TEXTURE_BASE === "string"
+        ? global.HEXSWEEPER_REFLECTION_TEXTURE_BASE
+        : "";
+      return base + (this.mobile ? preset.texture.mobile : preset.texture.desktop);
     }
 
     loadImage(url) {
@@ -9989,10 +9995,12 @@ void main() {
       announce("Seams · " + (next ? "On" : "Off"));
     }
 
-    // Curated theme cycle for the flower: the two mono looks plus the two
-    // material looks. Shell / Ink / Float / Card remain reachable through the
-    // Surface tile and the HUD cycle; Earth / Moon stay web-only.
-    const FLOWER_THEMES = ["light", "dark", "glow", "mercury"];
+    // Curated theme cycle for the flower: the two mono looks plus three
+    // reflection materials with different drift mechanisms — Stratosphere
+    // (light: sky environment map), Mercury (analytic metal), Amber Cells
+    // (dark: surface cell swarm with the microcell core). Glow / Shell / Ink /
+    // Float / Card stay on the HUD cycle; Earth / Moon are web-only.
+    const FLOWER_THEMES = ["light", "dark", "stratosphere", "mercury", "amber-cells"];
     function themeIndexById(id) {
       return THEMES.findIndex((t) => t && t.id === id);
     }
@@ -10203,7 +10211,7 @@ void main() {
             aria: () =>
               "Theme: " +
               currentThemeLabel() +
-              ". Activate to cycle Light, Dark, Glow, Mercury.",
+              ". Activate to cycle Light, Dark, Stratosphere, Mercury, Amber Cells.",
             cycle: cycleFlowerTheme,
           },
           {

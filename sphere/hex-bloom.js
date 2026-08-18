@@ -1147,10 +1147,12 @@
       announce("Seams · " + (next ? "On" : "Off"));
     }
 
-    // Curated theme cycle for the flower: the two mono looks plus the two
-    // material looks. Shell / Ink / Float / Card remain reachable through the
-    // Surface tile and the HUD cycle; Earth / Moon stay web-only.
-    const FLOWER_THEMES = ["light", "dark", "glow", "mercury"];
+    // Curated theme cycle for the flower: the two mono looks plus three
+    // reflection materials with different drift mechanisms — Stratosphere
+    // (light: sky environment map), Mercury (analytic metal), Amber Cells
+    // (dark: surface cell swarm with the microcell core). Glow / Shell / Ink /
+    // Float / Card stay on the HUD cycle; Earth / Moon are web-only.
+    const FLOWER_THEMES = ["light", "dark", "stratosphere", "mercury", "amber-cells"];
     function themeIndexById(id) {
       return THEMES.findIndex((t) => t && t.id === id);
     }
@@ -1361,7 +1363,7 @@
             aria: () =>
               "Theme: " +
               currentThemeLabel() +
-              ". Activate to cycle Light, Dark, Glow, Mercury.",
+              ". Activate to cycle Light, Dark, Stratosphere, Mercury, Amber Cells.",
             cycle: cycleFlowerTheme,
           },
           {

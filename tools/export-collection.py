@@ -784,52 +784,52 @@ DEFAULT_LAB_SWATCH = ("#080a0f", "#7eb8ff", "#34d399", "#fbbf24")
 
 REFLECTION_TEXTURES = {
     "canopy": {
-        "desktop": "sphere-reflection/assets/reflections/canopy-2048.webp",
-        "mobile": "sphere-reflection/assets/reflections/canopy-1024.webp",
+        "desktop": "sphere/assets/reflections/canopy-2048.webp",
+        "mobile": "sphere/assets/reflections/canopy-1024.webp",
     },
     "portoro": {
-        "desktop": "sphere-reflection/assets/reflections/portoro-2048.webp",
-        "mobile": "sphere-reflection/assets/reflections/portoro-1024.webp",
+        "desktop": "sphere/assets/reflections/portoro-2048.webp",
+        "mobile": "sphere/assets/reflections/portoro-1024.webp",
     },
     "deco": {
-        "desktop": "sphere-reflection/assets/reflections/deco-2048.webp",
-        "mobile": "sphere-reflection/assets/reflections/deco-1024.webp",
+        "desktop": "sphere/assets/reflections/deco-2048.webp",
+        "mobile": "sphere/assets/reflections/deco-1024.webp",
     },
     "oculus": {
-        "desktop": "sphere-reflection/assets/reflections/oculus-1280.webp",
-        "mobile": "sphere-reflection/assets/reflections/oculus-768.webp",
+        "desktop": "sphere/assets/reflections/oculus-1280.webp",
+        "mobile": "sphere/assets/reflections/oculus-768.webp",
     },
     "galaxy": {
-        "desktop": "sphere-reflection/assets/reflections/galaxy-1280.webp",
-        "mobile": "sphere-reflection/assets/reflections/galaxy-768.webp",
+        "desktop": "sphere/assets/reflections/galaxy-1280.webp",
+        "mobile": "sphere/assets/reflections/galaxy-768.webp",
     },
     "gilded-ribbon": {
-        "desktop": "sphere-reflection/assets/reflections/gilded-ribbon-1280.webp",
-        "mobile": "sphere-reflection/assets/reflections/gilded-ribbon-768.webp",
+        "desktop": "sphere/assets/reflections/gilded-ribbon-1280.webp",
+        "mobile": "sphere/assets/reflections/gilded-ribbon-768.webp",
     },
     "ion-storm": {
-        "desktop": "sphere-reflection/assets/reflections/ion-storm-1280.webp",
-        "mobile": "sphere-reflection/assets/reflections/ion-storm-768.webp",
+        "desktop": "sphere/assets/reflections/ion-storm-1280.webp",
+        "mobile": "sphere/assets/reflections/ion-storm-768.webp",
     },
     "amber-tempest": {
-        "desktop": "sphere-reflection/assets/reflections/amber-tempest-1280.webp",
-        "mobile": "sphere-reflection/assets/reflections/amber-tempest-768.webp",
+        "desktop": "sphere/assets/reflections/amber-tempest-1280.webp",
+        "mobile": "sphere/assets/reflections/amber-tempest-768.webp",
     },
     "heat-lightning": {
-        "desktop": "sphere-reflection/assets/reflections/heat-lightning-1280.webp",
-        "mobile": "sphere-reflection/assets/reflections/heat-lightning-768.webp",
+        "desktop": "sphere/assets/reflections/heat-lightning-1280.webp",
+        "mobile": "sphere/assets/reflections/heat-lightning-768.webp",
     },
     "stratosphere": {
-        "desktop": "sphere-reflection/assets/reflections/stratosphere-2048.webp",
-        "mobile": "sphere-reflection/assets/reflections/stratosphere-1024.webp",
+        "desktop": "sphere/assets/reflections/stratosphere-2048.webp",
+        "mobile": "sphere/assets/reflections/stratosphere-1024.webp",
     },
     "chromatic-ink": {
-        "desktop": "sphere-reflection/assets/reflections/chromatic-ink-1280.webp",
-        "mobile": "sphere-reflection/assets/reflections/chromatic-ink-768.webp",
+        "desktop": "sphere/assets/reflections/chromatic-ink-1280.webp",
+        "mobile": "sphere/assets/reflections/chromatic-ink-768.webp",
     },
     "amber-cells": {
-        "desktop": "sphere-reflection/assets/reflections/amber-cells-2048.webp",
-        "mobile": "sphere-reflection/assets/reflections/amber-cells-1024.webp",
+        "desktop": "sphere/assets/reflections/amber-cells-2048.webp",
+        "mobile": "sphere/assets/reflections/amber-cells-1024.webp",
     },
 }
 
@@ -840,15 +840,40 @@ def data_uri(path: Path) -> str:
     return f"data:{mime};base64,{payload}"
 
 
-def reflection_texture_boot() -> str:
-    payload = {
-        material_id: {
+def reflection_texture_boot(only: set[str] | None = None, *, mobile_only: bool = False) -> str:
+    """Inline reflection textures as data URIs. `only` limits the materials;
+    `mobile_only` seals the 1024 file for both slots (the app's payload budget:
+    an iPad reads a slightly softer sky, and the bundle stays under a megabyte)."""
+    if mobile_only:
+        # One data URI per material, bound to both slots — never serialized twice.
+        entries = []
+        for material_id, sizes in REFLECTION_TEXTURES.items():
+            if only is not None and material_id not in only:
+                continue
+            entries.append((material_id, data_uri(ROOT / sizes["mobile"])))
+        decls = ",".join(f"t{i}={json.dumps(uri)}" for i, (_, uri) in enumerate(entries))
+        body = ",".join(
+            f"{json.dumps(material_id)}:{{desktop:t{i},mobile:t{i}}}"
+            for i, (material_id, _) in enumerate(entries)
+        )
+        return (
+            "window.HEXSWEEPER_REFLECTION_TEXTURES = (function(){var "
+            + decls + ";return {" + body + "};})();\n"
+        )
+    payload = {}
+    for material_id, sizes in REFLECTION_TEXTURES.items():
+        if only is not None and material_id not in only:
+            continue
+        payload[material_id] = {
             size: data_uri(ROOT / relative_path)
             for size, relative_path in sizes.items()
         }
-        for material_id, sizes in REFLECTION_TEXTURES.items()
-    }
     return "window.HEXSWEEPER_REFLECTION_TEXTURES = " + json.dumps(payload) + ";\n"
+
+
+# Reflection materials shipped as canonical sphere themes (sphere.js THEMES).
+# The app seals their textures; the web root points at sphere/assets/.
+SPHERE_APP_MATERIALS = {"stratosphere", "amber-cells"}
 
 
 def reflection_registry_errors() -> list[str]:
@@ -1455,9 +1480,17 @@ def export_sphere(exp: dict) -> str:
         if reflection_material
         else ""
     )
-    reflection_texture_line = (
-        reflection_texture_boot() if source_name == "sphere-reflection" else ""
-    )
+    if source_name == "sphere-reflection":
+        reflection_texture_line = reflection_texture_boot()
+    elif source_name == "sphere":
+        # Pens live under collection/ (or on CodePen); reach the canonical
+        # sphere theme textures on the live site. Web root and app narrow this.
+        reflection_texture_line = (
+            'window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = '
+            f'"{SITE_BASE}/sphere/";\n'
+        )
+    else:
+        reflection_texture_line = ""
     welcome_key = exp.get("welcomeKey", "hexsweeper-sphere-welcome-v1")
     welcome_literal = (
         "'hexsweeper-sphere-welcome-v1'"
@@ -1717,8 +1750,15 @@ def export_sphere_app(exp: dict) -> str:
 
     markup = markup.replace(
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;",
-        "window.HEXSWEEPER_SPHERE_APP = true;",
+        "window.HEXSWEEPER_SPHERE_APP = true;\n"
+        + reflection_texture_boot(SPHERE_APP_MATERIALS, mobile_only=True),
         1,
+    )
+    if "HEXSWEEPER_REFLECTION_TEXTURES" not in markup:
+        raise SystemExit("export_sphere_app: reflection textures not sealed")
+    # Sealed: the embedded data URIs win, so no texture base at all in the app.
+    markup = markup.replace(
+        f'window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "{SITE_BASE}/sphere/";\n', "", 1
     )
 
     # Sphere is the app root (www/index.html); bundle assets sit beside it.
@@ -1771,6 +1811,14 @@ def export_sphere_web() -> str:
     markup = export_sphere(exp)
     markup = re.sub(r"<title>.*?</title>", "<title>Hexsweeper</title>", markup, count=1, flags=re.S)
     markup = markup.replace('<html lang="en" class="collection-export">', '<html lang="en">', 1)
+    # Reflection textures live under sphere/; the root page fetches them relatively.
+    markup = markup.replace(
+        f'window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "{SITE_BASE}/sphere/";',
+        'window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "sphere/";',
+        1,
+    )
+    if 'HEXSWEEPER_REFLECTION_TEXTURE_BASE = "sphere/"' not in markup:
+        raise SystemExit("export_sphere_web: texture base not narrowed")
     # Root social card: the product, not the pen.
     markup = re.sub(
         r'<meta name="description" content="[^"]*">',

@@ -1161,8 +1161,13 @@ void main() {
       if (!preset.texture) return null;
       const embedded = global.HEXSWEEPER_REFLECTION_TEXTURES &&
         global.HEXSWEEPER_REFLECTION_TEXTURES[preset.id];
-      const source = embedded || preset.texture;
-      return this.mobile ? source.mobile : source.desktop;
+      if (embedded) return this.mobile ? embedded.mobile : embedded.desktop;
+      // Preset paths are relative to sphere/ (the renderer's home). Pages
+      // elsewhere set HEXSWEEPER_REFLECTION_TEXTURE_BASE to reach them.
+      const base = typeof global.HEXSWEEPER_REFLECTION_TEXTURE_BASE === "string"
+        ? global.HEXSWEEPER_REFLECTION_TEXTURE_BASE
+        : "";
+      return base + (this.mobile ? preset.texture.mobile : preset.texture.desktop);
     }
 
     loadImage(url) {
