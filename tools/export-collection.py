@@ -12,6 +12,7 @@ import base64
 import json
 import mimetypes
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -1543,12 +1544,10 @@ GAME_MENU_PILL = """<style>
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
 """
 
-# Games live beside the launcher (games/ in the app, the site root on the web),
-# so "‹ Games" is a sibling link on both surfaces. Root Sphere pages get their
-# own pill pointing down into the launcher.
-APP_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
+# Only the web's flat games carry a Games pill (back to launcher.html). Root
+# Sphere pages carry none: the sphere is the front door on both surfaces, and
+# the app ships nothing but the sphere.
 WEB_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
-APP_ROOT_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "games/launcher.html")
 
 # Keeps the native launch screen up until the first painted frame; without it
 # the storyboard drops the moment the WebView mounts and the player watches a
@@ -1566,7 +1565,7 @@ APP_SPLASH_HIDE = """<script>
 """
 
 
-def appify(markup: str, *, back: bool = True, lock_zoom: bool = True, label: str = "app page") -> str:
+def appify(markup: str, *, lock_zoom: bool = True, label: str = "app page") -> str:
     """Apply the transforms every page in the native bundle needs.
 
     Outbound links must escape to Safari — a bare href replaces the game with a
@@ -1612,8 +1611,6 @@ def appify(markup: str, *, back: bool = True, lock_zoom: bool = True, label: str
         r'<a href="\1" target="_blank"',
         markup,
     )
-    if back:
-        markup = markup.replace("</body>", f"{APP_BACK_PILL}</body>", 1)
     markup = markup.replace("</body>", f"{APP_SPLASH_HIDE}</body>", 1)
 
     remote = re.findall(
@@ -1650,24 +1647,6 @@ def prepare_flat_product(markup: str, label: str) -> str:
     if 'id="help-modes"' in markup:
         raise SystemExit(f"prepare_flat_product({label}): unshipped mode links survived")
     return markup
-
-
-def export_flat_app(collection_file: str, label: str) -> str:
-    """Adapt an already-generated flat one-pager into a native-app game page."""
-    src = COLLECTION / collection_file
-    if not src.is_file():
-        raise SystemExit(f"export_flat_app: {collection_file} not built yet — run without --app first")
-    markup = prepare_flat_product(src.read_text(encoding="utf-8"), label)
-    # Web product metadata and routing must not perturb the vendored iOS
-    # payload. Keep this transform explicit so --app remains byte-stable while
-    # the public source can use its new play.html route and canonical URL.
-    markup = re.sub(r'\n<link rel="canonical" href="[^"]+">', "", markup, count=1)
-    markup = markup.replace("// Bare play.html opens Light.", "// Bare URL opens Light.")
-    markup = markup.replace(
-        "return inCollection ? `../play.html?mode=${mode}` : `?mode=${mode}`;",
-        "return inCollection ? `infinite.html?mode=${mode}` : `?mode=${mode}`;",
-    )
-    return appify(markup, label=label)
 
 
 def export_flat_web(markup: str, label: str, route: str) -> str:
@@ -1755,14 +1734,11 @@ def export_sphere_app(exp: dict) -> str:
     if "HEXSWEEPER_SPHERE_APP" not in markup:
         raise SystemExit("export_sphere_app: app flag not injected")
 
-    # Root Sphere: Games pill down into the launcher.
-    markup = markup.replace("</body>", f"{APP_ROOT_PILL}</body>", 1)
-
     # appify's guard checks src/href only. GLOBE_TEX_BASE still appears as a
     # string constant in the inlined sphere.js, but it is unreachable here:
     # globeUrl is only called for themes carrying `globeMap`, and the THEMES
     # filter drops every one of those under HEXSWEEPER_SPHERE_APP.
-    return appify(markup, back=False, label="sphere")
+    return appify(markup, label="sphere")
 
 
 WEB_ROOT_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
@@ -1785,15 +1761,12 @@ WEB_ROOT_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
 </script>
 """
 
-WEB_ROOT_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
-
-
 def export_sphere_web() -> str:
     """The public landing: Sphere itself, sealed like the collection pen but
     with web routing — canonical root URL, the home social card, external
-    fonts (cached across pages), and a Games pill to launcher.html. Sphere
-    restores its own autosave; saved Infinite/Classic runs are reached through
-    the launcher's Resume tile, never a prompt at the root."""
+    fonts (cached across pages), and no chrome of its own — Infinite and
+    Classic are reached from Help ("Also Games · Infinite · Classic") or
+    launcher.html directly. Sphere restores its own autosave."""
     exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
     markup = export_sphere(exp)
     markup = re.sub(r"<title>.*?</title>", "<title>Hexsweeper</title>", markup, count=1, flags=re.S)
@@ -1836,7 +1809,6 @@ def export_sphere_web() -> str:
     markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/launcher.html"', 'href="launcher.html"')
     markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/infinite.html"', 'href="infinite.html"')
     markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/bounded.html"', 'href="bounded.html"')
-    markup = markup.replace("</body>", f"{WEB_ROOT_PILL}</body>", 1)
     return markup
 
 
@@ -1861,24 +1833,6 @@ def render_launcher(
     if unresolved:
         raise SystemExit("render_launcher: unresolved placeholder(s): " + ", ".join(unresolved))
     return markup
-
-
-def export_app_launcher() -> str:
-    """The native games menu at games/launcher.html: three mode hexes plus a
-    centered Resume. Sphere is the app root, so its hex points back up."""
-    fonts_css = inline_css_urls(
-        (ROOT / "fonts" / "fonts.css").read_text(encoding="utf-8"), ROOT / "fonts"
-    )
-    markup = render_launcher(
-        fonts=f"<style>\n/* fonts/fonts.css (woff2 inlined) */\n{fonts_css}\n</style>",
-        infinite_href="infinite.html",
-        bounded_href="bounded.html",
-        sphere_href="../index.html",
-    )
-    # The launcher is a menu, not a game: no back pill (Sphere is one tap away
-    # in the triad), and unlike the games it stays pinch-zoomable — it is text
-    # and targets, not a canvas with its own gesture handling.
-    return appify(markup, back=False, lock_zoom=False, label="launcher")
 
 
 WEB_LAUNCHER_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/launcher.html">
@@ -1929,17 +1883,13 @@ def export_web_launcher() -> str:
     )
 
 
-# Native Capacitor webDir: index.html is Sphere; the launcher and the flat
-# games live under games/.
-APP_GAMES = [
-    ("games/infinite.html", "theme-plate.html", "infinite"),
-    ("games/bounded.html", "skin-classic.html", "bounded"),
-]
-
-
+# Native Capacitor webDir: the app is Sphere and nothing else — index.html
+# plus the help lightbox image. The launcher and the flat games are web-only.
 def write_app_build() -> list[Path]:
     """Stage the offline app payload under build/app/ and report what it wrote."""
-    (APP_BUILD / "games").mkdir(parents=True, exist_ok=True)
+    stale_games = APP_BUILD / "games"
+    if stale_games.exists():
+        shutil.rmtree(stale_games)
     (APP_BUILD / "assets").mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
 
@@ -1947,18 +1897,6 @@ def write_app_build() -> list[Path]:
     sphere = APP_BUILD / "index.html"
     sphere.write_text(export_sphere_app(sphere_exp), encoding="utf-8")
     written.append(sphere)
-
-    launcher = APP_BUILD / "games" / "launcher.html"
-    launcher.write_text(export_app_launcher(), encoding="utf-8")
-    written.append(launcher)
-    stale_sphere = APP_BUILD / "games" / "sphere.html"
-    if stale_sphere.exists():
-        stale_sphere.unlink()
-
-    for out_name, collection_file, label in APP_GAMES:
-        path = APP_BUILD / out_name
-        path.write_text(export_flat_app(collection_file, label), encoding="utf-8")
-        written.append(path)
 
     # The sphere's help lightbox reads this from the bundle, beside index.html.
     history = APP_BUILD / "assets" / "classic-minesweeper.png"

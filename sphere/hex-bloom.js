@@ -479,6 +479,16 @@
     helpCorner.className = "hex-bloom-corner";
     root.appendChild(helpCorner);
 
+    // Center-flower variants have no dock, so the flower's only route was the
+    // undocumented tap-outside-the-sphere. A visible seat in the opposite
+    // corner gives the menu a home without bringing the dock trio back.
+    let menuCorner = null;
+    if (DOCK_CENTER) {
+      menuCorner = document.createElement("div");
+      menuCorner.className = "hex-bloom-corner is-menu-corner";
+      root.appendChild(menuCorner);
+    }
+
     const live = document.createElement("p");
     live.className = "hex-bloom-live";
     live.setAttribute("role", "status");
@@ -1137,6 +1147,52 @@
       announce("Seams · " + (next ? "On" : "Off"));
     }
 
+    // Curated theme cycle for the flower: the two mono looks plus the two
+    // material looks. Shell / Ink / Float / Card remain reachable through the
+    // Surface tile and the HUD cycle; Earth / Moon stay web-only.
+    const FLOWER_THEMES = ["light", "dark", "glow", "mercury"];
+    function themeIndexById(id) {
+      return THEMES.findIndex((t) => t && t.id === id);
+    }
+    function currentThemeDef() {
+      const i =
+        typeof game.getThemeIndex === "function" ? game.getThemeIndex() : 0;
+      return THEMES[i] || null;
+    }
+    function currentThemeLabel() {
+      const t = currentThemeDef();
+      return t ? t.name : "Theme";
+    }
+    function themeSwatchSpec() {
+      const t = currentThemeDef();
+      if (!t) return null;
+      // Reflection themes are transparent on the canvas; swatch their
+      // fallback field so the tile still reads as "dark liquid metal".
+      if (t.reflectionSurface) {
+        return {
+          id: t.id,
+          name: t.name,
+          covered: t.fallbackBgGlow || "#3d484b",
+          bg: t.fallbackBg || "#050708",
+          coveredEdge: t.accent || "#eaf8ff",
+          chrome: t.chrome || "dark",
+          flagFill: t.flagFill || "#ff0000",
+          label: t.label || "#ffffff",
+        };
+      }
+      return t;
+    }
+    function cycleFlowerTheme() {
+      const available = FLOWER_THEMES.map(themeIndexById).filter((i) => i >= 0);
+      if (!available.length || typeof game.setThemeIndex !== "function") return;
+      const cur =
+        typeof game.getThemeIndex === "function" ? game.getThemeIndex() : 0;
+      const at = available.indexOf(cur);
+      const next = available[(at + 1) % available.length];
+      game.setThemeIndex(next);
+      announce("Theme · " + currentThemeLabel());
+    }
+
     function cycleLightDark() {
       const toDark = getAxes().field !== "dark";
       if (typeof game.setAppearanceAxes === "function") {
@@ -1297,7 +1353,17 @@
       ];
       if (SHARED_MENU) {
         const menu = [
-          all[0],
+          {
+            id: "theme",
+            label: () => currentThemeLabel(),
+            swatch: () => themeSwatchSpec(),
+            iconOnly: true,
+            aria: () =>
+              "Theme: " +
+              currentThemeLabel() +
+              ". Activate to cycle Light, Dark, Glow, Mercury.",
+            cycle: cycleFlowerTheme,
+          },
           {
             id: "warnings",
             label: warningModeLabel,
@@ -1401,6 +1467,7 @@
     let dockResetBtn = null;
     let dockFlagBtn = null;
     let dockHelpBtn = null; // corner seat, lower right
+    let cornerMenuBtn = null; // corner seat, lower left (center-flower variants)
     let centerActionBtn = null;
     let lastFocus = null;
 
@@ -1448,6 +1515,12 @@
         dockBtn._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
         dockBtn.setAttribute("aria-label", "Open game menu");
         dockBtn.setAttribute("aria-expanded", "false");
+      }
+      if (cornerMenuBtn) {
+        setHexIcon(cornerMenuBtn, open ? "close" : "gear");
+        cornerMenuBtn.setAttribute("aria-label", open ? "Close menu" : "Open game menu");
+        cornerMenuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        cornerMenuBtn.title = open ? "Close" : "Menu";
       }
       const sideActionsShown = root.dataset.bottomSeed !== "true" || open;
       if (dockResetBtn) {
@@ -1874,6 +1947,28 @@
         doHelp();
       });
       helpCorner.appendChild(dockHelpBtn);
+
+      if (menuCorner) {
+        cornerMenuBtn = makeHex({
+          cls: "is-dock is-dock-menu-corner",
+          label: "",
+          icon: "gear",
+          iconOnly: true,
+          ariaLabel: "Open game menu",
+        });
+        cornerMenuBtn.title = "Menu";
+        cornerMenuBtn.setAttribute("aria-haspopup", "dialog");
+        cornerMenuBtn.setAttribute("aria-controls", "hex-bloom-stage");
+        cornerMenuBtn.setAttribute("aria-expanded", "false");
+        cornerMenuBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          ignoreOutsideUntil = Date.now() + 250;
+          if (state.phase === "open" || state.phase === "rising") collapse();
+          else if (state.phase === "closed") expand();
+        });
+        menuCorner.appendChild(cornerMenuBtn);
+      }
 
       dock.appendChild(dockResetBtn);
       dock.appendChild(dockBtn);

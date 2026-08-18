@@ -301,8 +301,13 @@ body.help-open { overflow: hidden; }
   transition: opacity 0.18s ease;
 }
 .help-overlay.open { opacity: 1; pointer-events: auto; }
+.help-overlay[hidden] { display: none; }
 .help-panel {
-  width: min(268px, 100%);
+  width: min(360px, 100%);
+  max-height: calc(100dvh - 2.5rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: var(--bg-color);
   color: var(--text-main);
   border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
@@ -314,10 +319,10 @@ body.help-open { overflow: hidden; }
 }
 .help-close {
   position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  width: 1.75rem;
-  height: 1.75rem;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 2.75rem;
+  height: 2.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -355,11 +360,11 @@ body.help-open { overflow: hidden; }
 }
 .help-controls li {
   display: grid;
-  grid-template-columns: 4.5rem 1fr;
+  grid-template-columns: 5.2rem 1fr;
   gap: 0.5rem;
   align-items: baseline;
-  padding: 0.42rem 0;
-  font-size: 0.76rem;
+  padding: 0.46rem 0;
+  font-size: 0.8rem;
   line-height: 1.35;
   color: var(--text-main);
 }
@@ -376,7 +381,7 @@ body.help-open { overflow: hidden; }
 }
 .help-body {
   margin: 0 0 0.75rem;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   line-height: 1.45;
   color: var(--text-sub);
 }
@@ -488,15 +493,58 @@ body.help-open { overflow: hidden; }
 .help-done {
   appearance: none;
   width: 100%;
+  min-height: 2.75rem;
   border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
   border-radius: 999px;
   padding: 0.55rem 0.75rem;
+  background: var(--text-main);
+  color: var(--bg-color);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* Settings row: two even pills that read as switches, not bare buttons. */
+.help-packs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0 0 0.85rem;
+}
+.help-packs-cap {
+  grid-column: 1 / -1;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+.help-pack {
+  appearance: none;
+  min-height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 999px;
+  padding: 0.45rem 0.6rem;
   background: transparent;
   color: var(--text-main);
   font: inherit;
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
+}
+.help-pack:hover,
+.help-pack:focus-visible {
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  outline: none;
+}
+/* Touch: no keyboard, no modifier-click. Keep the copy honest per surface. */
+@media (hover: none) and (pointer: coarse) {
+  .help-keys,
+  .help-desk-only { display: none; }
+}
+@media (hover: hover) {
+  .help-touch-only { display: none; }
 }
 .help-done:hover,
 .help-done:focus-visible {
@@ -645,14 +693,14 @@ body.help-open { overflow: hidden; }
     <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Dig a face</span></li>
-      <li><span class="act">Hold / ⌃-click</span><span>Flag a face</span></li>
+      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag a face</span></li>
       <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
       <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Tap outside the sphere to open the center menu: reset, undo, flag mode, board size, light or dark, warning style, and drag inversion. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+      <p>Tap the menu button (bottom left) or anywhere outside the sphere to open the center menu: reset, undo, flag mode, board size, theme (Light, Dark, Glow, Mercury), warning style, and drag inversion. Progress autosaves. Reset or a size change starts a new sphere.</p>
     </div>
     <p class="help-keys"><kbd>C</kbd> menu · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -664,7 +712,7 @@ body.help-open { overflow: hidden; }
       </p>
     </div>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
-      <span class="help-packs-cap">Controls</span>
+      <span class="help-packs-cap">Settings</span>
       <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
       <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>

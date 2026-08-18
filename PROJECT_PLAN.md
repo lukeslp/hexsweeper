@@ -11,7 +11,7 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - **Static artifact** under `www/dr.eamer.dev/games/hexsweeper/` (symlink: `~/dr.eamer.dev`).
 - **`core.js`**: axial hex map, finite + endless modes, input (mouse/touch), flood reveal, flags, RAF loop, skin hooks.
 - **`sphere/` → `index.html`**: the root is Sphere itself, sealed by the exporter; no prompt in the way.
-- **`tools/app-launcher.html` → `launcher.html`**: shared native/web three-hex games menu (Infinite, Classic, Sphere, centered Resume).
+- **`tools/app-launcher.html` → `launcher.html`**: web three-hex games menu (Infinite, Classic, Sphere, centered Resume). The native app is sphere-only.
 - **`infinite.html` / `bounded.html`**: generated web product pages from the plate and Classic collection exports.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
@@ -68,6 +68,7 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - [x] Sphere share card that works — real capture, wired from Customize panel
 - [x] Sphere Glow theme — luminous dig centers
 - [x] Sphere Mercury theme — reflection studio material ported into the canonical engine (`sphere/mirror-material.js`), ships offline
+- [x] Flower Theme tile (Light → Dark → Glow → Mercury), corner Menu glyph, touch-sized help sheet, larger sphere on portrait phones
 - [x] Sphere Earth / Moon globe-map themes (`?theme=earth|moon`); Earth uses responsive 4K/2K multi-sample gloss rendering, with textures tracked in `sphere/assets/textures/`
 - [x] Three archived model-authored visual studies on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
 - [x] Free 360° drag tumble (was constrained camera)

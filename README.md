@@ -34,10 +34,12 @@ The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on
 | **Sphere** | Closed 3D Goldberg sphere | `index.html` (root) · `sphere/` (source) |
 
 The root opens straight into Sphere, which restores its own unfinished run
-without asking. The three-hex games menu — Infinite, Classic, Sphere, with the newest run in the
-center Resume tile — lives at `launcher.html`, one tap away behind every
-game's **‹ Games** pill. A mode tap starts a fresh run using the last used
-style, board size, or theme. Settings live inside each game.
+without asking, and carries no chrome of its own beyond the sphere's two corner
+glyphs (Menu, Help). The three-hex games menu — Infinite, Classic, Sphere, with
+the newest run in the center Resume tile — lives at `launcher.html`, reached
+from Infinite's and Classic's **‹ Games** pill or from the sphere's Help sheet
+("Also Games · Infinite · Classic"). A mode tap starts a fresh run using the
+last used style, board size, or theme. Settings live inside each game.
 
 The former five-mode flat production surface remains at `play.html` for its
 distinct materials and mechanics:
@@ -160,14 +162,18 @@ pens. The live multi-theme game remains available at `play.html`.
 
 `python3 tools/export-collection.py --app` stages the sealed Capacitor payload in
 `build/app/`. On both surfaces the root page is Sphere itself, sealed from
-`sphere/` by the exporter (`export_sphere_web` / `export_sphere_app`), and the
-games menu is rendered from `tools/app-launcher.html` to `launcher.html` (web)
-or `games/launcher.html` (app); route and asset treatment differ by platform.
+`sphere/` by the exporter (`export_sphere_web` / `export_sphere_app`). The
+native payload is **only** that page plus the help image: Infinite, Classic,
+and the launcher are web-only. On the web the games menu is rendered from
+`tools/app-launcher.html` to `launcher.html`.
 
 Nothing stands between the root and the board: Sphere restores its own
 autosave silently, and saved Infinite / Classic runs are reached through the
 launcher's Resume tile. Sphere honors `?fresh=1` (the launcher's "play Sphere"
-route) by starting a new board instead of restoring.
+route) by starting a new board instead of restoring. `tools/test-app-sphere-browser.mjs`
+drives the sealed app page in headless Chrome: cold start with no prompt and no
+Games chrome, corner Menu → flower on one tap, first-tap Undo, Theme tile
+through to Mercury with its WebGL canvas up.
 
 The launcher is three hexes — **Infinite**, **Classic**, and **Sphere** — with an
 empty seat in the middle. Tapping a mode opens that game at once with its
@@ -219,10 +225,10 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Minimal help: short lede, color history tile → [CoolmathGames history](https://www.coolmathgames.com/blog/the-history-of-minesweeper) + lightbox
 - Densities: **XS** = 162 · **S** = 362 · **M** = 1002 · **L** = 1442 · **XL** = 2252 (~17% mines; size button cycles XS→XL)
 - Flood expand: BFS ring stagger + brief flash/pop (logic opens immediately; paint catch-up; RM-safe)
-- **Chrome:** three BR glass pills — Reset·Size·Theme | Flag | Help; size/theme icons morph per state (no corner badges)
+- **Chrome:** the center flower (`hex-bloom.js`): Reset in the middle, ring of Theme (swatch tile: Light → Dark → Glow → Mercury) · Warnings · Undo · Flag · Invert · Size; opened by the bottom-left Menu glyph or a tap outside the sphere; Help is the bottom-right glyph. Corner glyphs are 48×54 on touch. Legacy dev-chrome HUD pills remain for `sphere/dev/`.
 - **Themes:** Light · Shell · Dark · Ink · **Float** (Light + contact shadow) · **Card** (Ink + contact shadow) · **Glow** (luminous dig centers) · **Earth** / **Moon** (globe-map daymaps, `?theme=earth|moon`) · **Mercury** (the reflection studio's Smoked Mercury material as a theme: WebGL mirrored body from `sphere/mirror-material.js`, etched crust, liquid-metal wells, gilded flags; procedural, so it also ships offline in the app; falls back to a plain metal field without WebGL); wells opposite the shell — `hexsweeper-sphere-theme-v6`
 - **Customize panel:** in-run theme/board tweaks with one-step undo; share card capture wired from the panel
-- **First visit:** short icon help modal (`hexsweeper-sphere-welcome-v1`); `?welcome=1` forces, `?welcome=0` skips
+- **Help sheet:** touch-sized (360px wide, 44pt controls, keyboard hints hidden on touch), gesture table, menu/theme copy, Settings pills (Invert, Effects), Done. First visit opens it on the web (`hexsweeper-sphere-welcome-v1`; `?welcome=1` forces, `?welcome=0` skips); the sealed exports pre-set the key so pens and the app start on the board.
 - **Endgame FX:** lose — graph-distance mine cascade + particle burst + shock ring; win — clearance pulse + confetti-lite (`prefers-reduced-motion`: instant states)
 
 Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at

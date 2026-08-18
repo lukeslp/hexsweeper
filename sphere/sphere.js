@@ -1115,6 +1115,15 @@
     const helpCloseBtn = document.getElementById("help-close-btn");
     const helpDoneBtn = document.getElementById("help-done-btn");
     let helpFocusReturn = null;
+    let helpOpenFrame = 0;
+    function cancelHelpOpenFrame() {
+      if (!helpOpenFrame) return;
+      // Test harnesses stub requestAnimationFrame without its cancel twin.
+      if (typeof global.cancelAnimationFrame === "function") {
+        global.cancelAnimationFrame(helpOpenFrame);
+      }
+      helpOpenFrame = 0;
+    }
     let shareBusy = false;
     /*
      * The share File is built when the win banner appears, not when the button
@@ -1640,7 +1649,14 @@
           : helpBtn;
       helpOverlay.hidden = false;
       document.body.classList.add("help-open");
-      requestAnimationFrame(() => helpOverlay.classList.add("open"));
+      // Deferred a frame so the opacity transition runs; closeHelp cancels it
+      // so an open→close inside one frame cannot leave the overlay both
+      // hidden and "open" (which blocked every tap on the board).
+      cancelHelpOpenFrame();
+      helpOpenFrame = requestAnimationFrame(() => {
+        helpOpenFrame = 0;
+        helpOverlay.classList.add("open");
+      });
       if (releaseFocusTrap) releaseFocusTrap();
       releaseFocusTrap = trapFocus(helpOverlay);
       (helpPanel || helpOverlay).focus?.();
@@ -1660,6 +1676,7 @@
         } catch (_) {}
         markWelcomeSeen = false;
       }
+      cancelHelpOpenFrame();
       helpOverlay.classList.remove("open");
       document.body.classList.remove("help-open");
       if (releaseFocusTrap) {
@@ -1684,7 +1701,14 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       state.centerX = w / 2;
       state.centerY = h / 2;
-      state.baseScale = Math.min(w, h) * BASE_SCALE_FRAC;
+      // Portrait phones: the short edge is the width and the flower must fit
+      // inside the sphere, so let the sphere take more of it (~86% at the
+      // default zoom) instead of the desktop-tuned 70%. Tall margins above
+      // and below stay free for the tap-outside menu gesture.
+      const portraitPhone = h > w * 1.25 && w <= 600;
+      state.baseScale = portraitPhone
+        ? w * 0.52
+        : Math.min(w, h) * BASE_SCALE_FRAC;
       state.scale = state.baseScale * state.zoomFactor;
       state.projectedCache = null;
     }

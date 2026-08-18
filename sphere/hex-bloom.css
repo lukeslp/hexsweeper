@@ -246,6 +246,11 @@
   z-index: 3;
   pointer-events: auto;
 }
+/* Menu seat: same quiet glyph treatment, opposite corner (center-flower only). */
+.hex-bloom-corner.is-menu-corner {
+  right: auto;
+  left: max(14px, calc(env(safe-area-inset-left, 0px) + 10px));
+}
 .hex-bloom-corner .hb-hex.is-dock {
   position: relative;
   left: auto;
@@ -308,6 +313,18 @@
   }
   .hex-bloom[data-phase="open"] .hex-bloom-dock {
     --dock-rise: -28px;
+  }
+}
+/* Touch: the corner glyphs are the only always-visible controls, so give
+   them a full finger target. Sits after the narrow-viewport override on
+   purpose — phones match both, and this one must win. */
+@media (hover: none) and (pointer: coarse) {
+  .hex-bloom {
+    --tile-w-dock-idle: 48px;
+    --tile-h-dock-idle: 54px;
+  }
+  .hex-bloom-corner .hb-hex.is-dock .hb-glyph {
+    opacity: 0.72;
   }
 }
 

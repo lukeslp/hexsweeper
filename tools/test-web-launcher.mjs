@@ -2,7 +2,7 @@
 // Static contract for the generated web surface: Sphere at the root, the
 // three-hex launcher at launcher.html, and their destinations.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -17,7 +17,6 @@ function expect(condition, message) {
 const rootPage = read("index.html");
 const launcher = read("launcher.html");
 const appRoot = read("build/app/index.html");
-const appLauncher = read("build/app/games/launcher.html");
 const template = read("tools/app-launcher.html");
 const core = read("core.js");
 const infinite = read("infinite.html");
@@ -37,7 +36,7 @@ for (const [label, href] of [
 // the launcher, and no prompt in the way — Sphere restores its own autosave.
 expect(rootPage.includes("HEXSWEEPER_SPHERE_GAME"), "root Sphere does not expose the game");
 expect(!rootPage.includes("resume-gate"), "root Sphere still carries a resume prompt");
-expect(rootPage.includes('class="app-back" href="launcher.html"'), "root Sphere has no Games pill to the launcher");
+expect(!rootPage.includes('class="app-back"'), "root Sphere grew a Games pill; the sphere is the front door");
 expect(rootPage.includes('id: "mercury"') && rootPage.includes("global.MirrorMaterial = {"), "root Sphere is missing the Mercury theme or its renderer");
 expect(rootPage.includes('<link rel="stylesheet" href="fonts/fonts.css">'), "root Sphere inlines fonts instead of linking them");
 expect(rootPage.includes('rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/"'), "root canonical is wrong");
@@ -46,11 +45,13 @@ expect(!rootPage.includes("user-scalable=no"), "root Sphere disables browser zoo
 expect(rootPage.includes('data-goatcounter="https://stats.dr.eamer.dev/count"'), "root analytics tag is missing");
 expect(rootPage.includes('name: "Mercury"') && sphere.includes('src="mirror-material.js?v='), "Sphere page does not load the reflection renderer");
 
-// App payload mirrors the web: Sphere at index.html, launcher under games/.
+// App payload is Sphere and nothing else: no launcher, no flat games, no pill.
 expect(appRoot.includes("window.HEXSWEEPER_SPHERE_APP = true;"), "app root is not the sealed Sphere");
 expect(!appRoot.includes("resume-gate"), "app root still carries a resume prompt");
-expect(appRoot.includes('class="app-back" href="games/launcher.html"'), "app root has no Games pill");
-expect(appLauncher.includes('href="../index.html?theme=light&amp;fresh=1"') && appLauncher.includes('href="infinite.html?mode=light&amp;fresh=1"'), "app launcher routes are wrong");
+expect(!appRoot.includes('class="app-back"'), "app root grew a Games pill");
+expect(!existsSync(join(root, "build/app/games")), "app payload still ships games/ (launcher, Infinite, Classic)");
+expect(appRoot.includes('id: "mercury"') && appRoot.includes("global.MirrorMaterial = {"), "app root is missing Mercury or its renderer");
+expect(appRoot.includes('FLOWER_THEMES = ["light", "dark", "glow", "mercury"]'), "flower has no theme tile reaching Mercury");
 expect(!appRoot.includes("https://stats.dr.eamer.dev"), "app root leaks analytics");
 
 for (const [label, selector] of [
