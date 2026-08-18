@@ -785,17 +785,17 @@ body.help-open { overflow: hidden; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hexsweeper 3D <span class="help-title-sub">settings</span></h2>
-    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
+    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Clear a face; place a flag where you think a mine is. Your first clear is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
-      <li><span class="act">Tap</span><span>Dig a face</span></li>
-      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag a face</span></li>
+      <li><span class="act">Tap</span><span>Clear a face</span></li>
+      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Place a flag</span></li>
       <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
       <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
     </ul>
     <div class="help-body">
-      <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet: theme, board size, warning style, drag inversion and effects. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
+      <p>Clear every safe face. Numbers count mines among the six touching neighbors. Flags mark where you think a mine is.</p>
+      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet: theme, board size, drag inversion and effects — each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
     </div>
     <p class="help-keys"><kbd>C</kbd> menu · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -813,10 +813,6 @@ body.help-open { overflow: hidden; }
     <div class="help-sizes" id="help-sizes" role="group" aria-label="Board size">
       <span class="help-packs-cap">Board size <em>· starts a new sphere</em></span>
       <div class="help-size-grid" id="help-size-grid"></div>
-    </div>
-    <div class="help-warnings" id="help-warnings" role="group" aria-label="Warning style">
-      <span class="help-packs-cap">Warnings</span>
-      <div class="help-warn-grid" id="help-warn-grid"></div>
     </div>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
       <span class="help-packs-cap">Settings</span>
@@ -838,8 +834,8 @@ body.help-open { overflow: hidden; }
     <h2 id="tutorial-title">Hexsweeper 3D</h2>
     <p class="help-lede">Minesweeper on a sphere. Six neighbours per face — numbers count up to six.</p>
     <ul class="help-controls tutorial-steps" aria-label="How to play">
-      <li><span class="act">Tap</span><span>Dig a face. Your first dig is always safe.</span></li>
-      <li><span class="act">Hold</span><span>Plant a flag — or arm flag mode at the bottom.</span></li>
+      <li><span class="act">Tap</span><span>Clear a face. Your first clear is always safe.</span></li>
+      <li><span class="act">Hold</span><span>Place a flag where you think a mine is — or arm flag mode at the bottom.</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere. Pinch to zoom.</span></li>
     </ul>
     <p class="help-body">Clear every safe face. Undo, New sphere and Flag live at the bottom; themes, sizes and everything else are behind <b>?</b>.</p>
@@ -954,45 +950,7 @@ const sphereChrome = initQuietChrome(sphereGame);
     sizeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === d)));
   }
 
-  // Warning style — four curated combinations of count paint, relief and seams.
-  const WARNINGS = [
-    ["numbers-depth", "Numbers · depth", "numerals", "extruded", true],
-    ["numbers-flat", "Numbers · flush", "numerals", "flush", false],
-    ["mono-depth", "Black + white · depth", "rings", "extruded", true],
-    ["yellow-flat", "Yellow · no seams", "yellow", "flush", false],
-  ];
-  const warnGrid = document.getElementById("help-warn-grid");
-  const warnButtons = [];
-  function warningIndex() {
-    const st = sphereGame.getState();
-    if (st.countStyle === "yellow") return 3;
-    if (st.countStyle === "rings") return 2;
-    if (st.relief === "flush" && st.seams === false) return 1;
-    return 0;
-  }
-  if (warnGrid) {
-    WARNINGS.forEach(([id, label, count, relief, seams], i) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "help-warn";
-      b.dataset.warn = id;
-      b.setAttribute("aria-pressed", "false");
-      b.textContent = label;
-      b.addEventListener("click", () => {
-        sphereGame.setCountStyle(count, { syncSurface: false });
-        sphereGame.setRelief(relief);
-        sphereGame.setSeams(seams);
-        syncWarnings();
-      });
-      warnGrid.appendChild(b);
-      warnButtons.push(b);
-    });
-  }
-  function syncWarnings() {
-    const i = warningIndex();
-    warnButtons.forEach((b, j) => b.setAttribute("aria-pressed", String(i === j)));
-  }
-  function syncAll() { sync(); syncSizes(); syncWarnings(); }
+  function syncAll() { sync(); syncSizes(); }
   syncAll();
   if (helpBtn) helpBtn.addEventListener("click", syncAll);
   window.HEXSWEEPER_SYNC_SETTINGS = syncAll;

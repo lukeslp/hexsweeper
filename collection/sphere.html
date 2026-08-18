@@ -1555,17 +1555,17 @@ body.help-open { overflow: hidden; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hexsweeper 3D <span class="help-title-sub">settings</span></h2>
-    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
+    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Clear a face; place a flag where you think a mine is. Your first clear is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
-      <li><span class="act">Tap</span><span>Dig a face</span></li>
-      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag a face</span></li>
+      <li><span class="act">Tap</span><span>Clear a face</span></li>
+      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Place a flag</span></li>
       <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
       <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
     </ul>
     <div class="help-body">
-      <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet: theme, board size, warning style, drag inversion and effects. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
+      <p>Clear every safe face. Numbers count mines among the six touching neighbors. Flags mark where you think a mine is.</p>
+      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet: theme, board size, drag inversion and effects — each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
     </div>
     <p class="help-keys"><kbd>C</kbd> menu · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -1583,10 +1583,6 @@ body.help-open { overflow: hidden; }
     <div class="help-sizes" id="help-sizes" role="group" aria-label="Board size">
       <span class="help-packs-cap">Board size <em>· starts a new sphere</em></span>
       <div class="help-size-grid" id="help-size-grid"></div>
-    </div>
-    <div class="help-warnings" id="help-warnings" role="group" aria-label="Warning style">
-      <span class="help-packs-cap">Warnings</span>
-      <div class="help-warn-grid" id="help-warn-grid"></div>
     </div>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
       <span class="help-packs-cap">Settings</span>
@@ -1608,8 +1604,8 @@ body.help-open { overflow: hidden; }
     <h2 id="tutorial-title">Hexsweeper 3D</h2>
     <p class="help-lede">Minesweeper on a sphere. Six neighbours per face — numbers count up to six.</p>
     <ul class="help-controls tutorial-steps" aria-label="How to play">
-      <li><span class="act">Tap</span><span>Dig a face. Your first dig is always safe.</span></li>
-      <li><span class="act">Hold</span><span>Plant a flag — or arm flag mode at the bottom.</span></li>
+      <li><span class="act">Tap</span><span>Clear a face. Your first clear is always safe.</span></li>
+      <li><span class="act">Hold</span><span>Place a flag where you think a mine is — or arm flag mode at the bottom.</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere. Pinch to zoom.</span></li>
     </ul>
     <p class="help-body">Clear every safe face. Undo, New sphere and Flag live at the bottom; themes, sizes and everything else are behind <b>?</b>.</p>
@@ -2236,6 +2232,10 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     chrome: "dark",
     reflectionSurface: true,
     material: "mercury",
+    // Themes own the warning treatment (count paint · relief · seams) and
+    // declare what a cleared face opens onto. Solid metals: depth, no seams.
+    interior: "metal",
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#eaf8ff",
     pureCovered: false,
     pureRevealed: false,
@@ -2309,6 +2309,9 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     name: "Stratosphere",
     chrome: "light",
     material: "stratosphere",
+    // Cleared faces open into an empty shell whose inside is sky.
+    interior: "hollow",
+    warn: { count: "numerals", relief: "flush", seams: false },
     accent: "#1d6fa9",
     fallbackBg: "#e7f2fa",
     fallbackBgGlow: "#ffffff",
@@ -2326,6 +2329,8 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     name: "Ion Storm",
     chrome: "dark",
     material: "ion-storm",
+    interior: "plasma",
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#c893dc",
     fallbackBg: "#060a19",
     fallbackBgGlow: "#175fa2",
@@ -2351,6 +2356,8 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     id: "aurora",
     name: "Aurora",
     material: "aurora",
+    interior: "hollow",
+    warn: { count: "numerals", relief: "flush", seams: false },
     accent: "#88d2d0",
     fallbackBg: "#02070d",
     fallbackBgGlow: "#2e7f83",
@@ -2367,6 +2374,8 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     id: "galaxy",
     name: "Galaxy",
     material: "galaxy",
+    interior: "hollow",
+    warn: { count: "numerals", relief: "flush", seams: false },
     accent: "#d09a9e",
     fallbackBg: "#050714",
     fallbackBgGlow: "#49405c",
@@ -2383,6 +2392,8 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     id: "gilded-ribbon",
     name: "Gilded Ribbon",
     material: "gilded-ribbon",
+    interior: "gold",
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#dfa35f",
     fallbackBg: "#080510",
     fallbackBgGlow: "#4d3449",
@@ -2399,6 +2410,8 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     id: "heat-lightning",
     name: "Heat Lightning",
     material: "heat-lightning",
+    interior: "magma",
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#ffb05b",
     fallbackBg: "#190f16",
     fallbackBgGlow: "#7a3f53",
@@ -2411,6 +2424,10 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     text: { 1: "#fff2e2", 2: "#ffd6a3", 3: "#ffb05b", 4: "#ff9db1", 5: "#c9b8ff", 6: "#8ed9f5" },
     label: "#fff2e2",
   });
+
+  // The two mono looks keep the classic read: numbers, depth, seams.
+  THEME_LIGHT.warn = { count: "numerals", relief: "extruded", seams: true };
+  THEME_DARK.warn = { count: "numerals", relief: "extruded", seams: true };
 
   const THEMES = [
     THEME_LIGHT,
@@ -3501,6 +3518,7 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
       themeIndex = ((index % THEMES.length) + THEMES.length) % THEMES.length;
       const def = currentThemeDef();
       state.theme = themePalette(def);
+      applyThemeWarnings(def);
       syncReflectionForTheme();
       if (def.id === "light" || def.id === "dark") {
         const dark = def.id === "dark";
@@ -3522,6 +3540,17 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
         localStorage.setItem(THEME_STORAGE_KEY, def.id);
       } catch (_) {}
       scheduleFrame();
+    }
+
+    /** Themes own count paint · relief · seams; a theme without `warn` leaves them alone. */
+    function applyThemeWarnings(def) {
+      const w = def && def.warn;
+      if (!w) return;
+      if (w.count && state.countStyle !== w.count) {
+        setCountStyle(w.count, { syncSurface: false, toast: false });
+      }
+      if (w.relief) state.relief = w.relief === "flush" ? "flush" : "extruded";
+      if (typeof w.seams === "boolean") state.seams = w.seams;
     }
 
     function cycleTheme() {
@@ -3882,6 +3911,7 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
 
     function invalidateProjection() {
       state.projectedCache = null;
+      state.interiorCache = null;
     }
 
     /**
@@ -5705,9 +5735,32 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
       if (!cell || !cell.revealed || cell.flagged || cell.isMine) return null;
       const T = state.theme;
       if (!T || !T.reflectionSurface) return null;
-      if (T.material === "mercury") return "metal";
-      if (T.material) return T.material; // one painter per material below
-      return null;
+      return T.interior || null;
+    }
+    /** Fixed spherical coordinates of a face — turn with the shell. */
+    function faceLatLon(tile) {
+      const c = tile.centerPoint;
+      const len = Math.hypot(c.x, c.y, c.z) || 1;
+      return { lat: Math.asin(c.y / len), lon: Math.atan2(c.x / len, c.z / len) };
+    }
+    function faceDepth(proj) {
+      // 0 at the rim → 1 at the sphere's centre, in screen terms.
+      const d = Math.hypot(proj.center.x - state.centerX, proj.center.y - state.centerY);
+      return Math.max(0, Math.min(1, 1 - d / Math.max(1, state.scale * 1.15)));
+    }
+    function mixHex(a, b, k) {
+      const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+      const r = Math.round(((pa >> 16) & 255) * (1 - k) + ((pb >> 16) & 255) * k);
+      const g = Math.round(((pa >> 8) & 255) * (1 - k) + ((pb >> 8) & 255) * k);
+      const bl = Math.round((pa & 255) * (1 - k) + (pb & 255) * k);
+      return `rgb(${r},${g},${bl})`;
+    }
+    function fillFace(proj, fill) {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      proj.boundary.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
+      ctx.closePath();
+      ctx.fill();
     }
     // Deterministic per-face hash for procedural cores.
     function coreHash(x, y, seed) {
@@ -5717,222 +5770,160 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     function coreTime(now) {
       return state.reduceMotion ? 0 : now * 0.001;
     }
-    /** Sky glass: deep-to-pale blue with slow cloud streaks drifting across. */
-    function drawSkyCore(proj, now) {
+    /** Brushed gold whose ribbons run along the sphere (by lat/lon), plus a view-locked sheen. */
+    function drawGoldFace(proj, tile, now) {
       const t = coreTime(now);
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const base = ctx.createLinearGradient(cx, cy - R, cx, cy + R);
-      base.addColorStop(0, "#0b3f7a");
-      base.addColorStop(0.55, "#2f86c8");
-      base.addColorStop(1, "#bfe1f5");
-      ctx.fillStyle = base;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      ctx.globalCompositeOperation = "screen";
-      for (let band = 0; band < 5; band++) {
-        const y0 = cy - R * 0.9 + band * R * 0.42 + Math.sin(t * 0.21 + band) * R * 0.05;
-        const drift = ((t * (0.05 + band * 0.012)) % 1) * R * 0.6;
-        const g = ctx.createLinearGradient(cx - R * 1.3 + drift, 0, cx + R * 1.3 + drift, 0);
-        g.addColorStop(0, "rgba(255,255,255,0)");
-        g.addColorStop(0.35, "rgba(255,255,255,0.22)");
-        g.addColorStop(0.55, "rgba(255,255,255,0.32)");
-        g.addColorStop(0.8, "rgba(255,255,255,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.ellipse(cx + drift * 0.3, y0, R * 1.2, R * 0.11 + band * R * 0.012, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-    /** Ion storm: navy plasma with pulsing violet filaments. */
-    function drawStormCore(proj, now) {
-      const t = coreTime(now);
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const base = ctx.createRadialGradient(cx - R * 0.2, cy - R * 0.25, R * 0.05, cx, cy, R * 1.15);
-      base.addColorStop(0, "#1c3f8f");
-      base.addColorStop(0.5, "#0b1a4a");
-      base.addColorStop(1, "#050a1e");
-      ctx.fillStyle = base;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      ctx.globalCompositeOperation = "screen";
-      ctx.lineCap = "round";
-      for (let f = 0; f < 6; f++) {
-        const seed = coreHash(f, 3, 2.1);
-        const pulse = 0.35 + 0.65 * Math.max(0, Math.sin(t * (1.1 + seed) + seed * 9));
-        ctx.strokeStyle = `rgba(200,147,220,${(0.16 + pulse * 0.42).toFixed(3)})`;
-        ctx.lineWidth = Math.max(1, R * (0.008 + seed * 0.01));
-        ctx.beginPath();
-        let x = cx - R * 1.1 + seed * R * 0.4;
-        let y = cy - R * 0.9 + coreHash(f, 7, 1.7) * R * 1.8;
-        ctx.moveTo(x, y);
-        for (let k = 0; k < 9; k++) {
-          x += R * 0.26;
-          y += (coreHash(f, k, 5.3) - 0.5) * R * 0.28 + Math.sin(t * 2 + k) * R * 0.02;
-          ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-    /** Aurora: night sky with slow teal-green curtains. */
-    function drawAuroraCore(proj, now) {
-      const t = coreTime(now);
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const base = ctx.createLinearGradient(cx, cy - R, cx, cy + R);
-      base.addColorStop(0, "#02070d");
-      base.addColorStop(0.6, "#071a2a");
-      base.addColorStop(1, "#0b2b2c");
-      ctx.fillStyle = base;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      ctx.globalCompositeOperation = "screen";
-      for (let c = 0; c < 6; c++) {
-        const seed = coreHash(c, 1, 8.8);
-        const x = cx - R * 1.0 + c * R * 0.42 + Math.sin(t * 0.35 + seed * 6) * R * 0.09;
-        const g = ctx.createLinearGradient(0, cy - R * 0.9, 0, cy + R * 0.7);
-        g.addColorStop(0, "rgba(136,210,208,0)");
-        g.addColorStop(0.35, `rgba(120,230,190,${(0.18 + 0.16 * Math.sin(t + seed * 5)).toFixed(3)})`);
-        g.addColorStop(0.7, "rgba(60,150,170,0.14)");
-        g.addColorStop(1, "rgba(30,60,120,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.moveTo(x - R * 0.12, cy - R * 0.9);
-        ctx.quadraticCurveTo(x + R * 0.18, cy, x - R * 0.06, cy + R * 0.7);
-        ctx.lineTo(x + R * 0.16, cy + R * 0.7);
-        ctx.quadraticCurveTo(x + R * 0.36, cy, x + R * 0.1, cy - R * 0.9);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-    /** Galaxy: indigo dust with a fixed star field that twinkles. */
-    function drawGalaxyCore(proj, now) {
-      const t = coreTime(now);
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const base = ctx.createRadialGradient(cx + R * 0.15, cy - R * 0.1, R * 0.05, cx, cy, R * 1.2);
-      base.addColorStop(0, "#3a2b52");
-      base.addColorStop(0.45, "#141232");
-      base.addColorStop(1, "#050714");
-      ctx.fillStyle = base;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      const dust = ctx.createLinearGradient(cx - R, cy + R * 0.4, cx + R, cy - R * 0.5);
-      dust.addColorStop(0, "rgba(208,154,158,0)");
-      dust.addColorStop(0.5, "rgba(208,154,158,0.16)");
-      dust.addColorStop(1, "rgba(120,110,200,0)");
-      ctx.fillStyle = dust;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      for (let i = 0; i < 90; i++) {
-        const sx = cx + (coreHash(i, 2, 1.1) - 0.5) * R * 2.4;
-        const sy = cy + (coreHash(i, 5, 3.3) - 0.5) * R * 2.4;
-        const tw = 0.45 + 0.55 * Math.abs(Math.sin(t * (0.6 + coreHash(i, 9, 0.7)) + i));
-        const r = (0.6 + coreHash(i, 4, 6.2) * 1.6) * Math.max(0.6, R / 260);
-        ctx.fillStyle = `rgba(255,${230 + Math.round(coreHash(i, 1, 2) * 25)},${210 + Math.round(coreHash(i, 3, 2) * 45)},${tw.toFixed(3)})`;
-        ctx.beginPath();
-        ctx.arc(sx, sy, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    /** Gilded ribbon: brushed gold with flowing ribbon lines. */
-    function drawGildedCore(proj, now) {
-      const t = coreTime(now);
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const angle = state.rotY * 0.18 + t * 0.06;
-      const dx = Math.cos(angle) * R * 1.4, dy = Math.sin(angle) * R * 1.4;
-      const gold = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
-      gold.addColorStop(0, "#3a2508");
-      gold.addColorStop(0.3, "#9a6a1e");
-      gold.addColorStop(0.5, "#f1cf7a");
-      gold.addColorStop(0.7, "#a5721f");
-      gold.addColorStop(1, "#2a1a06");
-      ctx.fillStyle = gold;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      ctx.globalCompositeOperation = "screen";
-      ctx.lineCap = "round";
-      for (let k = 0; k < 7; k++) {
-        const seed = coreHash(k, 6, 4.4);
-        ctx.strokeStyle = `rgba(255,236,170,${(0.10 + seed * 0.14).toFixed(3)})`;
-        ctx.lineWidth = Math.max(0.8, R * (0.006 + seed * 0.012));
-        ctx.beginPath();
-        const y0 = cy - R * 1.0 + k * R * 0.3;
-        for (let i = 0; i <= 24; i++) {
-          const x = cx - R * 1.3 + (i / 24) * R * 2.6;
-          const y = y0 + Math.sin(i * 0.5 + t * 0.9 + seed * 7) * R * 0.09 + Math.sin(i * 0.17 + t * 0.4) * R * 0.05;
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-    /** Heat lightning: magma glow with heat bands and a passing flash. */
-    function drawHeatCore(proj, now) {
-      const t = coreTime(now);
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const base = ctx.createRadialGradient(cx, cy + R * 0.3, R * 0.05, cx, cy, R * 1.2);
-      base.addColorStop(0, "#ffb05b");
-      base.addColorStop(0.35, "#c9481f");
-      base.addColorStop(0.75, "#5a1a2e");
-      base.addColorStop(1, "#190f16");
-      ctx.fillStyle = base;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      ctx.globalCompositeOperation = "screen";
-      for (let band = 0; band < 4; band++) {
-        const y0 = cy - R * 0.6 + band * R * 0.4;
-        ctx.strokeStyle = `rgba(255,190,120,${(0.10 + 0.08 * Math.sin(t * 1.3 + band)).toFixed(3)})`;
-        ctx.lineWidth = Math.max(1, R * 0.02);
-        ctx.beginPath();
-        for (let i = 0; i <= 26; i++) {
-          const x = cx - R * 1.3 + (i / 26) * R * 2.6;
-          const y = y0 + Math.sin(i * 0.42 + t * 1.6 + band * 2) * R * 0.045;
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
-      const flash = Math.max(0, Math.sin(t * 0.7) - 0.92) / 0.08; // brief every ~9s
-      if (flash > 0) {
-        ctx.fillStyle = `rgba(255,236,200,${(flash * 0.35).toFixed(3)})`;
-        ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-    function drawMetalCore(proj, now) {
-      const time = state.reduceMotion ? 0 : now * 0.000075;
-      const angle = state.rotY * 0.22 + state.rotX * 0.10 + time;
-      const span = state.scale * 1.55;
-      const dx = Math.cos(angle) * span;
-      const dy = Math.sin(angle) * span;
-      const metal = ctx.createLinearGradient(
-        state.centerX - dx,
-        state.centerY - dy,
-        state.centerX + dx,
-        state.centerY + dy
-      );
-      metal.addColorStop(0, "#030607");
-      metal.addColorStop(0.24, "#424d50");
-      metal.addColorStop(0.43, "#dce7e8");
-      metal.addColorStop(0.49, "#6f7c7f");
-      metal.addColorStop(0.66, "#182023");
-      metal.addColorStop(0.84, "#a8b5b7");
-      metal.addColorStop(1, "#06090a");
-      ctx.fillStyle = metal;
-      ctx.fillRect(
-        state.centerX - state.scale * 1.2,
-        state.centerY - state.scale * 1.2,
-        state.scale * 2.4,
-        state.scale * 2.4
-      );
-      // The highlight settles just behind the shell rotation, giving the
-      // exposed metal a little optical inertia rather than a scrolling decal.
+      const { lat, lon } = faceLatLon(tile);
+      const band = 0.5 + 0.5 * Math.sin(lon * 4 + lat * 3 + t * 0.35);
+      const band2 = 0.5 + 0.5 * Math.sin(lon * 11 - lat * 5 - t * 0.2);
+      const base = mixHex(mixHex("#5c3a0c", "#c8942a", band), "#f4d98a", band2 * 0.35);
+      fillFace(proj, base);
+      // Sheen: one screen-space gleam settles behind the rotation like Mercury's.
+      const angle = state.rotY * 0.22 + t * 0.06;
       const hx = state.centerX + Math.cos(angle * 0.73 - 0.8) * state.scale * 0.34;
       const hy = state.centerY + Math.sin(angle * 0.61 - 1.2) * state.scale * 0.25;
-      const gleam = ctx.createRadialGradient(hx, hy, 0, hx, hy, state.scale * 0.52);
-      gleam.addColorStop(0, "rgba(255,255,255,0.44)");
-      gleam.addColorStop(0.18, "rgba(226,244,246,0.16)");
+      const gleam = ctx.createRadialGradient(hx, hy, 0, hx, hy, state.scale * 0.55);
+      gleam.addColorStop(0, "rgba(255,246,210,0.42)");
+      gleam.addColorStop(0.2, "rgba(255,240,190,0.14)");
       gleam.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = gleam;
-      ctx.fillRect(
-        state.centerX - state.scale,
-        state.centerY - state.scale,
-        state.scale * 2,
-        state.scale * 2
-      );
+      fillFace(proj, gleam);
+    }
+    /** Magma nucleus: hottest at the sphere's centre, heat bands ride the latitude, a flash passes. */
+    function drawMagmaFace(proj, tile, now) {
+      const t = coreTime(now);
+      const { lat } = faceLatLon(tile);
+      const depth = faceDepth(proj);
+      const bands = 0.85 + 0.15 * Math.sin(lat * 9 + t * 1.4);
+      const heat = Math.min(1, depth * 1.15 * bands);
+      const base = heat > 0.5
+        ? mixHex("#c9481f", "#ffb05b", (heat - 0.5) * 2)
+        : mixHex("#190f16", "#c9481f", heat * 2);
+      fillFace(proj, base);
+      const glow = ctx.createRadialGradient(state.centerX, state.centerY, 0, state.centerX, state.centerY, state.scale * 0.9);
+      const pulse = 0.5 + 0.5 * Math.sin(t * 1.1);
+      glow.addColorStop(0, `rgba(255,220,150,${(0.28 + pulse * 0.16).toFixed(3)})`);
+      glow.addColorStop(0.5, "rgba(255,150,80,0.10)");
+      glow.addColorStop(1, "rgba(255,120,60,0)");
+      fillFace(proj, glow);
+      const flash = Math.max(0, Math.sin(t * 0.7) - 0.92) / 0.08;
+      if (flash > 0) fillFace(proj, `rgba(255,236,200,${(flash * 0.4).toFixed(3)})`);
+    }
+    /** Plasma nucleus: navy at the rim, violet-blue at the centre; a filament lives on each face and pulses. */
+    function drawPlasmaFace(proj, tile, now) {
+      const t = coreTime(now);
+      const depth = faceDepth(proj);
+      fillFace(proj, mixHex("#060a1e", "#1c3f8f", Math.pow(depth, 1.4)));
+      const glow = ctx.createRadialGradient(state.centerX, state.centerY, 0, state.centerX, state.centerY, state.scale * 0.8);
+      glow.addColorStop(0, "rgba(160,120,255,0.30)");
+      glow.addColorStop(0.55, "rgba(90,70,200,0.10)");
+      glow.addColorStop(1, "rgba(60,40,140,0)");
+      fillFace(proj, glow);
+      const seed = coreHash(tile.index, 3, 2.1);
+      if (seed < 0.55) return; // not every face carries a filament
+      const pulse = 0.25 + 0.75 * Math.max(0, Math.sin(t * (1.2 + seed) + seed * 9));
+      const b = proj.boundary;
+      const k = Math.floor(seed * b.length);
+      const a = b[k], c = b[(k + 3) % b.length];
+      ctx.strokeStyle = `rgba(200,147,220,${(0.25 + pulse * 0.6).toFixed(3)})`;
+      ctx.lineWidth = Math.max(0.8, Math.sqrt(proj.area) * 0.06);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      const mx = (a.x + c.x) / 2 + (coreHash(tile.index, 5, 1.3) - 0.5) * Math.sqrt(proj.area) * 0.5;
+      const my = (a.y + c.y) / 2 + (coreHash(tile.index, 7, 4.2) - 0.5) * Math.sqrt(proj.area) * 0.5;
+      ctx.lineTo(mx, my);
+      ctx.lineTo(c.x, c.y);
+      ctx.stroke();
+    }
+    /**
+     * Hollow interiors: cleared faces are holes; through them you see the
+     * concave far side of the shell, painted per back face from that face's
+     * own coordinates (so it turns with the sphere) — Galaxy's stars sit on
+     * the inside of the shell, Aurora's curtains hang by longitude, the sky
+     * shades by height. Drawn once per frame before the front faces, clipped
+     * to the union of the holes.
+     */
+    function interiorFaces() {
+      const key = rotKey() + "|i";
+      if (state.interiorCache && state.interiorKey === key) return state.interiorCache;
+      const back = [];
+      for (let i = 0; i < state.tiles.length; i++) {
+        const pr = projectTile(state.tiles[i], state.rotY, state.rotX);
+        if (pr.z < -0.02) back.push(pr);
+      }
+      back.sort((a, b) => a.z - b.z);
+      state.interiorCache = back;
+      state.interiorKey = key;
+      return back;
+    }
+    function drawHollowInterior(projected, now) {
+      const T = state.theme;
+      if (!T || T.interior !== "hollow") return;
+      const holes = projected.filter((p) => {
+        const c = state.cells[p.index];
+        return p.z > 0.02 && c && c.revealed && !c.isMine && !c.flagged;
+      });
+      if (!holes.length) return;
+      const t = coreTime(now);
+      ctx.save();
+      ctx.beginPath();
+      for (const h of holes) {
+        h.boundary.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
+        ctx.closePath();
+      }
+      ctx.clip();
+      const R = state.scale;
+      // A soft dark falloff so the interior reads as a cavity, not a poster.
+      const cavity = ctx.createRadialGradient(state.centerX, state.centerY, R * 0.1, state.centerX, state.centerY, R * 1.05);
+      const material = T.material;
+      if (material === "stratosphere") {
+        cavity.addColorStop(0, "#9ccbe9");
+        cavity.addColorStop(1, "#5a9ccf");
+      } else if (material === "aurora") {
+        cavity.addColorStop(0, "#08202a");
+        cavity.addColorStop(1, "#02070d");
+      } else {
+        cavity.addColorStop(0, "#1a1436");
+        cavity.addColorStop(1, "#050714");
+      }
+      ctx.fillStyle = cavity;
+      ctx.fillRect(state.centerX - R * 1.2, state.centerY - R * 1.2, R * 2.4, R * 2.4);
+      for (const face of interiorFaces()) {
+        const tile = state.tiles[face.index];
+        const { lat, lon } = faceLatLon(tile);
+        const depth = -face.z; // 0 near the rim → 1 at the far pole
+        let fill;
+        if (material === "stratosphere") {
+          // Height inside the shell: face normal's screen-up component.
+          const up = 0.5 + 0.5 * (face.normal ? face.normal.y : 0);
+          fill = up > 0.55 ? mixHex("#4c98d2", "#1d6fa9", (up - 0.55) * 2.2) : mixHex("#dceaf5", "#4c98d2", up / 0.55);
+          fillFace(face, fill);
+          const puff = coreHash(face.index, 2, 1.7);
+          if (puff > 0.7) {
+            fillFace(face, `rgba(255,255,255,${(0.10 + (puff - 0.7) * 0.6 + 0.05 * Math.sin(t + puff * 8)).toFixed(3)})`);
+          }
+        } else if (material === "aurora") {
+          const curtain = Math.pow(Math.max(0, Math.sin(lon * 3 + t * 0.35)), 2) * (0.55 + 0.45 * Math.cos(lat * 2.2));
+          fill = mixHex(mixHex("#02070d", "#0d3a3c", depth * 0.6), "#7fe0c8", curtain * 0.7);
+          fillFace(face, fill);
+        } else {
+          fill = mixHex("#07061a", "#2a1f4a", depth * 0.8 * (0.6 + 0.4 * Math.sin(lon * 2 + lat)));
+          fillFace(face, fill);
+          const star = coreHash(face.index, 4, 6.2);
+          if (star > 0.62) {
+            const tw = 0.45 + 0.55 * Math.abs(Math.sin(t * (0.5 + star) + face.index));
+            const b = face.boundary;
+            const ox = (coreHash(face.index, 1, 1.1) - 0.5) * 0.5;
+            const oy = (coreHash(face.index, 9, 3.3) - 0.5) * 0.5;
+            const w = Math.max(...b.map((p) => p.x)) - Math.min(...b.map((p) => p.x));
+            ctx.fillStyle = `rgba(255,${230 + Math.round(star * 20)},${205 + Math.round(star * 40)},${tw.toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(face.center.x + ox * w, face.center.y + oy * w, Math.max(0.6, w * (0.05 + star * 0.05)), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      ctx.restore();
     }
     function drawRevealedCore(proj, cell, now, profile) {
       if (!profile || !cell || !cell.revealed || cell.isMine) return;
@@ -5942,13 +5933,12 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
         return;
       }
       ctx.clip();
+      const tile = state.tiles[proj.index];
       if (profile === "metal") drawMetalCore(proj, now);
-      else if (profile === "stratosphere") drawSkyCore(proj, now);
-      else if (profile === "ion-storm") drawStormCore(proj, now);
-      else if (profile === "aurora") drawAuroraCore(proj, now);
-      else if (profile === "galaxy") drawGalaxyCore(proj, now);
-      else if (profile === "gilded-ribbon") drawGildedCore(proj, now);
-      else if (profile === "heat-lightning") drawHeatCore(proj, now);
+      else if (profile === "gold") drawGoldFace(proj, tile, now);
+      else if (profile === "magma") drawMagmaFace(proj, tile, now);
+      else if (profile === "plasma") drawPlasmaFace(proj, tile, now);
+      // "hollow" paints nothing here: the interior pass shows through.
       ctx.restore();
     }
     /**
@@ -6540,6 +6530,17 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
             };
           }
           const empty = cell.neighborMines === 0;
+          if (T.interior === "hollow") {
+            return {
+              fill: "rgba(0,0,0,0)",
+              stroke: "rgba(0,0,0,0)",
+              lineWidth: 0,
+              showLabel: cell.neighborMines > 0,
+              label: cell.neighborMines > 0 ? String(cell.neighborMines) : "",
+              labelColor: T.text[cell.neighborMines] || T.label,
+              labelStroke: T.labelStroke,
+            };
+          }
           return {
             fill: empty ? T.revealedEmpty : T.revealed,
             stroke: empty ? T.revealedEmptyEdge : T.revealedEdge,
@@ -6859,6 +6860,9 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
+      // Hollow interiors paint once, under the front faces, through the holes.
+      drawHollowInterior(projected, now);
+
       // Flags stand above the shell, so they paint after their neighbors
       // (still back-to-front among themselves) or the shell clips their skirts.
       const proudFlags = [];
@@ -6866,9 +6870,13 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
         const idx = proj.index;
         const cell = state.cells[idx];
         // Hover/press on activatable covered faces draw in the raised pass.
+        // Reflection themes have no raised pass (it tore the mirror), so the
+        // pressed face must stay in this pass or it vanishes for the whole
+        // hold — the long-press flag then only showed on release.
         const hoverRaise =
           highlightIdx >= 0 &&
           idx === highlightIdx &&
+          !(state.theme && state.theme.reflectionSurface) &&
           tileCanActivate(cell);
         if (proj.z > 0.02 && hoverRaise) {
           continue;
@@ -7389,7 +7397,8 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     }
 
     // Reflection themes need their renderer from the first frame, not the
-    // first theme change.
+    // first theme change; the theme's warning treatment likewise.
+    applyThemeWarnings(currentThemeDef());
     syncReflectionForTheme();
     scheduleFrame();
 
@@ -9323,45 +9332,7 @@ const sphereChrome = initQuietChrome(sphereGame);
     sizeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === d)));
   }
 
-  // Warning style — four curated combinations of count paint, relief and seams.
-  const WARNINGS = [
-    ["numbers-depth", "Numbers · depth", "numerals", "extruded", true],
-    ["numbers-flat", "Numbers · flush", "numerals", "flush", false],
-    ["mono-depth", "Black + white · depth", "rings", "extruded", true],
-    ["yellow-flat", "Yellow · no seams", "yellow", "flush", false],
-  ];
-  const warnGrid = document.getElementById("help-warn-grid");
-  const warnButtons = [];
-  function warningIndex() {
-    const st = sphereGame.getState();
-    if (st.countStyle === "yellow") return 3;
-    if (st.countStyle === "rings") return 2;
-    if (st.relief === "flush" && st.seams === false) return 1;
-    return 0;
-  }
-  if (warnGrid) {
-    WARNINGS.forEach(([id, label, count, relief, seams], i) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "help-warn";
-      b.dataset.warn = id;
-      b.setAttribute("aria-pressed", "false");
-      b.textContent = label;
-      b.addEventListener("click", () => {
-        sphereGame.setCountStyle(count, { syncSurface: false });
-        sphereGame.setRelief(relief);
-        sphereGame.setSeams(seams);
-        syncWarnings();
-      });
-      warnGrid.appendChild(b);
-      warnButtons.push(b);
-    });
-  }
-  function syncWarnings() {
-    const i = warningIndex();
-    warnButtons.forEach((b, j) => b.setAttribute("aria-pressed", String(i === j)));
-  }
-  function syncAll() { sync(); syncSizes(); syncWarnings(); }
+  function syncAll() { sync(); syncSizes(); }
   syncAll();
   if (helpBtn) helpBtn.addEventListener("click", syncAll);
   window.HEXSWEEPER_SYNC_SETTINGS = syncAll;

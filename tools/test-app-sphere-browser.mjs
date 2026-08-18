@@ -189,23 +189,25 @@ try {
     return { keysHidden: getComputedStyle(keys).display === "none", doneH: Math.round(done.height), panelW: Math.round(panel.width), text: document.getElementById("help-panel").innerText,
       themes: Array.from(document.querySelectorAll("#help-theme-grid .help-theme")).map(b => b.dataset.theme),
       sizes: Array.from(document.querySelectorAll("#help-size-grid .help-size")).map(b => b.dataset.size),
-      warns: Array.from(document.querySelectorAll("#help-warn-grid .help-warn")).map(b => b.dataset.warn),
       invert: !!document.querySelector('#help-controls [data-ctl="invert"]'), effects: !!document.querySelector('#help-controls [data-ctl="effects"]') };
   })()`);
   assert.equal(help.keysHidden, true, "keyboard hints show on a touch device");
   assert.ok(help.doneH >= 44, `Done button is ${help.doneH}px tall`);
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /bottom left/i, "help copy does not point at the bottom bar");
+  assert.doesNotMatch(help.text, /\bdig\b/i, "help copy still says dig");
   assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
   assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);
-  assert.deepEqual(help.warns, ["numbers-depth", "numbers-flat", "mono-depth", "yellow-flat"], `warning pills are ${help.warns.join(",")}`);
+  assert.equal(await evaluate('!!document.getElementById("help-warn-grid")'), false, "Warnings group is still on the sheet (themes own it now)");
   assert.ok(help.invert && help.effects, "invert / effects pills missing from the sheet");
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "theme grid did not apply Galaxy");
   assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "galaxy", "theme grid did not mark Galaxy pressed");
-  await evaluate('document.querySelector("#help-warn-grid .help-warn[data-warn=yellow-flat]").click()');
-  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.countStyle + "/" + s.relief + "/" + s.seams; })()'), "yellow/flush/false", "warning pill did not apply");
-  await evaluate('document.querySelector("#help-warn-grid .help-warn[data-warn=numbers-depth]").click()');
+  // Themes own the warning treatment: Mercury = depth, no seams; Galaxy = flush, no seams (hollow); Light = depth + seams.
+  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=mercury]").click()');
+  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Mercury did not set depth + no seams");
+  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
+  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "flush/false", "Galaxy did not set flush + no seams");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=easy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().difficulty'), "easy", "size pill did not start a Small sphere");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium]").click()');
