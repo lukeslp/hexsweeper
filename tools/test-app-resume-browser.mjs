@@ -141,29 +141,10 @@ try {
     const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
     await writeFile(process.env.HEXSWEEPER_LAUNCHER_INITIAL_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
   }
-  await evaluate('document.getElementById("infinite-game").click()');
-  await waitExpression('document.getElementById("infinite-settings").classList.contains("is-available")', "Infinite settings hub did not dig out");
-  await evaluate('document.getElementById("infinite-settings").click()');
-  await waitExpression('document.getElementById("infinite-dark").classList.contains("is-available")', "Infinite settings did not bloom");
-  await evaluate('document.getElementById("infinite-dark").click()');
-  const bloomOutcome = await evaluate(`(() => ({
-    path: location.pathname,
-    selected: document.getElementById("infinite-dark").getAttribute("aria-pressed"),
-    stored: localStorage.getItem("hexsweeper-mode-v3"),
-    modeSummary: document.getElementById("infinite-mode-current").textContent,
-  }))()`);
-  assert.equal(bloomOutcome.path.endsWith("/index.html"), true, "setting a launcher choice navigated away");
-  assert.equal(bloomOutcome.selected, "true", "the selected launcher setting is not exposed semantically");
-  assert.equal(bloomOutcome.stored, "dark", "the launcher setting did not persist in place");
-  assert.match(bloomOutcome.modeSummary, /Dark.*Play/, "the mode tile does not reflect its selected setting");
   if (process.env.HEXSWEEPER_LAUNCHER_SCREENSHOT) {
-    await delay(350);
     const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
     await writeFile(process.env.HEXSWEEPER_LAUNCHER_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
   }
-  await evaluate('document.getElementById("infinite-dark").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))');
-  await waitExpression('!document.getElementById("infinite-dark").classList.contains("is-available") && document.activeElement.id === "infinite-settings"', "Infinite settings did not fold closed and restore focus");
-
   await evaluate(`
     localStorage.clear();
     sessionStorage.clear();

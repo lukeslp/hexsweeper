@@ -10,14 +10,14 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 
 - **Static artifact** under `www/dr.eamer.dev/games/hexsweeper/` (symlink: `~/dr.eamer.dev`).
 - **`core.js`**: axial hex map, finite + endless modes, input (mouse/touch), flood reveal, flags, RAF loop, skin hooks.
-- **`tools/app-launcher.html` → `index.html`**: shared native/web playable endless-board launcher using `core.js`.
+- **`tools/app-launcher.html` → `index.html`**: shared native/web three-hex launcher (Infinite, Classic, Sphere, centered Resume).
 - **`infinite.html` / `bounded.html`**: generated web product pages from the plate and Classic collection exports.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
 ## Current status (2026-08-14)
 
-- [x] Shared playable launcher promoted to the public web root: drag, dig, flag, flood, and mode-triggered settings blooms use the real engine.
+- [x] Shared launcher promoted to the public web root: three mode hexes plus a centered Resume; last-used settings launch each game.
 - [x] Infinite, Classic, and Sphere route to first-class web game pages.
 - [x] Infinite/Classic/Sphere Resume and per-mode stateful launch settings retained.
 - [x] Former root `?mode=`, `?theme=`, and `?deal=` links forward to `play.html`.
@@ -217,10 +217,10 @@ The archived decorative theme remains at `collection/theme-water.html` and
 
 ## Acceptance (production)
 
-Bare root is a movable, playable endless field where digging Infinite / Classic /
-Sphere reveals that mode's connected settings hub and its foldable choice bloom;
-each route opens the correct playable board and returns through Games; newest valid
-Infinite, Classic, or Sphere saves can resume; launcher theme is independent of gameplay;
+Bare root is a three-hex launcher (Infinite, Classic, Sphere) with Resume in the
+center when a run is waiting; each mode opens the correct playable board and
+returns through Games; newest valid Infinite, Classic, or Sphere saves can resume;
+launcher appearance follows system light/dark and is independent of gameplay;
 old flat-game deep links retain their behavior at `play.html`; keyboard, touch,
 forced colors, reduced motion, safe areas, and no-script navigation remain
 usable. The flat game retains its five-theme acceptance contract: Light / Dark /

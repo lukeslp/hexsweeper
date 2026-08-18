@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <!--
-  File Purpose: Shared web/native launcher built on the real Hexsweeper engine.
-  Primary Functions/Classes: endless playable board, protected preset cells,
-    drag/pinch exploration, mode-triggered option reveals, and saved-run routing.
-  Inputs: pointer/keyboard play, viewport, saved runs/preferences. Outputs: game links.
-  A11y: native preset controls, focusable board cursor, visible focus, live status,
-    non-drag camera controls, reduced motion, forced colors, and reversible reset.
+  File Purpose: Shared web/native Hexsweeper launcher.
+  Primary Functions/Classes: three mode hexes, centered Resume, last-used launch URLs.
+  Inputs: pointer/keyboard, saved runs/preferences. Outputs: game links.
+  A11y: native links, visible focus, live status, reduced motion, forced colors, noscript fallback.
   Author: Luke Steuber <luke@lukesteuber.com>
 -->
 <html lang="en">
@@ -13,44 +11,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Hexsweeper</title>
-<meta name="description" content="Play a live Hexsweeper field and dig out Infinite, Classic, or Sphere options.">
+<meta name="description" content="Choose Infinite, Classic, or Sphere Hexsweeper. Resume waits in the center.">
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
   :root {
     --font-ui: "IBM Plex Sans", system-ui, sans-serif;
-    --font-count: "IBM Plex Mono", ui-monospace, monospace;
     --field: #e8eef5;
     --field-glow: #f8fafc;
-    --tile: #f7f9fc;
-    --tile-edge: #aebdce;
-    --well: #8f9db0;
     --ink: #263240;
     --muted: #68798c;
     --focus: #246da0;
     --infinite-accent: #246da0;
     --classic-accent: #16794f;
     --sphere-accent: #724ab5;
-    --flag: #e33030;
-    --glass: rgba(248, 250, 252, .82);
-    --glass-edge: rgba(115, 131, 151, .42);
-    --shadow: rgba(77, 94, 114, .24);
-    --cell-size: 34px;
+    --glass: rgba(248, 250, 252, .78);
+    --glass-edge: rgba(115, 131, 151, .36);
+    --shadow: rgba(77, 94, 114, .2);
+    --hex-size: clamp(46px, 10.2vmin, 70px);
+    --hex-gap: 1.08;
     color-scheme: light dark;
   }
   :root[data-appearance="dark"] {
     --field: #0c1118;
     --field-glow: #18212d;
-    --tile: #171f29;
-    --tile-edge: #536174;
-    --well: #d7e0eb;
     --ink: #edf3fb;
     --muted: #a8b6c7;
     --focus: #78c5f4;
     --infinite-accent: #78c5f4;
     --classic-accent: #20a873;
     --sphere-accent: #aa83e8;
-    --glass: rgba(17, 24, 33, .82);
-    --glass-edge: rgba(168, 182, 199, .32);
+    --glass: rgba(17, 24, 33, .78);
+    --glass-edge: rgba(168, 182, 199, .28);
     --shadow: rgba(0, 0, 0, .42);
   }
 
@@ -72,325 +63,189 @@
     isolation: isolate;
     overflow: hidden;
     background:
-      radial-gradient(72% 58% at 50% 47%, color-mix(in srgb, var(--field-glow) 34%, transparent), transparent 78%),
+      radial-gradient(68% 54% at 50% 48%, color-mix(in srgb, var(--field-glow) 40%, transparent), transparent 76%),
       var(--field);
   }
-  #launcher-canvas {
-    position: absolute;
-    z-index: 0;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    touch-action: none;
-    outline: none;
-  }
-  #launcher-canvas:focus-visible + .board-cursor { opacity: 1; }
 
   .masthead {
     position: fixed;
     z-index: 10;
     left: 50%;
-    top: max(15px, calc(env(safe-area-inset-top) + 9px));
-    width: min(32rem, calc(100vw - 104px));
+    top: max(16px, calc(env(safe-area-inset-top) + 10px));
+    width: min(28rem, calc(100vw - 40px));
     transform: translateX(-50%);
     display: grid;
     justify-items: center;
-    gap: 3px;
+    gap: 4px;
     pointer-events: none;
     text-align: center;
   }
   .brand {
     margin: 0;
-    font-size: clamp(1.05rem, 4.7vw, 1.38rem);
+    font-size: clamp(1.08rem, 4.7vw, 1.42rem);
     font-weight: 700;
     letter-spacing: .065em;
     line-height: 1;
     text-transform: uppercase;
-    text-shadow: 0 2px 12px var(--field), 0 2px 18px var(--field);
+    text-shadow: 0 2px 12px var(--field);
   }
   .hint {
     margin: 0;
-    max-width: 100%;
-    min-width: 0;
     color: var(--muted);
-    font-size: clamp(.72rem, 3vw, .86rem);
+    font-size: clamp(.74rem, 3vw, .88rem);
     font-weight: 600;
     line-height: 1.25;
     letter-spacing: .015em;
-    overflow-wrap: anywhere;
     text-wrap: balance;
-    text-shadow: 0 1px 10px var(--field), 0 1px 14px var(--field);
   }
 
-  .preset-layer {
+  .triad {
     position: absolute;
-    z-index: 4;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
+    left: 50%;
+    top: 54%;
+    width: 0;
+    height: 0;
+    transform: rotate(30deg);
   }
-  .preset,
-  .board-cursor {
-    position: absolute;
-    left: var(--screen-x, 50%);
-    top: var(--screen-y, 50%);
-    width: calc(var(--cell-size) * 1.73205);
-    height: calc(var(--cell-size) * 2);
-    transform: translate(-50%, -50%) scale(var(--preset-scale, 1));
-    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  }
-  .preset {
+
+  .hex {
     --accent: var(--focus);
-    z-index: 2;
+    --x: calc(var(--hex-size) * 1.73205 * var(--hex-gap) * (var(--q) + var(--r) / 2));
+    --y: calc(var(--hex-size) * 1.5 * var(--hex-gap) * var(--r));
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: calc(var(--hex-size) * 1.73205);
+    height: calc(var(--hex-size) * 2);
+    min-width: 44px;
+    min-height: 44px;
+    transform: translate(-50%, -50%) rotate(-30deg);
     display: grid;
     place-items: center;
-    border: 0;
     padding: 0;
+    border: 0;
     color: var(--ink);
-    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    background: color-mix(in srgb, var(--accent) 16%, var(--glass));
     text-decoration: none;
-    pointer-events: none;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    cursor: pointer;
+    outline: none;
     -webkit-user-select: none;
     user-select: none;
-    outline: none;
-    transition: opacity 170ms ease, filter 170ms ease, background 170ms ease;
+    filter: drop-shadow(0 8px 18px var(--shadow));
+    transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
   }
-  .preset::before {
+  .hex::before {
     content: "";
     position: absolute;
-    inset: 4px;
-    z-index: 0;
+    inset: 5px;
     clip-path: inherit;
-    border-radius: 18%;
     background: color-mix(in srgb, var(--accent) 8%, transparent);
   }
-  .preset:focus-visible {
-    --preset-scale: 1.04;
-    background: color-mix(in srgb, var(--accent) 24%, transparent);
-    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 78%, transparent));
+  .hex:hover {
+    background: color-mix(in srgb, var(--accent) 24%, var(--glass));
+    transform: translate(-50%, -50%) rotate(-30deg) scale(1.03);
   }
-  .preset:focus-visible::before {
-    inset: 3px;
+  .hex:focus-visible {
+    background: color-mix(in srgb, var(--accent) 28%, var(--glass));
+    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 70%, transparent));
+  }
+  .hex:focus-visible::before {
     outline: 3px solid var(--accent);
     outline-offset: -4px;
   }
-  .preset-content {
+  .hex-content {
     position: relative;
     z-index: 1;
     display: grid;
     justify-items: center;
-    gap: 0;
-    width: 96%;
-    transform: translateY(-1px);
+    gap: 1px;
+    width: 86%;
     text-align: center;
-    text-shadow: 0 1px 5px var(--field), 0 1px 9px var(--field);
+    text-shadow: 0 1px 6px var(--field);
   }
-  .preset-icon {
-    width: calc(var(--cell-size) * .5);
-    height: calc(var(--cell-size) * .5);
-    max-width: 25px;
-    max-height: 25px;
-    overflow: visible;
+  .hex-icon {
+    width: calc(var(--hex-size) * .46);
+    height: calc(var(--hex-size) * .46);
+    max-width: 28px;
+    max-height: 28px;
     color: var(--accent);
   }
-  .preset-name {
-    max-width: 100%;
-    font-size: clamp(.78rem, calc(var(--cell-size) * .43), 1.05rem);
+  .hex-name {
+    font-size: clamp(.8rem, calc(var(--hex-size) * .34), 1.08rem);
     font-weight: 700;
     line-height: .98;
     letter-spacing: -.018em;
   }
-  .preset-note {
-    max-width: 100%;
+  .hex-note {
     color: currentColor;
     opacity: .62;
-    font-size: clamp(.54rem, calc(var(--cell-size) * .28), .72rem);
+    font-size: clamp(.56rem, calc(var(--hex-size) * .22), .72rem);
     font-weight: 600;
     line-height: .98;
     letter-spacing: .015em;
   }
-  .mode-infinite,
-  .infinite-choice,
-  .resume[data-mode="infinite"] { --accent: var(--infinite-accent); }
-  .mode-classic,
-  .classic-choice,
-  .resume[data-mode="bounded"] { --accent: var(--classic-accent); }
-  .mode-sphere,
-  .sphere-choice,
-  .resume[data-mode="sphere"] { --accent: var(--sphere-accent); }
-  .mode {
-    z-index: 3;
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-  }
-  .mode.is-dug {
-    background: color-mix(in srgb, var(--accent) 17%, transparent);
-    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--accent) 28%, transparent));
-  }
-  .mode.is-dug .preset-content { transform: translateY(2px) scale(.96); }
-  .mode[aria-expanded="true"] {
-    background: color-mix(in srgb, var(--accent) 24%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 44%, transparent));
-  }
-  .resume[hidden] { display: none; }
+  .mode-infinite { --accent: var(--infinite-accent); }
+  .mode-classic { --accent: var(--classic-accent); }
+  .mode-sphere { --accent: var(--sphere-accent); }
   .resume {
-    z-index: 5;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 38%, transparent));
-  }
-  .settings-hub,
-  .choice {
-    z-index: 4;
-    visibility: hidden;
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(.74);
-  }
-  .settings-hub.is-available,
-  .choice.is-available {
-    visibility: visible;
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-    background: color-mix(in srgb, var(--accent) 20%, transparent);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 34%, transparent));
-    animation: option-rise 260ms cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms) backwards;
-  }
-  .settings-hub[aria-expanded="true"] {
-    background: color-mix(in srgb, var(--accent) 28%, transparent);
-    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 48%, transparent));
-  }
-  .choice[aria-pressed="true"]::after {
-    content: "✓";
-    position: absolute;
     z-index: 3;
-    top: 18%;
-    right: 20%;
-    display: grid;
-    place-items: center;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: var(--field);
-    font: 700 9px/1 var(--font-ui);
+    background: color-mix(in srgb, var(--accent) 28%, var(--glass));
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 46%, transparent));
   }
-  .size-icon {
-    display: grid;
-    place-items: center;
-    font: 700 calc(var(--cell-size) * .62)/1 var(--font-count);
-  }
-  .is-launching { opacity: .42 !important; }
-
-  .board-cursor {
-    z-index: 7;
-    opacity: 0;
+  .resume[data-mode="infinite"] { --accent: var(--infinite-accent); }
+  .resume[data-mode="bounded"] { --accent: var(--classic-accent); }
+  .resume[data-mode="sphere"] { --accent: var(--sphere-accent); }
+  .resume[hidden] { display: none; }
+  .seat {
+    z-index: 0;
     pointer-events: none;
-    background: color-mix(in srgb, var(--focus) 18%, transparent);
-    filter: drop-shadow(0 0 6px var(--focus));
-    transition: opacity 120ms ease, left 110ms ease, top 110ms ease;
+    background: color-mix(in srgb, var(--muted) 10%, transparent);
+    filter: none;
+    box-shadow: none;
   }
-  .board-cursor::after {
-    content: "";
-    position: absolute;
-    inset: 4px;
-    clip-path: inherit;
-    outline: 3px solid var(--focus);
-    outline-offset: -4px;
-  }
+  .seat::before { background: transparent; }
+  .launcher.has-resume .seat { visibility: hidden; }
+  .is-launching { opacity: .45; }
 
-  .board-tools {
-    position: fixed;
-    z-index: 12;
-    right: max(10px, calc(env(safe-area-inset-right) + 8px));
-    bottom: max(10px, calc(env(safe-area-inset-bottom) + 8px));
-    display: flex;
-    gap: 5px;
-    padding: 5px;
-    border: 1px solid var(--glass-edge);
-    border-radius: 999px;
-    background: var(--glass);
-    box-shadow: 0 7px 22px var(--shadow);
-    backdrop-filter: blur(12px) saturate(1.15);
-  }
-  .tool {
-    min-width: 42px;
-    min-height: 42px;
-    display: grid;
-    place-items: center;
-    border: 0;
-    border-radius: 999px;
-    padding: 0 10px;
-    color: var(--ink);
-    background: transparent;
-    font: 700 .72rem/1 var(--font-ui);
-    cursor: pointer;
-  }
-  .tool:hover { background: color-mix(in srgb, var(--focus) 10%, transparent); }
-  .tool:focus-visible { outline: 3px solid var(--focus); outline-offset: -2px; }
-  .tool[aria-pressed="true"] { color: var(--field); background: var(--flag); }
-  .tool-symbol { font: 700 1.05rem/1 var(--font-count); }
-  .sr-only {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
-  }
-
-  @media (max-width: 420px) {
-    .masthead { width: calc(100vw - 82px); }
-    .board-tools { gap: 2px; padding: 4px; }
-    .tool { min-width: 39px; min-height: 39px; padding: 0 8px; }
+  @media (max-width: 430px) {
+    :root { --hex-size: clamp(42px, 20vw, 54px); --hex-gap: 1.04; }
   }
   @media (max-height: 480px) and (orientation: landscape) {
+    :root { --hex-size: clamp(40px, 14vmin, 56px); }
     .masthead {
-      left: max(14px, calc(env(safe-area-inset-left) + 9px));
-      top: max(10px, calc(env(safe-area-inset-top) + 7px));
-      width: min(17rem, 42vw);
+      left: max(16px, calc(env(safe-area-inset-left) + 10px));
+      top: max(12px, calc(env(safe-area-inset-top) + 8px));
+      width: min(16rem, 40vw);
       transform: none;
       justify-items: start;
       text-align: left;
     }
-    .brand { font-size: .98rem; }
-    .hint { font-size: .68rem; }
+    .triad { left: 58%; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
-      scroll-behavior: auto !important;
       transition-duration: .01ms !important;
       animation-duration: .01ms !important;
-      animation-delay: 0ms !important;
     }
   }
   @media (forced-colors: active) {
     .launcher { background: Canvas; }
-    .preset { color: ButtonText; background: transparent; }
-    .preset::before { background: Canvas; outline: 2px solid ButtonText; outline-offset: -4px; }
-    .preset:focus-visible::before { outline: 4px solid Highlight; }
-    .settings-hub.is-available::before, .choice.is-available::before, .mode[aria-expanded="true"]::before { outline-color: Highlight; }
-    .preset-icon, .brand, .hint { color: CanvasText; text-shadow: none; }
-    .board-tools { background: Canvas; border-color: ButtonText; backdrop-filter: none; }
-    .tool { color: ButtonText; }
-    .tool:focus-visible { outline-color: Highlight; }
-  }
-  @keyframes option-rise {
-    from { opacity: .15; transform: translate(-50%, -45%) scale(.72); }
-    70% { transform: translate(-50%, -52%) scale(1.05); }
-    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .hex { color: ButtonText; background: Canvas; filter: none; }
+    .hex::before { outline: 2px solid ButtonText; outline-offset: -4px; }
+    .hex:focus-visible::before { outline: 4px solid Highlight; }
+    .brand, .hint, .hex-icon { color: CanvasText; text-shadow: none; }
   }
 </style>
 <link rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hexsweeper">
-<meta property="og:description" content="Choose an endless plate, a fixed classic board, or a 3D sphere from one safe opening.">
+<meta property="og:description" content="Choose an endless plate, a fixed classic board, or a 3D sphere.">
 <meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/">
 <meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/home-og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Hexsweeper">
-<meta name="twitter:description" content="Infinite, Classic, and Sphere Hexsweeper from one safe opening.">
+<meta name="twitter:description" content="Infinite, Classic, and Sphere Hexsweeper.">
 <meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/home-og.png">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e8eef5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c1118">
@@ -407,2570 +262,133 @@
 <body>
 <main>
   <section class="launcher" id="launcher" aria-labelledby="launcher-title">
-    <canvas id="launcher-canvas" tabindex="0" role="application" aria-roledescription="playable Hexsweeper board" aria-describedby="launcher-status" aria-label="Playable Hexsweeper menu. Drag to explore. Use arrow keys to move the keyboard cursor, Enter to dig, and F to flag."></canvas>
-    <div class="board-cursor" id="board-cursor" aria-hidden="true"></div>
-
     <header class="masthead">
       <h1 class="brand" id="launcher-title">Hexsweeper</h1>
-      <p class="hint" id="launcher-status" role="status" aria-live="polite">Dig a mode · drag to explore · hold to flag</p>
+      <p class="hint" id="launcher-status" role="status" aria-live="polite">Choose a board</p>
     </header>
 
-    <nav class="preset-layer" id="preset-layer" aria-label="Game modes and revealed options">
-      <a class="preset resume destination" id="resume-game" href="infinite.html" data-q="0" data-r="0" data-mode="infinite" aria-label="Resume Infinite Hexsweeper" hidden>
-        <span class="preset-content">
-          <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M13 17H6v-7M7 17a18 18 0 1 1-1 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="m21 16 14 8-14 8Z" fill="currentColor"/></svg>
-          <span class="preset-name">Resume</span>
-          <span class="preset-note" id="resume-mode-name">Infinite</span>
+    <nav class="triad" id="preset-layer" aria-label="Game modes">
+      <a class="hex mode mode-infinite" id="infinite-game" href="infinite.html?mode=light&amp;fresh=1" data-mode="infinite" data-branch="infinite" data-q="0" data-r="-1" style="--q:0;--r:-1" aria-label="Play Infinite Hexsweeper">
+        <span class="hex-content">
+          <svg class="hex-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="hex-name">Infinite</span>
+          <span class="hex-note" id="infinite-mode-current">Light</span>
         </span>
       </a>
-
-      <button class="preset mode mode-infinite" id="infinite-game" type="button" data-mode="infinite" data-branch="infinite" data-out-q="0" data-out-r="-1" data-q="0" data-r="-1" aria-expanded="false" aria-controls="infinite-settings" aria-label="Dig Infinite to reveal its settings">
-        <span class="preset-content">
-          <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M6 24c0-5.4 3.7-9.5 9-9.5 8.3 0 10.6 19 18 19 5.3 0 9-4.1 9-9.5s-3.7-9.5-9-9.5c-7.4 0-9.7 19-18 19-5.3 0-9-4.1-9-9.5Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span class="preset-name">Infinite</span>
-          <span class="preset-note" id="infinite-mode-current">Dig settings</span>
+      <a class="hex mode mode-classic" id="classic-game" href="bounded.html?size=medium&amp;new=1" data-mode="bounded" data-branch="classic" data-q="1" data-r="0" style="--q:1;--r:0" aria-label="Play Classic Hexsweeper">
+        <span class="hex-content">
+          <svg class="hex-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 35V14m1 2h14l-3.4 4.3L32 25H18m-4 11h9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="hex-name">Classic</span>
+          <span class="hex-note" id="classic-mode-current">Medium</span>
         </span>
-      </button>
-
-      <button class="preset mode mode-classic" id="classic-game" type="button" data-mode="bounded" data-branch="classic" data-out-q="1" data-out-r="0" data-q="1" data-r="0" aria-expanded="false" aria-controls="classic-settings" aria-label="Dig Classic to reveal its settings">
-        <span class="preset-content">
-          <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 40 14v20l-16 9-16-9V14Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 35V14m1 2h14l-3.4 4.3L32 25H18m-4 11h9" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span class="preset-name">Classic</span>
-          <span class="preset-note" id="classic-mode-current">Dig settings</span>
+      </a>
+      <a class="hex mode mode-sphere" id="sphere-game" href="sphere/?theme=light&amp;fresh=1" data-mode="sphere" data-branch="sphere" data-q="-1" data-r="1" style="--q:-1;--r:1" aria-label="Play Sphere Hexsweeper">
+        <span class="hex-content">
+          <svg class="hex-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M24 6c-7 5-9 12-9 18s2 13 9 18M24 6c7 5 9 12 9 18s-2 13-9 18M6 24h36M9 15c9 4 21 4 30 0M9 33c9-4 21-4 30 0" fill="none" stroke="currentColor" stroke-width="1" opacity=".78"/></svg>
+          <span class="hex-name">Sphere</span>
+          <span class="hex-note" id="sphere-mode-current">Light</span>
         </span>
-      </button>
-
-      <button class="preset mode mode-sphere" id="sphere-game" type="button" data-mode="sphere" data-branch="sphere" data-out-q="-1" data-out-r="1" data-q="-1" data-r="1" aria-expanded="false" aria-controls="sphere-settings" aria-label="Dig Sphere to reveal its settings">
-        <span class="preset-content">
-          <svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M24 6c-7 5-9 12-9 18s2 13 9 18M24 6c7 5 9 12 9 18s-2 13-9 18M6 24h36M9 15c9 4 21 4 30 0M9 33c9-4 21-4 30 0" fill="none" stroke="currentColor" stroke-width="1" opacity=".78"/></svg>
-          <span class="preset-name">Sphere</span>
-          <span class="preset-note" id="sphere-mode-current">Dig settings</span>
+      </a>
+      <span class="hex seat" id="resume-seat" data-q="0" data-r="0" style="--q:0;--r:0" aria-hidden="true"></span>
+      <a class="hex resume destination" id="resume-game" href="infinite.html" data-q="0" data-r="0" data-mode="infinite" style="--q:0;--r:0" aria-label="Resume Infinite Hexsweeper" hidden>
+        <span class="hex-content">
+          <svg class="hex-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M13 17H6v-7M7 17a18 18 0 1 1-1 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="m21 16 14 8-14 8Z" fill="currentColor"/></svg>
+          <span class="hex-name">Resume</span>
+          <span class="hex-note" id="resume-mode-name">Infinite</span>
         </span>
-      </button>
-
-      <button class="preset settings-hub infinite-choice" id="infinite-settings" type="button" data-branch="infinite" data-q="0" data-r="-2" aria-expanded="false" aria-controls="infinite-light infinite-dark infinite-effects" aria-label="Infinite settings, Light. Activate to open." aria-hidden="true" tabindex="-1" disabled>
-        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 9v5m0 20v5M9 24h5m20 0h5M13.4 13.4l3.5 3.5m14.2 14.2 3.5 3.5m0-21.2-3.5 3.5m-14.2 14.2-3.5 3.5" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/><circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="2.3"/></svg><span class="preset-name">Style</span><span class="preset-note" id="infinite-settings-current">Light</span></span>
-      </button>
-      <button class="preset settings-hub classic-choice" id="classic-settings" type="button" data-branch="classic" data-q="2" data-r="0" aria-expanded="false" aria-controls="classic-small classic-medium classic-large" aria-label="Classic board settings, Medium. Activate to open." aria-hidden="true" tabindex="-1" disabled>
-        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 15h26M11 24h26M11 33h26" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/><circle cx="19" cy="15" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="24" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="33" r="3" fill="var(--field)" stroke="currentColor" stroke-width="2"/></svg><span class="preset-name">Board</span><span class="preset-note" id="classic-settings-current">Medium</span></span>
-      </button>
-      <button class="preset settings-hub sphere-choice" id="sphere-settings" type="button" data-branch="sphere" data-q="-2" data-r="2" aria-expanded="false" aria-controls="sphere-light sphere-shell sphere-glow sphere-invert" aria-label="Sphere theme settings, Light. Activate to open." aria-hidden="true" tabindex="-1" disabled>
-        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M12 31c6-15 18-21 25-15 6 6-2 21-15 21-5 0-8-2-10-6Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="27" r="2.7" fill="currentColor"/><circle cx="28" cy="21" r="2.7" fill="currentColor"/><circle cx="34" cy="20" r="2.7" fill="currentColor"/></svg><span class="preset-name">Theme</span><span class="preset-note" id="sphere-settings-current">Light</span></span>
-      </button>
-
-      <button class="preset choice infinite-choice" id="infinite-light" type="button" data-branch="infinite" data-infinite-theme="light" aria-label="Set Infinite style to Light" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
-        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5M12 12l3.5 3.5m17 17L36 36m0-24-3.5 3.5m-17 17L12 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="preset-name">Light</span><span class="preset-note">Porcelain</span></span>
-      </button>
-      <button class="preset choice infinite-choice" id="infinite-dark" type="button" data-branch="infinite" data-infinite-theme="dark" aria-label="Set Infinite style to Dark" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled>
-        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M34.5 34.7A16 16 0 0 1 18 9.2 16 16 0 1 0 34.5 34.7Z" fill="currentColor"/></svg><span class="preset-name">Dark</span><span class="preset-note">Night iron</span></span>
-      </button>
-      <button class="preset choice infinite-choice" id="infinite-effects" type="button" data-branch="infinite" data-setting="effects" aria-label="Effects: Auto. Activate to cycle." aria-hidden="true" tabindex="-1" disabled>
-        <span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="m24 6 2.6 9.4L36 18l-9.4 2.6L24 30l-2.6-9.4L12 18l9.4-2.6Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m36 30 1.5 5.5L43 37l-5.5 1.5L36 44l-1.5-5.5L29 37l5.5-1.5Z" fill="currentColor"/></svg><span class="preset-name">Effects</span><span class="preset-note" id="effects-current">Auto</span></span>
-      </button>
-
-      <button class="preset choice classic-choice" id="classic-small" type="button" data-branch="classic" data-classic-size="easy" aria-label="Set Classic board to Small, 10 mines" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">S</span><span class="preset-name">Small</span><span class="preset-note">10 mines</span></span></button>
-      <button class="preset choice classic-choice" id="classic-medium" type="button" data-branch="classic" data-classic-size="medium" aria-label="Set Classic board to Medium, 35 mines" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">M</span><span class="preset-name">Medium</span><span class="preset-note">35 mines</span></span></button>
-      <button class="preset choice classic-choice" id="classic-large" type="button" data-branch="classic" data-classic-size="hard" aria-label="Set Classic board to Large, 80 mines" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><span class="preset-icon size-icon" aria-hidden="true">L</span><span class="preset-name">Large</span><span class="preset-note">80 mines</span></span></button>
-
-      <button class="preset choice sphere-choice" id="sphere-light" type="button" data-branch="sphere" data-sphere-theme="light" aria-label="Set Sphere theme to Light" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 7v5m0 24v5M7 24h5m24 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="preset-name">Light</span><span class="preset-note">White field</span></span></button>
-      <button class="preset choice sphere-choice" id="sphere-shell" type="button" data-branch="sphere" data-sphere-theme="shell" aria-label="Set Sphere theme to Shell" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="currentColor"/><circle cx="24" cy="24" r="10" fill="var(--field)"/><circle cx="24" cy="24" r="5" fill="currentColor"/></svg><span class="preset-name">Shell</span><span class="preset-note">Dark field</span></span></button>
-      <button class="preset choice sphere-choice" id="sphere-glow" type="button" data-branch="sphere" data-sphere-theme="glow" aria-label="Set Sphere theme to Glow" aria-pressed="false" aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="6" fill="currentColor" opacity=".7"/><circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" opacity=".45"/></svg><span class="preset-name">Glow</span><span class="preset-note">Luminous</span></span></button>
-      <button class="preset choice sphere-choice" id="sphere-invert" type="button" data-branch="sphere" data-setting="invert" aria-label="Sphere drag: Natural. Activate to cycle." aria-hidden="true" tabindex="-1" disabled><span class="preset-content"><svg class="preset-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 15h28M10 15l6-6m-6 6 6 6M38 33H10m28 0-6-6m6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="preset-name">Drag</span><span class="preset-note" id="invert-current">Natural</span></span></button>
+      </a>
     </nav>
-
-    <div class="board-tools" role="group" aria-label="Board controls">
-      <button class="tool" id="flag-tool" type="button" aria-pressed="false" aria-keyshortcuts="F" aria-label="Toggle flag mode"><span class="tool-symbol" aria-hidden="true">⚑</span></button>
-      <button class="tool" id="zoom-out-tool" type="button" aria-keyshortcuts="-" aria-label="Zoom out"><span class="tool-symbol" aria-hidden="true">−</span></button>
-      <button class="tool" id="zoom-in-tool" type="button" aria-keyshortcuts="+" aria-label="Zoom in"><span class="tool-symbol" aria-hidden="true">+</span></button>
-      <button class="tool" id="center-tool" type="button" aria-keyshortcuts="Escape" aria-label="Recenter the board"><span class="tool-symbol" aria-hidden="true">⌾</span></button>
-      <button class="tool" id="new-tool" type="button" aria-keyshortcuts="R" aria-label="Start a new launcher field"><span class="tool-symbol" aria-hidden="true">↻</span></button>
-    </div>
-    <p class="sr-only" id="keyboard-help">On the board, use arrow keys to move between hexes, Enter or Space to dig, F to flag, Escape to recenter, and R for a new field.</p>
   </section>
 </main>
+<noscript>
+<style>
+.launcher-fallback{position:fixed;z-index:99;inset:0;display:grid;place-content:center;
+ gap:12px;padding:24px;background:#e8eef5;color:#263240;text-align:center;
+ font:600 1rem/1.4 "IBM Plex Sans",system-ui,sans-serif}
+.launcher-fallback h2{margin:0 0 4px;font-size:1.3rem}
+.launcher-fallback a{display:block;min-width:220px;padding:13px 18px;border:2px solid currentColor;
+ border-radius:999px;color:inherit;text-decoration:none}
+@media(prefers-color-scheme:dark){.launcher-fallback{background:#0c1118;color:#edf3fb}}
+</style>
+<nav class="launcher-fallback" aria-label="Choose a Hexsweeper board">
+  <h2>Choose a board</h2>
+  <a href="infinite.html">Infinite · Endless</a>
+  <a href="bounded.html">Classic · Fixed</a>
+  <a href="sphere/">Sphere · 3D</a>
+</nav>
+</noscript>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
 
-<script>
-/**
- * File Purpose: Shared Hexsweeper game engine (hex grid, endless/finite boards,
- *   dig/flag/chord, drag-pan, wheel/pinch zoom, RAF loop) with skin hooks.
- * Primary Functions/Classes: Cell; boot(); applyViewZoom; exportEndlessState;
- *   applyEndlessState; setFinish; Hexsweeper.DEFAULT_*.
- * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless }).
- * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
- *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
- * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
- *   hooks.onReset / skin startFreshRun: chrome must be live before framing zoom.
- *   Boot skips onReset once; index.html restores autosave or calls startFreshRun.
- *   hooks.cameraLock (bool|fn): Fire-style tilt while the board fits the
- *   viewport. Once zoom pushes the board past the frame, drag pans (clamped
- *   to the board) so edge tiles stay reachable — especially on mobile.
- *   Long-press still flags; pinch zooms; Space/middle-drag always pans.
- */
-(function (global) {
-  "use strict";
-
-  const SQRT3 = Math.sqrt(3);
-
-  /**
-   * Global effects preference, shared by every Hexsweeper page on the origin.
-   *
-   *   "auto"    follow the OS Reduce Motion setting (default)
-   *   "full"    force effects on, even if the OS asks to reduce
-   *   "reduced" force effects off
-   *
-   * "auto" is the default so the accessibility behaviour still works untouched;
-   * "full" exists because a player who turned Reduce Motion on system-wide may
-   * still want the particles here, and that is their call to make.
-   *
-   * MIRROR: sphere/sphere.js and tools/app-launcher.html carry the same seven
-   * lines — they do not load core.js. Change all three together.
-   */
-  const EFFECTS_KEY = "hexsweeper-effects-v1";
-
-  function effectsReduced() {
-    let pref = null;
-    try {
-      pref = localStorage.getItem(EFFECTS_KEY);
-    } catch (_) {}
-    if (pref === "reduced") return true;
-    if (pref === "full") return false;
-    return (
-      typeof matchMedia === "function" &&
-      matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
-  }
-
-  /** Mirror the resolved preference onto <html> so CSS can gate too. */
-  function applyEffectsAttribute() {
-    if (typeof document === "undefined") return;
-    document.documentElement.setAttribute(
-      "data-effects",
-      effectsReduced() ? "reduced" : "full"
-    );
-  }
-
-  const DEFAULT_CONFIG = {
-    easy: { radius: 4, mines: 10, cellSize: 35 },
-    medium: { radius: 7, mines: 35, cellSize: 28 },
-    hard: { radius: 10, mines: 80, cellSize: 22 },
-  };
-
-  /** Endless Soft White defaults — density by starting difficulty. */
-  const ENDLESS_DENSITY = { easy: 0.13, medium: 0.155, hard: 0.18 };
-  /** Soft cap only — viewport-driven growth; not a fixed board size. */
-  const ENDLESS_MAX_RADIUS = 160;
-  /** Extra rings beyond the camera frustum so edges never show void. */
-  const ENDLESS_VIEW_BUFFER = 4;
-
-  const DEFAULT_THEME = {
-    bg: "#e0e5ec",
-    shadowLight: "#ffffff",
-    shadowDark: "#a3b1c6",
-    covered: "#e0e5ec",
-    revealed: "#e0e5ec",
-    flag: "#ef4444",
-    text: {
-      1: "#3b82f6",
-      2: "#10b981",
-      3: "#ef4444",
-      4: "#8b5cf6",
-      5: "#f59e0b",
-      6: "#ec4899",
-      mine: "#333",
-    },
-  };
-
-  class Cell {
-    constructor(q, r) {
-      this.q = q;
-      this.r = r;
-      this.isMine = false;
-      this.isFinish = false;
-      this.revealed = false;
-      this.flagged = false;
-      this.neighborMines = 0;
-      this.x = 0;
-      this.y = 0;
-      this.path = null;
-      this.animHover = 0;
-      this.animReveal = 0;
-      this.ring = 0;
-      this._pendingReveal = false;
-      this.revealDue = 0;
-    }
-
-    calcGeometry(centerX, centerY, size) {
-      this.x = centerX + size * SQRT3 * (this.q + this.r / 2);
-      this.y = centerY + size * 1.5 * this.r;
-      this.ring = (Math.abs(this.q) + Math.abs(this.q + this.r) + Math.abs(this.r)) / 2;
-      this.path = new Path2D();
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 180) * (30 + 60 * i);
-        const vx = this.x + size * Math.cos(angle);
-        const vy = this.y + size * Math.sin(angle);
-        if (i === 0) this.path.moveTo(vx, vy);
-        else this.path.lineTo(vx, vy);
-      }
-      this.path.closePath();
-    }
-
-    hexPath(size, scale = 1) {
-      const drawSize = size * scale;
-      const p = new Path2D();
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 180) * (30 + 60 * i);
-        const vx = this.x + drawSize * Math.cos(angle);
-        const vy = this.y + drawSize * Math.sin(angle);
-        if (i === 0) p.moveTo(vx, vy);
-        else p.lineTo(vx, vy);
-      }
-      p.closePath();
-      return p;
-    }
-  }
-
-  function boot(userOpts = {}) {
-    // Publish the resolved effects preference before first paint so CSS gates
-    // apply to the opening frame rather than snapping in after it.
-    applyEffectsAttribute();
-    const opts = {
-      canvasId: "gameCanvas",
-      difficulty: "medium",
-      showStats: false,
-      config: DEFAULT_CONFIG,
-      theme: { ...DEFAULT_THEME, ...(userOpts.theme || {}) },
-      hooks: userOpts.hooks || {},
-      ...userOpts,
-    };
-    if (userOpts.theme && userOpts.theme.text) {
-      opts.theme.text = { ...DEFAULT_THEME.text, ...userOpts.theme.text };
-    }
-
-    const requestedMinZoom = Number.isFinite(opts.minZoom) ? opts.minZoom : 0.55;
-    const requestedMaxZoom = Number.isFinite(opts.maxZoom) ? opts.maxZoom : 1.9;
-    const minViewZoom = Math.max(0.1, Math.min(requestedMinZoom, requestedMaxZoom));
-    const maxViewZoom = Math.max(minViewZoom, Math.max(requestedMinZoom, requestedMaxZoom));
-    const clampViewZoom = (value) => Math.max(minViewZoom, Math.min(maxViewZoom, value));
-
-    const canvas = document.getElementById(opts.canvasId);
-    if (!canvas) throw new Error("Hexsweeper: canvas not found");
-    const ctx = canvas.getContext("2d");
-
-    const state = {
-      canvas,
-      ctx,
-      map: new Map(),
-      mapRadius: 0,
-      mineCount: 0,
-      cellSize: 0,
-      isGameOver: false,
-      isFirstClick: true,
-      flagsPlaced: 0,
-      timeElapsed: 0,
-      timerInterval: null,
-      hoveredKey: null,
-      currentDifficulty: opts.difficulty,
-      showStats: opts.showStats,
-      theme: opts.theme,
-      config: opts.config,
-      hooks: opts.hooks,
-      pointer: { x: 0, y: 0, nx: 0, ny: 0, active: false },
-      t0: performance.now(),
-      now: 0,
-      win: null,
-      detonator: null, // cell that triggered a loss (for blast FX)
-      centerX: 0,
-      centerY: 0,
-      boardOffset: { x: 0, y: 0 },
-      // Endless / infinite field (Soft White): expand at the frontier, no win
-      // Escape may set finishKey — revealing that hex is a positive exit.
-      endless: !!opts.endless,
-      mineDensity:
-        opts.mineDensity != null && Number.isFinite(opts.mineDensity)
-          ? opts.mineDensity
-          : ENDLESS_DENSITY.medium,
-      maxRadius: opts.maxRadius != null ? opts.maxRadius : ENDLESS_MAX_RADIUS,
-      finishKey: null,
-      clearedSafe: 0,
-      bestCleared: 0,
-      hitMaxRadius: false,
-      // Camera (world → screen). Skins read these when positioning cells.
-      camX: 0,
-      camY: 0,
-      camTX: 0,
-      camTY: 0,
-      focusCell: null,
-      // Interaction: zoom (multiplies base cell size), dig vs flag, pan locks.
-      viewZoom: Number.isFinite(opts.initialZoom) ? clampViewZoom(opts.initialZoom) : clampViewZoom(1),
-      flagMode: false,
-      panning: false,
-      spaceDown: false,
-      floodPending: 0,
-      _growAfterFlood: false,
-    };
-
-    if (!Number.isFinite(opts.initialZoom) && opts.zoomStorageKey !== false) {
-      try {
-        const zoomKey = opts.zoomStorageKey || "hexsweeper-zoom-v1";
-        const z = parseFloat(localStorage.getItem(zoomKey) || "1");
-        if (Number.isFinite(z)) state.viewZoom = clampViewZoom(z);
-      } catch (_) {}
-    }
-
-    try {
-      const storedBest = parseInt(localStorage.getItem("hexsweeper-endless-best") || "0", 10);
-      if (Number.isFinite(storedBest) && storedBest > 0) state.bestCleared = storedBest;
-    } catch (_) {}
-
-    const modal = document.getElementById("modal-overlay");
-    const diffOptions = document.querySelectorAll(".diff-option");
-    const statsToggle = document.getElementById("stats-toggle");
-    const statsMines = document.getElementById("stats-mines");
-    const statsTime = document.getElementById("stats-time");
-    const menuBtn = document.getElementById("menu-btn");
-    const closeBtn = document.getElementById("close-modal-btn");
-    // Production uses #reset-btn on the HUD; lab skins still use #restart-btn in the modal.
-    const restartBtn =
-      document.getElementById("restart-btn") || document.getElementById("reset-btn");
-
-    function openModal() {
-      if (modal) modal.classList.add("open");
-    }
-    function closeModal() {
-      if (modal) modal.classList.remove("open");
-    }
-
-    if (menuBtn) menuBtn.addEventListener("click", openModal);
-    if (closeBtn) closeBtn.addEventListener("click", closeModal);
-    if (modal) {
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) closeModal();
-      });
-    }
-
-    function syncDiffButtons() {
-      if (!diffOptions.length) return;
-      diffOptions.forEach((opt) => {
-        const on = opt.dataset.val === state.currentDifficulty;
-        opt.classList.toggle("active", on);
-        opt.setAttribute("aria-pressed", on ? "true" : "false");
-      });
-    }
-
-    /**
-     * Start a clean board. Any persistence-owning surface must drop autosave
-     * here — otherwise S/M/L or Restart would paint a fresh field while the
-     * old run still resurrected on the next load.
-     */
-    function beginFreshRun(level, { clearPersist = true } = {}) {
-      if (
-        clearPersist &&
-        typeof state.hooks.onClearPersist === "function"
-      ) {
-        state.hooks.onClearPersist(api);
-      }
-      setDifficulty(level || state.currentDifficulty);
-    }
-
-    if (diffOptions.length) {
-      syncDiffButtons();
-      diffOptions.forEach((opt) => {
-        opt.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const level = opt.dataset.val;
-          if (!level || !state.config[level]) return;
-          // Always rebuild so S/M/L is never a no-op highlight-only change.
-          beginFreshRun(level);
-          closeModal();
-        });
-      });
-    }
-
-    if (statsToggle) {
-      statsToggle.classList.toggle("active", state.showStats);
-      statsToggle.addEventListener("click", () => {
-        state.showStats = !state.showStats;
-        statsToggle.classList.toggle("active", state.showStats);
-        updateStatsVisibility();
-      });
-    }
-
-    function updateStatsVisibility() {
-      if (!statsMines || !statsTime) return;
-      // Menu-embedded stats (no .score-rail) stay visible; lab score rails still honor the toggle.
-      const inRail = !!(statsMines.closest(".score-rail") || statsTime.closest(".score-rail"));
-      const show = !inRail || state.showStats || state.endless;
-      statsMines.classList.toggle("visible", show);
-      statsTime.classList.toggle("visible", show);
-      if (statsToggle) {
-        statsToggle.classList.toggle("active", state.showStats);
-        statsToggle.setAttribute("aria-checked", state.showStats ? "true" : "false");
-      }
-    }
-
-    if (restartBtn) {
-      restartBtn.addEventListener("click", () => {
-        closeModal();
-        beginFreshRun(state.currentDifficulty);
-      });
-    }
-
-    function getNeighbors(q, r) {
-      const directions = [
-        { dq: 1, dr: 0 },
-        { dq: 1, dr: -1 },
-        { dq: 0, dr: -1 },
-        { dq: -1, dr: 0 },
-        { dq: -1, dr: 1 },
-        { dq: 0, dr: 1 },
-      ];
-      const neighbors = [];
-      for (const d of directions) {
-        const nKey = `${q + d.dq},${r + d.dr}`;
-        if (state.map.has(nKey)) neighbors.push(state.map.get(nKey));
-      }
-      return neighbors;
-    }
-
-    const api = {
-      get state() {
-        return state;
-      },
-      getNeighbors,
-      hexPath(cell, size, scale) {
-        return cell.hexPath(size, scale);
-      },
-      drawDefaultCell(cell, size) {
-        drawDefaultCell(cell, size);
-      },
-      setBoardOffset(x, y) {
-        state.boardOffset.x = x;
-        state.boardOffset.y = y;
-      },
-      setEndless(on, density) {
-        state.endless = !!on;
-        // Preserve an explicit density (including 0) across setDifficulty.
-        if (density != null && Number.isFinite(density)) {
-          state.mineDensity = density;
-          state._densityLocked = true;
-        } else if (state.endless) {
-          state._densityLocked = false;
-          state.mineDensity =
-            ENDLESS_DENSITY[state.currentDifficulty] != null
-              ? ENDLESS_DENSITY[state.currentDifficulty]
-              : ENDLESS_DENSITY.medium;
-        } else {
-          state._densityLocked = false;
-        }
-        setDifficulty(state.currentDifficulty);
-      },
-      setCamera(x, y) {
-        state.camX = x;
-        state.camY = y;
-        state.camTX = x;
-        state.camTY = y;
-      },
-      /** Explicit framing only (themes / tools). Never called from dig/chord/flood. */
-      focusOnCell(cell, snap) {
-        if (!cell) return;
-        if (isCameraLocked()) return;
-        state.focusCell = cell;
-        const wx = state.cellSize * SQRT3 * (cell.q + cell.r / 2);
-        const wy = state.cellSize * 1.5 * cell.r;
-        state.camTX = wx;
-        state.camTY = wy;
-        if (snap) {
-          state.camX = wx;
-          state.camY = wy;
-        }
-      },
-      /**
-       * @param {{ clearPersist?: boolean }} [opts]
-       * clearPersist defaults true (R / Restart). Theme swaps pass false so
-       * the destination lane's autosave can be restored.
-       */
-      restart(opts = {}) {
-        beginFreshRun(state.currentDifficulty, {
-          clearPersist: opts.clearPersist !== false,
-        });
-      },
-      /** Snapshot any run (mines / revealed / flags / camera). */
-      exportRunState() {
-        return exportRunState();
-      },
-      /** Restore a matching finite or endless snapshot. */
-      applyRunState(data) {
-        return applyRunState(data);
-      },
-      /** Backward-compatible endless-only snapshot adapter. */
-      exportEndlessState() {
-        return exportEndlessState();
-      },
-      /** Backward-compatible endless-only restore adapter. */
-      applyEndlessState(data) {
-        return applyEndlessState(data);
-      },
-      toggleFlag(cell) {
-        if (cell) toggleFlag(cell);
-      },
-      setZoom(z, anchor, opts) {
-        return applyViewZoom(z, anchor, opts);
-      },
-      adjustZoom(factor, anchor) {
-        return applyViewZoom(state.viewZoom * factor, anchor);
-      },
-      setFlagMode(on) {
-        state.flagMode = !!on;
-        document.body.classList.toggle("flag-mode", state.flagMode);
-        syncCursor();
-        if (typeof state.hooks.onFlagMode === "function") state.hooks.onFlagMode(state.flagMode, api);
-        return state.flagMode;
-      },
-      toggleFlagMode() {
-        return api.setFlagMode(!state.flagMode);
-      },
-      /** Skin-driven loss/win (e.g. Escape rift catch). */
-      endGame(win, meta) {
-        if (state.isGameOver) return false;
-        if (meta && meta.detonator) state.detonator = meta.detonator;
-        if (meta && meta.reason) state.endReason = meta.reason;
-        else state.endReason = win ? "win" : "mine";
-        gameOver(!!win);
-        return true;
-      },
-      /**
-       * Escape exit hex (axial). Null clears. Never mined; created on expand if needed.
-       * @returns {string|null} finish key
-       */
-      setFinish(q, r) {
-        return setFinishCell(q, r);
-      },
-      /** Debug / skin helper: dig a cell by axial key or Cell. */
-      dig(target) {
-        if (state.isGameOver) return false;
-        let cell = target;
-        if (typeof target === "string") cell = state.map.get(target);
-        else if (target && typeof target.q === "number") {
-          cell = state.map.get(`${target.q},${target.r}`) || target;
-        }
-        if (!cell || cell.revealed || cell.flagged || cell._riftTorn) return false;
-        reveal(cell);
-        return true;
-      },
-    };
-
-    function hexRing(q, r) {
-      return (Math.abs(q) + Math.abs(q + r) + Math.abs(r)) / 2;
-    }
-
-    function shuffleInPlace(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-
-    function isSafeZone(cell, safeQ, safeR) {
-      if (cell.q === safeQ && cell.r === safeR) return true;
-      const dq = cell.q - safeQ;
-      const dr = cell.r - safeR;
-      return hexRing(dq, dr) <= 1;
-    }
-
-    function finishKeyOf(q, r) {
-      return `${q | 0},${r | 0}`;
-    }
-
-    function isFinishCell(cell) {
-      if (!cell) return false;
-      if (cell.isFinish) return true;
-      return !!(state.finishKey && state.finishKey === `${cell.q},${cell.r}`);
-    }
-
-    /**
-     * Product surfaces can reserve playable-looking cells for embedded controls
-     * (for example the shared launcher). Protected cells remain part of the
-     * board and can reveal normally, but never receive a mine or a flag.
-     */
-    function isProtectedCell(cell) {
-      if (!cell) return false;
-      if (isFinishCell(cell)) return true;
-      const guard = state.hooks && state.hooks.isProtectedCell;
-      return typeof guard === "function" && !!guard(cell, api);
-    }
-
-    /** Mark / clear the Escape finish hex; demines if already present. */
-    function setFinishCell(q, r) {
-      if (state.finishKey) {
-        const prev = state.map.get(state.finishKey);
-        if (prev) prev.isFinish = false;
-      }
-      if (q == null || r == null || !Number.isFinite(q) || !Number.isFinite(r)) {
-        state.finishKey = null;
-        return null;
-      }
-      const key = finishKeyOf(q, r);
-      state.finishKey = key;
-      const cell = state.map.get(key);
-      if (cell) stampFinishCell(cell);
-      return key;
-    }
-
-    function stampFinishCell(cell) {
-      if (!cell) return;
-      cell.isFinish = true;
-      if (cell.isMine) {
-        cell.isMine = false;
-        state.mineCount = Math.max(0, (state.mineCount | 0) - 1);
-        recountNeighbors();
-      }
-    }
-
-    function ensureFinishStamp() {
-      if (!state.finishKey) return;
-      const cell = state.map.get(state.finishKey);
-      if (cell) stampFinishCell(cell);
-    }
-
-    function recountNeighbors() {
-      state.map.forEach((cell) => {
-        if (!cell.isMine) {
-          cell.neighborMines = getNeighbors(cell.q, cell.r).filter((n) => n.isMine).length;
-        } else {
-          cell.neighborMines = 0;
-        }
-      });
-    }
-
-    function applyLayout() {
-      if (typeof state.hooks.layout === "function") {
-        state.hooks.layout(api);
-      } else if (state.endless) {
-        // Full-window viewport; camera pans the field
-        canvas.width = Math.max(320, window.innerWidth);
-        canvas.height = Math.max(320, window.innerHeight);
-      } else {
-        const boardWidth = (state.mapRadius * 2 + 1) * SQRT3 * state.cellSize;
-        const boardHeight =
-          (state.mapRadius * 2 + 1) * 1.5 * state.cellSize + 0.5 * state.cellSize;
-        canvas.width = Math.ceil(boardWidth + 40);
-        canvas.height = Math.ceil(boardHeight + 40);
-      }
-      state.centerX = canvas.width / 2 + state.boardOffset.x;
-      state.centerY = canvas.height / 2 + state.boardOffset.y;
-    }
-
-    /** Cell size for current difficulty / mode (does not mutate radius). */
-    function computeCellSize(level, mapRadius) {
-      const conf = state.config[level];
-      if (!conf) return state.cellSize || 28;
-      let cellSize = conf.cellSize;
-      if (state.endless) {
-        // Readable base size; user zoom multiplies. Pan instead of shrinking the world.
-        const phone = window.innerWidth < 500;
-        cellSize = phone ? 26 : Math.max(26, conf.cellSize + 4);
-      } else {
-        // Scale finite boards so the outer hex fills most of the viewport.
-        // viewportFill is a fraction of the live window (no stolen chrome padding —
-        // that made Fire's 0.98 read as ~90% with large letterbox margins).
-        // Optional viewportPadCells grows the height budget for innie shaft sink.
-        const maxW = Math.max(280, window.innerWidth);
-        const maxH = Math.max(280, window.innerHeight);
-        const padCells = Number.isFinite(state.config.viewportPadCells)
-          ? state.config.viewportPadCells
-          : 0;
-        const naturalW = (mapRadius * 2 + 1) * SQRT3 * cellSize;
-        const naturalH =
-          (mapRadius * 2 + 1) * 1.5 * cellSize + 0.5 * cellSize + padCells * cellSize;
-        // Fire ~0.98 fills the short axis; Plague keeps a thin specimen margin.
-        const fillDefault = window.innerWidth < 500 ? 0.96 : 0.94;
-        const fill = Number.isFinite(state.config.viewportFill)
-          ? state.config.viewportFill
-          : fillDefault;
-        if (naturalW > 0 && naturalH > 0) {
-          const scale = Math.min((maxW * fill) / naturalW, (maxH * fill) / naturalH);
-          // Cap high enough for easy Fire on large monitors (old 62 capped ~70% fill).
-          cellSize = Math.max(14, Math.min(96, cellSize * scale));
-        }
-      }
-      const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
-      return Math.max(12, Math.min(110, cellSize * zoom));
-    }
-
-    /**
-     * Zoom the board. When `anchor` is a canvas pixel, keep that world point under the cursor.
-     * `persist: false` frames the view without touching the stored preference — the zoom key
-     * is shared across themes, so an opening zoom must not overwrite what the player chose.
-     */
-    /** Finite board size in pixels at the current cellSize (includes zoom). */
-    function boardPixelExtents() {
-      const r = state.mapRadius || 0;
-      const s = state.cellSize || 28;
-      const pad = Number.isFinite(state.config && state.config.viewportPadCells)
-        ? state.config.viewportPadCells
-        : 0;
-      return {
-        w: (r * 2 + 1) * SQRT3 * s,
-        h: (r * 2 + 1) * 1.5 * s + 0.5 * s + pad * s,
-      };
-    }
-
-    /**
-     * True when edge tiles need pan: zoomed past default, or the finite board
-     * no longer fits the canvas. Zoom-1 Fire (~0.98 fill) stays tilt-only.
-     */
-    function boardOverflowsViewport() {
-      if (state.endless) return false;
-      const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
-      // Any deliberate zoom-in unlocks pan — bounding-box alone often leaves
-      // maxX=0 on wide desks (height overflows first) so rim tiles stayed stuck.
-      if (zoom > 1.04) return true;
-      const { w, h } = boardPixelExtents();
-      const slack = 12;
-      return w > canvas.width + slack || h > canvas.height + slack;
-    }
-
-    /** Keep a finite board's camera inside a usable overflow range. */
-    function clampCameraToBoard() {
-      if (state.endless) return;
-      const { w, h } = boardPixelExtents();
-      const zoom = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
-      const byBoxX = Math.max(0, (w - canvas.width) / 2);
-      const byBoxY = Math.max(0, (h - canvas.height) / 2);
-      // Zoom slack: even when one axis still "fits", let the player reach the rim.
-      const byZoomX = zoom > 1 ? (canvas.width * (zoom - 1)) / 2 : 0;
-      const byZoomY = zoom > 1 ? (canvas.height * (zoom - 1)) / 2 : 0;
-      const maxX = Math.max(byBoxX, byZoomX);
-      const maxY = Math.max(byBoxY, byZoomY);
-      if (maxX < 0.5 && maxY < 0.5) {
-        state.camX = 0;
-        state.camY = 0;
-      } else {
-        state.camX = Math.max(-maxX, Math.min(maxX, state.camX || 0));
-        state.camY = Math.max(-maxY, Math.min(maxY, state.camY || 0));
-      }
-      state.camTX = state.camX;
-      state.camTY = state.camY;
-    }
-
-    function applyViewZoom(nextZoom, anchor, { persist = true } = {}) {
-      const z = clampViewZoom(nextZoom);
-      if (Math.abs(z - state.viewZoom) < 0.001) return state.viewZoom;
-      const oldSize = state.cellSize || 28;
-      let worldUnder = null;
-      // Endless always; Fire (cameraLock) also — pinch/wheel should keep the dig under the finger.
-      const anchorZoom = state.endless || isCameraLocked();
-      if (anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y) && anchorZoom) {
-        const wx = anchor.x - canvas.width / 2 + state.camX;
-        const wy = anchor.y - canvas.height / 2 + state.camY;
-        worldUnder = { wx, wy };
-      }
-      state.viewZoom = z;
-      if (persist && opts.zoomStorageKey !== false) {
-        try {
-          const zoomKey = opts.zoomStorageKey || "hexsweeper-zoom-v1";
-          localStorage.setItem(zoomKey, String(Math.round(z * 100) / 100));
-        } catch (_) {}
-      }
-      const level = state.currentDifficulty;
-      state.cellSize = computeCellSize(level, state.mapRadius);
-      // Keep camera focus coherent when cell size changes
-      if (worldUnder && oldSize > 0) {
-        const ratio = state.cellSize / oldSize;
-        const wx = worldUnder.wx * ratio;
-        const wy = worldUnder.wy * ratio;
-        state.camX = wx - (anchor.x - canvas.width / 2);
-        state.camY = wy - (anchor.y - canvas.height / 2);
-        state.camTX = state.camX;
-        state.camTY = state.camY;
-      } else if (state.focusCell && oldSize > 0) {
-        const ratio = state.cellSize / oldSize;
-        state.camX *= ratio;
-        state.camY *= ratio;
-        state.camTX = state.camX;
-        state.camTY = state.camY;
-      }
-      state.map.forEach((cell) => {
-        cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
-      });
-      if (state.endless) ensureWorldCoverage(true);
-      // Fire: snap home when the pit fits again; clamp when zoomed past the frame.
-      if (isCameraLocked() && !state.endless) clampCameraToBoard();
-      if (typeof state.hooks.onZoom === "function") state.hooks.onZoom(api, { zoom: state.viewZoom });
-      syncCursor();
-      return state.viewZoom;
-    }
-
-    function syncCursor() {
-      if (!canvas) return;
-      if (state.panning) canvas.style.cursor = "grabbing";
-      else if (state.flagMode) canvas.style.cursor = "cell";
-      else if (state.hoveredKey) canvas.style.cursor = "pointer";
-      else canvas.style.cursor = state.endless ? "grab" : "crosshair";
-    }
-
-    /**
-     * Resize / reflow without wiping the run.
-     * Window resize used to call setDifficulty → full reset (fatal for endless).
-     */
-    function relayout() {
-      const level = state.currentDifficulty;
-      const conf = state.config[level];
-      if (!conf) return;
-      // Endless: keep world scale stable mid-run (only canvas / camera frame changes).
-      // Finite: may shrink slightly if the viewport got smaller.
-      if (!state.endless || state.isFirstClick) {
-        state.cellSize = computeCellSize(level, state.mapRadius || conf.radius);
-      }
-      applyLayout();
-      // Geometry is recomputed every frame by skins (beforeFrame); keep base paths
-      // coherent for any default draw / debug paths.
-      state.map.forEach((cell) => {
-        cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
-      });
-      if (state.endless) ensureWorldCoverage(true);
-      if (isCameraLocked() && !state.endless) clampCameraToBoard();
-      if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
-    }
-
-    function setDifficulty(level, options = {}) {
-      const conf = state.config[level];
-      if (!conf) {
-        console.warn("Hexsweeper: unknown difficulty", level);
-        return;
-      }
-      state.currentDifficulty = level;
-      // Finite modes use configured radius; endless starts small then fills the viewport.
-      state.mapRadius = state.endless ? Math.max(6, conf.radius) : conf.radius;
-      state.mineCount = conf.mines;
-      if (state.endless) {
-        if (!state._densityLocked) {
-          state.mineDensity =
-            ENDLESS_DENSITY[level] != null ? ENDLESS_DENSITY[level] : ENDLESS_DENSITY.medium;
-        }
-        // Score / mines matter in endless — surface the stats strip
-        if (!state.showStats) {
-          state.showStats = true;
-          if (statsToggle) {
-            statsToggle.classList.add("active");
-            statsToggle.setAttribute("aria-checked", "true");
-          }
-          updateStatsVisibility();
-        }
-      }
-      state.cellSize = computeCellSize(level, state.mapRadius);
-
-      applyLayout();
-      syncDiffButtons();
-      resetGame(options);
-      // Endless: grow the honeycomb until it fills the canvas (+ buffer)
-      if (state.endless) ensureWorldCoverage(true);
-    }
-
-    function resetGame(options = {}) {
-      state.map.clear();
-      state.camX = 0;
-      state.camY = 0;
-      state.camTX = 0;
-      state.camTY = 0;
-      state.focusCell = null;
-      state.clearedSafe = 0;
-      state.hitMaxRadius = false;
-      state.centerX = canvas.width / 2 + state.boardOffset.x;
-      state.centerY = canvas.height / 2 + state.boardOffset.y;
-
-      for (let q = -state.mapRadius; q <= state.mapRadius; q++) {
-        const r1 = Math.max(-state.mapRadius, -q - state.mapRadius);
-        const r2 = Math.min(state.mapRadius, -q + state.mapRadius);
-        for (let r = r1; r <= r2; r++) {
-          const cell = new Cell(q, r);
-          cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
-          state.map.set(`${q},${r}`, cell);
-        }
-      }
-
-      state.isGameOver = false;
-      state.isFirstClick = true;
-      state.flagsPlaced = 0;
-      state.timeElapsed = 0;
-      state.hoveredKey = null;
-      state.win = null;
-      state.detonator = null;
-      state.endReason = null;
-      state.finishKey = null;
-      state.floodPending = 0;
-      state._growAfterFlood = false;
-      // Endless: mineCount filled after first click by density
-      if (state.endless) state.mineCount = 0;
-      else {
-        const conf = state.config[state.currentDifficulty];
-        if (conf) state.mineCount = conf.mines;
-      }
-      stopTimer();
-      updateUI();
-      if (
-        options.skipHooks !== true &&
-        typeof state.hooks.onReset === "function"
-      ) {
-        state.hooks.onReset(api);
-      }
-    }
-
-    function noteCleared(n) {
-      if (n <= 0) return;
-      state.clearedSafe += n;
-      if (state.endless && state.clearedSafe > state.bestCleared) {
-        state.bestCleared = state.clearedSafe;
-        try {
-          localStorage.setItem("hexsweeper-endless-best", String(state.bestCleared));
-        } catch (_) {}
-      }
-    }
-
-    function placeMines(safeQ, safeR) {
-      const keys = Array.from(state.map.keys());
-      shuffleInPlace(keys);
-      let placed = 0;
-
-      if (state.endless) {
-        const density =
-          state.mineDensity != null && Number.isFinite(state.mineDensity)
-            ? state.mineDensity
-            : ENDLESS_DENSITY.medium;
-        for (const key of keys) {
-          const cell = state.map.get(key);
-          if (isSafeZone(cell, safeQ, safeR) || isProtectedCell(cell)) continue;
-          if (Math.random() < density) {
-            cell.isMine = true;
-            placed++;
-          }
-        }
-        // Guarantee at least a few mines on tiny boards
-        if (placed < 3 && keys.length > 12) {
-          for (const key of keys) {
-            const cell = state.map.get(key);
-            if (cell.isMine || isSafeZone(cell, safeQ, safeR) || isProtectedCell(cell)) {
-              continue;
-            }
-            cell.isMine = true;
-            placed++;
-            if (placed >= 3) break;
-          }
-        }
-      } else {
-        const target = state.mineCount;
-        for (const key of keys) {
-          if (placed >= target) break;
-          const cell = state.map.get(key);
-          if (isSafeZone(cell, safeQ, safeR) || isProtectedCell(cell)) continue;
-          cell.isMine = true;
-          placed++;
-        }
-      }
-      state.mineCount = placed;
-      ensureFinishStamp();
-      recountNeighbors();
-    }
-
-    /**
-     * Grow the hex field by one or more rings (endless mode).
-     * New cells get mines at mineDensity; neighbor counts refresh.
-     */
-    function expandMap(newRadius) {
-      const cap = state.maxRadius || ENDLESS_MAX_RADIUS;
-      const wanted = newRadius;
-      newRadius = Math.min(newRadius, cap);
-      if (newRadius <= state.mapRadius) {
-        if (wanted > cap && !state.hitMaxRadius) {
-          state.hitMaxRadius = true;
-          if (typeof state.hooks.onMaxRadius === "function") {
-            state.hooks.onMaxRadius(api, { radius: state.mapRadius, cap });
-          }
-        }
-        return 0;
-      }
-      const oldR = state.mapRadius;
-      const fresh = [];
-      for (let R = oldR + 1; R <= newRadius; R++) {
-        for (let q = -R; q <= R; q++) {
-          const r1 = Math.max(-R, -q - R);
-          const r2 = Math.min(R, -q + R);
-          for (let r = r1; r <= r2; r++) {
-            if (hexRing(q, r) !== R) continue;
-            const key = `${q},${r}`;
-            if (state.map.has(key)) continue;
-            const cell = new Cell(q, r);
-            cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
-            if (state.finishKey === key) cell.isFinish = true;
-            state.map.set(key, cell);
-            fresh.push(cell);
-          }
-        }
-      }
-      state.mapRadius = newRadius;
-      ensureFinishStamp();
-
-      if (!state.isFirstClick && fresh.length) {
-        const density =
-          state.mineDensity != null && Number.isFinite(state.mineDensity)
-            ? state.mineDensity
-            : ENDLESS_DENSITY.medium;
-        let added = 0;
-        // Freeze numbers on already-revealed cells: never place a mine adjacent
-        // to a revealed cell, and only recount unrevealed cells afterward.
-        const revealedKeys = new Set();
-        state.map.forEach((c, k) => {
-          if (c.revealed) revealedKeys.add(k);
-        });
-        // Eligible = not touching open (safe-band cells are forced clean).
-        // Boost density on the rest so overall field density does not drift down
-        // as the frontier expands (safe band would otherwise dilute mines).
-        const eligible = [];
-        for (const cell of fresh) {
-          if (isProtectedCell(cell)) continue;
-          const touchesOpen = getNeighbors(cell.q, cell.r).some((n) => n.revealed);
-          if (!touchesOpen) eligible.push(cell);
-        }
-        const safeBand = fresh.length - eligible.length;
-        const boost =
-          eligible.length > 0 && safeBand > 0
-            ? Math.min(0.42, density * (1 + (safeBand / fresh.length) * 1.35))
-            : density;
-        shuffleInPlace(eligible);
-        for (const cell of eligible) {
-          if (Math.random() < boost) {
-            cell.isMine = true;
-            added++;
-          }
-        }
-        state.mineCount += added;
-        // Recount only cells that were not revealed before this expand
-        state.map.forEach((cell, key) => {
-          if (revealedKeys.has(key)) return;
-          if (!cell.isMine) {
-            cell.neighborMines = getNeighbors(cell.q, cell.r).filter((n) => n.isMine).length;
-          } else {
-            cell.neighborMines = 0;
-          }
-        });
-      }
-
-      if (newRadius >= cap && !state.hitMaxRadius) {
-        state.hitMaxRadius = true;
-        if (typeof state.hooks.onMaxRadius === "function") {
-          state.hooks.onMaxRadius(api, { radius: state.mapRadius, cap });
-        }
-      }
-
-      if (typeof state.hooks.onExpand === "function") {
-        state.hooks.onExpand(api, { oldRadius: oldR, newRadius, added: fresh.length });
-      }
-      updateUI();
-      return fresh.length;
-    }
-
-    /**
-     * Minimum map radius so every screen corner (plus buffer) has hex cells.
-     * This is what makes the field feel infinite on the canvas — not a floating disc.
-     */
-    function radiusNeededForViewport() {
-      const size = state.cellSize || 28;
-      if (size <= 0) return state.mapRadius || 8;
-      const w = Math.max(320, canvas.width || window.innerWidth || 800);
-      const h = Math.max(320, canvas.height || window.innerHeight || 600);
-      const camX = state.camX || 0;
-      const camY = state.camY || 0;
-      const pad = size * (ENDLESS_VIEW_BUFFER + 1);
-      const samples = [
-        [pad, pad],
-        [w * 0.5, pad],
-        [w - pad, pad],
-        [pad, h * 0.5],
-        [w - pad, h * 0.5],
-        [pad, h - pad],
-        [w * 0.5, h - pad],
-        [w - pad, h - pad],
-      ];
-      let need = 0;
-      for (const [sx, sy] of samples) {
-        // Inverse of beforeFrame endless layout (no parallax): world = screen - center + cam
-        const wx = sx - w / 2 + camX;
-        const wy = sy - h / 2 + camY;
-        const rFloat = wy / (size * 1.5);
-        const qFloat = wx / (size * SQRT3) - rFloat / 2;
-        const hr = hexRound(qFloat, rFloat);
-        need = Math.max(need, hexRing(hr.q, hr.r));
-      }
-      return need + ENDLESS_VIEW_BUFFER;
-    }
-
-    /**
-     * Grow the world until the viewport (and optionally the dig frontier) is covered.
-     * @param {boolean} fillHard — allow larger jumps (boot / resize)
-     */
-    function ensureWorldCoverage(fillHard) {
-      if (!state.endless || state.isGameOver) return 0;
-      let want = radiusNeededForViewport();
-      // Also keep headroom past any revealed cell so dig never hits a hard rim
-      if (!state.isFirstClick) {
-        state.map.forEach((c) => {
-          if (c.revealed) want = Math.max(want, c.ring + ENDLESS_VIEW_BUFFER);
-        });
-      }
-      if (want <= state.mapRadius) return 0;
-      const cap = state.maxRadius || ENDLESS_MAX_RADIUS;
-      const step = fillHard ? 8 : 4;
-      let added = 0;
-      let guard = 0;
-      while (state.mapRadius < want && state.mapRadius < cap && guard < 24) {
-        const next = Math.min(want, state.mapRadius + step, cap);
-        added += expandMap(next);
-        guard++;
-        if (state.mapRadius < next) break; // hit expand no-op
-      }
-      return added;
-    }
-
-    /** @deprecated path — use ensureWorldCoverage; kept as alias for clarity */
-    function maybeExpandFrontier() {
-      ensureWorldCoverage(false);
-    }
-
-    function stepCamera() {
-      if (!state.endless) return;
-      // Smooth pan toward camTX (user drag / explicit setCamera only)
-      state.camX += (state.camTX - state.camX) * 0.08;
-      state.camY += (state.camTY - state.camY) * 0.08;
-      // As the camera moves, grow the honeycomb so the canvas never shows empty space
-      if (Math.abs(state.camTX - state.camX) > 0.5 || Math.abs(state.camTY - state.camY) > 0.5) {
-        ensureWorldCoverage(false);
-      }
-    }
-
-    function pixelToHex(x, y) {
-      const px = x - state.centerX;
-      const py = y - state.centerY;
-      const q_float = ((SQRT3 / 3) * px - (1 / 3) * py) / state.cellSize;
-      const r_float = ((2 / 3) * py) / state.cellSize;
-      return hexRound(q_float, r_float);
-    }
-
-    function hexRound(q, r) {
-      let s = -q - r;
-      let rq = Math.round(q);
-      let rr = Math.round(r);
-      let rs = Math.round(s);
-      const q_diff = Math.abs(rq - q);
-      const r_diff = Math.abs(rr - r);
-      const s_diff = Math.abs(rs - s);
-      if (q_diff > r_diff && q_diff > s_diff) rq = -rr - rs;
-      else if (r_diff > s_diff) rr = -rq - rs;
-      return { q: rq, r: rr };
-    }
-
-    function canvasPointFromEvent(e) {
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      let clientX = e.clientX;
-      let clientY = e.clientY;
-      if (clientX == null && e.touches && e.touches[0]) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      }
-      let x = (clientX - rect.left) * scaleX;
-      let y = (clientY - rect.top) * scaleY;
-      if (typeof state.hooks.transformPoint === "function") {
-        const t = state.hooks.transformPoint({ x, y }, api);
-        if (t) {
-          x = t.x;
-          y = t.y;
-        }
-      }
-      return { x, y };
-    }
-
-    function cellAtPixel(x, y) {
-      if (typeof state.hooks.hitTest === "function") {
-        return state.hooks.hitTest(x, y, api);
-      }
-      // Path hit-test when skins move cells (parallax / warp)
-      if (state.hooks.usePathHitTest) {
-        let cells = Array.from(state.map.values());
-        if (state.endless && cells.length > 200) {
-          const pad = state.cellSize * 3;
-          cells = cells.filter(
-            (c) =>
-              !c._offscreen &&
-              c.x > x - pad &&
-              c.x < x + pad &&
-              c.y > y - pad &&
-              c.y < y + pad
-          );
-        }
-        // front-to-back: higher ring first
-        cells.sort((a, b) => b.ring - a.ring || b.y - a.y);
-        for (const cell of cells) {
-          if (cell._riftTorn) continue;
-          const scale = cell._depthScale || 1;
-          const path = cell.hexPath(state.cellSize, scale);
-          if (ctx.isPointInPath(path, x, y)) return cell;
-        }
-        return null;
-      }
-      const coords = pixelToHex(x, y);
-      return state.map.get(`${coords.q},${coords.r}`) || null;
-    }
-
-    function getCellAtInput(e) {
-      const p = canvasPointFromEvent(e);
-      state.pointer.x = p.x;
-      state.pointer.y = p.y;
-      state.pointer.nx = (p.x / canvas.width) * 2 - 1;
-      state.pointer.ny = (p.y / canvas.height) * 2 - 1;
-      state.pointer.active = true;
-      return cellAtPixel(p.x, p.y);
-    }
-
-    function cellActionHandled(cell, source, event) {
-      const handler = state.hooks && state.hooks.onCellAction;
-      return typeof handler === "function" && handler(cell, api, { source, event }) === true;
-    }
-
-    let lastClickTime = 0;
-    let lastClickKey = null;
-    let suppressTapReveal = false;
-    let digSession = null; // { x, y, camX, camY, button, panned }
-    let pinchStartDist = 0;
-    let pinchStartZoom = 1;
-
-    function handleMouseDown(e) {
-      if (state.isGameOver && e.button === 0 && !state.spaceDown) return;
-      const p = canvasPointFromEvent(e);
-      state.pointer.x = p.x;
-      state.pointer.y = p.y;
-      state.pointer.nx = (p.x / canvas.width) * 2 - 1;
-      state.pointer.ny = (p.y / canvas.height) * 2 - 1;
-      state.pointer.active = true;
-
-      // Middle-click or Space+drag → pan. Right / Ctrl / Cmd → flag.
-      if (e.button === 1 || (e.button === 0 && state.spaceDown)) {
-        e.preventDefault();
-        digSession = {
-          x: e.clientX,
-          y: e.clientY,
-          camX: state.camX,
-          camY: state.camY,
-          button: e.button,
-          panned: true,
-          forcePan: true,
-        };
-        state.panning = true;
-        syncCursor();
-        return;
-      }
-      if (e.button === 2 || (e.button === 0 && (e.ctrlKey || e.metaKey))) {
-        e.preventDefault();
-        const cell = cellAtPixel(p.x, p.y);
-        if (cell) toggleFlag(cell);
-        return;
-      }
-      if (e.button !== 0) return;
-      digSession = {
-        x: e.clientX,
-        y: e.clientY,
-        camX: state.camX,
-        camY: state.camY,
-        button: 0,
-        panned: false,
-        forcePan: false,
-      };
-    }
-
-    function handleMouseMove(e) {
-      const p = canvasPointFromEvent(e);
-      state.pointer.x = p.x;
-      state.pointer.y = p.y;
-      state.pointer.nx = (p.x / canvas.width) * 2 - 1;
-      state.pointer.ny = (p.y / canvas.height) * 2 - 1;
-      state.pointer.active = true;
-
-      if (digSession && (e.buttons & 1 || digSession.forcePan || digSession.button === 1)) {
-        const dx = e.clientX - digSession.x;
-        const dy = e.clientY - digSession.y;
-        const dist = Math.hypot(dx, dy);
-        const panThreshold = digSession.forcePan || state.endless ? 8 : 18;
-        if (digSession.panned || dist > panThreshold) {
-          // Fire fits → tilt; Fire zoomed past frame (or Space/middle) → pan.
-          const lockTilt = isTiltDragOnly() && !digSession.forcePan;
-          if (!digSession.panned) {
-            digSession.panned = true;
-            // Tilt-only: suppress dig-on-release, but keep hover for heat/tilt
-            if (!lockTilt) {
-              state.panning = true;
-              state.hoveredKey = null;
-            }
-            syncCursor();
-          }
-          if (!lockTilt) {
-            // Absolute pan from drag origin (stable, no acceleration drift)
-            state.camX = digSession.camX - dx;
-            state.camY = digSession.camY - dy;
-            state.camTX = state.camX;
-            state.camTY = state.camY;
-            state.focusCell = null;
-            if (isCameraLocked() && !state.endless) clampCameraToBoard();
-            if (state.endless) ensureWorldCoverage(false);
-            return;
-          }
-          // Fall through: pointer already updated → pit tilt + cell hover
-        }
-      }
-
-      if (state.isGameOver) {
-        syncCursor();
-        return;
-      }
-      const cell = cellAtPixel(p.x, p.y);
-      state.hoveredKey = cell ? `${cell.q},${cell.r}` : null;
-      syncCursor();
-    }
-
-    function handleMouseUp(e) {
-      const wasPan = digSession && digSession.panned;
-      const wasForcePan = digSession && digSession.forcePan;
-      digSession = null;
-      state.panning = false;
-      syncCursor();
-      if (wasPan) {
-        // Camera moved — let endless autosave capture the new viewport
-        if (!isTiltDragOnly() || wasForcePan) {
-          if (typeof state.hooks.onPersistTick === "function") state.hooks.onPersistTick(api);
-        }
-        return;
-      }
-      if (state.isGameOver) return;
-      if (e.button !== 0 || e.ctrlKey || e.metaKey || state.spaceDown) return;
-      const cell = getCellAtInput(e);
-      if (!cell) return;
-      if (cellActionHandled(cell, "pointer", e)) return;
-      const now = Date.now();
-      const key = `${cell.q},${cell.r}`;
-      if (state.flagMode) {
-        if (!cell.revealed) toggleFlag(cell);
-        return;
-      }
-      // Chord only when double-clicking the *same* revealed cell
-      if (now - lastClickTime < 300 && cell.revealed && key === lastClickKey) chord(cell);
-      else if (!cell.revealed && !cell.flagged) reveal(cell);
-      else if (cell.revealed) {
-        // Single click on a satisfied number also chords (faster than double-click)
-        const flags = getNeighbors(cell.q, cell.r).filter((n) => n.flagged).length;
-        if (flags === cell.neighborMines && cell.neighborMines > 0) chord(cell);
-      }
-      lastClickTime = now;
-      lastClickKey = key;
-    }
-
-    let longPressTimer;
-    let touchStartPos;
-    let touchStartKey = null;
-    let touchMoved = false;
-    let touchFlagged = false;
-    let touchPanOrigin = null;
-
-    /** Fire (and similar): theme wants pit-tilt chrome rather than free pan. */
-    function isCameraLocked() {
-      const lock = state.hooks && state.hooks.cameraLock;
-      if (typeof lock === "function") return !!lock(api);
-      return !!lock;
-    }
-
-    /**
-     * Tilt-only drag while the locked board still fits the viewport.
-     * Once zoom overflows the frame, drag pans (clamped) so rim tiles stay reachable.
-     */
-    function isTiltDragOnly() {
-      return isCameraLocked() && !boardOverflowsViewport();
-    }
-
-    function handleTouchStart(e) {
-      e.preventDefault();
-      if (e.touches.length === 2) {
-        clearTimeout(longPressTimer);
-        const a = e.touches[0];
-        const b = e.touches[1];
-        pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
-        pinchStartZoom = state.viewZoom;
-        touchMoved = true;
-        suppressTapReveal = true;
-        touchStartPos = null;
-        return;
-      }
-      if (state.isGameOver) return;
-      touchFlagged = false;
-      touchMoved = false;
-      suppressTapReveal = false;
-      const cell = getCellAtInput(e);
-      touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      touchPanOrigin = { camX: state.camX, camY: state.camY };
-      if (cell) {
-        touchStartKey = `${cell.q},${cell.r}`;
-        state.hoveredKey = touchStartKey;
-        // Long-press flags on touch (no separate mode required)
-        longPressTimer = setTimeout(() => {
-          if (navigator.vibrate) navigator.vibrate(50);
-          toggleFlag(cell);
-          touchFlagged = true;
-          suppressTapReveal = true;
-          state.hoveredKey = null;
-        }, 420);
-      } else {
-        touchStartKey = null;
-      }
-    }
-    function handleTouchMove(e) {
-      e.preventDefault();
-      if (e.touches.length === 2) {
-        clearTimeout(longPressTimer);
-        const a = e.touches[0];
-        const b = e.touches[1];
-        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
-        const mid = canvasPointFromEvent({
-          clientX: (a.clientX + b.clientX) / 2,
-          clientY: (a.clientY + b.clientY) / 2,
-        });
-        applyViewZoom(pinchStartZoom * (dist / pinchStartDist), mid);
-        touchMoved = true;
-        suppressTapReveal = true;
-        state.panning = false;
-        return;
-      }
-      if (!touchStartPos) return;
-      const dx = e.touches[0].clientX - touchStartPos.x;
-      const dy = e.touches[0].clientY - touchStartPos.y;
-      if (Math.hypot(dx, dy) > 10) {
-        touchMoved = true;
-        clearTimeout(longPressTimer);
-        // Fire fits the frame → tilt; zoomed past the frame → clamped pan to the rim.
-        if (isTiltDragOnly()) {
-          handleMouseMove(e);
-          return;
-        }
-        state.hoveredKey = null;
-        state.panning = true;
-        // Pan the camera (endless plates + zoomed Fire / finite boards)
-        if (touchPanOrigin) {
-          state.camX = touchPanOrigin.camX - dx;
-          state.camY = touchPanOrigin.camY - dy;
-          state.camTX = state.camX;
-          state.camTY = state.camY;
-          state.focusCell = null;
-          if (isCameraLocked() && !state.endless) clampCameraToBoard();
-          if (state.endless) ensureWorldCoverage(false);
-        }
-        const p = canvasPointFromEvent(e);
-        state.pointer.x = p.x;
-        state.pointer.y = p.y;
-        state.pointer.nx = (p.x / canvas.width) * 2 - 1;
-        state.pointer.ny = (p.y / canvas.height) * 2 - 1;
-        state.pointer.active = true;
-        syncCursor();
-        return;
-      }
-      handleMouseMove(e);
-    }
-    function handleTouchEnd(e) {
-      e.preventDefault();
-      clearTimeout(longPressTimer);
-      state.panning = false;
-      syncCursor();
-      if (e.touches && e.touches.length > 0) {
-        // Still one finger down after pinch — ignore residual tap
-        suppressTapReveal = true;
-        return;
-      }
-      // Locked pit: ease parallax back to center when the finger lifts
-      if (isCameraLocked()) {
-        state.pointer.nx = 0;
-        state.pointer.ny = 0;
-        state.pointer.active = false;
-      }
-      if (suppressTapReveal || touchFlagged || touchMoved) {
-        if (touchMoved && !isTiltDragOnly() && typeof state.hooks.onPersistTick === "function") {
-          state.hooks.onPersistTick(api);
-        }
-        suppressTapReveal = false;
-        touchFlagged = false;
-        touchMoved = false;
-        state.hoveredKey = null;
-        touchStartPos = null;
-        touchStartKey = null;
-        touchPanOrigin = null;
-        return;
-      }
-      const key = touchStartKey || state.hoveredKey;
-      if (key && !state.isGameOver) {
-        const cell = state.map.get(key);
-        if (cell) {
-          if (cellActionHandled(cell, "touch", e)) {
-            state.hoveredKey = null;
-            touchStartPos = null;
-            touchStartKey = null;
-            touchPanOrigin = null;
-            touchMoved = false;
-            return;
-          }
-          if (state.flagMode) {
-            if (!cell.revealed) toggleFlag(cell);
-          } else if (!cell.flagged && !cell.revealed) reveal(cell);
-          else if (cell.revealed) chord(cell);
-        }
-      }
-      state.hoveredKey = null;
-      touchStartPos = null;
-      touchStartKey = null;
-      touchPanOrigin = null;
-      touchMoved = false;
-    }
-
-    function handleWheel(e) {
-      e.preventDefault();
-      const anchor = canvasPointFromEvent(e);
-      const factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
-      applyViewZoom(state.viewZoom * factor, anchor);
-    }
-
-    function reveal(cell) {
-      if (!cell || cell._riftTorn || cell._pendingReveal) return;
-      if (state.isFirstClick) {
-        startTimer();
-        placeMines(cell.q, cell.r);
-        state.isFirstClick = false;
-      }
-      cell.revealed = true;
-      if (!cell.isMine) noteCleared(1);
-      if (typeof state.hooks.onReveal === "function") {
-        state.hooks.onReveal(cell, api, { source: "dig" });
-      }
-      if (cell.isMine) {
-        state.detonator = cell;
-        gameOver(false);
-      } else {
-        openFrontier(cell);
-        if (!state.floodPending) checkWin();
-      }
-    }
-
-    /** Flood empties, then grow the infinite field and re-flood into new rings. */
-    function openFrontier(seed) {
-      if (seed && seed.neighborMines === 0) floodFrom(seed);
-      if (!state.endless) {
-        // Finite: win check runs when the reveal wave settles.
-        if (!state.floodPending) checkWin();
-        return;
-      }
-      if (state.floodPending > 0) {
-        // Grow after the wave finishes so new rings can cascade.
-        state._growAfterFlood = true;
-        return;
-      }
-      growEndlessFrontier();
-    }
-
-    function growEndlessFrontier() {
-      for (let i = 0; i < 8; i++) {
-        const r0 = state.mapRadius;
-        ensureWorldCoverage(false);
-        if (state.mapRadius === r0) break;
-        // New empty cells adjacent to opened zeros should keep cascading
-        const seeds = [];
-        state.map.forEach((c) => {
-          if (c.revealed && !c.isMine && c.neighborMines === 0) seeds.push(c);
-        });
-        for (const s of seeds) floodFrom(s);
-        if (state.floodPending > 0) {
-          state._growAfterFlood = true;
-          return;
-        }
-      }
-      checkWin();
-    }
-
-    /**
-     * Classic empty-cell flood, but cells open in BFS rings from the dig so
-     * the clearing reads as a wave out to the numbered boundary — not a poof.
-     */
-    function floodFrom(startCell) {
-      const queue = [{ cell: startCell, dist: 0 }];
-      const visited = new Set([`${startCell.q},${startCell.r}`]);
-      const wave = [];
-      while (queue.length > 0) {
-        const { cell: current, dist } = queue.shift();
-        for (const n of getNeighbors(current.q, current.r)) {
-          const k = `${n.q},${n.r}`;
-          if (
-            visited.has(k) ||
-            n.revealed ||
-            n._pendingReveal ||
-            n.flagged ||
-            n.isMine ||
-            n._riftTorn
-          ) {
-            continue;
-          }
-          visited.add(k);
-          const nextDist = dist + 1;
-          wave.push({ cell: n, dist: nextDist });
-          if (n.neighborMines === 0) queue.push({ cell: n, dist: nextDist });
-        }
-      }
-      if (!wave.length) return;
-
-      const reduceMotion = effectsReduced();
-      const now = performance.now();
-      // Pace by ring distance; cap so huge clears still finish in about a second.
-      const stepMs = reduceMotion ? 0 : 32;
-      for (const { cell, dist } of wave) {
-        cell._pendingReveal = true;
-        cell.revealDue = now + Math.min(dist * stepMs, reduceMotion ? 0 : 920);
-        cell.animReveal = 0;
-      }
-      state.floodPending = (state.floodPending || 0) + wave.length;
-      stepRevealWave();
-    }
-
-    function commitFloodReveal(cell) {
-      if (!cell || cell.revealed) {
-        if (cell && cell._pendingReveal) {
-          cell._pendingReveal = false;
-          state.floodPending = Math.max(0, (state.floodPending || 1) - 1);
-        }
-        return;
-      }
-      cell.revealed = true;
-      cell._pendingReveal = false;
-      cell.revealDue = 0;
-      cell.animReveal = 0;
-      state.floodPending = Math.max(0, (state.floodPending || 1) - 1);
-      if (!cell.isMine) noteCleared(1);
-      if (typeof state.hooks.onReveal === "function") {
-        state.hooks.onReveal(cell, api, { source: "flood" });
-      }
-    }
-
-    function stepRevealWave() {
-      if (!state.floodPending) return;
-      const now = performance.now();
-      let opened = 0;
-      state.map.forEach((c) => {
-        if (c._pendingReveal && now >= (c.revealDue || 0)) {
-          commitFloodReveal(c);
-          opened++;
-        }
-      });
-      if (!opened) return;
-      updateUI();
-      if (state.floodPending > 0) return;
-      if (state._growAfterFlood) {
-        state._growAfterFlood = false;
-        growEndlessFrontier();
-      } else {
-        checkWin();
-      }
-    }
-
-    function toggleFlag(cell) {
-      if (!cell || cell.revealed || cell._pendingReveal || cell._riftTorn) return;
-      if (isProtectedCell(cell)) {
-        if (typeof state.hooks.onProtectedFlag === "function") {
-          state.hooks.onProtectedFlag(cell, api);
-        }
-        return;
-      }
-      cell.flagged = !cell.flagged;
-      state.flagsPlaced += cell.flagged ? 1 : -1;
-      updateUI();
-      if (typeof state.hooks.onFlag === "function") state.hooks.onFlag(cell, api);
-    }
-
-    function chord(cell) {
-      const neighbors = getNeighbors(cell.q, cell.r);
-      const flagged = neighbors.filter((n) => n.flagged).length;
-      if (flagged === cell.neighborMines) {
-        let hitMine = false;
-        for (const n of neighbors) {
-          if (!n.revealed && !n.flagged && !n._riftTorn) {
-            n.revealed = true;
-            if (!n.isMine) noteCleared(1);
-            if (typeof state.hooks.onReveal === "function") {
-              state.hooks.onReveal(n, api, { source: "chord" });
-            }
-            if (n.isMine) {
-              hitMine = true;
-              if (!state.detonator) state.detonator = n;
-            } else if (n.neighborMines === 0) floodFrom(n);
-          }
-        }
-        if (hitMine) gameOver(false);
-        else {
-          openFrontier(null);
-          if (!state.floodPending) checkWin();
-        }
-      }
-    }
-
-    function checkWin() {
-      // Endless Soft White: no clear-the-board win — the field keeps expanding.
-      // Escape: revealing the finish hex is a positive exit.
-      if (state.endless) {
-        if (state.finishKey) {
-          const fin = state.map.get(state.finishKey);
-          if (fin && fin.revealed && !fin.isMine) {
-            state.endReason = "finish";
-            gameOver(true);
-            return;
-          }
-        }
-        updateUI();
-        return;
-      }
-      let revealed = 0;
-      state.map.forEach((c) => {
-        if (c.revealed) revealed++;
-      });
-      if (revealed === state.map.size - state.mineCount) gameOver(true);
-    }
-
-    function gameOver(win) {
-      state.isGameOver = true;
-      state.win = win;
-      stopTimer();
-      const reason = state.endReason || (win ? "win" : "mine");
-      // Rift catch: don't spoil the board with revealed mines — the tear is the death.
-      if (!win && reason !== "rift")
-        state.map.forEach((c) => {
-          if (c.isMine && !c.flagged) c.revealed = true;
-        });
-      else if (win) {
-        state.map.forEach((c) => {
-          if (c.isMine) c.flagged = true;
-        });
-        state.flagsPlaced = state.mineCount;
-        updateUI();
-        state.detonator = null;
-      }
-      if (typeof state.hooks.onGameOver === "function") {
-        state.hooks.onGameOver(win, api, { detonator: state.detonator, reason });
-      }
-    }
-
-    function startTimer(resumeAt) {
-      if (state.timerInterval) return;
-      if (Number.isFinite(resumeAt)) state.timeElapsed = Math.max(0, resumeAt | 0);
-      else state.timeElapsed = 0;
-      state.timerInterval = setInterval(() => {
-        state.timeElapsed++;
-        updateUI();
-        if (typeof state.hooks.onPersistTick === "function") {
-          state.hooks.onPersistTick(api);
-        }
-      }, 1000);
-    }
-    function stopTimer() {
-      clearInterval(state.timerInterval);
-      state.timerInterval = null;
-    }
-
-    /**
-     * Pack a run for localStorage / file export. Only stores mines, revealed,
-     * flagged, and torn cells — sparse vs the complete board map.
-     */
-    function exportRunState() {
-      if (state.endless) ensureFinishStamp();
-      const mines = [];
-      const revealed = [];
-      const flagged = [];
-      const torn = [];
-      state.map.forEach((c) => {
-        const key = `${c.q},${c.r}`;
-        if (c.isMine && !isFinishCell(c)) mines.push(key);
-        if (c.revealed) revealed.push(key);
-        if (c.flagged) flagged.push(key);
-        if (c._riftTorn) torn.push(key);
-      });
-      return {
-        v: 1,
-        endless: !!state.endless,
-        difficulty: state.currentDifficulty,
-        density: state.mineDensity,
-        radius: state.mapRadius,
-        first: !!state.isFirstClick,
-        over: !!state.isGameOver,
-        win: state.win,
-        endReason: state.endReason || null,
-        finish: state.finishKey || null,
-        cleared: state.clearedSafe | 0,
-        flags: state.flagsPlaced | 0,
-        mineCount: state.mineCount | 0,
-        time: state.timeElapsed | 0,
-        cam: [state.camX || 0, state.camY || 0],
-        zoom: Number.isFinite(state.viewZoom) ? state.viewZoom : 1,
-        mines,
-        revealed,
-        flagged,
-        torn,
-      };
-    }
-
-    function exportEndlessState() {
-      return state.endless ? exportRunState() : null;
-    }
-
-    function buildMapToRadius(radius) {
-      const R = Math.max(1, radius | 0);
-      state.map.clear();
-      state.centerX = canvas.width / 2 + state.boardOffset.x;
-      state.centerY = canvas.height / 2 + state.boardOffset.y;
-      for (let q = -R; q <= R; q++) {
-        const r1 = Math.max(-R, -q - R);
-        const r2 = Math.min(R, -q + R);
-        for (let r = r1; r <= r2; r++) {
-          const cell = new Cell(q, r);
-          cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
-          state.map.set(`${q},${r}`, cell);
-        }
-      }
-      state.mapRadius = R;
-    }
-
-    function applyKeyList(list, fn) {
-      if (!Array.isArray(list)) return;
-      for (const key of list) {
-        if (typeof key !== "string") continue;
-        let cell = state.map.get(key);
-        if (!cell) {
-          const parts = key.split(",");
-          const q = parseInt(parts[0], 10);
-          const r = parseInt(parts[1], 10);
-          if (!Number.isFinite(q) || !Number.isFinite(r)) continue;
-          cell = new Cell(q, r);
-          cell.calcGeometry(state.centerX, state.centerY, state.cellSize);
-          state.map.set(key, cell);
-          state.mapRadius = Math.max(state.mapRadius, cell.ring);
-        }
-        fn(cell);
-      }
-    }
-
-    /** Restore a snapshot for the currently booted topology. */
-    function applyRunState(data) {
-      if (!data || data.v !== 1 || typeof data.endless !== "boolean") return false;
-      if (!!data.endless !== !!state.endless) return false;
-      stopTimer();
-      if (data.difficulty && state.config[data.difficulty]) {
-        state.currentDifficulty = data.difficulty;
-      }
-      if (Number.isFinite(data.density)) {
-        state.mineDensity = data.density;
-        state._densityLocked = true;
-      }
-      const conf = state.config[state.currentDifficulty];
-      state.cellSize = computeCellSize(
-        state.currentDifficulty,
-        Math.max(conf?.radius || 6, data.radius | 0)
-      );
-      applyLayout();
-      syncDiffButtons();
-
-      const R = Math.max(conf?.radius || 6, data.radius | 0);
-      buildMapToRadius(R);
-
-      // Clear defaults then stamp sparse lists
-      state.map.forEach((c) => {
-        c.isMine = false;
-        c.isFinish = false;
-        c.revealed = false;
-        c.flagged = false;
-        c._riftTorn = false;
-        c.neighborMines = 0;
-        c.animReveal = 0;
-      });
-      applyKeyList(data.mines, (c) => {
-        c.isMine = true;
-      });
-      applyKeyList(data.revealed, (c) => {
-        c.revealed = true;
-        c.animReveal = 1;
-        c._pendingReveal = false;
-      });
-      applyKeyList(data.flagged, (c) => {
-        c.flagged = true;
-      });
-      applyKeyList(data.torn, (c) => {
-        c._riftTorn = true;
-        c._blastAlpha = 0.15;
-      });
-
-      state.isFirstClick = !!data.first;
-      state.isGameOver = !!data.over;
-      state.win = data.win == null ? null : !!data.win;
-      state.endReason = data.endReason || null;
-      state.clearedSafe = data.cleared | 0;
-      state.flagsPlaced = data.flags | 0;
-      state.mineCount = Number.isFinite(data.mineCount)
-        ? data.mineCount | 0
-        : Array.isArray(data.mines)
-          ? data.mines.length
-          : 0;
-      // Escape finish (axial key) — never a mine; stamp after mineCount restore.
-      if (state.endless && typeof data.finish === "string" && data.finish.includes(",")) {
-        const parts = data.finish.split(",");
-        setFinishCell(parseInt(parts[0], 10), parseInt(parts[1], 10));
-      } else {
-        state.finishKey = null;
-      }
-      if (state.endless) ensureFinishStamp();
-      recountNeighbors();
-      state.timeElapsed = data.time | 0;
-      state.detonator = null;
-      state.hitMaxRadius = false;
-      if (Array.isArray(data.cam) && data.cam.length >= 2) {
-        state.camX = Number(data.cam[0]) || 0;
-        state.camY = Number(data.cam[1]) || 0;
-        state.camTX = state.camX;
-        state.camTY = state.camY;
-      }
-      if (Number.isFinite(data.zoom)) {
-        // Restoring a lane's view, not choosing a zoom: leave the shared
-        // preference to explicit wheel / pinch / button input.
-        applyViewZoom(data.zoom, null, { persist: false });
-      }
-
-      updateUI();
-      if (!state.isFirstClick && !state.isGameOver) {
-        startTimer(state.timeElapsed);
-      }
-      if (typeof state.hooks.onRelayout === "function") state.hooks.onRelayout(api);
-      // Endless restores may need another ring to cover a changed viewport.
-      if (state.endless && !state.isGameOver) ensureWorldCoverage(true);
-      return true;
-    }
-
-    function applyEndlessState(data) {
-      if (!data || !data.endless || !state.endless) return false;
-      return applyRunState(data);
-    }
-
-    function updateUI() {
-      if (!statsMines || !statsTime) return;
-      if (state.endless) {
-        // Mines left · cells cleared (score); title includes best
-        const left = Math.max(0, state.mineCount - state.flagsPlaced);
-        statsMines.innerText = left >= 100 ? String(left) : left.toString().padStart(2, "0");
-        const score = state.clearedSafe || 0;
-        statsTime.innerText =
-          score >= 1000 ? String(score) : score.toString().padStart(3, "0");
-        statsMines.title = "Mines remaining (unflagged estimate)";
-        statsMines.setAttribute("data-label", "mines");
-        const best = state.bestCleared || 0;
-        statsTime.title =
-          best > score
-            ? `Safe cells cleared · best ${best}`
-            : best > 0
-              ? `Safe cells cleared · best ${best}`
-              : "Safe cells cleared (score)";
-        statsTime.setAttribute("data-label", best > 0 ? `best ${best}` : "cleared");
-      } else {
-        const left = Math.max(0, state.mineCount - state.flagsPlaced);
-        statsMines.innerText = left.toString().padStart(2, "0");
-        statsTime.innerText = Math.min(999, state.timeElapsed).toString().padStart(3, "0");
-        statsMines.title = "Mines remaining";
-        statsTime.title = "Time";
-        statsMines.setAttribute("data-label", "mines");
-        statsTime.setAttribute("data-label", "time");
-      }
-    }
-
-    function drawDefaultCell(cell, size) {
-      const T = state.theme;
-      const scale = 0.92 + cell.animHover * 0.05;
-      const drawPath = cell.hexPath(size, scale);
-      const drawSize = size * scale;
-
-      ctx.fillStyle = cell.revealed ? T.revealed || T.covered : T.covered;
-      ctx.fill(drawPath);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      if (cell.animReveal < 0.99) {
-        const opacity = 1 - cell.animReveal;
-        ctx.globalAlpha = opacity;
-        ctx.strokeStyle = T.shadowLight;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let i = 3; i <= 5; i++) {
-          const angle = (Math.PI / 180) * (30 + 60 * i);
-          const vx = cell.x + drawSize * Math.cos(angle);
-          const vy = cell.y + drawSize * Math.sin(angle);
-          if (i === 3) ctx.moveTo(vx, vy);
-          else ctx.lineTo(vx, vy);
-        }
-        ctx.stroke();
-        ctx.strokeStyle = T.shadowDark;
-        ctx.beginPath();
-        for (let i = 0; i <= 2; i++) {
-          const angle = (Math.PI / 180) * (30 + 60 * i);
-          const vx = cell.x + drawSize * Math.cos(angle);
-          const vy = cell.y + drawSize * Math.sin(angle);
-          if (i === 0) ctx.moveTo(vx, vy);
-          else ctx.lineTo(vx, vy);
-        }
-        ctx.stroke();
-      }
-
-      if (cell.animReveal > 0.01) {
-        ctx.globalAlpha = cell.animReveal;
-        ctx.strokeStyle = T.pressedDark || "#c8d0d9";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let i = 3; i <= 5; i++) {
-          const angle = (Math.PI / 180) * (30 + 60 * i);
-          const vx = cell.x + drawSize * Math.cos(angle);
-          const vy = cell.y + drawSize * Math.sin(angle);
-          if (i === 3) ctx.moveTo(vx, vy);
-          else ctx.lineTo(vx, vy);
-        }
-        ctx.stroke();
-        ctx.strokeStyle = T.pressedLight || "#ffffff";
-        ctx.beginPath();
-        for (let i = 0; i <= 2; i++) {
-          const angle = (Math.PI / 180) * (30 + 60 * i);
-          const vx = cell.x + drawSize * Math.cos(angle);
-          const vy = cell.y + drawSize * Math.sin(angle);
-          if (i === 0) ctx.moveTo(vx, vy);
-          else ctx.lineTo(vx, vy);
-        }
-        ctx.stroke();
-      }
-
-      ctx.globalAlpha = 1;
-
-      if (cell.animReveal > 0.1) {
-        ctx.globalAlpha = cell.animReveal;
-        if (cell.isMine) {
-          ctx.fillStyle = T.text.mine;
-          ctx.beginPath();
-          ctx.arc(cell.x, cell.y, size * 0.4, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (cell.neighborMines > 0) {
-          ctx.fillStyle = T.text[cell.neighborMines] || "#333";
-          ctx.font = `700 ${size}px "Segoe UI", system-ui, sans-serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(cell.neighborMines, cell.x, cell.y + size * 0.05);
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      if (cell.flagged && !cell.revealed) {
-        ctx.fillStyle = T.flag;
-        ctx.font = `bold ${size}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("!", cell.x, cell.y + size * 0.1);
-      }
-    }
-
-    function updateCell(cell) {
-      if (cell._offscreen) return;
-      const isHovered = state.hoveredKey === `${cell.q},${cell.r}` && !state.isGameOver;
-      cell.animHover += ((isHovered ? 1 : 0) - cell.animHover) * 0.2;
-      cell.animReveal += ((cell.revealed ? 1 : 0) - cell.animReveal) * 0.15;
-    }
-
-    /** Canvas on-screen (IntersectionObserver) — offscreen iframes / desk pens rest. */
-    let frameVisible = true;
-    let lastPaintTs = 0;
-    const inIframe = typeof window !== "undefined" && window.self !== window.top;
-
-    function isEndlessIdle(ts) {
-      if (!state.endless) return false;
-      const z = Number.isFinite(state.viewZoom) ? state.viewZoom : 1;
-      if (z >= 0.87) return false;
-      const camMoving =
-        Math.abs(state.camTX - state.camX) > 0.5 || Math.abs(state.camTY - state.camY) > 0.5;
-      if (camMoving || state.pointer.active) return false;
-      if (state.revealWave && state.revealWave.length) return false;
-      if (state.hoveredKey) return false;
-      if (typeof state.hooks.isFrameBusy === "function" && state.hooks.isFrameBusy(api, ts)) {
-        return false;
-      }
-      return true;
-    }
-
-    function framePaintInterval(ts) {
-      if (!isEndlessIdle(ts)) return 0;
-      // Zoomed-out endless plate: 15 fps standalone, 5 fps in embeds / background pens.
-      if (inIframe || !frameVisible) return 200;
-      return 66;
-    }
-
-    function resumeGameLoop() {
-      if (rafId) return;
-      if (typeof document !== "undefined" && document.hidden) return;
-      if (!frameVisible) return;
-      rafId = requestAnimationFrame(gameLoop);
-    }
-
-    let rafId = 0;
-    function gameLoop(ts) {
-      rafId = 0;
-      // Hidden tabs / offscreen canvas: stop painting so endless Soft UI rests.
-      if (typeof document !== "undefined" && document.hidden) return;
-      if (!frameVisible) return;
-
-      const minGap = framePaintInterval(ts);
-      if (minGap > 0 && ts - lastPaintTs < minGap) {
-        rafId = requestAnimationFrame(gameLoop);
-        return;
-      }
-      lastPaintTs = ts;
-
-      state.now = ts - state.t0;
-      stepRevealWave();
-      stepCamera();
-      // Periodic coverage check (camera settled / first frames after boot)
-      if (state.endless && (ts | 0) % 8 === 0) ensureWorldCoverage(false);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (typeof state.hooks.beforeFrame === "function") state.hooks.beforeFrame(ctx, api);
-
-      // Draw far rings first for depth skins that sort
-      let cells = Array.from(state.map.values());
-      // Endless: cull parked / off-screen tiles (beforeFrame sets _offscreen).
-      if (state.endless) {
-        cells = cells.filter((c) => !c._offscreen);
-        if (cells.length > 200) {
-          const pad = state.cellSize * 3;
-          const w = canvas.width;
-          const h = canvas.height;
-          cells = cells.filter(
-            (c) => c.x > -pad && c.y > -pad && c.x < w + pad && c.y < h + pad
-          );
-        }
-      }
-      if (state.hooks.sortCells) cells.sort(state.hooks.sortCells);
-      else cells.sort((a, b) => a.ring - b.ring || a.y - b.y);
-
-      for (const cell of cells) {
-        updateCell(cell);
-        if (typeof state.hooks.drawCell === "function") state.hooks.drawCell(ctx, cell, state.cellSize, api);
-        else drawDefaultCell(cell, state.cellSize);
-        if (typeof state.hooks.decorateCell === "function")
-          state.hooks.decorateCell(ctx, cell, state.cellSize, api);
-      }
-
-      if (typeof state.hooks.afterFrame === "function") state.hooks.afterFrame(ctx, api);
-      rafId = requestAnimationFrame(gameLoop);
-    }
-    if (typeof document !== "undefined" && document.addEventListener) {
-      document.addEventListener("visibilitychange", () => {
-        resumeGameLoop();
-      });
-    }
-    if (typeof IntersectionObserver !== "undefined") {
-      const frameObserver = new IntersectionObserver(
-        (entries) => {
-          frameVisible = entries.some((e) => e.isIntersecting && e.intersectionRatio > 0);
-          if (frameVisible) resumeGameLoop();
-        },
-        { threshold: [0, 0.01] }
-      );
-      frameObserver.observe(canvas);
-    }
-    if (typeof document !== "undefined" && document.addEventListener && inIframe) {
-      window.addEventListener("focus", resumeGameLoop);
-      window.addEventListener("blur", () => {
-        if (rafId) {
-          cancelAnimationFrame(rafId);
-          rafId = 0;
-        }
-      });
-    }
-
-    canvas.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("mousedown", handleMouseDown);
-    canvas.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("mouseup", (e) => {
-      if (digSession) handleMouseUp(e);
-    });
-    canvas.addEventListener("mouseout", () => {
-      if (!digSession) {
-        state.hoveredKey = null;
-        state.pointer.active = false;
-        // Locked pits ease back to a calm center when the pointer leaves
-        if (isCameraLocked()) {
-          state.pointer.nx = 0;
-          state.pointer.ny = 0;
-        }
-        syncCursor();
-      }
-    });
-    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-    canvas.addEventListener("wheel", handleWheel, { passive: false });
-    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
-    canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
-    canvas.addEventListener("touchcancel", handleTouchEnd, { passive: false });
-    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
-    // Never reset the run on viewport change — endless depends on this.
-    let resizeTimer = null;
-    const scheduleRelayout = () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => relayout(), 80);
-    };
-    window.addEventListener("resize", scheduleRelayout);
-    // Mobile URL-bar show/hide changes visualViewport without always firing resize.
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", scheduleRelayout);
-      window.visualViewport.addEventListener("scroll", scheduleRelayout);
-    }
-
-    window.addEventListener("keydown", (e) => {
-      if (
-        e.target &&
-        (e.target.closest?.("button, a, input, textarea, select, [contenteditable='true']") ||
-          /input|textarea|select/i.test(e.target.tagName))
-      ) {
-        return;
-      }
-      if (e.code === "Space") {
-        state.spaceDown = true;
-        if (!e.repeat) e.preventDefault();
-        syncCursor();
-      }
-      if (e.key === "Escape") {
-        closeModal();
-      }
-      if ((e.key === "+" || e.key === "=") && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        applyViewZoom(state.viewZoom * 1.1, {
-          x: canvas.width / 2,
-          y: canvas.height / 2,
-        });
-      }
-      if ((e.key === "-" || e.key === "_") && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        applyViewZoom(state.viewZoom / 1.1, {
-          x: canvas.width / 2,
-          y: canvas.height / 2,
-        });
-      }
-      if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey) {
-        api.toggleFlagMode();
-      }
-      if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey) {
-        if (!modal || !modal.classList.contains("open")) {
-          api.restart();
-        }
-      }
-    });
-    window.addEventListener("keyup", (e) => {
-      if (e.code === "Space") {
-        state.spaceDown = false;
-        syncCursor();
-      }
-    });
-
-    updateStatsVisibility();
-    // Skins finish chrome first, then call startFreshRun or restore — see index.html.
-    setDifficulty(state.currentDifficulty, { skipHooks: true });
-    // Re-apply persisted zoom after first layout (startFreshRun may override).
-    if (Math.abs(state.viewZoom - 1) > 0.01) {
-      applyViewZoom(state.viewZoom);
-    }
-    syncCursor();
-    rafId = requestAnimationFrame(gameLoop);
-
-    // Expose relayout for skins / debug
-    api.relayout = relayout;
-
-    return api;
-  }
-
-  global.Hexsweeper = {
-    boot,
-    DEFAULT_THEME,
-    DEFAULT_CONFIG,
-    SQRT3,
-    EFFECTS_KEY,
-    effectsReduced,
-    applyEffectsAttribute,
-  };
-})(typeof window !== "undefined" ? window : globalThis);
-
-</script>
 <script>
 (function () {
   "use strict";
 
-  var SQRT3 = Math.sqrt(3);
   var launcher = document.getElementById("launcher");
-  var canvas = document.getElementById("launcher-canvas");
-  var presetLayer = document.getElementById("preset-layer");
-  var cursor = document.getElementById("board-cursor");
   var status = document.getElementById("launcher-status");
   var resume = document.getElementById("resume-game");
   var resumeModeName = document.getElementById("resume-mode-name");
-  var flagTool = document.getElementById("flag-tool");
-  var zoomOutTool = document.getElementById("zoom-out-tool");
-  var zoomInTool = document.getElementById("zoom-in-tool");
-  var centerTool = document.getElementById("center-tool");
-  var newTool = document.getElementById("new-tool");
-  var modes = Array.prototype.slice.call(presetLayer.querySelectorAll(".mode[data-branch]"));
-  var hubs = Array.prototype.slice.call(presetLayer.querySelectorAll(".settings-hub[data-branch]"));
-  var choices = Array.prototype.slice.call(presetLayer.querySelectorAll(".choice[data-branch]"));
-  var branches = {};
-  var protectedKeys = new Set(["0,0"]);
-  var modeByKey = new Map();
-  var hubByKey = new Map();
-  var choiceByKey = new Map();
-  var exposedBranches = new Set();
-  var activeBranch = null;
-  var revealTimers = [];
-  var resetTimer = 0;
-  var api = null;
-  var geometrySignature = "";
-  var selectedKey = "0,0";
+  var infinite = document.getElementById("infinite-game");
+  var classic = document.getElementById("classic-game");
+  var sphere = document.getElementById("sphere-game");
   var leaving = false;
-  var keyboardRevealFocus = null;
   var activeResume = null;
-  var statusLockUntil = 0;
 
   var APPEARANCE_KEY = "hexsweeper-appearance-v1";
-  var EFFECTS_KEY = "hexsweeper-effects-v1";
-  var INVERT_KEY = "hexsweeper-sphere-invert-v1";
   var INFINITE_THEME_KEY = "hexsweeper-mode-v3";
   var CLASSIC_SIZE_KEY = "hexsweeper-classic-size-v1";
   var SPHERE_THEME_KEY = "hexsweeper-sphere-theme-v6";
-  var LAUNCHER_ZOOM_KEY = "hexsweeper-launcher-zoom-v1";
-  var LAUNCHER_MIN_ZOOM = 1.28;
-  var LAUNCHER_MAX_ZOOM = 2.1;
   var appearancePreference = "system";
-  var effectsPreference = "auto";
-  var invertPreference = { x: false, y: false };
   var infiniteThemePreference = "light";
   var classicSizePreference = "medium";
   var sphereThemePreference = "light";
   var colorScheme = matchMedia("(prefers-color-scheme: dark)");
-  var INVERT_OPTIONS = [
-    { x: false, y: false, label: "Natural" },
-    { x: true, y: false, label: "Invert X" },
-    { x: false, y: true, label: "Invert Y" },
-    { x: true, y: true, label: "Invert both" }
-  ];
 
-  function key(q, r) { return q + "," + r; }
-  function distance(q, r) { return Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)); }
   function storageValue(store, storageKey) {
     try { return store.getItem(storageKey); } catch (_) { return null; }
-  }
-  function writePreference(storageKey, value) {
-    try { localStorage.setItem(storageKey, value); } catch (_) {}
   }
   function parseSave(raw) {
     if (!raw) return null;
     try { return JSON.parse(raw); } catch (_) { return null; }
   }
   function titleCase(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
-  function reducedMotion() { return Hexsweeper.effectsReduced(); }
-
-  function initialLauncherZoom() {
-    var stored = parseFloat(storageValue(localStorage, LAUNCHER_ZOOM_KEY) || "");
-    if (Number.isFinite(stored)) {
-      var readable = Math.max(LAUNCHER_MIN_ZOOM, Math.min(LAUNCHER_MAX_ZOOM, stored));
-      if (readable !== stored) writePreference(LAUNCHER_ZOOM_KEY, String(readable));
-      return readable;
-    }
-    return innerWidth < 500 ? 1.46 : 1.32;
+  function classicSizeLabel(size) {
+    return size === "easy" ? "Small" : size === "hard" ? "Large" : "Medium";
   }
-
-  modes.forEach(function (mode) {
-    branches[mode.dataset.branch] = {
-      mode: mode,
-      hub: hubs.find(function (hub) { return hub.dataset.branch === mode.dataset.branch; }),
-      choices: choices.filter(function (choice) { return choice.dataset.branch === mode.dataset.branch; })
-    };
-  });
-
-  function axialPoint(q, r) {
-    return { x: q + r / 2, y: .8660254038 * r };
+  function reducedMotion() {
+    return matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
-
-  // Branch records own only their semantic direction. Seats are assigned from
-  // the data at boot, globally, so another future material extends the field
-  // without a platform-specific breakpoint or a second overlay menu.
-  function layoutChoiceSeats() {
-    var occupied = new Set(["0,0"]);
-    modes.forEach(function (mode) {
-      occupied.add(key(Number(mode.dataset.q), Number(mode.dataset.r)));
-    });
-    hubs.forEach(function (hub) {
-      occupied.add(key(Number(hub.dataset.q), Number(hub.dataset.r)));
-    });
-    Object.keys(branches).forEach(function (branchName) {
-      var branch = branches[branchName];
-      var hubQ = Number(branch.hub.dataset.q);
-      var hubR = Number(branch.hub.dataset.r);
-      var outward = axialPoint(Number(branch.mode.dataset.outQ), Number(branch.mode.dataset.outR));
-      var candidates = [];
-      for (var radius = 1; radius <= 7; radius += 1) {
-        for (var relR = -radius; relR <= radius; relR += 1) {
-          for (var relQ = -radius; relQ <= radius; relQ += 1) {
-            if (distance(relQ, relR) !== radius) continue;
-            var q = hubQ + relQ;
-            var r = hubR + relR;
-            var id = key(q, r);
-            if (occupied.has(id)) continue;
-            var point = axialPoint(relQ, relR);
-            candidates.push({
-              q: q,
-              r: r,
-              id: id,
-              radius: radius,
-              forward: point.x * outward.x + point.y * outward.y,
-              cross: Math.abs(point.x * outward.y - point.y * outward.x)
-            });
-          }
-        }
-      }
-      candidates.sort(function (a, b) {
-        return a.radius - b.radius || b.forward - a.forward || a.cross - b.cross || a.r - b.r || a.q - b.q;
-      });
-      branch.choices.forEach(function (choice, index) {
-        var seatIndex = candidates.findIndex(function (candidate) { return !occupied.has(candidate.id); });
-        var seat = seatIndex >= 0 ? candidates.splice(seatIndex, 1)[0] : null;
-        if (!seat) return;
-        choice.dataset.q = String(seat.q);
-        choice.dataset.r = String(seat.r);
-        choice.dataset.layoutIndex = String(index);
-        choice.style.setProperty("--reveal-delay", (index * 24) + "ms");
-        occupied.add(seat.id);
-      });
-    });
+  function isDark() {
+    return appearancePreference === "dark" || (appearancePreference === "system" && colorScheme.matches);
   }
-
-  function indexPresetSeats() {
-    protectedKeys = new Set(["0,0"]);
-    modeByKey.clear();
-    hubByKey.clear();
-    choiceByKey.clear();
-    modes.forEach(function (mode) {
-      var id = key(Number(mode.dataset.q), Number(mode.dataset.r));
-      protectedKeys.add(id);
-      modeByKey.set(id, mode);
-    });
-    hubs.forEach(function (hub) {
-      var id = key(Number(hub.dataset.q), Number(hub.dataset.r));
-      protectedKeys.add(id);
-      hubByKey.set(id, hub);
-    });
-    choices.forEach(function (choice) {
-      var id = key(Number(choice.dataset.q), Number(choice.dataset.r));
-      protectedKeys.add(id);
-      choiceByKey.set(id, choice);
-    });
+  function applyAppearance() {
+    document.documentElement.dataset.appearance = isDark() ? "dark" : "light";
   }
 
   function loadPreferences() {
     var appearance = storageValue(localStorage, APPEARANCE_KEY);
     if (["system", "light", "dark"].indexOf(appearance) >= 0) appearancePreference = appearance;
-    var effects = storageValue(localStorage, EFFECTS_KEY);
-    if (["auto", "full", "reduced"].indexOf(effects) >= 0) effectsPreference = effects;
-    var infinite = storageValue(localStorage, INFINITE_THEME_KEY);
-    if (["light", "dark"].indexOf(infinite) >= 0) infiniteThemePreference = infinite;
+    var infiniteTheme = storageValue(localStorage, INFINITE_THEME_KEY);
+    if (["light", "dark"].indexOf(infiniteTheme) >= 0) infiniteThemePreference = infiniteTheme;
     var size = storageValue(localStorage, CLASSIC_SIZE_KEY);
     if (["easy", "medium", "hard"].indexOf(size) >= 0) classicSizePreference = size;
-    var sphere = storageValue(localStorage, SPHERE_THEME_KEY);
-    if (sphere) sphereThemePreference = sphere;
-    try {
-      var invert = JSON.parse(storageValue(localStorage, INVERT_KEY) || "null");
-      if (invert && typeof invert === "object") invertPreference = { x: !!invert.x, y: !!invert.y };
-    } catch (_) {}
-  }
-
-  function currentInvertLabel() {
-    var current = INVERT_OPTIONS.find(function (option) {
-      return option.x === invertPreference.x && option.y === invertPreference.y;
-    });
-    return current ? current.label : "Natural";
-  }
-
-  function setCurrent(choice, current) {
-    choice.setAttribute("aria-pressed", current ? "true" : "false");
-  }
-
-  function classicSizeLabel(size) {
-    return size === "easy" ? "Small" : size === "hard" ? "Large" : "Medium";
+    var sphereTheme = storageValue(localStorage, SPHERE_THEME_KEY);
+    if (sphereTheme) sphereThemePreference = sphereTheme;
   }
 
   function syncPreferences() {
     var infiniteLabel = titleCase(infiniteThemePreference);
     var classicLabel = classicSizeLabel(classicSizePreference);
     var sphereLabel = titleCase(sphereThemePreference);
-    document.getElementById("effects-current").textContent = titleCase(effectsPreference);
-    document.getElementById("invert-current").textContent = currentInvertLabel();
-    document.getElementById("infinite-settings-current").textContent = infiniteLabel;
-    document.getElementById("classic-settings-current").textContent = classicLabel;
-    document.getElementById("sphere-settings-current").textContent = sphereLabel;
-    document.getElementById("infinite-mode-current").textContent = branches.infinite.hub.classList.contains("is-available") ? infiniteLabel + " · Play" : "Dig settings";
-    document.getElementById("classic-mode-current").textContent = branches.classic.hub.classList.contains("is-available") ? classicLabel + " · Play" : "Dig settings";
-    document.getElementById("sphere-mode-current").textContent = branches.sphere.hub.classList.contains("is-available") ? sphereLabel + " · Play" : "Dig settings";
-    document.getElementById("infinite-effects").setAttribute("aria-label", "Effects: " + titleCase(effectsPreference) + ". Activate to cycle.");
-    document.getElementById("sphere-invert").setAttribute("aria-label", "Sphere drag: " + currentInvertLabel() + ". Activate to cycle.");
-    document.getElementById("infinite-settings").setAttribute("aria-label", "Infinite settings, " + infiniteLabel + ". Activate to " + (activeBranch === "infinite" ? "close." : "open."));
-    document.getElementById("classic-settings").setAttribute("aria-label", "Classic board settings, " + classicLabel + ". Activate to " + (activeBranch === "classic" ? "close." : "open."));
-    document.getElementById("sphere-settings").setAttribute("aria-label", "Sphere theme settings, " + sphereLabel + ". Activate to " + (activeBranch === "sphere" ? "close." : "open."));
-    document.getElementById("infinite-game").setAttribute("aria-label", branches.infinite.hub.classList.contains("is-available") ? "Play Infinite, " + infiniteLabel + " style" : "Dig Infinite to reveal its settings");
-    document.getElementById("classic-game").setAttribute("aria-label", branches.classic.hub.classList.contains("is-available") ? "Play Classic, " + classicLabel + " board" : "Dig Classic to reveal its settings");
-    document.getElementById("sphere-game").setAttribute("aria-label", branches.sphere.hub.classList.contains("is-available") ? "Play Sphere, " + sphereLabel + " theme" : "Dig Sphere to reveal its settings");
-    presetLayer.querySelectorAll("[data-infinite-theme]").forEach(function (choice) {
-      setCurrent(choice, choice.dataset.infiniteTheme === infiniteThemePreference);
-    });
-    presetLayer.querySelectorAll("[data-classic-size]").forEach(function (choice) {
-      setCurrent(choice, choice.dataset.classicSize === classicSizePreference);
-    });
-    presetLayer.querySelectorAll("[data-sphere-theme]").forEach(function (choice) {
-      setCurrent(choice, choice.dataset.sphereTheme === sphereThemePreference);
-    });
-  }
-
-  function isDark() {
-    return appearancePreference === "dark" || (appearancePreference === "system" && colorScheme.matches);
-  }
-
-  function engineTheme() {
-    if (isDark()) {
-      return {
-        background: "#0c1118", covered: "#171f29", revealed: "#d7e0eb",
-        shadowLight: "#536174", shadowDark: "#070a0f",
-        pressedLight: "#ffffff", pressedDark: "#9aa8b9", flag: "#ef4444",
-        text: { 1: "#2563eb", 2: "#0f855c", 3: "#c43131", 4: "#724ab5", 5: "#b45309", 6: "#be185d", mine: "#172231" }
-      };
-    }
-    return {
-      background: "#e8eef5", covered: "#f7f9fc", revealed: "#8f9db0",
-      shadowLight: "#ffffff", shadowDark: "#aebdce",
-      pressedLight: "#dbe4ee", pressedDark: "#657386", flag: "#e33030",
-      text: { 1: "#125cc8", 2: "#16794f", 3: "#c43131", 4: "#724ab5", 5: "#9a5b05", 6: "#ad1c5d", mine: "#172231" }
-    };
-  }
-
-  function applyAppearance() {
-    document.documentElement.dataset.appearance = isDark() ? "dark" : "light";
-    if (api) Object.assign(api.state.theme, engineTheme());
+    document.getElementById("infinite-mode-current").textContent = infiniteLabel;
+    document.getElementById("classic-mode-current").textContent = classicLabel;
+    document.getElementById("sphere-mode-current").textContent = sphereLabel;
+    infinite.href = "infinite.html?mode=" + encodeURIComponent(infiniteThemePreference) + "&fresh=1";
+    classic.href = "bounded.html?size=" + encodeURIComponent(classicSizePreference) + "&new=1";
+    sphere.href = "sphere/?theme=" + encodeURIComponent(sphereThemePreference) + "&fresh=1";
+    infinite.setAttribute("aria-label", "Play Infinite, " + infiniteLabel + " style");
+    classic.setAttribute("aria-label", "Play Classic, " + classicLabel + " board");
+    sphere.setAttribute("aria-label", "Play Sphere, " + sphereLabel + " theme");
   }
 
   function infiniteResumeCandidate() {
@@ -3014,6 +432,8 @@
       .sort(function (a, b) { return b.savedAt - a.savedAt; })[0] || null;
     if (!activeResume) {
       resume.hidden = true;
+      launcher.classList.remove("has-resume");
+      status.textContent = "Choose a board";
       return;
     }
     resume.hidden = false;
@@ -3021,219 +441,8 @@
     resume.dataset.mode = activeResume.mode;
     resumeModeName.textContent = activeResume.name;
     resume.setAttribute("aria-label", "Resume " + activeResume.name + " Hexsweeper");
-  }
-
-  function screenPoint(q, r, state) {
-    return {
-      x: state.canvas.width / 2 - state.camX + state.cellSize * SQRT3 * (q + r / 2),
-      y: state.canvas.height / 2 - state.camY + state.cellSize * 1.5 * r
-    };
-  }
-
-  function syncPresetGeometry(gameApi) {
-    var state = gameApi.state;
-    var signature = [state.canvas.width, state.canvas.height, state.cellSize.toFixed(3), state.camX.toFixed(2), state.camY.toFixed(2), state.map.size].join(":");
-    if (signature === geometrySignature) return;
-    geometrySignature = signature;
-    var originX = state.canvas.width / 2 - state.camX;
-    var originY = state.canvas.height / 2 - state.camY;
-    state.map.forEach(function (cell) { cell.calcGeometry(originX, originY, state.cellSize); });
-    document.documentElement.style.setProperty("--cell-size", state.cellSize.toFixed(2) + "px");
-    [resume].concat(modes, hubs, choices).forEach(function (control) {
-      var point = screenPoint(Number(control.dataset.q), Number(control.dataset.r), state);
-      control.style.setProperty("--screen-x", point.x.toFixed(2) + "px");
-      control.style.setProperty("--screen-y", point.y.toFixed(2) + "px");
-    });
-    updateCursor();
-  }
-
-  function updateCursor() {
-    if (!api) return;
-    var cell = api.state.map.get(selectedKey);
-    if (!cell) return;
-    var point = screenPoint(cell.q, cell.r, api.state);
-    cursor.style.setProperty("--screen-x", point.x.toFixed(2) + "px");
-    cursor.style.setProperty("--screen-y", point.y.toFixed(2) + "px");
-    var stateName = cell.flagged ? "flagged" : cell.revealed ? (cell.neighborMines ? "revealed, " + cell.neighborMines + " nearby" : "revealed, clear") : "covered";
-    canvas.setAttribute("aria-label", "Playable Hexsweeper menu. Selected tile is " + stateName + ". Arrow keys move, Enter digs, F flags, Escape recenters.");
-  }
-
-  function revealChoice(choice) {
-    if (choice.classList.contains("is-available")) return;
-    choice.classList.add("is-available");
-    choice.setAttribute("aria-hidden", "false");
-    choice.tabIndex = 0;
-    if (choice.tagName === "BUTTON") choice.disabled = false;
-  }
-
-  function revealHub(hub) {
-    if (!hub || !exposedBranches.has(hub.dataset.branch)) return;
-    hub.classList.add("is-available");
-    hub.setAttribute("aria-hidden", "false");
-    hub.tabIndex = 0;
-    hub.disabled = false;
-    var branch = branches[hub.dataset.branch];
-    branch.mode.classList.add("is-dug");
-    branch.mode.setAttribute("aria-expanded", "true");
-    syncPreferences();
-    if (keyboardRevealFocus === hub.dataset.branch + ":hub") {
-      keyboardRevealFocus = null;
-      hub.focus({ preventScroll: true });
-    }
-  }
-
-  function branchLabel(branchName) {
-    return branchName === "classic" ? "Classic board" : branchName === "sphere" ? "Sphere theme" : "Infinite style";
-  }
-
-  function closeBloom(branchName, restoreFocus) {
-    var branch = branches[branchName];
-    if (!branch) return;
-    branch.choices.forEach(function (choice) {
-      choice.classList.remove("is-available");
-      choice.setAttribute("aria-hidden", "true");
-      choice.tabIndex = -1;
-      choice.disabled = true;
-    });
-    branch.hub.setAttribute("aria-expanded", "false");
-    if (activeBranch === branchName) activeBranch = null;
-    syncPreferences();
-    if (restoreFocus) branch.hub.focus({ preventScroll: true });
-  }
-
-  function finishBloomReveal(branchName) {
-    var branch = branches[branchName];
-    if (!branch || activeBranch !== branchName) return;
-    branch.choices.forEach(function (choice) {
-      var cell = api.state.map.get(key(Number(choice.dataset.q), Number(choice.dataset.r)));
-      if (cell && cell.revealed) revealChoice(choice);
-    });
-    status.textContent = branchLabel(branchName) + " · choose a tile · tap " + branch.hub.querySelector(".preset-name").textContent + " to close";
-    if (keyboardRevealFocus === branchName + ":choice") {
-      keyboardRevealFocus = null;
-      var target = branch.choices.find(function (choice) { return choice.classList.contains("is-available"); });
-      if (target) target.focus({ preventScroll: true });
-    }
-  }
-
-  function openBloom(branchName, focusChoice) {
-    var branch = branches[branchName];
-    if (!branch || leaving || !branch.hub.classList.contains("is-available")) return;
-    if (activeBranch === branchName) {
-      closeBloom(branchName, focusChoice);
-      status.textContent = branchLabel(branchName) + " settings closed";
-      return;
-    }
-    if (activeBranch) closeBloom(activeBranch, false);
-    activeBranch = branchName;
-    branch.hub.setAttribute("aria-expanded", "true");
-    if (focusChoice) keyboardRevealFocus = branchName + ":choice";
-    var hubCell = api.state.map.get(key(Number(branch.hub.dataset.q), Number(branch.hub.dataset.r)));
-    if (hubCell) {
-      api.focusOnCell(hubCell, reducedMotion());
-      geometrySignature = "";
-    }
-    syncPreferences();
-    statusLockUntil = performance.now() + (reducedMotion() ? 120 : 1800);
-    status.textContent = "Blooming " + branchLabel(branchName).toLowerCase() + " settings…";
-    var lastDelay = 0;
-    branch.choices.forEach(function (choice, index) {
-      var delay = reducedMotion() ? 0 : 75 + index * 105;
-      lastDelay = Math.max(lastDelay, delay);
-      revealTimers.push(setTimeout(function () {
-        if (activeBranch !== branchName || leaving) return;
-        var id = key(Number(choice.dataset.q), Number(choice.dataset.r));
-        var cell = api.state.map.get(id);
-        if (cell && !cell.revealed && !cell._pendingReveal) api.dig(cell);
-        if (cell && cell.revealed) revealChoice(choice);
-      }, delay));
-    });
-    revealTimers.push(setTimeout(function () { finishBloomReveal(branchName); }, lastDelay + (reducedMotion() ? 20 : 190)));
-  }
-
-  function exposeSettingsHub(branchName, focusHub) {
-    var branch = branches[branchName];
-    if (!branch || leaving) return;
-    exposedBranches.add(branchName);
-    branch.mode.classList.add("is-dug");
-    if (focusHub) keyboardRevealFocus = branchName + ":hub";
-    if (branch.hub.classList.contains("is-available")) {
-      if (focusHub) branch.hub.focus({ preventScroll: true });
-      return;
-    }
-    statusLockUntil = performance.now() + (reducedMotion() ? 120 : 900);
-    status.textContent = "Digging out " + branchLabel(branchName).toLowerCase() + " settings…";
-    revealTimers.push(setTimeout(function () {
-      if (leaving) return;
-      var id = key(Number(branch.hub.dataset.q), Number(branch.hub.dataset.r));
-      var cell = api.state.map.get(id);
-      if (cell && !cell.revealed && !cell._pendingReveal) api.dig(cell);
-      if (cell && cell.revealed) revealHub(branch.hub);
-      status.textContent = branch.mode.querySelector(".preset-name").textContent + " ready · tap to play or adjust " + branch.hub.querySelector(".preset-name").textContent;
-    }, reducedMotion() ? 0 : 105));
-  }
-
-  function selectMode(mode, focusHub) {
-    if (!api || leaving) return;
-    var id = key(Number(mode.dataset.q), Number(mode.dataset.r));
-    var cell = api.state.map.get(id);
-    if (!cell) return;
-    if (!cell.revealed) {
-      if (focusHub) keyboardRevealFocus = mode.dataset.branch + ":hub";
-      api.dig(cell);
-      return;
-    }
-    var branch = branches[mode.dataset.branch];
-    if (!branch.hub.classList.contains("is-available")) {
-      exposeSettingsHub(mode.dataset.branch, focusHub);
-      return;
-    }
-    launchMode(mode.dataset.branch);
-  }
-
-  function cycleSetting(choice) {
-    if (choice.dataset.setting === "effects") {
-      var effects = ["auto", "full", "reduced"];
-      effectsPreference = effects[(effects.indexOf(effectsPreference) + 1) % effects.length];
-      writePreference(EFFECTS_KEY, effectsPreference);
-      Hexsweeper.applyEffectsAttribute();
-      syncPreferences();
-      status.textContent = "Effects: " + titleCase(effectsPreference);
-      return;
-    }
-    if (choice.dataset.setting === "invert") {
-      var currentIndex = INVERT_OPTIONS.findIndex(function (option) {
-        return option.x === invertPreference.x && option.y === invertPreference.y;
-      });
-      var next = INVERT_OPTIONS[(Math.max(0, currentIndex) + 1) % INVERT_OPTIONS.length];
-      invertPreference = { x: next.x, y: next.y };
-      writePreference(INVERT_KEY, JSON.stringify(invertPreference));
-      syncPreferences();
-      status.textContent = "Sphere drag: " + next.label;
-    }
-  }
-
-  function applyChoice(choice) {
-    if (choice.dataset.setting) {
-      cycleSetting(choice);
-      return;
-    }
-    if (choice.dataset.classicSize) {
-      classicSizePreference = choice.dataset.classicSize;
-      writePreference(CLASSIC_SIZE_KEY, classicSizePreference);
-      status.textContent = classicSizeLabel(classicSizePreference) + " set · tap Classic to play";
-    }
-    if (choice.dataset.infiniteTheme) {
-      infiniteThemePreference = choice.dataset.infiniteTheme;
-      writePreference(INFINITE_THEME_KEY, infiniteThemePreference);
-      status.textContent = titleCase(infiniteThemePreference) + " set · tap Infinite to play";
-    }
-    if (choice.dataset.sphereTheme) {
-      sphereThemePreference = choice.dataset.sphereTheme;
-      writePreference(SPHERE_THEME_KEY, sphereThemePreference);
-      status.textContent = titleCase(sphereThemePreference) + " set · tap Sphere to play";
-    }
-    syncPreferences();
+    launcher.classList.add("has-resume");
+    status.textContent = "Resume waits in the center";
   }
 
   function beginLaunch(control, name, href, verb) {
@@ -3242,372 +451,49 @@
     launcher.classList.add("is-launching");
     control.classList.add("is-launching");
     status.textContent = verb + " " + name;
-    setTimeout(function () { location.href = href; }, reducedMotion() ? 20 : 190);
+    setTimeout(function () { location.href = href; }, reducedMotion() ? 0 : 140);
   }
 
-  function launchMode(branchName) {
-    var branch = branches[branchName];
-    if (!branch) return;
-    if (branchName === "infinite") {
-      beginLaunch(branch.mode, "Infinite · " + titleCase(infiniteThemePreference), "infinite.html?mode=" + encodeURIComponent(infiniteThemePreference) + "&fresh=1", "Opening");
+  function onModeClick(event) {
+    event.preventDefault();
+    var branch = event.currentTarget.dataset.branch;
+    if (branch === "infinite") {
+      beginLaunch(infinite, "Infinite · " + titleCase(infiniteThemePreference), infinite.href, "Opening");
       return;
     }
-    if (branchName === "classic") {
-      beginLaunch(branch.mode, "Classic · " + classicSizeLabel(classicSizePreference), "bounded.html?size=" + encodeURIComponent(classicSizePreference) + "&new=1", "Opening");
+    if (branch === "classic") {
+      beginLaunch(classic, "Classic · " + classicSizeLabel(classicSizePreference), classic.href, "Opening");
       return;
     }
-    beginLaunch(branch.mode, "Sphere · " + titleCase(sphereThemePreference), "sphere/?theme=" + encodeURIComponent(sphereThemePreference) + "&fresh=1", "Opening");
+    beginLaunch(sphere, "Sphere · " + titleCase(sphereThemePreference), sphere.href, "Opening");
   }
 
-  function chooseDestination(destination) {
-    beginLaunch(destination, resumeModeName.textContent, destination.href, "Resuming");
-  }
-
-  function resetBloomControls() {
-    activeBranch = null;
-    exposedBranches.clear();
-    keyboardRevealFocus = null;
-    revealTimers.forEach(clearTimeout);
-    revealTimers.length = 0;
-    choices.forEach(function (choice) {
-      choice.classList.remove("is-available", "is-launching");
-      choice.setAttribute("aria-hidden", "true");
-      choice.tabIndex = -1;
-      choice.disabled = true;
-    });
-    hubs.forEach(function (hub) {
-      hub.classList.remove("is-available", "is-launching");
-      hub.setAttribute("aria-hidden", "true");
-      hub.setAttribute("aria-expanded", "false");
-      hub.tabIndex = -1;
-      hub.disabled = true;
-    });
-    modes.forEach(function (mode) {
-      mode.classList.remove("is-dug");
-      mode.setAttribute("aria-expanded", "false");
-    });
-    syncPreferences();
-  }
-
-  function newField(announce) {
-    clearTimeout(resetTimer);
-    resetBloomControls();
-    leaving = false;
-    launcher.classList.remove("is-launching");
-    api.restart({ clearPersist: false });
-    api.setCamera(0, 0);
-    selectedKey = "0,0";
-    geometrySignature = "";
-    flagTool.setAttribute("aria-pressed", "false");
-    if (announce !== false) status.textContent = "New field · dig a mode or any safe-looking tile";
-    canvas.focus({ preventScroll: true });
-  }
-
-  function activateCellByKey(id, focusChoice) {
-    if (!api) return;
-    if (!resume.hidden && id === "0,0") {
-      chooseDestination(resume);
-      return;
-    }
-    var choice = choiceByKey.get(id);
-    if (choice && choice.classList.contains("is-available")) {
-      applyChoice(choice);
-      return;
-    }
-    var hub = hubByKey.get(id);
-    if (hub && hub.classList.contains("is-available")) {
-      openBloom(hub.dataset.branch, focusChoice);
-      return;
-    }
-    var mode = modeByKey.get(id);
-    if (mode) {
-      selectMode(mode, focusChoice);
-      return;
-    }
-    var cell = api.state.map.get(id);
-    if (cell && !cell.revealed && !cell.flagged) api.dig(cell);
-  }
-
-  layoutChoiceSeats();
-  indexPresetSeats();
   loadPreferences();
   applyAppearance();
   syncPreferences();
   refreshResume();
+  colorScheme.addEventListener("change", applyAppearance);
 
-  var config = {
-    easy: { radius: 7, mines: 28, cellSize: 30 },
-    medium: { radius: 8, mines: 46, cellSize: 32 },
-    hard: { radius: 10, mines: 80, cellSize: 34 }
-  };
-
-  /**
-   * Launcher count language mirrors Sphere: nested inset hexes get denser as
-   * danger rises. Exact counts remain in the board's spoken status, while the
-   * visual field stays quieter than a screen full of competing digits.
-   */
-  function drawDangerRings(ctx, cell, size, count, color) {
-    var n = Math.max(0, Math.min(6, count | 0));
-    if (!cell.revealed || cell.isMine || n < 1) return;
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.globalAlpha = .64;
-    ctx.lineWidth = Math.max(1.05, Math.min(1.7, size * .038));
-    for (var index = 0; index < n; index += 1) {
-      var scale = n === 1
-        ? .34
-        : .52 - index * (.36 / Math.max(1, n - 1));
-      ctx.stroke(cell.hexPath(size, scale));
-    }
-    ctx.restore();
-  }
-
-  api = Hexsweeper.boot({
-    canvasId: "launcher-canvas",
-    difficulty: "medium",
-    endless: true,
-    mineDensity: .17,
-    maxRadius: 54,
-    initialZoom: initialLauncherZoom(),
-    minZoom: LAUNCHER_MIN_ZOOM,
-    maxZoom: LAUNCHER_MAX_ZOOM,
-    zoomStorageKey: LAUNCHER_ZOOM_KEY,
-    config: config,
-    theme: engineTheme(),
-    hooks: {
-      usePathHitTest: true,
-      layout: function (gameApi) {
-        gameApi.state.canvas.width = Math.max(320, Math.round(innerWidth));
-        gameApi.state.canvas.height = Math.max(320, Math.round(innerHeight));
-      },
-      isProtectedCell: function (cell) {
-        return protectedKeys.has(key(cell.q, cell.r));
-      },
-      beforeFrame: function (_ctx, gameApi) {
-        syncPresetGeometry(gameApi);
-      },
-      drawCell: function (_ctx, cell, size, gameApi) {
-        var count = cell.neighborMines;
-        var protectedCell = protectedKeys.has(key(cell.q, cell.r));
-        cell.neighborMines = 0;
-        gameApi.drawDefaultCell(cell, size);
-        cell.neighborMines = count;
-        if (!protectedCell && count > 0) {
-          drawDangerRings(_ctx, cell, size, count, gameApi.state.theme.text[count] || "#263240");
-        }
-      },
-      onCellAction: function (cell, gameApi) {
-        var id = key(cell.q, cell.r);
-        if (!resume.hidden && id === "0,0") {
-          chooseDestination(resume);
-          return true;
-        }
-        var choice = choiceByKey.get(id);
-        if (choice && choice.classList.contains("is-available")) {
-          applyChoice(choice);
-          return true;
-        }
-        var hub = hubByKey.get(id);
-        if (hub && hub.classList.contains("is-available")) {
-          openBloom(hub.dataset.branch, false);
-          return true;
-        }
-        var mode = modeByKey.get(id);
-        if (mode && (cell.revealed || gameApi.state.flagMode)) {
-          selectMode(mode, false);
-          return true;
-        }
-        return false;
-      },
-      onReveal: function (cell, _gameApi, meta) {
-        var id = key(cell.q, cell.r);
-        var mode = modeByKey.get(id);
-        if (mode) {
-          mode.classList.add("is-dug");
-          if (meta && meta.source === "dig") exposeSettingsHub(mode.dataset.branch, keyboardRevealFocus === mode.dataset.branch + ":hub");
-        }
-        var hub = hubByKey.get(id);
-        if (hub && exposedBranches.has(hub.dataset.branch)) revealHub(hub);
-        var choice = choiceByKey.get(id);
-        if (choice && activeBranch === choice.dataset.branch) revealChoice(choice);
-        if (!mode && !hub && !choice && !leaving && performance.now() > statusLockUntil) {
-          status.textContent = cell.neighborMines ? "Safe · " + cell.neighborMines + " nearby" : "Clear · the opening is spreading";
-        }
-        updateCursor();
-      },
-      onFlag: function (cell) {
-        status.textContent = cell.flagged ? "Flag placed" : "Flag removed";
-        updateCursor();
-      },
-      onProtectedFlag: function () {
-        status.textContent = "Preset cells stay safe · dig them to reveal their purpose";
-      },
-      onFlagMode: function (on) {
-        flagTool.setAttribute("aria-pressed", on ? "true" : "false");
-        status.textContent = on ? "Flag mode on · tap a covered tile" : "Dig mode on";
-      },
-      onGameOver: function () {
-        status.textContent = "Mine · the launcher will grow a fresh field";
-        clearTimeout(resetTimer);
-        resetTimer = setTimeout(function () { newField(false); status.textContent = "Fresh field · modes are still safe"; }, reducedMotion() ? 120 : 1350);
-      },
-      onReset: function () { geometrySignature = ""; },
-      onExpand: function () { geometrySignature = ""; },
-      onRelayout: function () { geometrySignature = ""; }
-    }
-  });
-  geometrySignature = "";
-
-  modes.forEach(function (mode) {
-    mode.addEventListener("click", function (event) {
-      event.preventDefault();
-      selectMode(mode, true);
-    });
-  });
-  hubs.forEach(function (hub) {
-    hub.addEventListener("click", function (event) {
-      event.preventDefault();
-      if (!hub.classList.contains("is-available")) return;
-      openBloom(hub.dataset.branch, true);
-    });
-  });
-  choices.forEach(function (choice) {
-    choice.addEventListener("click", function (event) {
-      event.preventDefault();
-      if (!choice.classList.contains("is-available")) return;
-      applyChoice(choice);
-    });
-  });
+  infinite.addEventListener("click", onModeClick);
+  classic.addEventListener("click", onModeClick);
+  sphere.addEventListener("click", onModeClick);
   resume.addEventListener("click", function (event) {
     event.preventDefault();
-    chooseDestination(resume);
+    beginLaunch(resume, resumeModeName.textContent, resume.href, "Resuming");
   });
 
-  flagTool.addEventListener("click", function () { api.toggleFlagMode(); });
-  function zoomBoard(factor) {
-    var zoom = api.adjustZoom(factor, {
-      x: api.state.canvas.width / 2,
-      y: api.state.canvas.height / 2
-    });
-    geometrySignature = "";
-    status.textContent = "Board zoom: " + Math.round(zoom * 100) + "%";
-    canvas.focus({ preventScroll: true });
-  }
-  zoomOutTool.addEventListener("click", function () { zoomBoard(1 / 1.12); });
-  zoomInTool.addEventListener("click", function () { zoomBoard(1.12); });
-  centerTool.addEventListener("click", function () {
-    api.setCamera(0, 0);
-    selectedKey = "0,0";
-    geometrySignature = "";
-    status.textContent = "Board centered";
-    canvas.focus({ preventScroll: true });
-  });
-  newTool.addEventListener("click", function () { newField(true); });
-
-  addEventListener("keydown", function (event) {
-    if (event.key !== "Escape" || !activeBranch || event.target === canvas) return;
-    event.preventDefault();
-    var closingBranch = activeBranch;
-    closeBloom(closingBranch, true);
-    status.textContent = branchLabel(closingBranch) + " settings closed";
-  });
-
-  canvas.addEventListener("focus", updateCursor);
-  canvas.addEventListener("keydown", function (event) {
-    var directions = {
-      ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]
-    };
-    if (directions[event.key]) {
-      event.preventDefault();
-      event.stopPropagation();
-      var current = selectedKey.split(",").map(Number);
-      var nextQ = current[0] + directions[event.key][0];
-      var nextR = current[1] + directions[event.key][1];
-      var next = api.state.map.get(key(nextQ, nextR));
-      if (!next) return;
-      selectedKey = key(nextQ, nextR);
-      var point = screenPoint(nextQ, nextR, api.state);
-      var margin = api.state.cellSize * 2.4;
-      if (point.x < margin || point.x > api.state.canvas.width - margin || point.y < margin || point.y > api.state.canvas.height - margin) {
-        api.focusOnCell(next, false);
-      }
-      geometrySignature = "";
-      updateCursor();
-      return;
-    }
-    if (event.key === "Enter" || event.code === "Space") {
-      event.preventDefault();
-      event.stopPropagation();
-      activateCellByKey(selectedKey, true);
-      return;
-    }
-    if (event.key === "f" || event.key === "F") {
-      event.preventDefault();
-      event.stopPropagation();
-      var selected = api.state.map.get(selectedKey);
-      if (selected && !protectedKeys.has(selectedKey)) api.toggleFlag(selected);
-      return;
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      if (activeBranch) {
-        var closingBranch = activeBranch;
-        closeBloom(closingBranch, true);
-        status.textContent = branchLabel(closingBranch) + " settings closed";
-        return;
-      }
-      api.setCamera(0, 0);
-      geometrySignature = "";
-      status.textContent = "Board centered";
-      return;
-    }
-    if ((event.key === "r" || event.key === "R") && !event.metaKey && !event.ctrlKey) {
-      event.preventDefault();
-      event.stopPropagation();
-      newField(true);
-    }
-  });
-
-  addEventListener("pageshow", function (event) {
-    if (!event.persisted) return;
+  addEventListener("pageshow", function () {
     leaving = false;
     launcher.classList.remove("is-launching");
-    [resume].concat(modes, hubs).forEach(function (control) { control.classList.remove("is-launching"); });
+    [infinite, classic, sphere, resume].forEach(function (control) {
+      control.classList.remove("is-launching");
+    });
     loadPreferences();
     applyAppearance();
     syncPreferences();
     refreshResume();
-    geometrySignature = "";
   });
-  if (colorScheme.addEventListener) colorScheme.addEventListener("change", applyAppearance);
-  else if (colorScheme.addListener) colorScheme.addListener(applyAppearance);
-
-  status.textContent = activeResume
-    ? "Resume in the center · dig a mode · drag to explore"
-    : "Dig a mode · drag to explore · hold to flag";
 })();
 </script>
-<noscript>
-<style>
-.launcher-fallback{position:fixed;z-index:99;inset:0;display:grid;place-content:center;
- gap:12px;padding:24px;background:#e8eef5;color:#263240;text-align:center;
- font:600 1rem/1.4 "IBM Plex Sans",system-ui,sans-serif}
-.launcher-fallback h2{margin:0 0 4px;font-size:1.3rem}
-.launcher-fallback a{display:block;min-width:220px;padding:13px 18px;border:2px solid currentColor;
- border-radius:999px;color:inherit;text-decoration:none}
-@media(prefers-color-scheme:dark){.launcher-fallback{background:#0c1118;color:#edf3fb}}
-</style>
-<nav class="launcher-fallback" aria-label="Choose a Hexsweeper board">
-  <h2>Choose a board</h2>
-  <a href="infinite.html">Infinite · Endless</a>
-  <a href="bounded.html">Classic · Fixed</a>
-  <a href="sphere/">Sphere · 3D</a>
-</nav>
-</noscript>
-<script data-goatcounter="https://stats.dr.eamer.dev/count"
-        async src="https://stats.dr.eamer.dev/count.js"></script>
 </body>
 </html>

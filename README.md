@@ -5,11 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
 
 A hexagonal minesweeper in three shapes: an endless plate, a fixed classic
-board, and a closed 3D sphere. The web and native apps share one continuous,
-playable launcher board: drag to explore, dig or flag ordinary cells, and dig a
-mode cell to uncover its connected settings hub. Each hub blooms settable
-choices into adjacent safe cells; the revealed mode starts the configured game.
-Keyboard and reduced-motion paths use the same board state.
+board, and a closed 3D sphere. The web and native apps share one launcher:
+three mode hexes around a centered Resume. Tap a mode to start with the last
+used settings; each game keeps its own customize controls.
 
 **[Play Hexsweeper on dr.eamer.dev](https://dr.eamer.dev/games/hexsweeper/).**
 
@@ -35,13 +33,9 @@ The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on
 | **Classic** | Fixed neumorphic board; the run persists | `bounded.html` |
 | **Sphere** | Closed 3D Goldberg sphere | `sphere/` |
 
-The root launcher surfaces the newest unfinished Infinite, Classic, or Sphere
-run in the center. Infinite, Classic, and Sphere are protected cells in the live
-field; digging one reveals its connected settings hub through the same safe-dig
-and flood engine as ordinary play. Activating that hub blooms stateful choices;
-activating the revealed mode starts a fresh configured run. Choice seats are
-data-placed and mine-safe, so new launch-time materials can extend a branch
-without a fixed menu layout.
+The root launcher is three hexes — Infinite, Classic, Sphere — with the newest
+unfinished run in the center Resume tile. A mode tap starts a fresh run using
+the last used style, board size, or theme. Settings live inside each game.
 
 The former five-mode flat production surface remains at `play.html` for its
 distinct materials and mechanics:
@@ -91,7 +85,7 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 
 | File | Role |
 |------|------|
-| `index.html` | Generated playable endless-board launcher (web landing) |
+| `index.html` | Generated three-hex launcher (web landing) |
 | `infinite.html` | Generated endless Light/Dark product page |
 | `bounded.html` | Generated fixed Classic product page |
 | `play.html` | Flat five-mode game source (Light/Dark/Fire/Plague/Escape) |

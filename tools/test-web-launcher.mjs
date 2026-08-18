@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Static contract for the generated playable launcher and its three destinations.
+// Static contract for the generated three-hex launcher and its destinations.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -30,9 +30,9 @@ for (const [label, href] of [
 }
 
 for (const [label, selector] of [
-  ["Infinite mode", 'id="infinite-game" type="button" data-mode="infinite" data-branch="infinite" data-out-q="0" data-out-r="-1" data-q="0" data-r="-1"'],
-  ["Classic mode", 'id="classic-game" type="button" data-mode="bounded" data-branch="classic" data-out-q="1" data-out-r="0" data-q="1" data-r="0"'],
-  ["Sphere mode", 'id="sphere-game" type="button" data-mode="sphere" data-branch="sphere" data-out-q="-1" data-out-r="1" data-q="-1" data-r="1"'],
+  ["Infinite mode", 'id="infinite-game" href="infinite.html?mode=light&amp;fresh=1" data-mode="infinite" data-branch="infinite" data-q="0" data-r="-1"'],
+  ["Classic mode", 'id="classic-game" href="bounded.html?size=medium&amp;new=1" data-mode="bounded" data-branch="classic" data-q="1" data-r="0"'],
+  ["Sphere mode", 'id="sphere-game" href="sphere/?theme=light&amp;fresh=1" data-mode="sphere" data-branch="sphere" data-q="-1" data-r="1"'],
 ]) {
   expect(launcher.includes(selector), `launcher lost ${label}`);
 }
@@ -41,65 +41,23 @@ expect(
   "Resume is no longer centered",
 );
 expect(
-  launcher.includes('id="launcher-canvas"') && launcher.includes('role="application"'),
-  "launcher is no longer a keyboard-addressable playable board",
+  template.includes('class="triad"') &&
+    template.includes('id="infinite-game"') &&
+    template.includes('id="classic-game"') &&
+    template.includes('id="sphere-game"') &&
+    template.includes('id="resume-game"') &&
+    template.includes('style="--q:0;--r:-1"') &&
+    template.includes('style="--q:1;--r:0"') &&
+    template.includes('style="--q:-1;--r:1"') &&
+    template.includes('style="--q:0;--r:0"'),
+  "launcher is no longer a three-hex picker with a centered Resume",
 );
 expect(
-  launcher.includes("Hexsweeper.boot({") && launcher.includes("endless: true"),
-  "launcher no longer boots the real endless Hexsweeper engine",
-);
-expect(
-  core.includes("function isProtectedCell(cell)") && core.includes("hooks.onCellAction"),
-  "core lost the protected-preset or embedded-cell activation seam",
-);
-expect(
-  template.includes("function layoutChoiceSeats()") && template.includes("choice.dataset.layoutIndex"),
-  "launcher choices are no longer assigned connected seats from branch data",
-);
-expect(
-  template.includes('id="infinite-settings"') &&
-    template.includes('id="classic-settings"') &&
-    template.includes('id="sphere-settings"') &&
-    template.includes("function openBloom(") &&
-    template.includes("activeBranch === branchName"),
-  "launcher lost the per-mode Clex-style settings blooms",
-);
-expect(
-  template.includes('id="classic-medium" type="button"') &&
-    template.includes('data-classic-size="medium"') &&
-    template.includes('aria-pressed="false"') &&
-    template.includes("function applyChoice("),
-  "launcher settings choices are no longer stateful in-place controls",
-);
-expect(
-  template.includes("protectedKeys.has(key(cell.q, cell.r))") && template.includes("api.dig(cell)"),
-  "preset cells are not guaranteed safe or revealed through the game engine",
-);
-expect(
-  template.includes("function drawDangerRings(") && template.includes("cell.neighborMines = 0"),
-  "launcher brought numeric count glyphs back instead of nested danger hexes",
-);
-expect(
-  template.includes("touch-action: none") && launcher.includes("const panThreshold = digSession.forcePan || state.endless ? 8 : 18"),
-  "launcher lost drag-vs-dig input handling",
-);
-expect(
-  launcher.includes("Long-press flags on touch") && launcher.includes("floodFrom(startCell)"),
-  "launcher lost real flag or zero-flood behavior from core",
-);
-expect(
-  template.includes('LAUNCHER_ZOOM_KEY = "hexsweeper-launcher-zoom-v1"') &&
-    template.includes("LAUNCHER_MIN_ZOOM = 1.28") &&
-    template.includes("minZoom: LAUNCHER_MIN_ZOOM") &&
-    core.includes("const clampViewZoom") &&
-    template.includes("zoomStorageKey: LAUNCHER_ZOOM_KEY") &&
-    template.includes('id="zoom-out-tool"') &&
-    template.includes('id="zoom-in-tool"'),
-  "launcher zoom is not explicit, persistent, or isolated from game lanes",
-);
-expect(
-  !template.includes("function fitLayout()"),
-  "launcher brought back the fixed fitted flower menu",
+  !template.includes("Hexsweeper.boot") &&
+    !template.includes('id="launcher-canvas"') &&
+    !template.includes("function openBloom(") &&
+    !template.includes("function layoutChoiceSeats("),
+  "launcher kept the playable-board menu or settings blooms",
 );
 expect(
   core.includes("exportRunState()") && core.includes("applyRunState(data)"),
@@ -150,7 +108,6 @@ expect(sphere.includes('class="web-games-back" href="../"'), "Sphere has no Game
 expect(play.includes("ONEPAGER_MODES") && play.includes('id="gameCanvas"'), "play.html no longer contains the flat game source");
 
 for (const placeholder of [
-  "{{CORE_JS}}",
   "{{INFINITE_HREF}}",
   "{{BOUNDED_HREF}}",
   "{{SPHERE_HREF}}",

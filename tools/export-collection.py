@@ -1763,7 +1763,6 @@ def render_launcher(
     template = (ROOT / "tools" / "app-launcher.html").read_text(encoding="utf-8")
     replacements = {
         "{{FONTS}}": fonts,
-        "{{CORE_JS}}": (ROOT / "core.js").read_text(encoding="utf-8"),
         "{{INFINITE_HREF}}": infinite_href,
         "{{BOUNDED_HREF}}": bounded_href,
         "{{SPHERE_HREF}}": sphere_href,
@@ -1780,7 +1779,7 @@ def render_launcher(
 
 
 def export_app_launcher() -> str:
-    """The native picker: three structural choices — infinite, classic, sphere."""
+    """The native picker: three mode hexes plus a centered Resume."""
     fonts_css = inline_css_urls(
         (ROOT / "fonts" / "fonts.css").read_text(encoding="utf-8"), ROOT / "fonts"
     )
@@ -1799,12 +1798,12 @@ def export_app_launcher() -> str:
 WEB_LAUNCHER_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hexsweeper">
-<meta property="og:description" content="Choose an endless plate, a fixed classic board, or a 3D sphere from one safe opening.">
+<meta property="og:description" content="Choose an endless plate, a fixed classic board, or a 3D sphere.">
 <meta property="og:url" content="{SITE_BASE}/">
 <meta property="og:image" content="{SITE_BASE}/assets/social/home-og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Hexsweeper">
-<meta name="twitter:description" content="Infinite, Classic, and Sphere Hexsweeper from one safe opening.">
+<meta name="twitter:description" content="Infinite, Classic, and Sphere Hexsweeper.">
 <meta name="twitter:image" content="{SITE_BASE}/assets/social/home-og.png">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e8eef5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c1118">
@@ -1842,7 +1841,7 @@ WEB_LAUNCHER_TAIL = """<noscript>
 
 
 def export_web_launcher() -> str:
-    """The public landing: the native launcher's spatial menu, with web routes."""
+    """The public landing: the native launcher's three-hex picker, with web routes."""
     return render_launcher(
         fonts='<link rel="stylesheet" href="fonts/fonts.css">',
         infinite_href="infinite.html",
