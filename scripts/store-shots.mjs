@@ -122,14 +122,15 @@ try {
     })()`);
     await delay(1400);
     if (shot.flower) {
-      await ev('document.querySelector(".is-menu-corner .is-dock").click()');
-      await waitFor(() => ev('document.getElementById("hex-bloom").dataset.phase === "open" && (() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]"); return el && el.getBoundingClientRect().width >= 48; })()'), "flower");
-      await delay(700);
+      // Settings sheet open over the board.
+      await ev('document.getElementById("qc-help").click()');
+      await waitFor(() => ev('!document.getElementById("help-overlay").hidden && document.getElementById("help-overlay").classList.contains("open")'), "settings sheet");
+      await delay(500);
     }
     const png = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
     await writeFile(join(outDir, `${shot.file}.png`), Buffer.from(png.data, "base64"));
     console.log(`shot ${shot.file} (${shot.theme})`);
-    if (shot.flower) { await ev('document.querySelector(".is-menu-corner .is-dock").click()'); await delay(400); }
+    if (shot.flower) { await ev('document.getElementById("help-done-btn").click()'); await delay(400); }
   }
   socket.close();
 } finally {

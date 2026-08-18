@@ -47,3 +47,56 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
+
+// MARK: - HexShare: share the finished-board card as an image, not a file
+//
+// The web game's share button hands the card to navigator.share() as a File.
+// WKWebView forwards that to UIActivityViewController as a document, so the
+// sheet offers Files/AirDrop/Mail and hides the image-capable apps (Messages,
+// Instagram, Bluesky…) that are the point of sharing. This local plugin takes
+// the PNG as base64 and presents the sheet with a UIImage activity item, which
+// gets the full roster. Registered below via HexBridgeViewController (the
+// storyboard's root view controller) so no project-file edit is needed.
+@objc(HexSharePlugin)
+public class HexSharePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "HexSharePlugin"
+    public let jsName = "HexShare"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "shareImage", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func shareImage(_ call: CAPPluginCall) {
+        guard let base64 = call.getString("base64"),
+              let data = Data(base64Encoded: base64, options: [.ignoreUnknownCharacters]),
+              let image = UIImage(data: data) else {
+            call.reject("HexShare: no image")
+            return
+        }
+        DispatchQueue.main.async {
+            guard let host = self.bridge?.viewController else {
+                call.reject("HexShare: no view controller")
+                return
+            }
+            let sheet = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+            sheet.completionWithItemsHandler = { activity, completed, _, error in
+                if let error = error {
+                    call.reject(error.localizedDescription)
+                    return
+                }
+                call.resolve(["completed": completed, "activity": activity?.rawValue ?? ""])
+            }
+            if let pop = sheet.popoverPresentationController {
+                pop.sourceView = host.view
+                pop.sourceRect = CGRect(x: host.view.bounds.midX, y: host.view.bounds.maxY - 96, width: 1, height: 1)
+                pop.permittedArrowDirections = [.down]
+            }
+            host.present(sheet, animated: true)
+        }
+    }
+}
+
+class HexBridgeViewController: CAPBridgeViewController {
+    override open func capacitorDidLoad() {
+        bridge?.registerPluginInstance(HexSharePlugin())
+    }
+}

@@ -49,9 +49,13 @@ App Store Connect app and abandoning this one.
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
 the sealed Sphere game — one self-contained file with fonts, CSS, and all JS
-(engine, Mercury's WebGL renderer, flower menu) inlined; the only other asset is
+(engine, WebGL material renderer, quiet chrome) inlined; the only other asset is
 the help sheet's history image under `www/assets/`. There is nothing to
-navigate to and no back affordance to need. `capacitor.config` is
+navigate to and no back affordance to need. One local native plugin,
+`HexShare` (in `AppDelegate.swift`, registered by `HexBridgeViewController`),
+presents the finished-board card as a `UIImage` in the iOS share sheet so
+image-capable apps appear; the web build's Web Share path is the fallback.
+`capacitor.config` is
 `.js` because `@capacitor/cli` requires a full `typescript` install purely to
 read a `.ts` config, which is not worth a toolchain in a repo with no TS source.
 

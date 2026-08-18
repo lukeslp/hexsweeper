@@ -10,7 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` is 49 for the release candidate (splash + sphere-only payload + zoom-to-menu face menu + theme fan + Help theme grid)
+- [x] `CURRENT_PROJECT_VERSION` is 50 for the release candidate (splash + sphere-only payload + quiet bar + settings sheet + native image share)
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [x] Archive signs cleanly under team `596T7J7FB6`
@@ -44,7 +44,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Build 46 uploaded 2026-08-18: flower off the sphere, no scrim blur
 - [x] Build 47 uploaded 2026-08-18: menu on the sphere's faces (Face Takeover)
 - [x] Build 48 uploaded 2026-08-18: face-tile labels, Help theme grid
-- [x] Build 49 uploaded 2026-08-18: zoom-to-menu, theme fan on ring two; attached to 1.0 as the release candidate
+- [x] Build 49 uploaded 2026-08-18: zoom-to-menu, theme fan on ring two
+- [x] Build 50 uploaded 2026-08-18: quiet bar + settings sheet, themed cores, tutorial, HexShare image plugin; attached to 1.0 as the release candidate
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network

@@ -18,14 +18,14 @@ and any network dependency is a defect.
 
 | # | Check | Pass criteria | Result |
 |---|---|---|---|
-| 1 | Cold launch | Launch screen hands off to Sphere with no blank frame between and no prompt; an unfinished sphere run restores in place | |
-| 1a | Corner glyphs | Menu (bottom left) and Help (bottom right) are visible on the closed board, at least 44 pt each, clear of the home indicator; no Games pill anywhere | |
-| 1b | Menu first tap | One tap on the corner Menu **zooms the sphere in** and seats the menu on seven of its faces (labelled: Theme, Warn, Undo, Reset, Flag, Invert, Size, ≥ 74 pt each), board sharp — no blur; one tap on a tile acts; dragging the board while open spins it and the menu rides along, re-seating if it nears the rim; a still tap on the board or the × glyph closes and the zoom returns to where you had it | |
-| 1c | Theme fan | Tapping Theme fans nine labelled swatch faces across the ring outside the menu (Light, Dark, Sky, Mercury, Storm, Aurora, Galaxy, Ribbon, Heat); the sphere eases out so they all fit; tapping one applies it, previews on the whole board, and rings it as chosen; Theme again folds the fan; the choice persists across relaunch | |
+| 1 | Cold launch | Launch screen hands off to Sphere with no blank frame; **first launch** shows the short tutorial sheet (Play dismisses; never again); an unfinished run restores in place | |
+| 1a | Quiet bar | Undo · New sphere · Flag (bottom left) and ? (bottom right) are visible, ≥ 44 pt each, clear of the home indicator; mines-left · seconds readout at the top; no Games pill, no menu | |
+| 1b | Bar first tap | One tap on Undo takes back the last move; one tap on Flag arms flag mode and the glyph turns red (board taps then flag; tap again to disarm); New sphere restarts | |
+| 1c | Themed cores | On each material theme a dig opens onto its own surface with no seams between wells (sky glass, plasma, curtains, star field, gold, magma, metal) and flags plant in that theme's metal/light | |
 | 1c′ | Textured materials | Stratosphere shows the drifting sky on the mirror (light chrome, dark glass wells); Ion Storm shows the storm cloud trailing the rotation; Galaxy, Gilded Ribbon, Heat Lightning show their textures; Aurora its curtains — all offline, in airplane mode | |
 | 1d | Mercury | Mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
 | 2 | Sphere size | On a phone in portrait the sphere spans roughly 85% of the width; margins above and below still open the flower on tap | |
-| 3 | Help sheet | Help opens wide enough to read (≥340 pt on a phone), no keyboard hints, a Theme grid of nine swatches (tap one → sphere changes behind, swatch reads pressed), Settings pills and Done at least 44 pt tall, closes with × / Done / outside tap and never blocks the board afterwards | |
+| 3 | Settings sheet | ? opens wide enough to read (≥340 pt on a phone), no keyboard hints; Theme grid (nine), Board size (XS–XL, new sphere on change), Warnings (four), Invert, Effects all apply live and read pressed; Done ≥ 44 pt; closes with × / Done / outside tap and never blocks the board afterwards | |
 | 6 | Sphere render | Sphere is centred and fully visible; no clipping at any edge | |
 | 7 | Sphere dig | Single tap reveals the intended tile — not a neighbour | |
 | 8 | Sphere flag | Long-press flags; flag stands proud of the shell | |
@@ -41,6 +41,7 @@ and any network dependency is a defect.
 | 18 | Backgrounding | Background 30s and return; no blank WebView, no reset | |
 | 19 | Reduced Motion | Launcher and endgame effects become instant states | |
 | 20 | Outbound links | Credits open in the system browser and return cleanly; the game is never replaced in-place | |
+| 20a | Share | On game end, Share opens the iOS share sheet with the card **as an image** — Messages, Instagram, Bluesky, Photos appear (not a Files-only sheet); cancelling returns cleanly; the banner reads Share · Undo · New sphere | |
 | 21 | Rotation | Portrait ↔ landscape reflows without losing the run or hiding the corner glyphs or the open flower | |
 | 22 | Android Back | System Back closes the flower or help sheet when open, otherwise exits or follows documented platform behaviour without losing the run | |
 | 23 | Android system bars | Content clears status/navigation/gesture insets in both orientations | |
