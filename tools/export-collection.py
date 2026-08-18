@@ -1754,6 +1754,8 @@ def export_sphere_app(exp: dict) -> str:
         + reflection_texture_boot(SPHERE_APP_MATERIALS, mobile_only=True),
         1,
     )
+    # First launch shows the tutorial sheet once; pens pre-set the key, the app does not.
+    markup = markup.replace("  localStorage.setItem('hexsweeper-sphere-welcome-v1', '1');\n", "", 1)
     if "HEXSWEEPER_REFLECTION_TEXTURES" not in markup:
         raise SystemExit("export_sphere_app: reflection textures not sealed")
     # Sealed: the embedded data URIs win, so no texture base at all in the app.
@@ -1811,6 +1813,8 @@ def export_sphere_web() -> str:
     markup = export_sphere(exp)
     markup = re.sub(r"<title>.*?</title>", "<title>Hexsweeper</title>", markup, count=1, flags=re.S)
     markup = markup.replace('<html lang="en" class="collection-export">', '<html lang="en">', 1)
+    # First-timers get the tutorial: pens pre-set the welcome key, the root does not.
+    markup = markup.replace("  localStorage.setItem('hexsweeper-sphere-welcome-v1', '1');\n", "", 1)
     # Reflection textures live under sphere/; the root page fetches them relatively.
     markup = markup.replace(
         f'window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "{SITE_BASE}/sphere/";',

@@ -935,7 +935,7 @@ body.help-open { overflow: hidden; }
 .sphere-banner {
   position: fixed;
   left: 50%;
-  bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
+  bottom: max(88px, calc(env(safe-area-inset-bottom) + 84px));
   transform: translateX(-50%) translateY(12px);
   z-index: 45;
   display: flex;
@@ -943,12 +943,14 @@ body.help-open { overflow: hidden; }
   align-items: center;
   gap: 10px;
   max-width: min(360px, calc(100vw - 32px));
-  padding: 14px 18px;
+  padding: 16px 18px 14px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--nav-bg) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--text-main) 20%, transparent);
+  background: color-mix(in srgb, var(--bg-color) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
   text-align: center;
   opacity: 0;
   pointer-events: none;
@@ -969,28 +971,30 @@ body.help-open { overflow: hidden; }
 }
 .sphere-banner .banner-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   justify-content: center;
 }
 .sphere-banner .banner-btn {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--text-main) 22%, transparent);
-  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  background: transparent;
   color: var(--text-main);
   border-radius: 999px;
-  /* Icon-only, at the same 44/20 scale as .hud-btn so the banner and the
-     corner cluster read as one control language. 44px also clears the
-     minimum touch target. */
-  width: 44px;
-  height: 44px;
-  padding: 0;
+  /* Labelled pills — the same grammar as the settings sheet's buttons. */
+  min-height: 44px;
+  padding: 0 14px 0 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
   cursor: pointer;
 }
-.sphere-banner .banner-btn svg { width: 20px; height: 20px; stroke-width: 2; }
+.sphere-banner .banner-btn svg { width: 18px; height: 18px; stroke-width: 2.1; flex: none; }
+.sphere-banner .banner-btn-label { white-space: nowrap; }
 /* The label still exists for screen readers and carries share progress —
    sphere.js updates this span, never the button, so the icon survives. */
 .sr-only {
@@ -1116,8 +1120,8 @@ body.help-open { overflow: hidden; }
   overscroll-behavior: contain;
   background: var(--bg-color);
   color: var(--text-main);
-  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
-  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 16px;
   padding: 1.05rem 1rem 0.85rem;
   position: relative;
   text-align: left;
@@ -1417,6 +1421,11 @@ body.help-open { overflow: hidden; }
   background: color-mix(in srgb, var(--text-main) 6%, transparent);
   outline: none;
 }
+/* First-timer tutorial shares the sheet's panel; just shorter and centred. */
+.help-panel.is-tutorial { width: min(340px, 100%); }
+.help-panel.is-tutorial .help-lede { font-size: 0.86rem; }
+.help-panel.is-tutorial .tutorial-steps li { font-size: 0.86rem; padding: 0.55rem 0; }
+.help-panel.is-tutorial .help-body { font-size: 0.82rem; margin-bottom: 0.9rem; }
 /* Touch: no keyboard, no modifier-click. Keep the copy honest per surface. */
 @media (hover: none) and (pointer: coarse) {
   .help-keys,
@@ -1469,22 +1478,21 @@ body.help-open { overflow: hidden; }
         <path d="M8 7l4-4 4 4"></path>
         <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path>
       </svg>
-      <span class="sr-only">Share image</span>
+      <span class="banner-btn-label">Share</span>
     </button>
     <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="3 7 3 13 9 13"></polyline>
-        <path d="M3.51 13a9 9 0 1 0 2.13-5.36L3 11"></path>
+        <path d="M9 14 4 9l5-5"></path>
+        <path d="M4 9h9.5a6.5 6.5 0 1 1 0 13H11"></path>
       </svg>
-      <span class="sr-only">Undo last move</span>
+      <span class="banner-btn-label">Undo</span>
     </button>
     <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="23 4 23 10 17 10"></polyline>
-        <polyline points="1 20 1 14 7 14"></polyline>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        <path d="M20 11a8 8 0 1 0-2.34 5.66"></path>
+        <path d="M20 4v7h-7"></path>
       </svg>
-      <span class="sr-only">Play again</span>
+      <span class="banner-btn-label">New sphere</span>
     </button>
   </div>
 </div>
@@ -1577,6 +1585,20 @@ body.help-open { overflow: hidden; }
       <span class="menu-links-sep" aria-hidden="true">·</span>
       <a href="https://datapoems.io" rel="noopener noreferrer">datapoems.io</a>
     </nav>
+  </div>
+</div>
+
+<div id="tutorial-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" hidden>
+  <div class="help-panel is-tutorial" id="tutorial-panel" tabindex="-1">
+    <h2 id="tutorial-title">Hexsweeper 3D</h2>
+    <p class="help-lede">Minesweeper on a sphere. Six neighbours per face — numbers count up to six.</p>
+    <ul class="help-controls tutorial-steps" aria-label="How to play">
+      <li><span class="act">Tap</span><span>Dig a face. Your first dig is always safe.</span></li>
+      <li><span class="act">Hold</span><span>Plant a flag — or arm flag mode at the bottom.</span></li>
+      <li><span class="act">Drag</span><span>Spin the sphere. Pinch to zoom.</span></li>
+    </ul>
+    <p class="help-body">Clear every safe face. Undo, New sphere and Flag live at the bottom; themes, sizes and everything else are behind <b>?</b>.</p>
+    <button type="button" class="help-done" id="tutorial-play-btn">Play</button>
   </div>
 </div>
 
@@ -5306,9 +5328,9 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
      * to screen readers rather than conveyed by colour alone.
      */
     const SHARE_LABEL = {
-      idle: "Share image",
-      busy: "Preparing image…",
-      error: "Share failed",
+      idle: "Share",
+      busy: "Preparing…",
+      error: "Couldn't share",
     };
     function setShareState(kind) {
       if (!shareWinBtn) return;
@@ -5316,7 +5338,7 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
       shareWinBtn.dataset.state = kind;
       shareWinBtn.title = label;
       shareWinBtn.setAttribute("aria-label", label);
-      const sr = shareWinBtn.querySelector(".sr-only");
+      const sr = shareWinBtn.querySelector(".banner-btn-label, .sr-only");
       if (sr) sr.textContent = label;
     }
 
@@ -5369,8 +5391,29 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
           });
         }
         const blob = file;
-        const text = shareLabels().text;
-        const url = "https://dr.eamer.dev/games/hexsweeper/sphere/";
+        // Native shell: hand the PNG over as an image (UIImage activity item)
+        // so the iOS sheet offers Messages, Instagram, Bluesky and friends.
+        // Web Share with a File shows a document sheet there instead.
+        const native =
+          typeof window !== "undefined" &&
+          window.Capacitor &&
+          window.Capacitor.Plugins &&
+          window.Capacitor.Plugins.HexShare;
+        if (native && typeof native.shareImage === "function") {
+          try {
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(blob);
+            });
+            await native.shareImage({ base64, filename: file.name });
+            return;
+          } catch (err) {
+            if (err && /cancel|abort/i.test(String(err.message || err))) return;
+            // fall through to Web Share / download
+          }
+        }
         let canFileShare = false;
         try {
           canFileShare =
@@ -7317,8 +7360,14 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
         restored ||
         wantDeal ||
         !!activeTake;
-      if (forceWelcome) openHelp(true);
-      else if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openHelp(true);
+      // The page may supply a first-timer tutorial (opts.onWelcome); it
+      // marks the welcome key itself. Otherwise the settings sheet opens.
+      const welcome = () => {
+        if (typeof opts.onWelcome === "function" && opts.onWelcome()) return;
+        openHelp(true);
+      };
+      if (forceWelcome) welcome();
+      else if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) welcome();
     } catch (_) {
       // Storage blocked — only show help on a truly fresh first board.
       if (!restored && !wantDeal) openHelp(true);
@@ -9162,7 +9211,29 @@ void main() {
 
 </script>
 <script>
-const sphereGame = SphereSweeper.boot({ canvasId: "gameCanvas" });
+// First-timer tutorial: a short sheet instead of the full settings sheet.
+function showTutorial() {
+  const overlay = document.getElementById("tutorial-overlay");
+  const panel = document.getElementById("tutorial-panel");
+  const play = document.getElementById("tutorial-play-btn");
+  if (!overlay || !play) return false;
+  overlay.hidden = false;
+  requestAnimationFrame(() => overlay.classList.add("open"));
+  document.body.classList.add("help-open");
+  (panel || overlay).focus?.();
+  function done() {
+    try { localStorage.setItem("hexsweeper-sphere-welcome-v1", "1"); } catch (_) {}
+    overlay.classList.remove("open");
+    document.body.classList.remove("help-open");
+    setTimeout(() => { overlay.hidden = true; }, 200);
+    document.getElementById("gameCanvas")?.focus?.();
+  }
+  play.addEventListener("click", done, { once: true });
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) done(); });
+  document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { done(); document.removeEventListener("keydown", esc); } });
+  return true;
+}
+const sphereGame = SphereSweeper.boot({ canvasId: "gameCanvas", onWelcome: showTutorial });
 // Exposed for tooling and the settings sheet below.
 window.HEXSWEEPER_SPHERE_GAME = sphereGame;
 const sphereChrome = initQuietChrome(sphereGame);

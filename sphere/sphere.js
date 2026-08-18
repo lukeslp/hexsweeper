@@ -3459,9 +3459,9 @@
      * to screen readers rather than conveyed by colour alone.
      */
     const SHARE_LABEL = {
-      idle: "Share image",
-      busy: "Preparing image…",
-      error: "Share failed",
+      idle: "Share",
+      busy: "Preparing…",
+      error: "Couldn't share",
     };
     function setShareState(kind) {
       if (!shareWinBtn) return;
@@ -3469,7 +3469,7 @@
       shareWinBtn.dataset.state = kind;
       shareWinBtn.title = label;
       shareWinBtn.setAttribute("aria-label", label);
-      const sr = shareWinBtn.querySelector(".sr-only");
+      const sr = shareWinBtn.querySelector(".banner-btn-label, .sr-only");
       if (sr) sr.textContent = label;
     }
 
@@ -3522,8 +3522,29 @@
           });
         }
         const blob = file;
-        const text = shareLabels().text;
-        const url = "https://dr.eamer.dev/games/hexsweeper/sphere/";
+        // Native shell: hand the PNG over as an image (UIImage activity item)
+        // so the iOS sheet offers Messages, Instagram, Bluesky and friends.
+        // Web Share with a File shows a document sheet there instead.
+        const native =
+          typeof window !== "undefined" &&
+          window.Capacitor &&
+          window.Capacitor.Plugins &&
+          window.Capacitor.Plugins.HexShare;
+        if (native && typeof native.shareImage === "function") {
+          try {
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(blob);
+            });
+            await native.shareImage({ base64, filename: file.name });
+            return;
+          } catch (err) {
+            if (err && /cancel|abort/i.test(String(err.message || err))) return;
+            // fall through to Web Share / download
+          }
+        }
         let canFileShare = false;
         try {
           canFileShare =
@@ -5470,8 +5491,14 @@
         restored ||
         wantDeal ||
         !!activeTake;
-      if (forceWelcome) openHelp(true);
-      else if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openHelp(true);
+      // The page may supply a first-timer tutorial (opts.onWelcome); it
+      // marks the welcome key itself. Otherwise the settings sheet opens.
+      const welcome = () => {
+        if (typeof opts.onWelcome === "function" && opts.onWelcome()) return;
+        openHelp(true);
+      };
+      if (forceWelcome) welcome();
+      else if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) welcome();
     } catch (_) {
       // Storage blocked — only show help on a truly fresh first board.
       if (!restored && !wantDeal) openHelp(true);

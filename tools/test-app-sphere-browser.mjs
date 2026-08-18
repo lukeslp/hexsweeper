@@ -153,6 +153,12 @@ try {
   await send("Page.reload", { ignoreCache: true });
   await waitExpression('document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere did not reload");
   await delay(400);
+  // First launch: the tutorial sheet, not the settings sheet; Play dismisses and marks the key.
+  await waitExpression('!document.getElementById("tutorial-overlay").hidden', "first launch did not show the tutorial");
+  assert.equal(await evaluate('document.getElementById("help-overlay").hidden'), true, "settings sheet opened on first launch instead of the tutorial");
+  await evaluate('document.getElementById("tutorial-play-btn").click()');
+  await waitExpression('document.getElementById("tutorial-overlay").hidden', "tutorial did not dismiss");
+  assert.equal(await evaluate('localStorage.getItem("hexsweeper-sphere-welcome-v1")'), "1", "tutorial did not mark the welcome key");
 
   const cold = await evaluate(`(() => ({
     dialog: !!document.querySelector("dialog[open]"),
@@ -236,6 +242,20 @@ try {
   await evaluate('document.getElementById("qc-reset").click()');
   await delay(300);
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().flagsPlaced'), 0, "New sphere did not reset the board");
+  // Game over: the banner is a labelled card (Share · Undo · New sphere) and its Undo revives the run.
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await delay(60);
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await waitExpression('!window.HEXSWEEPER_SPHERE_GAME.getState().isFirstClick', "dig before detonation did not resolve");
+  await evaluate('(() => { const g = window.HEXSWEEPER_SPHERE_GAME; const s = g.getState(); const i = s.cells.findIndex(c => c.isMine && !c.revealed); g.digAt(i); })()');
+  await waitExpression('document.getElementById("sphere-banner").classList.contains("visible")', "game-over banner did not show");
+  const banner = await evaluate('Array.from(document.querySelectorAll("#banner-actions .banner-btn")).filter(b => !b.hidden).map(b => b.querySelector(".banner-btn-label").textContent.trim())');
+  assert.deepEqual(banner, ["Share", "Undo", "New sphere"], `banner buttons are ${banner.join(",")}`);
+  await evaluate('document.getElementById("banner-undo-btn").click()');
+  await delay(300);
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().isGameOver'), false, "banner Undo did not revive the run");
+  await evaluate('document.getElementById("qc-reset").click()');
+  await delay(300);
 
   // Textured materials: the sealed data URI must actually load into the renderer.
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "ion-storm")); void 0;');
