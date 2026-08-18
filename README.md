@@ -158,27 +158,22 @@ pens. The live multi-theme game remains available at `play.html`.
 `python3 tools/export-collection.py --app` stages the sealed Capacitor payload in
 `build/app/`. The public `index.html` and native app launcher are both rendered
 from `tools/app-launcher.html`; route and asset treatment differ by platform.
-The launcher boots the real endless `core.js` board. It owns the same first-dig
-safety, animated zero flood, right-click / long-hold flags, drag pan, pinch and
-wheel zoom, keyboard cursor, mine loss, and reset behavior as Hexsweeper itself.
-**Infinite**, **Classic**, and **Sphere** are immediately legible, protected
-cells on the board. Digging a mode uses the engine's reveal path, then uncovers
-that mode's connected settings hub. The hub opens and folds a Clex-style bloom:
-Infinite themes and effects, Classic Small / Medium / Large boards, and Sphere
-materials plus drag direction. Choices set preferences in place and remain
-visibly selected; the mode face reflects the current value and starts play. The
-field remains playable and movable, and opening one bloom folds the previous one.
 
-Choice seats are assigned globally from branch direction and data, rather than
-fixed viewport offsets, so additional launch-time materials occupy the next
-connected safe hex. Selecting a value writes the same preference key used by
-its game. Drag gestures beyond the engine threshold pan without activating a
-cell; arrow-key exploration and the Center control provide non-drag routes.
+The launcher is three hexes — **Infinite**, **Classic**, and **Sphere** — with an
+empty seat in the middle. Tapping a mode opens that game at once with its
+last-used settings (Infinite theme from `hexsweeper-mode-v3`, Classic size from
+`hexsweeper-classic-size-v1`, Sphere theme from `hexsweeper-sphere-theme-v6`);
+the small caption under each name shows the value that will load. Style, size,
+and theme are changed inside each game, not on the launcher. Appearance follows
+`hexsweeper-appearance-v1` (system / light / dark) and is independent of
+gameplay.
 
 When an unfinished Infinite, Classic, or Sphere autosave exists, the newest run
-rises as a mode-colored **Resume** face in the center. Launcher preferences never
-mutate those save blobs. Classic snapshots mines, reveals, flags, size, time, and
-view state before the Games transition; only the Resume route restores it.
+fills the center seat as a mode-colored **Resume** hex and the status line
+names it. The launcher never mutates save blobs; only the Resume route restores
+one. Classic snapshots mines, reveals, flags, size, time, and view state before
+the Games transition. `tools/test-web-launcher.mjs` is the contract test; it
+checks the three routes, the Resume seat, and the export.
 
 ## Engine API
 

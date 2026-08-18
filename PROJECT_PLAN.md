@@ -218,7 +218,7 @@ The archived decorative theme remains at `collection/theme-water.html` and
 ## Acceptance (production)
 
 Bare root is a three-hex launcher (Infinite, Classic, Sphere) with Resume in the
-center when a run is waiting; each mode opens the correct playable board and
+center when a run is waiting; each mode opens its game with last-used settings and
 returns through Games; newest valid Infinite, Classic, or Sphere saves can resume;
 launcher appearance follows system light/dark and is independent of gameplay;
 old flat-game deep links retain their behavior at `play.html`; keyboard, touch,
