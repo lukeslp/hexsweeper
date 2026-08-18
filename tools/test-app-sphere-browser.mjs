@@ -185,6 +185,13 @@ try {
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /menu button/i, "help copy does not mention the menu button");
   assert.match(help.text, /Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning/, "help copy does not name the theme cycle");
+  // Help sheet theme picker: nine swatches, one tap selects.
+  const picker = await evaluate('Array.from(document.querySelectorAll("#help-theme-grid .help-theme")).map(b => b.dataset.theme)');
+  assert.deepEqual(picker, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `help theme picker roster is ${picker.join(",")}`);
+  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "help theme picker did not apply Galaxy");
+  assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "galaxy", "help theme picker did not mark Galaxy pressed");
+  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=light]").click()');
   await evaluate('document.getElementById("help-done-btn").click()');
   await waitExpression('document.getElementById("help-overlay").hidden', "help did not close");
 

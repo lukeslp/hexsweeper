@@ -150,7 +150,7 @@
   // rotation kept live while open. Falls back to the off-sphere flower when
   // no clean seven-hex patch faces the camera.
   const FACE_MENU = FIXED_CENTER;
-  const FACE_MIN_TILE = 62; // CSS px across a tile before the patch is scaled up
+  const FACE_MIN_TILE = 70; // CSS px across a tile before the patch is scaled up (room for a label)
   const FACE_MAX_SCALE = 6; // XL boards have ~11px faces; the cluster still reads as on-sphere
   const FACE_RESEAT_Z = 0.6; // patch turned this far from the camera → re-seat on the front
   const FACE_SHORT_THEME = {
@@ -2210,8 +2210,8 @@
       el.style.width = width.toFixed(1) + "px";
       el.style.height = height.toFixed(1) + "px";
       el.style.setProperty("--face-poly", "polygon(" + polygon + ")");
-      el.style.setProperty("--face-icon", Math.max(18, Math.min(34, height * 0.34)).toFixed(1) + "px");
-      el.style.setProperty("--face-label", Math.max(9, Math.min(12, height * 0.15)).toFixed(1) + "px");
+      el.style.setProperty("--face-icon", Math.max(18, Math.min(32, height * 0.30)).toFixed(1) + "px");
+      el.style.setProperty("--face-label", Math.max(11, Math.min(13, height * 0.16)).toFixed(1) + "px");
     }
 
     function layoutFaceMenu() {

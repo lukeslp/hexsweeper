@@ -1033,16 +1033,19 @@ body.hex-bloom-open.hex-bloom-rotatable .canvas-container {
   max-width: none;
   max-height: none;
 }
-.hex-bloom[data-face-menu="true"] .hb-face-action .hb-face-label {
-  font-size: var(--face-label, 10px);
+.hex-bloom[data-face-menu="true"] .hb-hex.is-primary.hb-face-action .hb-label.hb-face-label:not(.sr-visual-hide) {
+  font-size: var(--face-label, 11px);
   font-weight: 700;
   letter-spacing: 0.01em;
-  line-height: 1;
-  max-width: 92%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
-  opacity: 0.92;
+  line-height: 1.02;
+  max-width: 78%;
+  white-space: normal;
+  overflow: visible;
+  text-align: center;
+  opacity: 0.96;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action {
+  row-gap: 3px;
 }
 .hex-bloom[data-face-menu="true"] .hb-face-action.is-theme-swatch .hb-theme-dot {
   width: calc(var(--face-icon, 26px) * 0.62);

@@ -1773,16 +1773,19 @@ body.hex-bloom-open.hex-bloom-rotatable .canvas-container {
   max-width: none;
   max-height: none;
 }
-.hex-bloom[data-face-menu="true"] .hb-face-action .hb-face-label {
-  font-size: var(--face-label, 10px);
+.hex-bloom[data-face-menu="true"] .hb-hex.is-primary.hb-face-action .hb-label.hb-face-label:not(.sr-visual-hide) {
+  font-size: var(--face-label, 11px);
   font-weight: 700;
   letter-spacing: 0.01em;
-  line-height: 1;
-  max-width: 92%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
-  opacity: 0.92;
+  line-height: 1.02;
+  max-width: 78%;
+  white-space: normal;
+  overflow: visible;
+  text-align: center;
+  opacity: 0.96;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action {
+  row-gap: 3px;
 }
 .hex-bloom[data-face-menu="true"] .hb-face-action.is-theme-swatch .hb-theme-dot {
   width: calc(var(--face-icon, 26px) * 0.62);
@@ -9068,7 +9071,7 @@ void main() {
   // rotation kept live while open. Falls back to the off-sphere flower when
   // no clean seven-hex patch faces the camera.
   const FACE_MENU = FIXED_CENTER;
-  const FACE_MIN_TILE = 62; // CSS px across a tile before the patch is scaled up
+  const FACE_MIN_TILE = 70; // CSS px across a tile before the patch is scaled up (room for a label)
   const FACE_MAX_SCALE = 6; // XL boards have ~11px faces; the cluster still reads as on-sphere
   const FACE_RESEAT_Z = 0.6; // patch turned this far from the camera → re-seat on the front
   const FACE_SHORT_THEME = {
@@ -11128,8 +11131,8 @@ void main() {
       el.style.width = width.toFixed(1) + "px";
       el.style.height = height.toFixed(1) + "px";
       el.style.setProperty("--face-poly", "polygon(" + polygon + ")");
-      el.style.setProperty("--face-icon", Math.max(18, Math.min(34, height * 0.34)).toFixed(1) + "px");
-      el.style.setProperty("--face-label", Math.max(9, Math.min(12, height * 0.15)).toFixed(1) + "px");
+      el.style.setProperty("--face-icon", Math.max(18, Math.min(32, height * 0.30)).toFixed(1) + "px");
+      el.style.setProperty("--face-label", Math.max(11, Math.min(13, height * 0.16)).toFixed(1) + "px");
     }
 
     function layoutFaceMenu() {
