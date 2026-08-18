@@ -18,8 +18,8 @@ and any network dependency is a defect.
 
 | # | Check | Pass criteria | Result |
 |---|---|---|---|
-| 1 | Cold launch | Launch screen hands off to Sphere with no blank frame between; no dialog when nothing is saved | |
-| 1a | Resume gate | With an unfinished Infinite, Classic, or Sphere run saved, cold launch shows the resume dialog naming the newest run; Resume reopens it, the other button dismisses and stays on Sphere; Escape / outside tap dismiss | |
+| 1 | Cold launch | Launch screen hands off to Sphere with no blank frame between and no prompt; an unfinished sphere run restores in place | |
+| 1a | Dock first tap | After dragging the sphere (dock receded to a ghost), one tap on Undo / Menu / Flag acts immediately — no second tap needed | |
 | 1b | Mercury | Theme cycles to Mercury: mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
 | 2 | Launcher | **‹ Games** on Sphere opens the launcher: Infinite, Classic, and Sphere are three clear hexes; each caption shows the setting that will load | |
 | 3 | Launcher routes | Each hex opens the right game with its last-used settings; **‹ Games** returns to the launcher; the Sphere hex returns to the root without the dialog | |

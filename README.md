@@ -5,9 +5,8 @@ are Canvas/vanilla-JS builds from
 [lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps them
 for iOS and Android from the same sealed offline payload.
 
-The app opens straight into **Sphere**. If an unfinished Infinite, Classic, or
-Sphere run is saved, a small dialog asks first: resume it, or play Sphere. The
-**‹ Games** pill opens the three-hex launcher — **Infinite**, **Classic**,
+The app opens straight into **Sphere**, which restores its own unfinished run
+without asking. The **‹ Games** pill opens the three-hex launcher — **Infinite**, **Classic**,
 **Sphere**, each captioned with the setting it will load, with the newest saved
 run in the center as a mode-colored **Resume** hex. Style, size, and theme are
 changed inside each game.
@@ -57,7 +56,7 @@ App Store Connect app and abandoning this one.
 | `scripts/android-build.sh` | JDK-21 Gradle wrapper for APK/AAB builds |
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
-the sealed Sphere game (with the resume gate); `www/games/launcher.html` is the
+the sealed Sphere game; `www/games/launcher.html` is the
 three-hex launcher, and each `www/games/*.html` is one self-contained file with fonts,
 CSS, and all JS already inlined; the only shared asset is the sphere help
 screen's history image under `www/assets/`. Navigation between them is plain

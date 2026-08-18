@@ -1024,13 +1024,13 @@ body[data-sphere-chrome="dark"] .cz-dot {
 /* Flag mode live: the dock tile reads as a planted flag (red face) via the
    shared .is-flag-icon.is-active language. */
 
-/* While board has attention, whole dock recedes */
+/* While board has attention, whole dock recedes to a ghost. It stays
+   hit-testable on purpose: on touch there is no hover to bring it back first,
+   so a pointer-events:none dock made the first tap on Undo/Menu/Flag land on
+   the canvas and only the second tap act. */
 .hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-dock,
 .hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-corner {
-  opacity: 0;
-}
-.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hb-hex.is-dock {
-  pointer-events: none !important;
+  opacity: 0.22;
 }
 @media (prefers-reduced-motion: reduce) {
   /* Stage / .hb-hex reduced-motion handling lives in the !important block
@@ -11880,109 +11880,6 @@ document.getElementById("open-menu-a11y")?.addEventListener("click", () => spher
 </style>
 <a class="app-back" href="games/launcher.html">
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
-<style>
-#resume-gate{position:fixed;inset:0;z-index:10000;margin:auto;max-width:min(92vw,360px);
- padding:22px 22px 18px;border:1px solid rgba(255,255,255,.16);border-radius:22px;
- background:rgba(14,18,26,.92);color:#f2f6fb;
- -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
- box-shadow:0 24px 60px rgba(0,0,0,.45);
- font:400 .95rem/1.45 "IBM Plex Sans",system-ui,sans-serif}
-#resume-gate::backdrop{background:rgba(2,4,8,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
-#resume-gate h2{margin:0 0 6px;font-size:1.15rem;font-weight:700;letter-spacing:.01em}
-#resume-gate p{margin:0 0 16px;color:#b8c4d4}
-#resume-gate .gate-actions{display:grid;gap:10px}
-#resume-gate button{min-height:46px;padding:0 16px;border-radius:999px;border:1px solid transparent;
- font:600 .92rem/1 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
-#resume-gate .gate-resume{background:#7c3aed;color:#fff}
-#resume-gate .gate-resume[data-mode="infinite"]{background:#2563eb}
-#resume-gate .gate-resume[data-mode="bounded"]{background:#0f766e}
-#resume-gate .gate-fresh{background:transparent;color:#e6edf7;border-color:rgba(255,255,255,.28)}
-#resume-gate button:focus-visible{outline:3px solid #7fc4f2;outline-offset:2px}
-body[data-sphere-chrome="light"] #resume-gate{background:rgba(255,255,255,.94);color:#141a24;
- border-color:rgba(0,0,0,.12);box-shadow:0 24px 60px rgba(0,0,0,.22)}
-body[data-sphere-chrome="light"] #resume-gate p{color:#4a5568}
-body[data-sphere-chrome="light"] #resume-gate .gate-fresh{color:#141a24;border-color:rgba(0,0,0,.28)}
-@media (prefers-reduced-motion:no-preference){#resume-gate button{transition:transform .15s ease}
- #resume-gate button:active{transform:scale(.97)}}
-@media (forced-colors:active){#resume-gate{border:2px solid CanvasText}#resume-gate button{border:2px solid ButtonText}}
-</style>
-<script>
-/* root: resume gate — ask before a fresh Sphere buries a saved run */
-(function () {
-  var params;
-  try { params = new URLSearchParams(location.search); } catch (_) { return; }
-  if (["fresh", "resume", "deal", "take", "welcome"].some(function (k) { return params.has(k); })) return;
-  if (typeof HTMLDialogElement !== "function") return;
-  function read(store, key) { try { return store.getItem(key); } catch (_) { return null; } }
-  function parse(raw) { if (!raw) return null; try { return JSON.parse(raw); } catch (_) { return null; } }
-  function infinite() {
-    var d = parse(read(localStorage, "hexsweeper-endless-plate-v1"));
-    if (!d || d.v !== 1 || d.endless !== true) return null;
-    if (d.first !== false || d.over !== false || Number(d.cleared) <= 0) return null;
-    return { mode: "infinite", name: "Infinite", href: "games/infinite.html", savedAt: Number(d.savedAt) || 0 };
-  }
-  function classic() {
-    var d = parse(read(localStorage, "hexsweeper-classic-run-v1"));
-    if (!d || d.v !== 1 || d.kind !== "classic" || d.endless !== false) return null;
-    if (d.first !== false || d.over !== false) return null;
-    if (["easy", "medium", "hard"].indexOf(d.difficulty) < 0) return null;
-    if (!Array.isArray(d.mines) || !d.mines.length || !Array.isArray(d.revealed) || !d.revealed.length || !Array.isArray(d.flagged)) return null;
-    return { mode: "bounded", name: "Classic", href: "games/bounded.html?resume=1", savedAt: Number(d.savedAt) || 0 };
-  }
-  function sphere() {
-    var best = null;
-    [sessionStorage, localStorage].forEach(function (store) {
-      ["hexsweeper-sphere-run-v2", "hexsweeper-sphere-run-v1"].forEach(function (key) {
-        var d = parse(read(store, key));
-        if (!d || (d.v !== 1 && d.v !== 2) || d.kind !== "sphere") return;
-        if (d.over !== false || typeof d.first !== "boolean") return;
-        var flagged = Array.isArray(d.flagged) ? d.flagged.length : Number(d.flags) || 0;
-        if (d.first && flagged <= 0) return;
-        if (!d.first && (!Array.isArray(d.mines) || d.mines.length === 0)) return;
-        var c = { mode: "sphere", name: "Sphere", href: "", savedAt: Number(d.savedAt) || 0 };
-        if (!best || c.savedAt >= best.savedAt) best = c;
-      });
-    });
-    return best;
-  }
-  var best = [infinite(), classic(), sphere()].filter(Boolean)
-    .sort(function (a, b) { return b.savedAt - a.savedAt; })[0];
-  if (!best) return;
-  var game = window.HEXSWEEPER_SPHERE_GAME || null;
-  var isSphere = best.mode === "sphere";
-  var dlg = document.createElement("dialog");
-  dlg.id = "resume-gate";
-  dlg.setAttribute("aria-labelledby", "resume-gate-title");
-  dlg.innerHTML =
-    '<h2 id="resume-gate-title">Resume your ' + best.name + " game?</h2>" +
-    "<p>" + (isSphere
-      ? "Your last sphere is still open where you left it."
-      : "You have an unfinished " + best.name + " board waiting.") + "</p>" +
-    '<div class="gate-actions">' +
-    '<button type="button" class="gate-resume" data-mode="' + best.mode + '">Resume ' + best.name + "</button>" +
-    '<button type="button" class="gate-fresh">' + (isSphere ? "Start a new sphere" : "Play Sphere instead") + "</button>" +
-    "</div>";
-  document.body.appendChild(dlg);
-  var closed = false;
-  function finish(action) {
-    if (closed) return;
-    closed = true;
-    try { dlg.close(); } catch (_) {}
-    if (dlg.parentNode) dlg.parentNode.removeChild(dlg);
-    if (action === "resume" && !isSphere) { location.href = best.href; return; }
-    if (action === "fresh" && isSphere && game && typeof game.reset === "function") game.reset();
-    if (game && typeof game.resumeTimer === "function") game.resumeTimer();
-  }
-  dlg.querySelector(".gate-resume").addEventListener("click", function () { finish("resume"); });
-  dlg.querySelector(".gate-fresh").addEventListener("click", function () { finish("fresh"); });
-  dlg.addEventListener("cancel", function (e) { e.preventDefault(); finish("keep"); });
-  dlg.addEventListener("click", function (e) { if (e.target === dlg) finish("keep"); });
-  if (game && typeof game.pauseTimer === "function") game.pauseTimer();
-  try { dlg.showModal(); } catch (_) { finish("keep"); return; }
-  var first = dlg.querySelector(".gate-resume");
-  if (first) first.focus();
-})();
-</script>
 <script>
 /* app: dismiss the native launch screen after first paint */
 (function () {

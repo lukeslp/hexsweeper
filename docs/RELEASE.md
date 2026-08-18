@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 39 is the latest uploaded TestFlight build and the
+this same record. Build 40 is the latest uploaded TestFlight build and the
 checked-in project matches it.
 
 ## Archive → TestFlight
@@ -101,8 +101,12 @@ Done (updated 2026-08-11, through the App Store Connect API):
 - [x] Build 39 uploaded to TestFlight on 2026-08-17: the app opens straight
       into Sphere, a resume gate asks about saved runs, the three-hex launcher
       sits behind the Games pill, and Mercury ships as a sphere theme
-      (vendored from hexsweeper `feab6e5`); confirm distribution state in App
-      Store Connect before widening access
+      (vendored from hexsweeper `feab6e5`)
+- [x] Build 40 uploaded to TestFlight on 2026-08-17: no resume prompt at
+      launch (Sphere restores its own run), and the receded dock stays
+      tappable so Undo acts on the first tap (vendored from hexsweeper
+      `05ef85b`); confirm distribution state in App Store Connect before
+      widening access
 
 Still owed:
 
