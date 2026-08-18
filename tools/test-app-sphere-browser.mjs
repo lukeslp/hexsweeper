@@ -203,11 +203,11 @@ try {
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "theme grid did not apply Galaxy");
   assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "galaxy", "theme grid did not mark Galaxy pressed");
-  // Themes own the warning treatment: Mercury = depth, no seams; Galaxy = flush, no seams (hollow); Light = depth + seams.
+  // Themes own the warning treatment: mirror materials = depth, no seams (seamless wells); Light/Dark = depth + seams.
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=mercury]").click()');
   assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Mercury did not set depth + no seams");
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
-  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "flush/false", "Galaxy did not set flush + no seams");
+  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Galaxy did not set depth + no seams");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=easy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().difficulty'), "easy", "size pill did not start a Small sphere");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium]").click()');
