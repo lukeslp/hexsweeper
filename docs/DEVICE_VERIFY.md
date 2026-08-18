@@ -21,8 +21,8 @@ and any network dependency is a defect.
 | 1 | Cold launch | Launch screen hands off to Sphere with no blank frame between and no prompt; an unfinished sphere run restores in place | |
 | 1a | Corner glyphs | Menu (bottom left) and Help (bottom right) are visible on the closed board, at least 44 pt each, clear of the home indicator; no Games pill anywhere | |
 | 1b | Menu first tap | One tap on the corner Menu opens the center flower; one tap on a flower tile (Undo, Flag, Size…) acts — no second tap needed; the corner glyph reads × while open and closes it | |
-| 1c | Theme tile | The flower's swatch tile cycles Light → Dark → Stratosphere → Mercury → Amber Cells; the choice persists across relaunch | |
-| 1c′ | Textured materials | Stratosphere shows the drifting sky on the mirror (light chrome, dark glass wells); Amber Cells shows the cell swarm shell and breathing amber cells under dug faces — both offline, in airplane mode | |
+| 1c | Theme tile | The flower's swatch tile cycles Light → Dark → Stratosphere → Mercury → Ion Storm; the choice persists across relaunch | |
+| 1c′ | Textured materials | Stratosphere shows the drifting sky on the mirror (light chrome, dark glass wells); Ion Storm shows the storm cloud trailing the rotation on the mirror — both offline, in airplane mode | |
 | 1d | Mercury | Mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
 | 2 | Sphere size | On a phone in portrait the sphere spans roughly 85% of the width; margins above and below still open the flower on tap | |
 | 3 | Help sheet | Help opens wide enough to read (≥340 pt on a phone), no keyboard hints, Settings pills and Done at least 44 pt tall, closes with × / Done / outside tap and never blocks the board afterwards | |
