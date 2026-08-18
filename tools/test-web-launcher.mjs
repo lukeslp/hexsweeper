@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Static contract for the generated web surface: Sphere at the root (with the
-// resume gate), the three-hex launcher at launcher.html, and their destinations.
+// Static contract for the generated web surface: Sphere at the root, the
+// three-hex launcher at launcher.html, and their destinations.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -34,10 +34,9 @@ for (const [label, href] of [
 }
 
 // Root is Sphere itself: sealed engine, Mercury available, Games pill down to
-// the launcher, and the resume gate for saved runs in any of the three games.
-expect(rootPage.includes("HEXSWEEPER_SPHERE_GAME"), "root Sphere does not expose the game for the resume gate");
-expect(rootPage.includes('id = "resume-gate"'), "root Sphere has no resume gate");
-expect(rootPage.includes('href: "infinite.html"') && rootPage.includes('href: "bounded.html?resume=1"'), "root resume gate routes are wrong");
+// the launcher, and no prompt in the way — Sphere restores its own autosave.
+expect(rootPage.includes("HEXSWEEPER_SPHERE_GAME"), "root Sphere does not expose the game");
+expect(!rootPage.includes("resume-gate"), "root Sphere still carries a resume prompt");
 expect(rootPage.includes('class="app-back" href="launcher.html"'), "root Sphere has no Games pill to the launcher");
 expect(rootPage.includes('id: "mercury"') && rootPage.includes("global.MirrorMaterial = {"), "root Sphere is missing the Mercury theme or its renderer");
 expect(rootPage.includes('<link rel="stylesheet" href="fonts/fonts.css">'), "root Sphere inlines fonts instead of linking them");
@@ -49,7 +48,7 @@ expect(rootPage.includes('name: "Mercury"') && sphere.includes('src="mirror-mate
 
 // App payload mirrors the web: Sphere at index.html, launcher under games/.
 expect(appRoot.includes("window.HEXSWEEPER_SPHERE_APP = true;"), "app root is not the sealed Sphere");
-expect(appRoot.includes('id = "resume-gate"') && appRoot.includes('href: "games/infinite.html"') && appRoot.includes('href: "games/bounded.html?resume=1"'), "app root resume gate routes are wrong");
+expect(!appRoot.includes("resume-gate"), "app root still carries a resume prompt");
 expect(appRoot.includes('class="app-back" href="games/launcher.html"'), "app root has no Games pill");
 expect(appLauncher.includes('href="../index.html?theme=light&amp;fresh=1"') && appLauncher.includes('href="infinite.html?mode=light&amp;fresh=1"'), "app launcher routes are wrong");
 expect(!appRoot.includes("https://stats.dr.eamer.dev"), "app root leaks analytics");

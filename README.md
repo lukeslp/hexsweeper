@@ -33,9 +33,8 @@ The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on
 | **Classic** | Fixed neumorphic board; the run persists | `bounded.html` |
 | **Sphere** | Closed 3D Goldberg sphere | `index.html` (root) · `sphere/` (source) |
 
-The root opens straight into Sphere. When an unfinished Infinite, Classic, or
-Sphere run is saved, a small dialog asks first: resume it, or play Sphere. The
-three-hex games menu — Infinite, Classic, Sphere, with the newest run in the
+The root opens straight into Sphere, which restores its own unfinished run
+without asking. The three-hex games menu — Infinite, Classic, Sphere, with the newest run in the
 center Resume tile — lives at `launcher.html`, one tap away behind every
 game's **‹ Games** pill. A mode tap starts a fresh run using the last used
 style, board size, or theme. Settings live inside each game.
@@ -88,7 +87,7 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 
 | File | Role |
 |------|------|
-| `index.html` | Generated web landing: the sealed Sphere game with the resume gate |
+| `index.html` | Generated web landing: the sealed Sphere game |
 | `launcher.html` | Generated three-hex games menu |
 | `infinite.html` | Generated endless Light/Dark product page |
 | `bounded.html` | Generated fixed Classic product page |
@@ -165,10 +164,10 @@ pens. The live multi-theme game remains available at `play.html`.
 games menu is rendered from `tools/app-launcher.html` to `launcher.html` (web)
 or `games/launcher.html` (app); route and asset treatment differ by platform.
 
-The root Sphere page carries a **resume gate**: if the newest saved Infinite,
-Classic, or Sphere run is unfinished, a dialog offers to resume it or play
-Sphere; `?fresh=1` and `?resume=1` (the launcher's own routes) skip it, and
-Sphere honors `?fresh=1` by starting a new board instead of restoring.
+Nothing stands between the root and the board: Sphere restores its own
+autosave silently, and saved Infinite / Classic runs are reached through the
+launcher's Resume tile. Sphere honors `?fresh=1` (the launcher's "play Sphere"
+route) by starting a new board instead of restoring.
 
 The launcher is three hexes — **Infinite**, **Classic**, and **Sphere** — with an
 empty seat in the middle. Tapping a mode opens that game at once with its

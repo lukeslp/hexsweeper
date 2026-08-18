@@ -12,7 +12,7 @@ Saved edits on Drummer are live on the public site. Prefer: edit → verify loca
 ## Product surface
 
 The public root `index.html` is the Sphere game, sealed from `sphere/` by the
-exporter, with a resume gate for saved runs. `launcher.html` is generated from
+exporter. `launcher.html` is generated from
 `tools/app-launcher.html` and offers the three structural boards: **Infinite**,
 **Classic**, and **Sphere**. `infinite.html` and `bounded.html` are generated
 product pages; `sphere/` is authored in place (Mercury's WebGL renderer is

@@ -136,10 +136,10 @@ try {
     return waitFor(async () => evaluate(expression), message);
   }
 
-  // Root is Sphere. A cold start with no saves must not raise the resume gate.
+  // Root is Sphere; nothing stands between the launch screen and the board.
   await waitExpression('location.pathname.endsWith("/index.html") && document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere did not load");
   await delay(200);
-  assert.equal(await evaluate('!!document.getElementById("resume-gate")'), false, "resume gate showed with no saved runs");
+  assert.equal(await evaluate('!!document.querySelector("dialog[open]")'), false, "a dialog opened over root Sphere on cold start");
   assert.equal(await evaluate('document.querySelector(".app-back")?.getAttribute("href")'), "games/launcher.html", "root Sphere Games pill does not point at the launcher");
   await evaluate('location.href = "games/launcher.html"');
   await waitExpression('location.pathname.endsWith("/games/launcher.html") && document.readyState === "complete"', "launcher did not load");
@@ -237,32 +237,15 @@ try {
   assert.equal(restoredClassic.over, false, "Classic Resume reopened a terminal board");
   assert.ok(restoredClassic.revealed > 0, "Classic Resume restored no revealed cells");
 
-  // Root Sphere with a saved Classic run: the gate asks, Resume reopens Classic.
+  // Root Sphere with a saved Classic run: still straight into the sphere, no prompt.
   await evaluate('location.href = "../index.html"');
   await waitExpression('location.pathname.endsWith("/index.html") && document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere did not reload");
-  const gate = await waitExpression(`(() => {
-    const dlg = document.getElementById("resume-gate");
-    if (!dlg || !dlg.open) return null;
-    return {
-      title: dlg.querySelector("h2").textContent,
-      resumeMode: dlg.querySelector(".gate-resume").dataset.mode,
-      fresh: dlg.querySelector(".gate-fresh").textContent,
-    };
-  })()`, "resume gate did not open over root Sphere");
-  assert.match(gate.title, /Resume your Classic game\?/, "gate does not name the newest saved run");
-  assert.equal(gate.resumeMode, "bounded", "gate Resume does not target Classic");
-  assert.match(gate.fresh, /Play Sphere instead/, "gate secondary action is wrong for a flat-game save");
-  await evaluate('document.querySelector("#resume-gate .gate-fresh").click()');
-  assert.equal(await evaluate('!!document.getElementById("resume-gate")'), false, "gate did not close on Play Sphere");
-  await evaluate('location.href = "index.html"');
-  await waitExpression('location.pathname.endsWith("/index.html") && document.readyState === "complete" && !!document.getElementById("resume-gate")', "gate did not reappear on a fresh root visit");
-  await evaluate('document.querySelector("#resume-gate .gate-resume").click()');
-  await waitExpression('location.pathname.endsWith("/games/bounded.html") && location.search.includes("resume=1") && document.readyState === "complete"', "gate Resume did not reopen Classic");
-  // ?fresh=1 (the launcher's Sphere route) skips the gate.
-  await evaluate('location.href = "../index.html?fresh=1"');
+  await delay(300);
+  assert.equal(await evaluate('!!document.querySelector("dialog[open]")'), false, "a dialog opened over root Sphere with a saved Classic run");
+  // ?fresh=1 (the launcher's Sphere route) starts a new board.
+  await evaluate('location.href = "index.html?fresh=1"');
   await waitExpression('location.pathname.endsWith("/index.html") && document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere fresh route did not load");
-  await delay(200);
-  assert.equal(await evaluate('!!document.getElementById("resume-gate")'), false, "resume gate ignored ?fresh=1");
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().isFirstClick'), true, "?fresh=1 did not start a new sphere");
   console.log("app resume browser contract: ok");
   socket.close();
 } finally {

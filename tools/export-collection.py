@@ -1755,133 +1755,14 @@ def export_sphere_app(exp: dict) -> str:
     if "HEXSWEEPER_SPHERE_APP" not in markup:
         raise SystemExit("export_sphere_app: app flag not injected")
 
-    # Root Sphere: Games pill down into the launcher, and the resume gate for
-    # runs saved in any of the three games.
-    gate = resume_gate(infinite_href="games/infinite.html", bounded_href="games/bounded.html")
-    markup = markup.replace("</body>", f"{APP_ROOT_PILL}{gate}</body>", 1)
-    if "HEXSWEEPER_SPHERE_GAME" not in markup:
-        raise SystemExit("export_sphere_app: sphere page no longer exposes HEXSWEEPER_SPHERE_GAME")
+    # Root Sphere: Games pill down into the launcher.
+    markup = markup.replace("</body>", f"{APP_ROOT_PILL}</body>", 1)
 
     # appify's guard checks src/href only. GLOBE_TEX_BASE still appears as a
     # string constant in the inlined sphere.js, but it is unreachable here:
     # globeUrl is only called for themes carrying `globeMap`, and the THEMES
     # filter drops every one of those under HEXSWEEPER_SPHERE_APP.
     return appify(markup, back=False, label="sphere")
-
-
-# Root pages open straight into Sphere. When a saved Infinite, Classic, or
-# Sphere run is waiting, this dialog asks before the player digs into a fresh
-# board. Detection mirrors tools/app-launcher.html; ?fresh=1 / ?resume=1 (the
-# launcher's routes) and preview params skip it. __INFINITE__ / __BOUNDED__ are
-# replaced per output surface.
-RESUME_GATE = """<style>
-#resume-gate{position:fixed;inset:0;z-index:10000;margin:auto;max-width:min(92vw,360px);
- padding:22px 22px 18px;border:1px solid rgba(255,255,255,.16);border-radius:22px;
- background:rgba(14,18,26,.92);color:#f2f6fb;
- -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
- box-shadow:0 24px 60px rgba(0,0,0,.45);
- font:400 .95rem/1.45 "IBM Plex Sans",system-ui,sans-serif}
-#resume-gate::backdrop{background:rgba(2,4,8,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
-#resume-gate h2{margin:0 0 6px;font-size:1.15rem;font-weight:700;letter-spacing:.01em}
-#resume-gate p{margin:0 0 16px;color:#b8c4d4}
-#resume-gate .gate-actions{display:grid;gap:10px}
-#resume-gate button{min-height:46px;padding:0 16px;border-radius:999px;border:1px solid transparent;
- font:600 .92rem/1 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
-#resume-gate .gate-resume{background:#7c3aed;color:#fff}
-#resume-gate .gate-resume[data-mode="infinite"]{background:#2563eb}
-#resume-gate .gate-resume[data-mode="bounded"]{background:#0f766e}
-#resume-gate .gate-fresh{background:transparent;color:#e6edf7;border-color:rgba(255,255,255,.28)}
-#resume-gate button:focus-visible{outline:3px solid #7fc4f2;outline-offset:2px}
-body[data-sphere-chrome="light"] #resume-gate{background:rgba(255,255,255,.94);color:#141a24;
- border-color:rgba(0,0,0,.12);box-shadow:0 24px 60px rgba(0,0,0,.22)}
-body[data-sphere-chrome="light"] #resume-gate p{color:#4a5568}
-body[data-sphere-chrome="light"] #resume-gate .gate-fresh{color:#141a24;border-color:rgba(0,0,0,.28)}
-@media (prefers-reduced-motion:no-preference){#resume-gate button{transition:transform .15s ease}
- #resume-gate button:active{transform:scale(.97)}}
-@media (forced-colors:active){#resume-gate{border:2px solid CanvasText}#resume-gate button{border:2px solid ButtonText}}
-</style>
-<script>
-/* root: resume gate — ask before a fresh Sphere buries a saved run */
-(function () {
-  var params;
-  try { params = new URLSearchParams(location.search); } catch (_) { return; }
-  if (["fresh", "resume", "deal", "take", "welcome"].some(function (k) { return params.has(k); })) return;
-  if (typeof HTMLDialogElement !== "function") return;
-  function read(store, key) { try { return store.getItem(key); } catch (_) { return null; } }
-  function parse(raw) { if (!raw) return null; try { return JSON.parse(raw); } catch (_) { return null; } }
-  function infinite() {
-    var d = parse(read(localStorage, "hexsweeper-endless-plate-v1"));
-    if (!d || d.v !== 1 || d.endless !== true) return null;
-    if (d.first !== false || d.over !== false || Number(d.cleared) <= 0) return null;
-    return { mode: "infinite", name: "Infinite", href: "__INFINITE__", savedAt: Number(d.savedAt) || 0 };
-  }
-  function classic() {
-    var d = parse(read(localStorage, "hexsweeper-classic-run-v1"));
-    if (!d || d.v !== 1 || d.kind !== "classic" || d.endless !== false) return null;
-    if (d.first !== false || d.over !== false) return null;
-    if (["easy", "medium", "hard"].indexOf(d.difficulty) < 0) return null;
-    if (!Array.isArray(d.mines) || !d.mines.length || !Array.isArray(d.revealed) || !d.revealed.length || !Array.isArray(d.flagged)) return null;
-    return { mode: "bounded", name: "Classic", href: "__BOUNDED__?resume=1", savedAt: Number(d.savedAt) || 0 };
-  }
-  function sphere() {
-    var best = null;
-    [sessionStorage, localStorage].forEach(function (store) {
-      ["hexsweeper-sphere-run-v2", "hexsweeper-sphere-run-v1"].forEach(function (key) {
-        var d = parse(read(store, key));
-        if (!d || (d.v !== 1 && d.v !== 2) || d.kind !== "sphere") return;
-        if (d.over !== false || typeof d.first !== "boolean") return;
-        var flagged = Array.isArray(d.flagged) ? d.flagged.length : Number(d.flags) || 0;
-        if (d.first && flagged <= 0) return;
-        if (!d.first && (!Array.isArray(d.mines) || d.mines.length === 0)) return;
-        var c = { mode: "sphere", name: "Sphere", href: "", savedAt: Number(d.savedAt) || 0 };
-        if (!best || c.savedAt >= best.savedAt) best = c;
-      });
-    });
-    return best;
-  }
-  var best = [infinite(), classic(), sphere()].filter(Boolean)
-    .sort(function (a, b) { return b.savedAt - a.savedAt; })[0];
-  if (!best) return;
-  var game = window.HEXSWEEPER_SPHERE_GAME || null;
-  var isSphere = best.mode === "sphere";
-  var dlg = document.createElement("dialog");
-  dlg.id = "resume-gate";
-  dlg.setAttribute("aria-labelledby", "resume-gate-title");
-  dlg.innerHTML =
-    '<h2 id="resume-gate-title">Resume your ' + best.name + " game?</h2>" +
-    "<p>" + (isSphere
-      ? "Your last sphere is still open where you left it."
-      : "You have an unfinished " + best.name + " board waiting.") + "</p>" +
-    '<div class="gate-actions">' +
-    '<button type="button" class="gate-resume" data-mode="' + best.mode + '">Resume ' + best.name + "</button>" +
-    '<button type="button" class="gate-fresh">' + (isSphere ? "Start a new sphere" : "Play Sphere instead") + "</button>" +
-    "</div>";
-  document.body.appendChild(dlg);
-  var closed = false;
-  function finish(action) {
-    if (closed) return;
-    closed = true;
-    try { dlg.close(); } catch (_) {}
-    if (dlg.parentNode) dlg.parentNode.removeChild(dlg);
-    if (action === "resume" && !isSphere) { location.href = best.href; return; }
-    if (action === "fresh" && isSphere && game && typeof game.reset === "function") game.reset();
-    if (game && typeof game.resumeTimer === "function") game.resumeTimer();
-  }
-  dlg.querySelector(".gate-resume").addEventListener("click", function () { finish("resume"); });
-  dlg.querySelector(".gate-fresh").addEventListener("click", function () { finish("fresh"); });
-  dlg.addEventListener("cancel", function (e) { e.preventDefault(); finish("keep"); });
-  dlg.addEventListener("click", function (e) { if (e.target === dlg) finish("keep"); });
-  if (game && typeof game.pauseTimer === "function") game.pauseTimer();
-  try { dlg.showModal(); } catch (_) { finish("keep"); return; }
-  var first = dlg.querySelector(".gate-resume");
-  if (first) first.focus();
-})();
-</script>
-"""
-
-
-def resume_gate(*, infinite_href: str, bounded_href: str) -> str:
-    return RESUME_GATE.replace("__INFINITE__", infinite_href).replace("__BOUNDED__", bounded_href)
 
 
 WEB_ROOT_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
@@ -1910,8 +1791,9 @@ WEB_ROOT_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
 def export_sphere_web() -> str:
     """The public landing: Sphere itself, sealed like the collection pen but
     with web routing — canonical root URL, the home social card, external
-    fonts (cached across pages), a Games pill to launcher.html, and the resume
-    gate for saved runs."""
+    fonts (cached across pages), and a Games pill to launcher.html. Sphere
+    restores its own autosave; saved Infinite/Classic runs are reached through
+    the launcher's Resume tile, never a prompt at the root."""
     exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
     markup = export_sphere(exp)
     markup = re.sub(r"<title>.*?</title>", "<title>Hexsweeper</title>", markup, count=1, flags=re.S)
@@ -1954,10 +1836,7 @@ def export_sphere_web() -> str:
     markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/launcher.html"', 'href="launcher.html"')
     markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/infinite.html"', 'href="infinite.html"')
     markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/bounded.html"', 'href="bounded.html"')
-    gate = resume_gate(infinite_href="infinite.html", bounded_href="bounded.html")
-    markup = markup.replace("</body>", f"{WEB_ROOT_PILL}{gate}</body>", 1)
-    if "HEXSWEEPER_SPHERE_GAME" not in markup:
-        raise SystemExit("export_sphere_web: sphere page no longer exposes HEXSWEEPER_SPHERE_GAME")
+    markup = markup.replace("</body>", f"{WEB_ROOT_PILL}</body>", 1)
     return markup
 
 

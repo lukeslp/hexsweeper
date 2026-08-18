@@ -1024,13 +1024,13 @@ body[data-sphere-chrome="dark"] .cz-dot {
 /* Flag mode live: the dock tile reads as a planted flag (red face) via the
    shared .is-flag-icon.is-active language. */
 
-/* While board has attention, whole dock recedes */
+/* While board has attention, whole dock recedes to a ghost. It stays
+   hit-testable on purpose: on touch there is no hover to bring it back first,
+   so a pointer-events:none dock made the first tap on Undo/Menu/Flag land on
+   the canvas and only the second tap act. */
 .hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-dock,
 .hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-corner {
-  opacity: 0;
-}
-.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hb-hex.is-dock {
-  pointer-events: none !important;
+  opacity: 0.22;
 }
 @media (prefers-reduced-motion: reduce) {
   /* Stage / .hb-hex reduced-motion handling lives in the !important block

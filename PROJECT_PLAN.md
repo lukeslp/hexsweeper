@@ -10,7 +10,7 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 
 - **Static artifact** under `www/dr.eamer.dev/games/hexsweeper/` (symlink: `~/dr.eamer.dev`).
 - **`core.js`**: axial hex map, finite + endless modes, input (mouse/touch), flood reveal, flags, RAF loop, skin hooks.
-- **`sphere/` → `index.html`**: the root is Sphere itself, sealed by the exporter, with a resume gate for saved Infinite / Classic / Sphere runs.
+- **`sphere/` → `index.html`**: the root is Sphere itself, sealed by the exporter; no prompt in the way.
 - **`tools/app-launcher.html` → `launcher.html`**: shared native/web three-hex games menu (Infinite, Classic, Sphere, centered Resume).
 - **`infinite.html` / `bounded.html`**: generated web product pages from the plate and Classic collection exports.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
@@ -219,8 +219,8 @@ The archived decorative theme remains at `collection/theme-water.html` and
 
 ## Acceptance (production)
 
-Bare root is Sphere; a saved Infinite, Classic, or Sphere run raises the resume
-gate first. `launcher.html` is the three-hex menu (Infinite, Classic, Sphere)
+Bare root is Sphere, restoring its own run silently. `launcher.html` is the
+three-hex menu (Infinite, Classic, Sphere)
 with Resume in the center when a run is waiting; each mode opens its game with
 last-used settings and returns through Games; newest valid Infinite, Classic, or Sphere saves can resume;
 launcher appearance follows system light/dark and is independent of gameplay;

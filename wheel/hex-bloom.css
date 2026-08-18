@@ -287,10 +287,7 @@
 /* While board has attention, whole dock recedes */
 .hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-dock,
 .hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hex-bloom-corner {
-  opacity: 0;
-}
-.hex-bloom[data-sphere-busy="true"][data-phase="closed"] .hb-hex.is-dock {
-  pointer-events: none !important;
+  opacity: 0.22; /* ghost stays tappable: first tap must act on touch */
 }
 @media (prefers-reduced-motion: reduce) {
   /* Stage / .hb-hex reduced-motion handling lives in the !important block
