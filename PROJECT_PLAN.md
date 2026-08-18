@@ -68,8 +68,8 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - [x] Sphere share card that works — real capture, wired from Customize panel
 - [x] Sphere Glow theme — luminous dig centers
 - [x] Sphere Mercury theme — reflection studio material ported into the canonical engine (`sphere/mirror-material.js`), ships offline
-- [x] Flower Theme tile (Light → Dark → Stratosphere → Mercury → Amber Cells), corner Menu glyph, touch-sized help sheet, larger sphere on portrait phones
-- [x] Stratosphere (light) and Amber Cells (dark) ported from the reflection studio as canonical themes; textures moved to `sphere/assets/reflections/` and sealed into the app
+- [x] Flower Theme tile (Light → Dark → Stratosphere → Mercury → Ion Storm), corner Menu glyph, touch-sized help sheet, larger sphere on portrait phones
+- [x] Stratosphere (light) and Ion Storm (dark) ported from the reflection studio as canonical themes (Amber Cells was tried and swapped out); textures moved to `sphere/assets/reflections/` and sealed into the app
 - [x] Sphere Earth / Moon globe-map themes (`?theme=earth|moon`); Earth uses responsive 4K/2K multi-sample gloss rendering, with textures tracked in `sphere/assets/textures/`
 - [x] Three archived model-authored visual studies on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
 - [x] Free 360° drag tumble (was constrained camera)

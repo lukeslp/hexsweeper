@@ -184,7 +184,7 @@ try {
   assert.ok(help.doneH >= 44, `Done button is ${help.doneH}px tall`);
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /menu button/i, "help copy does not mention the menu button");
-  assert.match(help.text, /Stratosphere, Mercury, Amber Cells/, "help copy does not name the theme cycle");
+  assert.match(help.text, /Stratosphere, Mercury, Ion Storm/, "help copy does not name the theme cycle");
   await evaluate('document.getElementById("help-done-btn").click()');
   await waitExpression('document.getElementById("help-overlay").hidden', "help did not close");
 
@@ -211,7 +211,7 @@ try {
   await fingerTap(menuBox.x, menuBox.y);
   await waitExpression('document.getElementById("hex-bloom").dataset.phase === "open" && !!document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo].shown")', "corner Menu did not open the flower on one tap");
   // Tiles fold open with a transform; wait for the rise to finish before measuring.
-  await waitExpression('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); return el && el.getBoundingClientRect().width >= 40; })()', "Undo tile never reached full size");
+  await waitExpression('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); return el && el.getBoundingClientRect().width >= 60; })()', "Undo tile never reached full size");
   const undoBox = await evaluate('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height) }; })()');
   assert.ok(undoBox.w >= 44 && undoBox.h >= 44, `Undo tile is ${undoBox.w}x${undoBox.h}`);
   await evaluate('document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]").click()');
@@ -236,16 +236,16 @@ try {
     await delay(150);
     seen.push(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'));
   }
-  assert.deepEqual(seen, ["dark", "stratosphere", "mercury", "amber-cells", "light"], `theme cycle was ${seen.join(" → ")}`);
+  assert.deepEqual(seen, ["dark", "stratosphere", "mercury", "ion-storm", "light"], `theme cycle was ${seen.join(" → ")}`);
   // Textured materials: the sealed data URI must actually load into the renderer.
-  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "amber-cells")); void 0;');
-  const amber = await waitExpression(`(() => {
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "ion-storm")); void 0;');
+  const storm = await waitExpression(`(() => {
     const c = document.getElementById("reflectionCanvas");
     if (!c || c.style.display === "none") return null;
-    if (document.body.dataset.reflectionMaterial !== "amber-cells") return null;
+    if (document.body.dataset.reflectionMaterial !== "ion-storm") return null;
     return { chrome: document.body.dataset.sphereChrome };
-  })()`, "Amber Cells did not switch the renderer");
-  assert.equal(amber.chrome, "dark", "Amber Cells did not switch chrome to dark");
+  })()`, "Ion Storm did not switch the renderer");
+  assert.equal(storm.chrome, "dark", "Ion Storm did not switch chrome to dark");
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "stratosphere")); void 0;');
   const strato = await waitExpression(`(() => document.body.dataset.reflectionMaterial === "stratosphere" ? { chrome: document.body.dataset.sphereChrome } : null)()`, "Stratosphere did not switch the renderer");
   assert.equal(strato.chrome, "light", "Stratosphere did not switch chrome to light");

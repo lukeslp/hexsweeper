@@ -51,12 +51,12 @@ expect(!appRoot.includes("resume-gate"), "app root still carries a resume prompt
 expect(!appRoot.includes('class="app-back"'), "app root grew a Games pill");
 expect(!existsSync(join(root, "build/app/games")), "app payload still ships games/ (launcher, Infinite, Classic)");
 expect(appRoot.includes('id: "mercury"') && appRoot.includes("global.MirrorMaterial = {"), "app root is missing Mercury or its renderer");
-expect(appRoot.includes('FLOWER_THEMES = ["light", "dark", "stratosphere", "mercury", "amber-cells"]'), "flower theme cycle is not Light, Dark, Stratosphere, Mercury, Amber Cells");
-expect(appRoot.includes("HEXSWEEPER_REFLECTION_TEXTURES = (function(){") && appRoot.includes("data:image/webp;base64,"), "app root does not seal the Stratosphere / Amber Cells textures");
+expect(appRoot.includes('FLOWER_THEMES = ["light", "dark", "stratosphere", "mercury", "ion-storm"]'), "flower theme cycle is not Light, Dark, Stratosphere, Mercury, Ion Storm");
+expect(appRoot.includes("HEXSWEEPER_REFLECTION_TEXTURES = (function(){") && appRoot.includes("data:image/webp;base64,"), "app root does not seal the Stratosphere / Ion Storm textures");
 expect(!appRoot.includes("HEXSWEEPER_REFLECTION_TEXTURE_BASE = "), "app root still assigns a texture URL base");
 expect(rootPage.includes('HEXSWEEPER_REFLECTION_TEXTURE_BASE = "sphere/"'), "web root does not point reflection textures at sphere/");
-expect(rootPage.includes('id: "stratosphere"') && rootPage.includes('id: "amber-cells"'), "root Sphere is missing Stratosphere or Amber Cells");
-expect(existsSync(join(root, "sphere/assets/reflections/stratosphere-1024.webp")) && existsSync(join(root, "sphere/assets/reflections/amber-cells-1024.webp")), "reflection textures are not under sphere/assets/reflections");
+expect(rootPage.includes('id: "stratosphere"') && rootPage.includes('id: "ion-storm"'), "root Sphere is missing Stratosphere or Ion Storm");
+expect(existsSync(join(root, "sphere/assets/reflections/stratosphere-1024.webp")) && existsSync(join(root, "sphere/assets/reflections/ion-storm-768.webp")), "reflection textures are not under sphere/assets/reflections");
 expect(!appRoot.includes("https://stats.dr.eamer.dev"), "app root leaks analytics");
 
 for (const [label, selector] of [

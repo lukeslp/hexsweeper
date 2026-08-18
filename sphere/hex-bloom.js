@@ -1149,10 +1149,10 @@
 
     // Curated theme cycle for the flower: the two mono looks plus three
     // reflection materials with different drift mechanisms — Stratosphere
-    // (light: sky environment map), Mercury (analytic metal), Amber Cells
-    // (dark: surface cell swarm with the microcell core). Glow / Shell / Ink /
+    // (light: sky environment map), Mercury (analytic metal), Ion Storm
+    // (dark: hybrid-mapped storm on a lagging frame). Glow / Shell / Ink /
     // Float / Card stay on the HUD cycle; Earth / Moon are web-only.
-    const FLOWER_THEMES = ["light", "dark", "stratosphere", "mercury", "amber-cells"];
+    const FLOWER_THEMES = ["light", "dark", "stratosphere", "mercury", "ion-storm"];
     function themeIndexById(id) {
       return THEMES.findIndex((t) => t && t.id === id);
     }
@@ -1363,7 +1363,7 @@
             aria: () =>
               "Theme: " +
               currentThemeLabel() +
-              ". Activate to cycle Light, Dark, Stratosphere, Mercury, Amber Cells.",
+              ". Activate to cycle Light, Dark, Stratosphere, Mercury, Ion Storm.",
             cycle: cycleFlowerTheme,
           },
           {
