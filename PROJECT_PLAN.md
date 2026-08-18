@@ -16,6 +16,12 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Current status (2026-08-18)
+
+- [x] Regression fixed: TestFlight 51's Mercury called a deleted interior painter; the first clear threw inside `draw()`, the frame loop died and the sphere stopped answering touch. `drawMetalFace` (grain by lat/lon, view-locked gleam) replaces it; `loop()` survives a painter exception; the app contract now clears, flags and drags on every theme with uncaught exceptions captured, and a Playwright WebKit probe covers the engine iOS actually runs.
+- [x] Best times per board size (`hexsweeper-sphere-best-v1`): win banner + size pills on the settings sheet.
+- [x] The Water Wheel as a hidden second sphere: hold the mine count (water rises), the app payload ships `wheel.html` (sealed, app-flagged, own tutorial, Sphere pill home); web root points at `wheel/`.
+
 ## Current status (2026-08-14)
 
 - [x] Shared launcher promoted to the public web root: three mode hexes plus a centered Resume; last-used settings launch each game.
