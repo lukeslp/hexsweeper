@@ -8,7 +8,7 @@ repo wraps it for iOS and Android as one sealed offline page.
 The app opens straight into the sphere, which restores its own unfinished run
 without asking. Two quiet corner glyphs are the only fixed chrome: **Menu**
 (bottom left) opens the center flower — reset, undo, flag mode, board size,
-theme (Light · Dark · Glow · Mercury), warning style, drag inversion — and
+theme (Light · Dark · Stratosphere · Mercury · Amber Cells), warning style, drag inversion — and
 **Help** (bottom right) opens the touch-sized help sheet. Tapping anywhere
 outside the sphere also opens the flower. Infinite and Classic are web-only;
 they are not in this binary.
@@ -99,7 +99,9 @@ upload, pricing, and publication remain manual release steps. See
 fetch anything at runtime — `globeUrl()` in `sphere.js` only resolves textures
 relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
 back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
-network. Their daymap provenance is also unrecorded. The eight offline themes
-(Light, Shell, Dark, Ink, Float, Card, Glow, Mercury) ship; the web build keeps
-all ten. Mercury's mirrored body is a WebGL2 shader with no texture asset, so it
-seals offline; without WebGL it falls back to a plain metal field.
+network. Their daymap provenance is also unrecorded. The ten offline themes
+(Light, Shell, Dark, Ink, Float, Card, Glow, Mercury, Stratosphere, Amber Cells)
+ship; the web build keeps all twelve. Mercury's mirrored body is a WebGL2 shader
+with no texture asset; Stratosphere and Amber Cells carry their 1024px textures
+sealed as data URIs (about 300KB together). Without WebGL each falls back to a
+plain field in its own palette.

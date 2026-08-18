@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 41 is the latest uploaded TestFlight build and the
+this same record. Build 42 is the latest uploaded TestFlight build and the
 checked-in project matches it.
 
 ## Archive → TestFlight
@@ -109,8 +109,12 @@ Done (updated 2026-08-11, through the App Store Connect API):
 - [x] Build 41 uploaded to TestFlight on 2026-08-18: sphere-only payload (no
       Games pill, no launcher, no Infinite/Classic), corner Menu glyph, Theme
       tile reaching Glow and Mercury, touch-sized help sheet, larger sphere on
-      phones (vendored from hexsweeper `eb7b7fa`); confirm distribution state
-      in App Store Connect before widening access
+      phones (vendored from hexsweeper `eb7b7fa`)
+- [x] Build 42 uploaded to TestFlight on 2026-08-18: Stratosphere (light) and
+      Amber Cells (dark) join Mercury in the flower's theme cycle, Glow drops
+      out of it; their textures are sealed into the payload (vendored from
+      hexsweeper `7c241e8`); confirm distribution state in App Store Connect
+      before widening access
 
 Still owed:
 
