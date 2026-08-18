@@ -1066,6 +1066,30 @@ body.hex-bloom-open.hex-bloom-rotatable .canvas-container {
   opacity: 1;
   z-index: 140 !important;
 }
+/* Theme fan swatches on ring 2: the theme's own field/shell colours, a
+   chosen ring on the active one, short label in the wide band. */
+.hex-bloom[data-face-menu="true"] .hb-face-swatch {
+  background: var(--theme-edge, var(--hb-stroke));
+  color: var(--theme-ink, var(--hb-ink));
+}
+.hex-bloom[data-face-menu="true"] .hb-face-swatch::before {
+  background: var(--theme-fill, var(--hb-fill));
+  inset: 1.5px;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-swatch.is-chosen {
+  background: var(--theme-accent, #ff0000);
+}
+.hex-bloom[data-face-menu="true"] .hb-face-swatch.is-chosen::before {
+  inset: 3px;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-swatch .hb-theme-dot {
+  width: calc(var(--face-icon, 26px) * 0.7);
+  height: calc(var(--face-icon, 26px) * 0.7);
+}
+.hex-bloom[data-face-menu="true"] .hb-face-swatch .hb-face-label {
+  color: var(--theme-ink, var(--hb-ink));
+  text-shadow: 0 0 3px var(--theme-fill, transparent), 0 0 1px var(--theme-fill, transparent);
+}
 .hex-bloom[data-face-menu="true"] .hb-face-center.shown {
   filter: drop-shadow(0 5px 8px color-mix(in srgb, var(--hb-ink) 38%, transparent));
 }

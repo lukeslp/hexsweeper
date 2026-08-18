@@ -153,6 +153,8 @@
   const FACE_MIN_TILE = 70; // CSS px across a tile before the patch is scaled up (room for a label)
   const FACE_MAX_SCALE = 6; // XL boards have ~11px faces; the cluster still reads as on-sphere
   const FACE_RESEAT_Z = 0.6; // patch turned this far from the camera → re-seat on the front
+  const FACE_FOCUS_PX = 84; // the sphere zooms until the centre face is this wide (menu)
+  const FAN_FOCUS_MIN = 52; // theme fan needs ring 2 on screen: smaller faces, more of them
   const FACE_SHORT_THEME = {
     light: "Light",
     dark: "Dark",
@@ -1223,8 +1225,8 @@
       const t = currentThemeDef();
       return t ? t.name : "Theme";
     }
-    function themeSwatchSpec() {
-      const t = currentThemeDef();
+    function themeSwatchSpec(themeDef) {
+      const t = themeDef || currentThemeDef();
       if (!t) return null;
       // Reflection themes are transparent on the canvas; swatch their
       // fallback field so the tile still reads as "dark liquid metal".
@@ -1529,6 +1531,7 @@
     let facePatchIndices = null; // seven tile indices the face menu inhabits
     let faceActions = []; // { el, faceIndex } for live relayout on rotation
     let faceMenuLive = false; // true while the current open menu is on the sphere
+    let fanOpen = false; // theme swatches fanned across ring 2 of the patch
     let dockHelpBtn = null; // corner seat, lower right
     let cornerMenuBtn = null; // corner seat, lower left (center-flower variants)
     let centerActionBtn = null;
@@ -1648,6 +1651,7 @@
       centerActionBtn = null;
       facePatchIndices = null;
       faceActions = [];
+      fanOpen = false;
     }
 
     function removeSubmenu() {
@@ -1903,6 +1907,11 @@
         '.hb-hex.is-primary[data-cat="' + id + '"]'
       );
       if (!cat || !el) return;
+      if (faceMenuLive && id === "theme") {
+        toggleThemeFan();
+        el.setAttribute("aria-expanded", fanOpen ? "true" : "false");
+        return;
+      }
 
       // Cycle primaries: one click flips state, no nested bloom.
       if (typeof cat.cycle === "function") {
@@ -2179,7 +2188,10 @@
       const xs = b.map((pt) => pt.x);
       const width = Math.max(...xs) - Math.min(...xs);
       if (!width) return 1;
-      return Math.max(1, Math.min(FACE_MAX_SCALE, FACE_MIN_TILE / width));
+      // With the fan open the sphere is deliberately zoomed less so ring 2
+      // fits; do not scale that back up.
+      const floor = fanOpen ? Math.min(FACE_MIN_TILE, FAN_FOCUS_MIN - 4) : FACE_MIN_TILE;
+      return Math.max(1, Math.min(FACE_MAX_SCALE, floor / width));
     }
 
     function placeProjectedFace(el, face, patch, canvasRect, scale) {
@@ -2214,6 +2226,137 @@
       el.style.setProperty("--face-label", Math.max(11, Math.min(13, height * 0.16)).toFixed(1) + "px");
     }
 
+    /** Zoom goal for the on-sphere menu; the fan needs ring 2 to fit on screen. */
+    function focusFaceMin() {
+      if (!fanOpen) return FACE_FOCUS_PX;
+      const w = stage.clientWidth || global.innerWidth;
+      const h = stage.clientHeight || global.innerHeight;
+      // Ring 2 spans ~5 faces across; keep it inside the short viewport edge.
+      return Math.max(FAN_FOCUS_MIN, Math.min(FACE_FOCUS_PX, (Math.min(w, h) - 48) / 5.2));
+    }
+    function focusMenu() {
+      if (!faceMenuLive || !facePatchIndices) return;
+      if (typeof game.focusPatch === "function") {
+        game.focusPatch({ indices: facePatchIndices, faceMin: focusFaceMin() });
+      }
+    }
+
+    /**
+     * Theme fan: the second ring of faces around the patch (neighbours of the
+     * ring, minus the patch) become swatch tiles — one per flower theme,
+     * clockwise from the top. Tapping one applies it; the rest of the sphere
+     * previews it live around the fan. Fan tiles are re-projected with the
+     * menu on every camera move.
+     */
+    function ringTwoFaces(patch) {
+      const st = game.getState();
+      const tiles = st.tiles || [];
+      const inPatch = new Set(patch.indices);
+      const seen = new Set();
+      const out = [];
+      patch.ring.forEach((face) => {
+        const t = tiles[face.index];
+        (t && t.neighborIndices || []).forEach((k) => {
+          if (inPatch.has(k) || seen.has(k)) return;
+          seen.add(k);
+          out.push(k);
+        });
+      });
+      const cx = patch.center.center.x;
+      const cy = patch.center.center.y;
+      const projected = out
+        .map((k) => Object.assign(game.projectTile(tiles[k], st.rotY, st.rotX), { index: k }))
+        .filter((f) => f.z > 0.12)
+        .sort((a, b) => {
+          const aa = Math.atan2(a.center.y - cy, a.center.x - cx) + Math.PI / 2;
+          const bb = Math.atan2(b.center.y - cy, b.center.x - cx) + Math.PI / 2;
+          const na = (aa + Math.PI * 2) % (Math.PI * 2);
+          const nb = (bb + Math.PI * 2) % (Math.PI * 2);
+          return na - nb;
+        });
+      return projected;
+    }
+    function luminanceOf(color) {
+      const m = String(color || "").match(/#([0-9a-f]{6})/i);
+      if (!m) {
+        const rgba = String(color || "").match(/rgba?\(([^)]+)\)/i);
+        if (!rgba) return 0;
+        const [r, g, b] = rgba[1].split(",").map((v) => parseFloat(v));
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      }
+      const n = parseInt(m[1], 16);
+      return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+    }
+    function fanTheme(face) {
+      // Same shape as getMenuPatch faces so placeProjectedFace can use them.
+      return { index: face.index, z: face.z, center: face.center, boundary: face.boundary };
+    }
+    function renderThemeFan() {
+      const patch = currentFacePatch();
+      const canvas = document.getElementById("gameCanvas");
+      if (!patch || !canvas) return false;
+      const faces = ringTwoFaces(patch);
+      const ids = FLOWER_THEMES.map((id) => [id, themeIndexById(id)]).filter(([, i]) => i >= 0);
+      if (faces.length < 6) return false;
+      const canvasRect = canvas.getBoundingClientRect();
+      const scale = facePatchScale(patch);
+      const current = currentThemeDef();
+      ids.slice(0, faces.length).forEach(([id, index], j) => {
+        const t = THEMES[index];
+        const face = fanTheme(faces[j]);
+        const el = makeHex({
+          cls: "is-sub is-theme-swatch hb-face-action hb-face-swatch" + (current && current.id === id ? " is-chosen" : ""),
+          label: FACE_SHORT_THEME[id] || t.name,
+          ariaLabel: "Theme: " + t.name,
+          icon: null,
+          iconOnly: true,
+          tooltip: t.name,
+        });
+        applyPrimarySwatch(el, themeSwatchSpec(t));
+        // Label ink by the swatch fill's luminance, not the theme's own text
+        // colour (Light's is white on a white shell).
+        el.style.setProperty("--theme-ink", luminanceOf(themeSwatchVars(themeSwatchSpec(t)).fill) > 0.55 ? "#111111" : "#ffffff");
+        showFaceLabel(el, FACE_SHORT_THEME[id] || t.name);
+        el.dataset.theme = id;
+        el.dataset.faceIndex = String(face.index);
+        el.dataset.fan = "true";
+        placeProjectedFace(el, face, patch, canvasRect, scale);
+        el.classList.add("folded");
+        el.dataset.delay = String(40 + j * 30);
+        el.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          ignoreOutsideUntil = Date.now() + 200;
+          game.setThemeIndex(index);
+          stage.querySelectorAll(".hb-face-swatch").forEach((n) => n.classList.toggle("is-chosen", n.dataset.theme === id));
+          refreshPrimaryLabels();
+          announce("Theme · " + t.name);
+        });
+        faceActions.push({ el, faceIndex: face.index, fan: true });
+        stage.appendChild(el);
+      });
+      return true;
+    }
+    function toggleThemeFan() {
+      if (fanOpen) {
+        fanOpen = false;
+        stage.querySelectorAll(".hb-face-swatch").forEach((n) => n.remove());
+        faceActions = faceActions.filter((a) => !a.fan);
+        focusMenu();
+        announce("Theme fan closed");
+        return;
+      }
+      fanOpen = true;
+      focusMenu();
+      if (renderThemeFan()) {
+        unfold(stage.querySelectorAll(".hb-face-swatch.folded"));
+        announce("Choose a theme");
+      } else {
+        fanOpen = false;
+        cycleFlowerTheme();
+      }
+    }
+
     function layoutFaceMenu() {
       if (!faceMenuLive || !facePatchIndices || !faceActions.length) return;
       const patch = currentFacePatch();
@@ -2237,8 +2380,17 @@
       const faces = new Map(
         [patch.center].concat(patch.ring).map((face) => [face.index, face])
       );
+      const st = game.getState();
       faceActions.forEach((action) => {
-        const face = faces.get(action.faceIndex);
+        let face = faces.get(action.faceIndex);
+        if (!face && action.fan) {
+          const t = st.tiles[action.faceIndex];
+          if (t) {
+            const pr = game.projectTile(t, st.rotY, st.rotX);
+            face = pr.z > 0.12 ? fanTheme(Object.assign(pr, { index: action.faceIndex })) : null;
+          }
+          action.el.style.visibility = face ? "" : "hidden";
+        }
         if (face) placeProjectedFace(action.el, face, patch, canvasRect, scale);
       });
     }
@@ -2489,6 +2641,7 @@
         root.style.setProperty("--rise-y", DOCK_CENTER ? "0px" : dockRiseDelta() + "px");
         renderBloom({ petals: true });
         refreshPrimaryLabels();
+        focusMenu();
         void stage.offsetHeight; // commit the pre-rise transform
         stage.style.transition = "";
         requestAnimationFrame(() => {
@@ -2501,6 +2654,7 @@
     }
 
     function collapse() {
+      if (faceMenuLive && typeof game.releaseFocus === "function") game.releaseFocus();
       if (state.phase !== "open" && state.phase !== "rising") return;
       clearTimeout(phaseTimer);
       clearTimeout(hoverCloseTimer);

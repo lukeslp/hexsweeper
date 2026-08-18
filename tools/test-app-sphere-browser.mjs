@@ -237,6 +237,15 @@ try {
   assert.equal(face.inside, true, "a face tile sits outside the sphere");
   assert.equal(face.visibleLabels, 7, `only ${face.visibleLabels} face tiles carry a visible label`);
   assert.equal(face.rotateOnly, true, "engine is not in rotate-only mode while the face menu is open");
+  // The sphere came to the menu: zoom is up and the tiles are finger-sized with 11px+ labels.
+  await delay(500);
+  const focus = await evaluate(`(() => {
+    const tiles = Array.from(document.querySelectorAll("#hex-bloom-stage .hb-hex"));
+    return { zoom: window.HEXSWEEPER_SPHERE_GAME.getState().zoomFactor, minW: Math.min(...tiles.map(e => e.getBoundingClientRect().width)), minFont: Math.min(...tiles.map(e => parseFloat(getComputedStyle(e.querySelector(".hb-label")).fontSize))) };
+  })()`);
+  assert.ok(focus.zoom > 1.2, `menu did not zoom the sphere in (zoom ${focus.zoom.toFixed(2)})`);
+  assert.ok(focus.minW >= 74, `smallest face tile is ${Math.round(focus.minW)}px after focus`);
+  assert.ok(focus.minFont >= 11, `face labels are ${focus.minFont}px`);
   assert.ok(face.blur === "none" || face.blur === "", `scrim still blurs the board: ${face.blur}`);
   assert.equal(face.bg, "rgba(0, 0, 0, 0)", `scrim still tints the board: ${face.bg}`);
   // Drag the board with the menu open: it rotates, nothing digs, menu stays.
@@ -256,22 +265,34 @@ try {
   await waitExpression('document.getElementById("hex-bloom").dataset.phase === "closed"', "corner Menu did not close the flower");
   await delay(200);
 
-  // Theme tile: Light → Dark → Glow → Mercury, and Mercury brings up the WebGL material.
+  // Theme tile opens the fan: nine swatches on ring two; a tap applies and previews.
   await evaluate('document.querySelector(".is-menu-corner .is-dock").click()');
   await waitExpression('document.getElementById("hex-bloom").dataset.phase === "open" && !!document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]")', "flower did not reopen");
-  const themeTile = '#hex-bloom-stage .hb-hex[data-cat=theme]';
-  assert.equal(await evaluate(`!!document.querySelector('${themeTile}')`), true, "flower has no Theme tile");
-  const seen = [];
-  for (let i = 0; i < 9; i++) {
-    if ((await evaluate('document.getElementById("hex-bloom").dataset.phase')) !== "open") {
-      await evaluate('document.querySelector(".is-menu-corner .is-dock").click()');
-      await waitExpression('document.getElementById("hex-bloom").dataset.phase === "open" && !!document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]")', "flower did not reopen for the next theme");
-    }
-    await evaluate(`document.querySelector('${themeTile}').click()`);
-    await delay(150);
-    seen.push(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'));
-  }
-  assert.deepEqual(seen, ["dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning", "light"], `theme cycle was ${seen.join(" → ")}`);
+  await delay(600);
+  await evaluate('document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]").click()');
+  const fan = await waitExpression(`(() => {
+    const sw = Array.from(document.querySelectorAll("#hex-bloom-stage .hb-face-swatch"));
+    if (sw.length < 9) return null;
+    return { themes: sw.map(e => e.dataset.theme), minW: Math.min(...sw.map(e => e.getBoundingClientRect().width)), labels: sw.filter(e => e.querySelector(".hb-label") && e.querySelector(".hb-label").textContent.trim()).length };
+  })()`, "theme fan did not open with nine swatches");
+  await delay(900); // let the swatches unfold and the fan zoom settle
+  const fanSizes = await evaluate('Array.from(document.querySelectorAll("#hex-bloom-stage .hb-face-swatch")).map(e => e.getBoundingClientRect().width).sort((a, b) => a - b)');
+  fan.minW = fanSizes[0];
+  fan.medianW = fanSizes[Math.floor(fanSizes.length / 2)];
+  assert.ok(fan.medianW >= 56, `median fan swatch is ${Math.round(fan.medianW)}px`);
+  assert.deepEqual(fan.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `fan order was ${fan.themes.join(",")}`);
+  assert.ok(fan.minW >= 40, `smallest (rim-foreshortened) fan swatch is ${Math.round(fan.minW)}px`);
+  assert.equal(fan.labels, 9, "fan swatches are missing labels");
+  await evaluate('document.querySelector("#hex-bloom-stage .hb-face-swatch[data-theme=stratosphere]").click()');
+  await delay(300);
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "stratosphere", "fan swatch did not apply Stratosphere");
+  assert.equal(await evaluate('document.querySelector("#hex-bloom-stage .hb-face-swatch.is-chosen").dataset.theme'), "stratosphere", "fan did not mark Stratosphere chosen");
+  assert.equal(await evaluate('document.getElementById("hex-bloom").dataset.phase'), "open", "fan pick closed the menu");
+  await evaluate('document.querySelector(".is-menu-corner .is-dock").click()');
+  await waitExpression('document.getElementById("hex-bloom").dataset.phase === "closed"', "menu did not close after the fan");
+  await delay(600);
+  const zoomBack = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().zoomFactor');
+  assert.ok(Math.abs(zoomBack - 0.72) < 0.02, `zoom did not restore after close (${zoomBack.toFixed(2)})`);
   // Textured materials: the sealed data URI must actually load into the renderer.
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "ion-storm")); void 0;');
   const storm = await waitExpression(`(() => {

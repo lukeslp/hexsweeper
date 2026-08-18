@@ -1996,6 +1996,77 @@
       state.projectedCache = null;
     }
 
+    /**
+     * "The sphere comes to the menu": rotate a seven-face patch dead-front
+     * and zoom in until its centre face is at least `faceMin` CSS px across,
+     * so on-sphere chrome uses real faces at finger size. Rotation eases via
+     * the ordinary camera targets; zoom tweens here. releaseFocus() tweens
+     * the zoom back (rotation stays where the player left it). The focus zoom
+     * is never persisted — a reload restores the player's own zoom.
+     */
+    let focusRestore = null;
+    let focusTween = 0;
+    const FOCUS_ZOOM_MAX = 3.6;
+    function tweenZoom(to, ms, done) {
+      cancelAnimationFrame(focusTween);
+      const from = state.zoomFactor;
+      const t0 = performance.now();
+      const step = (now) => {
+        const k = ms > 0 ? Math.min(1, (now - t0) / ms) : 1;
+        const e = 1 - Math.pow(1 - k, 3);
+        state.zoomFactor = from + (to - from) * e;
+        state.scale = state.baseScale * state.zoomFactor;
+        invalidateProjection();
+        scheduleFrame();
+        if (k < 1) focusTween = requestAnimationFrame(step);
+        else if (done) done();
+      };
+      focusTween = requestAnimationFrame(step);
+    }
+    function focusPatch(options) {
+      const opts = options || {};
+      const indices = Array.isArray(opts.indices) ? opts.indices : null;
+      const centerIndex = indices ? indices[0] : -1;
+      const tile = state.tiles[centerIndex];
+      if (!tile) return null;
+      if (!focusRestore) focusRestore = { zoom: state.zoomFactor };
+      stopAmbientSpin();
+      // Rotation that carries the tile's centre to +z (camera): yaw first
+      // (rotatePoint applies Y then X), then pitch.
+      const c = tile.centerPoint;
+      const len = Math.hypot(c.x, c.y, c.z) || 1;
+      const x = c.x / len, y = c.y / len, z = c.z / len;
+      const yaw = Math.atan2(-x, z);
+      const rho = Math.hypot(x, z);
+      const pitch = Math.atan2(y, rho);
+      state.targetRotY = state.rotY + angleDelta(state.rotY, yaw);
+      state.targetRotX = state.rotX + angleDelta(state.rotX, pitch);
+      // Zoom so the centre face reaches faceMin px across (measured at the
+      // target rotation, where it is widest).
+      const faceMin = Number(opts.faceMin) || 80;
+      const proj = projectTile(tile, yaw, pitch);
+      const xs = proj.boundary.map((pt) => pt.x);
+      const width = Math.max(...xs) - Math.min(...xs);
+      let zoom = state.zoomFactor;
+      if (width > 0) zoom = state.zoomFactor * (faceMin / width);
+      // Both directions: small boards zoom out so a fan still fits on screen.
+      zoom = Math.max(ZOOM_MIN, Math.min(FOCUS_ZOOM_MAX, zoom));
+      tweenZoom(zoom, state.reduceMotion ? 0 : Number(opts.ms) || 320);
+      return { zoom, restore: focusRestore.zoom };
+    }
+    function releaseFocus() {
+      if (!focusRestore) return;
+      const back = focusRestore.zoom;
+      focusRestore = null;
+      tweenZoom(back, state.reduceMotion ? 0 : 260, () => {
+        state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, state.zoomFactor));
+        state.scale = state.baseScale * state.zoomFactor;
+        invalidateProjection();
+        scheduleFrame();
+        schedulePersist();
+      });
+    }
+
     function setMenuInteraction(active) {
       state.menuRotateOnly = !!active;
       state.hovered = -1;
@@ -2389,7 +2460,7 @@
         time: state.timeElapsed | 0,
         rotY: state.rotY,
         rotX: state.rotX,
-        zoom: state.zoomFactor,
+        zoom: focusRestore ? focusRestore.zoom : state.zoomFactor,
         mines,
         revealed,
         flagged,
@@ -4762,6 +4833,7 @@
       else requestAnimationFrame(loop);
     }
 
+    let lastMenuPose = null;
     function loop(ts) {
       state.rafScheduled = false;
       const now = ts || performance.now();
@@ -4771,6 +4843,17 @@
       tickEndFx(now);
       draw();
       state.lastFrameAt = now;
+      if (state.menuRotateOnly) {
+        // On-sphere chrome re-projects itself on every frame the camera moved
+        // (eased rotation, focus zoom, drag) — not only on drag events.
+        const pose = state.rotY + "|" + state.rotX + "|" + state.zoomFactor + "|" + state.centerX + "|" + state.centerY;
+        if (pose !== lastMenuPose) {
+          lastMenuPose = pose;
+          canvas.dispatchEvent(new CustomEvent("hexsweeper:rotation"));
+        }
+      } else {
+        lastMenuPose = null;
+      }
       if (frameNeedsPaint(now)) scheduleFrame();
       else scheduleFrame(IDLE_FRAME_MS);
     }
@@ -4875,10 +4958,7 @@
           state.rotY = state.targetRotY;
           state.rotX = state.targetRotX;
           invalidateProjection();
-          if (state.menuRotateOnly) {
-            scheduleFrame();
-            canvas.dispatchEvent(new CustomEvent("hexsweeper:rotation"));
-          }
+          if (state.menuRotateOnly) scheduleFrame(); // the loop re-projects on-sphere chrome
         }
       }
       state.hovered = state.menuRotateOnly ? -1 : pickTile(p.x, p.y);
@@ -5204,6 +5284,8 @@
       getThemeIndex: () => themeIndex,
       getMenuPatch,
       setMenuInteraction,
+      focusPatch,
+      releaseFocus,
       pauseTimer: () => stopTimer(),
       resumeTimer: () => {
         if (!state.isGameOver && !state.isFirstClick) startTimer();
