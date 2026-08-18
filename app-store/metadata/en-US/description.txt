@@ -14,7 +14,7 @@ Light and Dark for a clean read, then a set of mirrored materials rendered live:
 QUIET BY DESIGN
 
 • Entirely offline. No account, no ads, no analytics, nothing to accept.
-• Two small corner buttons and a center menu: reset, undo, flag mode, size, theme, warning style, drag inversion. Nothing else on screen but the sphere.
+• A quiet bar — undo, new sphere, flag — and one settings sheet for theme, board size, warning style, drag inversion and effects. Nothing else on screen but the sphere.
 • Share card of your finished board.
 
 Free and complete. Just minesweeper, with better geometry.
