@@ -10,7 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` is 53 for the release candidate (quiet bar + settings sheet + native image share + sphere-attached interiors + best times + hidden Water Wheel)
+- [x] `CURRENT_PROJECT_VERSION` is 54 for the release candidate (quiet bar + settings sheet + native image share + sphere-attached interiors + best times + hidden Water Wheel)
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [x] Archive signs cleanly under team `596T7J7FB6`
@@ -48,7 +48,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Build 50 uploaded 2026-08-18: quiet bar + settings sheet, themed cores, tutorial, HexShare image plugin
 - [x] Build 51 uploaded 2026-08-18: interiors turn with the shell / hollow shells, themes own warnings, clear-not-dig; **regressed on device** (Mercury's first clear froze the frame loop)
 - [x] Build 52 uploaded 2026-08-18: Mercury interior restored, frame loop survives painter errors, every-theme clear contract + WebKit probe; best times per size; the Water Wheel as a hidden second sphere (`www/wheel.html`); **Mercury's cores were wrong** (interiors pass had replaced them)
-- [x] Build 53 uploaded 2026-08-18: build-50 dig cores restored on every mirror theme; tabbed ? sheet (Play · Themes · Board · Settings); attached to 1.0 as the release candidate
+- [x] Build 53 uploaded 2026-08-18: build-50 dig cores restored on every mirror theme; tabbed ? sheet (Play · Themes · Board · Settings)
+- [x] Build 54 uploaded 2026-08-18: cores only on Mercury + Galaxy, the other mirror themes clear to matte wells with depth + seams, contrasting flags on Gilded Ribbon/Heat Lightning; attached to 1.0 as the release candidate
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
