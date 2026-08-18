@@ -432,6 +432,10 @@
     hoverRing: "#1d6fa9",
     activeRing: "#0f4f80",
     flagEdge: "#ffd6d8",
+    // Wells open onto bright sky glass, so numbers go dark on a light stroke.
+    text: { 1: "#0b2540", 2: "#123c66", 3: "#1d5a8f", 4: "#7a2d10", 5: "#8f1d1d", 6: "#5a0f2c" },
+    label: "#0b2540",
+    labelStroke: "rgba(255,255,255,0.85)",
   });
   const THEME_ION_STORM = reflectionTheme({
     id: "ion-storm",
@@ -2017,9 +2021,17 @@
         state.zoomFactor = from + (to - from) * e;
         state.scale = state.baseScale * state.zoomFactor;
         invalidateProjection();
-        scheduleFrame();
+        // Paint now: the main loop may be parked on its idle timer, which
+        // would turn a 320ms tween into two visible steps.
+        draw();
+        if (state.menuRotateOnly) {
+          canvas.dispatchEvent(new CustomEvent("hexsweeper:rotation"));
+        }
         if (k < 1) focusTween = requestAnimationFrame(step);
-        else if (done) done();
+        else {
+          scheduleFrame();
+          if (done) done();
+        }
       };
       focusTween = requestAnimationFrame(step);
     }
@@ -3789,7 +3801,191 @@
       const T = state.theme;
       if (!T || !T.reflectionSurface) return null;
       if (T.material === "mercury") return "metal";
+      if (T.material) return T.material; // one painter per material below
       return null;
+    }
+    // Deterministic per-face hash for procedural cores.
+    function coreHash(x, y, seed) {
+      const value = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
+      return value - Math.floor(value);
+    }
+    function coreTime(now) {
+      return state.reduceMotion ? 0 : now * 0.001;
+    }
+    /** Sky glass: deep-to-pale blue with slow cloud streaks drifting across. */
+    function drawSkyCore(proj, now) {
+      const t = coreTime(now);
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const base = ctx.createLinearGradient(cx, cy - R, cx, cy + R);
+      base.addColorStop(0, "#0b3f7a");
+      base.addColorStop(0.55, "#2f86c8");
+      base.addColorStop(1, "#bfe1f5");
+      ctx.fillStyle = base;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      ctx.globalCompositeOperation = "screen";
+      for (let band = 0; band < 5; band++) {
+        const y0 = cy - R * 0.9 + band * R * 0.42 + Math.sin(t * 0.21 + band) * R * 0.05;
+        const drift = ((t * (0.05 + band * 0.012)) % 1) * R * 0.6;
+        const g = ctx.createLinearGradient(cx - R * 1.3 + drift, 0, cx + R * 1.3 + drift, 0);
+        g.addColorStop(0, "rgba(255,255,255,0)");
+        g.addColorStop(0.35, "rgba(255,255,255,0.22)");
+        g.addColorStop(0.55, "rgba(255,255,255,0.32)");
+        g.addColorStop(0.8, "rgba(255,255,255,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(cx + drift * 0.3, y0, R * 1.2, R * 0.11 + band * R * 0.012, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+    /** Ion storm: navy plasma with pulsing violet filaments. */
+    function drawStormCore(proj, now) {
+      const t = coreTime(now);
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const base = ctx.createRadialGradient(cx - R * 0.2, cy - R * 0.25, R * 0.05, cx, cy, R * 1.15);
+      base.addColorStop(0, "#1c3f8f");
+      base.addColorStop(0.5, "#0b1a4a");
+      base.addColorStop(1, "#050a1e");
+      ctx.fillStyle = base;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      ctx.globalCompositeOperation = "screen";
+      ctx.lineCap = "round";
+      for (let f = 0; f < 6; f++) {
+        const seed = coreHash(f, 3, 2.1);
+        const pulse = 0.35 + 0.65 * Math.max(0, Math.sin(t * (1.1 + seed) + seed * 9));
+        ctx.strokeStyle = `rgba(200,147,220,${(0.16 + pulse * 0.42).toFixed(3)})`;
+        ctx.lineWidth = Math.max(1, R * (0.008 + seed * 0.01));
+        ctx.beginPath();
+        let x = cx - R * 1.1 + seed * R * 0.4;
+        let y = cy - R * 0.9 + coreHash(f, 7, 1.7) * R * 1.8;
+        ctx.moveTo(x, y);
+        for (let k = 0; k < 9; k++) {
+          x += R * 0.26;
+          y += (coreHash(f, k, 5.3) - 0.5) * R * 0.28 + Math.sin(t * 2 + k) * R * 0.02;
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+    /** Aurora: night sky with slow teal-green curtains. */
+    function drawAuroraCore(proj, now) {
+      const t = coreTime(now);
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const base = ctx.createLinearGradient(cx, cy - R, cx, cy + R);
+      base.addColorStop(0, "#02070d");
+      base.addColorStop(0.6, "#071a2a");
+      base.addColorStop(1, "#0b2b2c");
+      ctx.fillStyle = base;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      ctx.globalCompositeOperation = "screen";
+      for (let c = 0; c < 6; c++) {
+        const seed = coreHash(c, 1, 8.8);
+        const x = cx - R * 1.0 + c * R * 0.42 + Math.sin(t * 0.35 + seed * 6) * R * 0.09;
+        const g = ctx.createLinearGradient(0, cy - R * 0.9, 0, cy + R * 0.7);
+        g.addColorStop(0, "rgba(136,210,208,0)");
+        g.addColorStop(0.35, `rgba(120,230,190,${(0.18 + 0.16 * Math.sin(t + seed * 5)).toFixed(3)})`);
+        g.addColorStop(0.7, "rgba(60,150,170,0.14)");
+        g.addColorStop(1, "rgba(30,60,120,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(x - R * 0.12, cy - R * 0.9);
+        ctx.quadraticCurveTo(x + R * 0.18, cy, x - R * 0.06, cy + R * 0.7);
+        ctx.lineTo(x + R * 0.16, cy + R * 0.7);
+        ctx.quadraticCurveTo(x + R * 0.36, cy, x + R * 0.1, cy - R * 0.9);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+    /** Galaxy: indigo dust with a fixed star field that twinkles. */
+    function drawGalaxyCore(proj, now) {
+      const t = coreTime(now);
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const base = ctx.createRadialGradient(cx + R * 0.15, cy - R * 0.1, R * 0.05, cx, cy, R * 1.2);
+      base.addColorStop(0, "#3a2b52");
+      base.addColorStop(0.45, "#141232");
+      base.addColorStop(1, "#050714");
+      ctx.fillStyle = base;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      const dust = ctx.createLinearGradient(cx - R, cy + R * 0.4, cx + R, cy - R * 0.5);
+      dust.addColorStop(0, "rgba(208,154,158,0)");
+      dust.addColorStop(0.5, "rgba(208,154,158,0.16)");
+      dust.addColorStop(1, "rgba(120,110,200,0)");
+      ctx.fillStyle = dust;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      for (let i = 0; i < 90; i++) {
+        const sx = cx + (coreHash(i, 2, 1.1) - 0.5) * R * 2.4;
+        const sy = cy + (coreHash(i, 5, 3.3) - 0.5) * R * 2.4;
+        const tw = 0.45 + 0.55 * Math.abs(Math.sin(t * (0.6 + coreHash(i, 9, 0.7)) + i));
+        const r = (0.6 + coreHash(i, 4, 6.2) * 1.6) * Math.max(0.6, R / 260);
+        ctx.fillStyle = `rgba(255,${230 + Math.round(coreHash(i, 1, 2) * 25)},${210 + Math.round(coreHash(i, 3, 2) * 45)},${tw.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    /** Gilded ribbon: brushed gold with flowing ribbon lines. */
+    function drawGildedCore(proj, now) {
+      const t = coreTime(now);
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const angle = state.rotY * 0.18 + t * 0.06;
+      const dx = Math.cos(angle) * R * 1.4, dy = Math.sin(angle) * R * 1.4;
+      const gold = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
+      gold.addColorStop(0, "#3a2508");
+      gold.addColorStop(0.3, "#9a6a1e");
+      gold.addColorStop(0.5, "#f1cf7a");
+      gold.addColorStop(0.7, "#a5721f");
+      gold.addColorStop(1, "#2a1a06");
+      ctx.fillStyle = gold;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      ctx.globalCompositeOperation = "screen";
+      ctx.lineCap = "round";
+      for (let k = 0; k < 7; k++) {
+        const seed = coreHash(k, 6, 4.4);
+        ctx.strokeStyle = `rgba(255,236,170,${(0.10 + seed * 0.14).toFixed(3)})`;
+        ctx.lineWidth = Math.max(0.8, R * (0.006 + seed * 0.012));
+        ctx.beginPath();
+        const y0 = cy - R * 1.0 + k * R * 0.3;
+        for (let i = 0; i <= 24; i++) {
+          const x = cx - R * 1.3 + (i / 24) * R * 2.6;
+          const y = y0 + Math.sin(i * 0.5 + t * 0.9 + seed * 7) * R * 0.09 + Math.sin(i * 0.17 + t * 0.4) * R * 0.05;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+    /** Heat lightning: magma glow with heat bands and a passing flash. */
+    function drawHeatCore(proj, now) {
+      const t = coreTime(now);
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const base = ctx.createRadialGradient(cx, cy + R * 0.3, R * 0.05, cx, cy, R * 1.2);
+      base.addColorStop(0, "#ffb05b");
+      base.addColorStop(0.35, "#c9481f");
+      base.addColorStop(0.75, "#5a1a2e");
+      base.addColorStop(1, "#190f16");
+      ctx.fillStyle = base;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      ctx.globalCompositeOperation = "screen";
+      for (let band = 0; band < 4; band++) {
+        const y0 = cy - R * 0.6 + band * R * 0.4;
+        ctx.strokeStyle = `rgba(255,190,120,${(0.10 + 0.08 * Math.sin(t * 1.3 + band)).toFixed(3)})`;
+        ctx.lineWidth = Math.max(1, R * 0.02);
+        ctx.beginPath();
+        for (let i = 0; i <= 26; i++) {
+          const x = cx - R * 1.3 + (i / 26) * R * 2.6;
+          const y = y0 + Math.sin(i * 0.42 + t * 1.6 + band * 2) * R * 0.045;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      const flash = Math.max(0, Math.sin(t * 0.7) - 0.92) / 0.08; // brief every ~9s
+      if (flash > 0) {
+        ctx.fillStyle = `rgba(255,236,200,${(flash * 0.35).toFixed(3)})`;
+        ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      }
+      ctx.globalCompositeOperation = "source-over";
     }
     function drawMetalCore(proj, now) {
       const time = state.reduceMotion ? 0 : now * 0.000075;
@@ -3842,6 +4038,12 @@
       }
       ctx.clip();
       if (profile === "metal") drawMetalCore(proj, now);
+      else if (profile === "stratosphere") drawSkyCore(proj, now);
+      else if (profile === "ion-storm") drawStormCore(proj, now);
+      else if (profile === "aurora") drawAuroraCore(proj, now);
+      else if (profile === "galaxy") drawGalaxyCore(proj, now);
+      else if (profile === "gilded-ribbon") drawGildedCore(proj, now);
+      else if (profile === "heat-lightning") drawHeatCore(proj, now);
       ctx.restore();
     }
     /**
@@ -4320,17 +4522,27 @@
       };
     }
 
+    // Each material plants a flag in its own metal or light: a screen-space
+    // sheen (like Mercury's gilded pin) so it reads as a sheen, not a decal,
+    // while the face still rises with the ordinary flag geometry.
+    const FLAG_SHEENS = {
+      mercury: { stops: ["#3f2705", "#8c5a0d", "#f4d77a", "#b67a17", "#4b2b04"], stroke: "#ffe7a0" },
+      stratosphere: { stops: ["#0f4f80", "#3f95d6", "#f4fbff", "#5aa9e2", "#0b3a5c"], stroke: "#ffffff" },
+      "ion-storm": { stops: ["#2c1150", "#7a3fbf", "#f0d8ff", "#9a5be0", "#1a0a33"], stroke: "#e2c4f5" },
+      aurora: { stops: ["#083b3a", "#1f8a7c", "#dcfff6", "#38b39a", "#052625"], stroke: "#b9f0ee" },
+      galaxy: { stops: ["#4a2033", "#b0606f", "#ffe1e4", "#c47b88", "#2a1220"], stroke: "#f0cdd0" },
+      "gilded-ribbon": { stops: ["#3a2205", "#a06f14", "#fff0b8", "#c78a1c", "#2b1804"], stroke: "#f4cf9a" },
+      "heat-lightning": { stops: ["#5a1a10", "#d9622a", "#fff0cf", "#e88a3c", "#3a0e0c"], stroke: "#ffd6a3" },
+    };
     function reflectionFlagStyle(proj, theme) {
-      if (theme.material !== "mercury") {
+      const sheen = FLAG_SHEENS[theme.material];
+      if (!sheen) {
         return {
           fill: theme.tierFlagged || theme.flagFill,
           stroke: theme.flagEdge,
           lineWidth: theme.takeFlagHalo ? 3.4 : 2,
         };
       }
-      // Mercury flags are small pieces of warm metal planted into cool metal.
-      // The highlight is anchored in screen space so it behaves like a sheen,
-      // while the face still rises with the ordinary flag geometry.
       const radius = Math.max(12, Math.sqrt(Math.max(24, proj.area)) * 0.92);
       const shine = ctx.createLinearGradient(
         proj.center.x - radius,
@@ -4338,14 +4550,15 @@
         proj.center.x + radius,
         proj.center.y - radius * 0.72
       );
-      shine.addColorStop(0, "#3f2705");
-      shine.addColorStop(0.22, "#8c5a0d");
-      shine.addColorStop(0.48, "#f4d77a");
-      shine.addColorStop(0.62, "#b67a17");
-      shine.addColorStop(1, "#4b2b04");
+      const [a, b, c, d, e] = sheen.stops;
+      shine.addColorStop(0, a);
+      shine.addColorStop(0.22, b);
+      shine.addColorStop(0.48, c);
+      shine.addColorStop(0.62, d);
+      shine.addColorStop(1, e);
       return {
         fill: shine,
-        stroke: "#ffe7a0",
+        stroke: sheen.stroke,
         lineWidth: 2.15,
       };
     }
@@ -4764,8 +4977,12 @@
       for (const proj of proudFlags) drawTile(proj);
 
       // Raised pass: hover/press on covered or flagged, lifted over its tier.
+      // Reflection themes skip it: the shell is a continuous mirror on the
+      // WebGL canvas, and a lifted, skirted copy of one face tears that
+      // surface on every touch (the ring highlight below still marks it).
       if (
         highlightIdx >= 0 &&
+        !(state.theme && state.theme.reflectionSurface) &&
         tileCanActivate(state.cells[highlightIdx])
       ) {
         const idx = highlightIdx;
@@ -4813,6 +5030,7 @@
 
     function frameNeedsPaint(now) {
       if (state.ambientSpin && !state.reduceMotion) return true;
+      if (focusTween) return true;
       if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
       if (revealAnimBusy(now)) return true;
       if (END_FX.active) return true;

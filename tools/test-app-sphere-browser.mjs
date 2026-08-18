@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Browser contract for the sealed native payload (build/app): the app is the
 // sphere and nothing else. Cold start lands on the board with no prompt and no
-// Games chrome; the corner Menu opens the flower; Undo acts on the first tap;
-// the Theme tile reaches Mercury and its WebGL renderer comes up.
+// Games chrome; the quiet bar (Undo · Reset · Flag · ?) sits at the bottom;
+// the ? sheet carries theme, size, warnings, invert, effects; Undo acts on the
+// first tap; the material themes bring up the WebGL renderer offline.
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -156,143 +157,86 @@ try {
   const cold = await evaluate(`(() => ({
     dialog: !!document.querySelector("dialog[open]"),
     back: !!document.querySelector(".app-back"),
+    bloom: !!document.getElementById("hex-bloom"),
     helpOpen: !document.getElementById("help-overlay").hidden,
-    menuBtn: !!document.querySelector(".is-menu-corner .is-dock"),
-    helpBtn: !!document.querySelector(".hex-bloom-corner:not(.is-menu-corner) .is-dock"),
-    menuBox: (() => { const r = document.querySelector(".is-menu-corner .is-dock").getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), left: Math.round(r.left), bottom: Math.round(innerHeight - r.bottom) }; })(),
+    bar: ["qc-undo", "qc-reset", "qc-flag", "qc-help"].map(id => { const el = document.getElementById(id); if (!el) return null; const r = el.getBoundingClientRect(); return { id, w: Math.round(r.width), h: Math.round(r.height), bottom: Math.round(innerHeight - r.bottom) }; }),
+    stats: (document.querySelector(".qc-stats") || {}).textContent || "",
     sphereR: Math.round(window.HEXSWEEPER_SPHERE_GAME.getSphereScreen().r),
     width: innerWidth,
   }))()`);
   assert.equal(cold.dialog, false, "a dialog opened over root Sphere on cold start");
   assert.equal(cold.back, false, "root Sphere carries a Games pill");
+  assert.equal(cold.bloom, false, "the hex-bloom menu is still mounted");
   assert.equal(cold.helpOpen, false, "help opened uninvited on cold start");
-  assert.equal(cold.menuBtn, true, "no corner Menu button");
-  assert.equal(cold.helpBtn, true, "no corner Help button");
-  assert.ok(cold.menuBox.w >= 44 && cold.menuBox.h >= 44, `corner Menu target is ${cold.menuBox.w}x${cold.menuBox.h}, under 44pt`);
+  assert.ok(cold.bar.every(Boolean), "quiet bar is missing a button");
+  assert.ok(cold.bar.every(b => b.w >= 44 && b.h >= 44), `quiet bar targets: ${JSON.stringify(cold.bar)}`);
+  assert.match(cold.stats, /\d+/, "top readout has no numbers");
   assert.ok(cold.sphereR / cold.width > 0.4, `sphere fills only ${(cold.sphereR * 2 / cold.width * 100).toFixed(0)}% of a portrait phone`);
 
-  // Help modal opens from the corner and closes with Done; touch copy hides key hints.
-  await evaluate('document.querySelector(".hex-bloom-corner:not(.is-menu-corner) .is-dock").click()');
+  // ? opens the settings sheet: gestures, theme grid, size, warnings, invert/effects, Done.
+  await evaluate('document.getElementById("qc-help").click()');
   await waitExpression('!document.getElementById("help-overlay").hidden', "help did not open");
   const help = await evaluate(`(() => {
     const keys = document.querySelector(".help-keys");
     const done = document.getElementById("help-done-btn").getBoundingClientRect();
     const panel = document.getElementById("help-panel").getBoundingClientRect();
-    return { keysHidden: getComputedStyle(keys).display === "none", doneH: Math.round(done.height), panelW: Math.round(panel.width), text: document.getElementById("help-panel").innerText };
+    return { keysHidden: getComputedStyle(keys).display === "none", doneH: Math.round(done.height), panelW: Math.round(panel.width), text: document.getElementById("help-panel").innerText,
+      themes: Array.from(document.querySelectorAll("#help-theme-grid .help-theme")).map(b => b.dataset.theme),
+      sizes: Array.from(document.querySelectorAll("#help-size-grid .help-size")).map(b => b.dataset.size),
+      warns: Array.from(document.querySelectorAll("#help-warn-grid .help-warn")).map(b => b.dataset.warn),
+      invert: !!document.querySelector('#help-controls [data-ctl="invert"]'), effects: !!document.querySelector('#help-controls [data-ctl="effects"]') };
   })()`);
   assert.equal(help.keysHidden, true, "keyboard hints show on a touch device");
   assert.ok(help.doneH >= 44, `Done button is ${help.doneH}px tall`);
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
-  assert.match(help.text, /menu button/i, "help copy does not mention the menu button");
-  assert.match(help.text, /Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning/, "help copy does not name the theme cycle");
-  // Help sheet theme picker: nine swatches, one tap selects.
-  const picker = await evaluate('Array.from(document.querySelectorAll("#help-theme-grid .help-theme")).map(b => b.dataset.theme)');
-  assert.deepEqual(picker, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `help theme picker roster is ${picker.join(",")}`);
+  assert.match(help.text, /bottom left/i, "help copy does not point at the bottom bar");
+  assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
+  assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);
+  assert.deepEqual(help.warns, ["numbers-depth", "numbers-flat", "mono-depth", "yellow-flat"], `warning pills are ${help.warns.join(",")}`);
+  assert.ok(help.invert && help.effects, "invert / effects pills missing from the sheet");
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
-  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "help theme picker did not apply Galaxy");
-  assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "galaxy", "help theme picker did not mark Galaxy pressed");
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "theme grid did not apply Galaxy");
+  assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "galaxy", "theme grid did not mark Galaxy pressed");
+  await evaluate('document.querySelector("#help-warn-grid .help-warn[data-warn=yellow-flat]").click()');
+  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.countStyle + "/" + s.relief + "/" + s.seams; })()'), "yellow/flush/false", "warning pill did not apply");
+  await evaluate('document.querySelector("#help-warn-grid .help-warn[data-warn=numbers-depth]").click()');
+  await evaluate('document.querySelector("#help-size-grid .help-size[data-size=easy]").click()');
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().difficulty'), "easy", "size pill did not start a Small sphere");
+  await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium]").click()');
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=light]").click()');
   await evaluate('document.getElementById("help-done-btn").click()');
   await waitExpression('document.getElementById("help-overlay").hidden', "help did not close");
 
-  // Dig the front face, then Undo through the flower on the FIRST tap of each control.
-  // A finger tap holds for a few dozen ms; a zero-length synthetic tap can
-  // land between the engine's press and release bookkeeping.
-  async function fingerTap(x, y) {
-    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
-    await delay(70);
-    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  }
+  // Dig the front face (mouse: headless SwiftShader drops synthetic touch taps on the canvas), then Undo on the first tap.
   const centre = await evaluate('(() => { const g = window.HEXSWEEPER_SPHERE_GAME.getSphereScreen(); return { x: g.cx, y: g.cy }; })()');
-  // Board digs use mouse events: headless SwiftShader intermittently drops a
-  // synthetic touch tap on the canvas (real fingers do not), and the flat-game
-  // contracts always dug this way. Chrome controls stay on touch below.
   await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
   await delay(60);
   await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
-  if (process.env.HEX_DEBUG) console.log("dbg", JSON.stringify(await evaluate('(() => { const g = window.HEXSWEEPER_SPHERE_GAME; const s = g.getState(); const d = g.getSphereScreen(); const el = document.elementFromPoint(d.cx, d.cy); return { first: s.isFirstClick, over: s.isGameOver, pick: g.pickTile(d.cx, d.cy), r: d.r, cx: d.cx, cy: d.cy, el: el && (el.tagName + "#" + el.id + "." + el.className), chain: el && (() => { const out = []; let n = el; while (n && n !== document.body) { out.push(n.tagName + "#" + n.id + "." + (n.className || "")); n = n.parentElement; } return out.join(" < "); })(), html: el && el.outerHTML.slice(0, 160), phase: document.getElementById("hex-bloom").dataset.phase, helpHidden: document.getElementById("help-overlay").hidden, iw: innerWidth, ih: innerHeight }; })()')));
   await waitExpression('!window.HEXSWEEPER_SPHERE_GAME.getState().isFirstClick', "first dig did not resolve");
   const revealedBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length');
   assert.ok(revealedBefore > 0, "nothing revealed after the dig");
-  const menuBox = await evaluate('(() => { const r = document.querySelector(".is-menu-corner .is-dock").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()');
-  await fingerTap(menuBox.x, menuBox.y);
-  await waitExpression('document.getElementById("hex-bloom").dataset.phase === "open" && !!document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo].shown")', "corner Menu did not open the flower on one tap");
-  // Tiles fold open with a transform; wait for the rise to finish before measuring.
-  await waitExpression('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); return el && el.getBoundingClientRect().width >= 52; })()', "Undo tile never reached full size");
-  const undoBox = await evaluate('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height) }; })()');
-  assert.ok(undoBox.w >= 44 && undoBox.h >= 44, `Undo tile is ${undoBox.w}x${undoBox.h}`);
-  // The menu lives on the sphere: seven projected faces, labelled, the board
-  // sharp (no scrim blur/tint) and still rotatable while open.
-  const face = await evaluate(`(() => {
-    const g = window.HEXSWEEPER_SPHERE_GAME;
-    const d = g.getSphereScreen();
-    const tiles = Array.from(document.querySelectorAll("#hex-bloom-stage .hb-hex"));
-    const inside = tiles.every(e => { const r = e.getBoundingClientRect(); return Math.hypot(r.left + r.width / 2 - d.cx, r.top + r.height / 2 - d.cy) < d.r; });
-    const visibleLabels = tiles.filter(e => { const l = e.querySelector(".hb-label"); return l && !l.classList.contains("sr-visual-hide") && l.textContent.trim(); }).length;
-    const scrim = getComputedStyle(document.querySelector(".hex-bloom-scrim"));
-    return { faceMenu: document.getElementById("hex-bloom").dataset.faceMenu, count: tiles.length, inside, visibleLabels, rotateOnly: !!g.getState().menuRotateOnly, blur: scrim.backdropFilter || scrim.webkitBackdropFilter || "none", bg: scrim.backgroundColor };
-  })()`);
-  assert.equal(face.faceMenu, "true", "menu is not seated on the sphere's faces");
-  assert.equal(face.count, 7, `face menu has ${face.count} tiles, expected 7`);
-  assert.equal(face.inside, true, "a face tile sits outside the sphere");
-  assert.equal(face.visibleLabels, 7, `only ${face.visibleLabels} face tiles carry a visible label`);
-  assert.equal(face.rotateOnly, true, "engine is not in rotate-only mode while the face menu is open");
-  // The sphere came to the menu: zoom is up and the tiles are finger-sized with 11px+ labels.
-  await delay(500);
-  const focus = await evaluate(`(() => {
-    const tiles = Array.from(document.querySelectorAll("#hex-bloom-stage .hb-hex"));
-    return { zoom: window.HEXSWEEPER_SPHERE_GAME.getState().zoomFactor, minW: Math.min(...tiles.map(e => e.getBoundingClientRect().width)), minFont: Math.min(...tiles.map(e => parseFloat(getComputedStyle(e.querySelector(".hb-label")).fontSize))) };
-  })()`);
-  assert.ok(focus.zoom > 1.2, `menu did not zoom the sphere in (zoom ${focus.zoom.toFixed(2)})`);
-  assert.ok(focus.minW >= 74, `smallest face tile is ${Math.round(focus.minW)}px after focus`);
-  assert.ok(focus.minFont >= 11, `face labels are ${focus.minFont}px`);
-  assert.ok(face.blur === "none" || face.blur === "", `scrim still blurs the board: ${face.blur}`);
-  assert.equal(face.bg, "rgba(0, 0, 0, 0)", `scrim still tints the board: ${face.bg}`);
-  // Drag the board with the menu open: it rotates, nothing digs, menu stays.
-  const revealedBeforeDrag = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length');
-  const rotBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
-  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x - 110, y: centre.y + 120, button: "left", clickCount: 1 });
-  for (let i = 1; i <= 6; i++) { await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: centre.x - 110 + i * 10, y: centre.y + 120, button: "left" }); await delay(25); }
-  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x - 50, y: centre.y + 120, button: "left", clickCount: 1 });
-  await delay(400);
-  assert.notEqual(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY'), rotBefore, "dragging with the menu open did not rotate the sphere");
-  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length'), revealedBeforeDrag, "dragging with the menu open dug a face");
-  assert.equal(await evaluate('document.getElementById("hex-bloom").dataset.phase'), "open", "menu closed on a drag");
-  await evaluate('document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]").click()');
-  await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length === 0', "Undo did not act on the first activation");
-  // The flower stays open after Undo (only Reset folds it); the corner button closes it.
-  await evaluate('document.querySelector(".is-menu-corner .is-dock").click()');
-  await waitExpression('document.getElementById("hex-bloom").dataset.phase === "closed"', "corner Menu did not close the flower");
-  await delay(200);
-
-  // Theme tile opens the fan: nine swatches on ring two; a tap applies and previews.
-  await evaluate('document.querySelector(".is-menu-corner .is-dock").click()');
-  await waitExpression('document.getElementById("hex-bloom").dataset.phase === "open" && !!document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]")', "flower did not reopen");
-  await delay(600);
-  await evaluate('document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]").click()');
-  const fan = await waitExpression(`(() => {
-    const sw = Array.from(document.querySelectorAll("#hex-bloom-stage .hb-face-swatch"));
-    if (sw.length < 9) return null;
-    return { themes: sw.map(e => e.dataset.theme), minW: Math.min(...sw.map(e => e.getBoundingClientRect().width)), labels: sw.filter(e => e.querySelector(".hb-label") && e.querySelector(".hb-label").textContent.trim()).length };
-  })()`, "theme fan did not open with nine swatches");
-  await delay(900); // let the swatches unfold and the fan zoom settle
-  const fanSizes = await evaluate('Array.from(document.querySelectorAll("#hex-bloom-stage .hb-face-swatch")).map(e => e.getBoundingClientRect().width).sort((a, b) => a - b)');
-  fan.minW = fanSizes[0];
-  fan.medianW = fanSizes[Math.floor(fanSizes.length / 2)];
-  assert.ok(fan.medianW >= 56, `median fan swatch is ${Math.round(fan.medianW)}px`);
-  assert.deepEqual(fan.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `fan order was ${fan.themes.join(",")}`);
-  assert.ok(fan.minW >= 40, `smallest (rim-foreshortened) fan swatch is ${Math.round(fan.minW)}px`);
-  assert.equal(fan.labels, 9, "fan swatches are missing labels");
-  await evaluate('document.querySelector("#hex-bloom-stage .hb-face-swatch[data-theme=stratosphere]").click()');
+  const undoBox = await evaluate('(() => { const r = document.getElementById("qc-undo").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()');
+  await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: undoBox.x, y: undoBox.y }] });
+  await delay(70);
+  await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length === 0', "Undo did not act on the first tap");
+  // Flag mode: the bar flag arms red; a board tap flags instead of digging.
+  await evaluate('document.getElementById("qc-flag").click()');
   await delay(300);
-  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "stratosphere", "fan swatch did not apply Stratosphere");
-  assert.equal(await evaluate('document.querySelector("#hex-bloom-stage .hb-face-swatch.is-chosen").dataset.theme'), "stratosphere", "fan did not mark Stratosphere chosen");
-  assert.equal(await evaluate('document.getElementById("hex-bloom").dataset.phase'), "open", "fan pick closed the menu");
-  await evaluate('document.querySelector(".is-menu-corner .is-dock").click()');
-  await waitExpression('document.getElementById("hex-bloom").dataset.phase === "closed"', "menu did not close after the fan");
-  await delay(600);
-  const zoomBack = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().zoomFactor');
-  assert.ok(Math.abs(zoomBack - 0.72) < 0.02, `zoom did not restore after close (${zoomBack.toFixed(2)})`);
+  assert.equal(await evaluate('document.getElementById("qc-flag").classList.contains("is-armed") && document.getElementById("qc-flag").getAttribute("aria-pressed") === "true"'), true, "flag button did not arm");
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().flagMode'), true, "flag mode did not engage");
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await delay(60);
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+  await delay(300);
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().flagsPlaced'), 1, "board tap in flag mode did not plant a flag");
+  await evaluate('document.getElementById("qc-flag").click()');
+  await delay(200);
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().flagMode'), false, "flag mode did not disarm");
+  await evaluate('document.getElementById("qc-reset").click()');
+  await delay(300);
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().flagsPlaced'), 0, "New sphere did not reset the board");
+
   // Textured materials: the sealed data URI must actually load into the renderer.
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "ion-storm")); void 0;');
   const storm = await waitExpression(`(() => {

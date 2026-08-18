@@ -51,7 +51,8 @@ expect(!appRoot.includes("resume-gate"), "app root still carries a resume prompt
 expect(!appRoot.includes('class="app-back"'), "app root grew a Games pill");
 expect(!existsSync(join(root, "build/app/games")), "app payload still ships games/ (launcher, Infinite, Classic)");
 expect(appRoot.includes('id: "mercury"') && appRoot.includes("global.MirrorMaterial = {"), "app root is missing Mercury or its renderer");
-expect(appRoot.includes('FLOWER_THEMES = [\n      "light",\n      "dark",\n      "stratosphere",\n      "mercury",\n      "ion-storm",\n      "aurora",\n      "galaxy",\n      "gilded-ribbon",\n      "heat-lightning",\n    ]'), "flower theme cycle is not the nine-theme roster");
+expect(appRoot.includes("initQuietChrome") && !appRoot.includes("initHexBloom("), "app root does not boot the quiet chrome");
+expect(appRoot.includes('id="help-theme-grid"') && appRoot.includes('id="help-size-grid"') && appRoot.includes('id="help-warn-grid"'), "settings sheet is missing theme / size / warnings groups");
 expect(appRoot.includes("HEXSWEEPER_REFLECTION_TEXTURES = (function(){") && appRoot.includes("data:image/webp;base64,"), "app root does not seal the reflection textures");
 expect(!appRoot.includes("HEXSWEEPER_REFLECTION_TEXTURE_BASE = "), "app root still assigns a texture URL base");
 expect(rootPage.includes('HEXSWEEPER_REFLECTION_TEXTURE_BASE = "sphere/"'), "web root does not point reflection textures at sphere/");

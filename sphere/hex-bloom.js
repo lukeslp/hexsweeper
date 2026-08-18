@@ -2265,6 +2265,7 @@
       const cx = patch.center.center.x;
       const cy = patch.center.center.y;
       const projected = out
+        .filter((k) => tiles[k] && tiles[k].boundary && tiles[k].boundary.length === 6)
         .map((k) => Object.assign(game.projectTile(tiles[k], st.rotY, st.rotX), { index: k }))
         .filter((f) => f.z > 0.12)
         .sort((a, b) => {
