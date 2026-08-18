@@ -11,7 +11,7 @@ without asking. The fixed chrome is a quiet bar: **Undo · New sphere · Flag**
 seconds readout at the top. Everything else — theme (Light · Dark ·
 Stratosphere · Mercury · Ion Storm · Aurora · Galaxy · Gilded Ribbon · Heat
 Lightning), board size with your best time per size, drag inversion, effects,
-the tutorial — lives behind **?**. Hold the mine count and water rises through
+the tutorial — lives behind **?**, on four tabs (Play · Themes · Board · Settings). Hold the mine count and water rises through
 it: keep holding and you drop into the **Water Wheel**, a hidden second sphere
 (`www/wheel.html`) where armed mines have to be spun beneath the waterline;
 its Sphere pill brings you back and the run resumes. Infinite and Classic are

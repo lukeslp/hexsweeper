@@ -25,10 +25,11 @@ and any network dependency is a defect.
 | 1c′ | Textured materials | Stratosphere shows the drifting sky on the mirror (light chrome, dark glass wells); Ion Storm shows the storm cloud trailing the rotation; Galaxy, Gilded Ribbon, Heat Lightning show their textures; Aurora its curtains — all offline, in airplane mode | |
 | 1d | Mercury | Mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
 | 2 | Sphere size | On a phone in portrait the sphere spans roughly 85% of the width | |
-| 2a | Mercury clears | On Mercury, clear a face and keep playing: brushed-steel interior turns with the shell, the sphere keeps answering drag and tap (build 51 froze here) | |
+| 2a | Mercury clears | On Mercury, clear a face and keep playing: liquid-metal wells (the build-50 look), sphere keeps answering drag and tap (build 51 froze here; build 52 had the wrong cores) | |
+| 2d | Tabbed sheet | ? opens on the last-used tab; Play · Themes · Board · Settings each ≥ 44 pt; one panel at a time; Done/× on every tab | |
 | 2b | Best times | Win an XS sphere: banner reads *First clear at this size*; ? shows *Best …* under XS; a slower win keeps the old best | |
 | 2c | Water Wheel | Hold the mine count at the top: water rises through it; keep holding → the Water Wheel opens with its own tutorial and a Sphere pill top-left clear of the status bar; Sphere returns to the resumed run | |
-| 3 | Settings sheet | ? opens wide enough to read (≥340 pt on a phone), no keyboard hints; Theme grid (nine), Board size (XS–XL, new sphere on change), Invert, Effects all apply live and read pressed; no Warnings group (themes own depth/seams/marks: Light/Dark depth+seams, metals depth no seams, hollow shells flush); Done ≥ 44 pt; "Show the tutorial again" reopens the tutorial; closes with × / Done / outside tap and never blocks the board afterwards | |
+| 3 | Settings sheet | ? opens wide enough to read (≥340 pt on a phone), no keyboard hints; Theme grid (nine, Themes tab), Board size (XS–XL, new sphere on change, Board tab), Invert, Effects (Settings tab) all apply live and read pressed; no Warnings group (themes own depth/seams/marks: Light/Dark depth+seams, mirror materials depth no seams); Done ≥ 44 pt; "Show the tutorial again" reopens the tutorial; closes with × / Done / outside tap and never blocks the board afterwards | |
 | 6 | Sphere render | Sphere is centred and fully visible; no clipping at any edge | |
 | 7 | Sphere dig | Single tap reveals the intended tile — not a neighbour | |
 | 8 | Sphere flag | Long-press flags; flag stands proud of the shell | |

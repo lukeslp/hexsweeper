@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 52 is the latest uploaded TestFlight build, attached to 1.0, and the
+this same record. Build 53 is the latest uploaded TestFlight build, attached to 1.0, and the
 checked-in project matches it.
 
 ## Archive → TestFlight
@@ -57,12 +57,12 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-Current Android identity is `versionCode 7`, `versionName 1.0-test`, targeting
+Current Android identity is `versionCode 8`, `versionName 1.0-test`, targeting
 API 36 with minimum API 24. The direct test APK is debug-signed with the same
-certificate as builds 1–6 so testers can upgrade in place. Build 7 (2026-08-18,
-payload `12f9cec`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
+certificate as builds 1–7 so testers can upgrade in place. Build 8 (2026-08-18,
+payload `f32a0b2`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
 (APK served from `/home/coolhand/html/downloads/android/hexsweeper/` on Drummer;
-the page keeps `index.html.bak-before-build7`). The release AAB remains
+the page keeps `index.html.bak-before-build8`). The release AAB remains
 deliberately unsigned. Create and
 retain the Play signing key outside this repository, then use Android Studio's
 **Build → Generate Signed App Bundle** for the first store upload. Do not commit
@@ -163,7 +163,14 @@ Done (updated 2026-08-11, through the App Store Connect API):
       the engine iOS runs; best times per board size (sheet + win banner);
       the Water Wheel ships as a hidden second sphere (`www/wheel.html`, hold
       the mine count) — the payload is now three files (vendored from
-      hexsweeper `12f9cec`)
+      hexsweeper `12f9cec`). **On device Mercury's cleared faces had lost
+      their liquid-metal wells** — the interiors pass had replaced every
+      mirror core, not just fixed the crash.
+- [x] Build 53 uploaded and attached to 1.0 on 2026-08-18: theme rendering
+      rolled back to build 50's dig cores (Mercury liquid metal, sky glass,
+      plasma, curtains, star field, gold, magma — the reference); the ?
+      sheet is tabbed Play · Themes · Board · Settings (vendored from
+      hexsweeper `f32a0b2`)
 
 Still owed:
 
