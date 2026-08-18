@@ -214,17 +214,34 @@ try {
   await waitExpression('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); return el && el.getBoundingClientRect().width >= 52; })()', "Undo tile never reached full size");
   const undoBox = await evaluate('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height) }; })()');
   assert.ok(undoBox.w >= 44 && undoBox.h >= 44, `Undo tile is ${undoBox.w}x${undoBox.h}`);
-  // The flower sits off the sphere on a portrait phone (below it), and the
-  // scrim no longer fogs the board.
-  const placement = await evaluate(`(() => {
-    const d = window.HEXSWEEPER_SPHERE_GAME.getSphereScreen();
-    const tops = Array.from(document.querySelectorAll("#hex-bloom-stage .hb-hex")).map(e => e.getBoundingClientRect().top);
+  // The menu lives on the sphere: seven projected faces, labelled, the board
+  // sharp (no scrim blur/tint) and still rotatable while open.
+  const face = await evaluate(`(() => {
+    const g = window.HEXSWEEPER_SPHERE_GAME;
+    const d = g.getSphereScreen();
+    const tiles = Array.from(document.querySelectorAll("#hex-bloom-stage .hb-hex"));
+    const inside = tiles.every(e => { const r = e.getBoundingClientRect(); return Math.hypot(r.left + r.width / 2 - d.cx, r.top + r.height / 2 - d.cy) < d.r; });
+    const visibleLabels = tiles.filter(e => { const l = e.querySelector(".hb-label"); return l && !l.classList.contains("sr-visual-hide") && l.textContent.trim(); }).length;
     const scrim = getComputedStyle(document.querySelector(".hex-bloom-scrim"));
-    return { flowerTop: Math.min(...tops), sphereBottom: d.cy + d.r, blur: scrim.backdropFilter || scrim.webkitBackdropFilter || "none", bg: scrim.backgroundColor };
+    return { faceMenu: document.getElementById("hex-bloom").dataset.faceMenu, count: tiles.length, inside, visibleLabels, rotateOnly: !!g.getState().menuRotateOnly, blur: scrim.backdropFilter || scrim.webkitBackdropFilter || "none", bg: scrim.backgroundColor };
   })()`);
-  assert.ok(placement.flowerTop >= placement.sphereBottom - 4, `flower (top ${Math.round(placement.flowerTop)}) overlaps the sphere (bottom ${Math.round(placement.sphereBottom)})`);
-  assert.ok(placement.blur === "none" || placement.blur === "", `scrim still blurs the board: ${placement.blur}`);
-  assert.equal(placement.bg, "rgba(0, 0, 0, 0)", `scrim still tints the board: ${placement.bg}`);
+  assert.equal(face.faceMenu, "true", "menu is not seated on the sphere's faces");
+  assert.equal(face.count, 7, `face menu has ${face.count} tiles, expected 7`);
+  assert.equal(face.inside, true, "a face tile sits outside the sphere");
+  assert.equal(face.visibleLabels, 7, `only ${face.visibleLabels} face tiles carry a visible label`);
+  assert.equal(face.rotateOnly, true, "engine is not in rotate-only mode while the face menu is open");
+  assert.ok(face.blur === "none" || face.blur === "", `scrim still blurs the board: ${face.blur}`);
+  assert.equal(face.bg, "rgba(0, 0, 0, 0)", `scrim still tints the board: ${face.bg}`);
+  // Drag the board with the menu open: it rotates, nothing digs, menu stays.
+  const revealedBeforeDrag = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length');
+  const rotBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x - 110, y: centre.y + 120, button: "left", clickCount: 1 });
+  for (let i = 1; i <= 6; i++) { await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: centre.x - 110 + i * 10, y: centre.y + 120, button: "left" }); await delay(25); }
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x - 50, y: centre.y + 120, button: "left", clickCount: 1 });
+  await delay(400);
+  assert.notEqual(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY'), rotBefore, "dragging with the menu open did not rotate the sphere");
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length'), revealedBeforeDrag, "dragging with the menu open dug a face");
+  assert.equal(await evaluate('document.getElementById("hex-bloom").dataset.phase'), "open", "menu closed on a drag");
   await evaluate('document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]").click()');
   await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length === 0', "Undo did not act on the first activation");
   // The flower stays open after Undo (only Reset folds it); the corner button closes it.

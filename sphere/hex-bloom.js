@@ -145,6 +145,25 @@
   const DEFAULT_BLOOM = DOCK_MODE === "default";
   const DOCK_CENTER = DOCK_MODE === "center" || DOCK_CONTEXT;
   const SHARED_MENU = FIXED_CENTER || DEFAULT_BLOOM;
+  // Production: the flower lives ON the sphere — seven real front faces,
+  // projected, labelled, sized up so tiles never fall under a fingertip, with
+  // rotation kept live while open. Falls back to the off-sphere flower when
+  // no clean seven-hex patch faces the camera.
+  const FACE_MENU = FIXED_CENTER;
+  const FACE_MIN_TILE = 62; // CSS px across a tile before the patch is scaled up
+  const FACE_MAX_SCALE = 6; // XL boards have ~11px faces; the cluster still reads as on-sphere
+  const FACE_RESEAT_Z = 0.6; // patch turned this far from the camera → re-seat on the front
+  const FACE_SHORT_THEME = {
+    light: "Light",
+    dark: "Dark",
+    stratosphere: "Sky",
+    mercury: "Mercury",
+    "ion-storm": "Storm",
+    aurora: "Aurora",
+    galaxy: "Galaxy",
+    "gilded-ribbon": "Ribbon",
+    "heat-lightning": "Heat",
+  };
   /**
    * ?dome=1 — the flower seated on a convex sphere segment: center tile at
    * the front of the cap, ring tiles pulled to chord positions and tilted to
@@ -1507,6 +1526,9 @@
     let dockBtn = null; // center menu / close
     let dockResetBtn = null;
     let dockFlagBtn = null;
+    let facePatchIndices = null; // seven tile indices the face menu inhabits
+    let faceActions = []; // { el, faceIndex } for live relayout on rotation
+    let faceMenuLive = false; // true while the current open menu is on the sphere
     let dockHelpBtn = null; // corner seat, lower right
     let cornerMenuBtn = null; // corner seat, lower left (center-flower variants)
     let centerActionBtn = null;
@@ -1624,6 +1646,8 @@
       hideTooltip();
       stage.querySelectorAll(".hb-hex").forEach((n) => n.remove());
       centerActionBtn = null;
+      facePatchIndices = null;
+      faceActions = [];
     }
 
     function removeSubmenu() {
@@ -1834,7 +1858,10 @@
         }
         // Size keeps a visible letter badge; other primaries are icon-only
         if (el._labelEl) {
-          if (SHARED_MENU) {
+          if (el.classList.contains("hb-face-action")) {
+            // Face tiles carry a visible short label.
+            showFaceLabel(el, faceLabel(cat));
+          } else if (SHARED_MENU) {
             el._labelEl.textContent = lab;
             el._labelEl.classList.add("sr-visual-hide", "hb-label-sr");
             el.classList.remove("has-badge");
@@ -1882,6 +1909,14 @@
         clearActive();
         cat.cycle();
         refreshPrimaryLabels();
+        if (faceMenuLive && cat.id === "size") {
+          // A new board has new faces; re-seat the menu on the fresh front patch.
+          requestAnimationFrame(() => {
+            if (state.phase !== "open") return;
+            renderBloom({ petals: true });
+            bloomPetals();
+          });
+        }
         return;
       }
 
@@ -2017,28 +2052,8 @@
       paintDock();
     }
 
-    function renderBloom(options) {
-      const withPetals = !options || options.petals !== false;
-      clearStage();
-      setRiseVar();
-      const { HEX } = tileMetrics();
-      const { cx, cy } = centerXY();
-      const cats = categories();
-
-      // Center is the activation node (dock menu). When open, dock menu is the
-      // close control — no separate traveler hex (avoids double × and rise).
-      if (!withPetals) return;
-
-      cats.forEach((cat, i) => {
-        const d =
-          (FIXED_CENTER
-            ? FIXED_CENTER_SLOTS[i]
-            : DOCK_CONTEXT
-              ? CENTER_SLOTS[i]
-              : DEFAULT_BLOOM
-                ? DEFAULT_BLOOM_SLOTS[i]
-              : PRIMARY_SLOTS[i]) || DIRECTIONS[i];
-        const p = hexToPixel(d.q, d.r, HEX);
+    /** One flower primary — shared by the ring layout and the face menu. */
+    function makePrimaryTile(cat, i, extraCls) {
         const lab = typeof cat.label === "function" ? cat.label() : cat.label;
         const iconName =
           typeof cat.icon === "function" ? cat.icon() : cat.icon;
@@ -2049,7 +2064,9 @@
           DOCK_CENTER && cat.id === "flagmode" && !!game.getState().flagMode;
         const el = makeHex({
           cls:
-            "is-primary cat-" +
+            "is-primary " +
+            (extraCls || "") +
+            " cat-" +
             cat.id +
             (state.active === cat.id ? " is-active" : "") +
             (showBadge ? " has-badge" : "") +
@@ -2081,6 +2098,223 @@
           el.removeAttribute("aria-haspopup");
           el.setAttribute("aria-expanded", "false");
         }
+        el.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          ignoreOutsideUntil = Date.now() + 200;
+          toggleCategory(cat.id, i);
+        });
+        if (hoverBloomEnabled && cat.hoverSub) {
+          el.addEventListener("pointerenter", () => {
+            clearTimeout(hoverCloseTimer);
+            if (state.active !== cat.id) toggleCategory(cat.id, i);
+          });
+        }
+      return el;
+    }
+
+    // ---- Face menu: the flower on the sphere's own faces ----
+
+    function faceLabel(cat) {
+      if (cat.id === "theme") {
+        const t = currentThemeDef();
+        return (t && (FACE_SHORT_THEME[t.id] || t.name)) || "Theme";
+      }
+      if (cat.id === "size") return "Size " + currentSize();
+      if (cat.id === "warnings") return "Warn";
+      if (cat.id === "flagmode") return "Flag";
+      if (cat.id === "invert") return "Invert";
+      if (cat.id === "undo") return "Undo";
+      const lab = typeof cat.label === "function" ? cat.label() : cat.label;
+      return String(lab || cat.id);
+    }
+
+    function showFaceLabel(el, text) {
+      if (!el._labelEl) return;
+      el._labelEl.textContent = text;
+      el._labelEl.classList.remove("sr-visual-hide", "hb-label-sr");
+      el._labelEl.classList.add("hb-face-label");
+    }
+
+    function currentFacePatch() {
+      if (typeof game.getMenuPatch !== "function") return null;
+      return facePatchIndices
+        ? game.getMenuPatch({ indices: facePatchIndices })
+        : game.getMenuPatch();
+    }
+
+    /** Ring faces matched to the fixed seats by angle, so Theme is always NW. */
+    function orderProjectedRing(patch) {
+      const available = patch.ring.slice();
+      return FIXED_CENTER_SLOTS.map((slot) => {
+        const target = hexToPixel(slot.q, slot.r, 1);
+        const targetAngle = Math.atan2(target.y, target.x);
+        let bestIndex = 0;
+        let bestDelta = Infinity;
+        available.forEach((face, index) => {
+          const angle = Math.atan2(
+            face.center.y - patch.center.center.y,
+            face.center.x - patch.center.center.x
+          );
+          const delta = Math.abs(
+            Math.atan2(Math.sin(angle - targetAngle), Math.cos(angle - targetAngle))
+          );
+          if (delta < bestDelta) {
+            bestDelta = delta;
+            bestIndex = index;
+          }
+        });
+        return available.splice(bestIndex, 1)[0];
+      });
+    }
+
+    /**
+     * Scale factor that keeps a face tile at least FACE_MIN_TILE across. The
+     * whole patch scales about the centre face's centroid — a similarity
+     * transform — so seven projected polygons stay a seamless cluster while
+     * growing past their faces on large boards.
+     */
+    function facePatchScale(patch) {
+      const b = patch.center.boundary;
+      const xs = b.map((pt) => pt.x);
+      const width = Math.max(...xs) - Math.min(...xs);
+      if (!width) return 1;
+      return Math.max(1, Math.min(FACE_MAX_SCALE, FACE_MIN_TILE / width));
+    }
+
+    function placeProjectedFace(el, face, patch, canvasRect, scale) {
+      const ox = patch.center.center.x;
+      const oy = patch.center.center.y;
+      const points = face.boundary.map((point) => ({
+        x: canvasRect.left + ox + (point.x - ox) * scale,
+        y: canvasRect.top + oy + (point.y - oy) * scale,
+      }));
+      const minX = Math.min(...points.map((point) => point.x));
+      const maxX = Math.max(...points.map((point) => point.x));
+      const minY = Math.min(...points.map((point) => point.y));
+      const maxY = Math.max(...points.map((point) => point.y));
+      const width = Math.max(1, maxX - minX);
+      const height = Math.max(1, maxY - minY);
+      const polygon = points
+        .map(
+          (point) =>
+            (((point.x - minX) / width) * 100).toFixed(2) +
+            "% " +
+            (((point.y - minY) / height) * 100).toFixed(2) +
+            "%"
+        )
+        .join(",");
+      el.style.left = minX.toFixed(1) + "px";
+      el.style.top = minY.toFixed(1) + "px";
+      el.style.bottom = "auto";
+      el.style.width = width.toFixed(1) + "px";
+      el.style.height = height.toFixed(1) + "px";
+      el.style.setProperty("--face-poly", "polygon(" + polygon + ")");
+      el.style.setProperty("--face-icon", Math.max(18, Math.min(34, height * 0.34)).toFixed(1) + "px");
+      el.style.setProperty("--face-label", Math.max(9, Math.min(12, height * 0.15)).toFixed(1) + "px");
+    }
+
+    function layoutFaceMenu() {
+      if (!faceMenuLive || !facePatchIndices || !faceActions.length) return;
+      const patch = currentFacePatch();
+      const canvas = document.getElementById("gameCanvas");
+      if (!canvas) return;
+      if (!patch) {
+        // The patch rotated away: rebuild on a fresh front patch.
+        renderBloom({ petals: true });
+        bloomPetals();
+        return;
+      }
+      if (patch.center.z < FACE_RESEAT_Z) {
+        // Dragged toward the rim: the tiles would foreshorten into slivers.
+        facePatchIndices = null;
+        renderBloom({ petals: true });
+        bloomPetals();
+        return;
+      }
+      const canvasRect = canvas.getBoundingClientRect();
+      const scale = facePatchScale(patch);
+      const faces = new Map(
+        [patch.center].concat(patch.ring).map((face) => [face.index, face])
+      );
+      faceActions.forEach((action) => {
+        const face = faces.get(action.faceIndex);
+        if (face) placeProjectedFace(action.el, face, patch, canvasRect, scale);
+      });
+    }
+
+    function renderFaceMenu(cats) {
+      const patch = currentFacePatch();
+      const canvas = document.getElementById("gameCanvas");
+      if (!patch || !canvas) return false;
+      facePatchIndices = patch.indices.slice();
+      const canvasRect = canvas.getBoundingClientRect();
+      const scale = facePatchScale(patch);
+      const ring = orderProjectedRing(patch);
+      ring.forEach((face, index) => {
+        const cat = cats[index];
+        if (!cat) return;
+        const el = makePrimaryTile(cat, index, "hb-face-action");
+        showFaceLabel(el, faceLabel(cat));
+        el.dataset.faceIndex = String(face.index);
+        placeProjectedFace(el, face, patch, canvasRect, scale);
+        el.classList.add("folded");
+        el.dataset.delay = String(45 + index * 38);
+        faceActions.push({ el, faceIndex: face.index });
+        stage.appendChild(el);
+      });
+      const reset = makeHex({
+        cls: "is-primary is-center-reset hb-face-action hb-face-center",
+        label: "Reset",
+        icon: "reset",
+        iconOnly: true,
+        ariaLabel: "Restart game",
+      });
+      showFaceLabel(reset, "Reset");
+      reset.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        doReset();
+      });
+      reset.dataset.faceIndex = String(patch.center.index);
+      placeProjectedFace(reset, patch.center, patch, canvasRect, scale);
+      reset.classList.add("folded");
+      reset.dataset.delay = "0";
+      centerActionBtn = reset;
+      faceActions.push({ el: reset, faceIndex: patch.center.index });
+      stage.insertBefore(reset, stage.firstChild);
+      return true;
+    }
+
+    function renderBloom(options) {
+      const withPetals = !options || options.petals !== false;
+      clearStage();
+      setRiseVar();
+      const { HEX } = tileMetrics();
+      const { cx, cy } = centerXY();
+      const cats = categories();
+
+      // Center is the activation node (dock menu). When open, dock menu is the
+      // close control — no separate traveler hex (avoids double × and rise).
+      if (!withPetals) return;
+
+      if (FACE_MENU) {
+        const onSphere = renderFaceMenu(cats);
+        setFaceMenuLive(onSphere);
+        if (onSphere) return;
+      }
+
+      cats.forEach((cat, i) => {
+        const d =
+          (FIXED_CENTER
+            ? FIXED_CENTER_SLOTS[i]
+            : DOCK_CONTEXT
+              ? CENTER_SLOTS[i]
+              : DEFAULT_BLOOM
+                ? DEFAULT_BLOOM_SLOTS[i]
+              : PRIMARY_SLOTS[i]) || DIRECTIONS[i];
+        const p = hexToPixel(d.q, d.r, HEX);
+        const el = makePrimaryTile(cat, i);
         const seat = DOME
           ? DOCK_CENTER
             ? domeSeat(p.x, p.y, HEX)
@@ -2101,18 +2335,6 @@
                 )
             )
           : String(i * 26);
-        el.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          ignoreOutsideUntil = Date.now() + 200;
-          toggleCategory(cat.id, i);
-        });
-        if (hoverBloomEnabled && cat.hoverSub) {
-          el.addEventListener("pointerenter", () => {
-            clearTimeout(hoverCloseTimer);
-            if (state.active !== cat.id) toggleCategory(cat.id, i);
-          });
-        }
         stage.appendChild(el);
       });
 
@@ -2166,6 +2388,22 @@
       if (canvas) {
         if (on) canvas.setAttribute("inert", "");
         else canvas.removeAttribute("inert");
+      }
+    }
+
+    /**
+     * On-sphere menu: the board stays live for rotation (drag / arrow keys),
+     * with dig, flag, long-press, pinch and wheel suppressed by the engine's
+     * rotate-only mode. A stationary background tap still closes the menu.
+     */
+    function setFaceMenuLive(on) {
+      faceMenuLive = !!on;
+      root.dataset.faceMenu = faceMenuLive ? "true" : "false";
+      document.body.classList.toggle("hex-bloom-rotatable", faceMenuLive);
+      stage.setAttribute("aria-modal", faceMenuLive ? "false" : "true");
+      setCanvasInert(!faceMenuLive);
+      if (typeof game.setMenuInteraction === "function") {
+        game.setMenuInteraction(faceMenuLive);
       }
     }
 
@@ -2292,6 +2530,7 @@
         statsTimer = null;
         hub.dataset.open = "false";
         hub.hidden = true;
+        setFaceMenuLive(false);
         setCanvasInert(false);
         if (typeof game.resumeTimer === "function") game.resumeTimer();
         announce("Menu closed");
@@ -2738,6 +2977,21 @@
       window.addEventListener("touchmove", onMove, { passive: true });
       window.addEventListener("touchend", onUp, { passive: true });
     }
+
+    // On-sphere menu: follow the board when it rotates or resizes; a still
+    // tap on the board (not on a tile) closes, matching the scrim.
+    const menuCanvas = document.getElementById("gameCanvas");
+    if (menuCanvas) {
+      menuCanvas.addEventListener("hexsweeper:rotation", () => {
+        if (faceMenuLive && state.phase === "open") layoutFaceMenu();
+      });
+      menuCanvas.addEventListener("hexsweeper:menu-background-tap", () => {
+        if (faceMenuLive && state.phase === "open" && Date.now() >= ignoreOutsideUntil) collapse();
+      });
+    }
+    window.addEventListener("resize", () => {
+      if (faceMenuLive && state.phase === "open") layoutFaceMenu();
+    });
 
     // Boot
     setPhase("closed");

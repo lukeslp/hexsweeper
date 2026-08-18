@@ -996,6 +996,76 @@ body.hex-bloom-ui .legacy-hud {
 body.hex-bloom-open .canvas-container {
   pointer-events: none;
 }
+/* On-sphere menu: the board stays live for rotation; the engine's rotate-only
+   mode blocks digs, and a still tap on the board closes the menu. */
+body.hex-bloom-open.hex-bloom-rotatable .canvas-container {
+  pointer-events: auto;
+}
+.hex-bloom[data-face-menu="true"][data-open="true"] .hex-bloom-scrim {
+  pointer-events: none;
+}
+
+/* Face menu tiles are the renderer's real projected polygons (scaled about
+   the patch centre so they never fall under a fingertip): each control is
+   the size, skew and neighbour seam of the face it sits on. Glyph above a
+   short label; both scale with the face. */
+.hex-bloom[data-face-menu="true"] .hb-face-action {
+  margin: 0;
+  clip-path: var(--face-poly);
+  background: color-mix(in srgb, var(--hb-ink) 78%, transparent);
+  transform-origin: 50% 50% !important;
+  align-content: center;
+  row-gap: 1px;
+  transition:
+    transform 210ms cubic-bezier(0.22, 1, 0.3, 1),
+    opacity 160ms ease,
+    filter 140ms ease;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action::before {
+  inset: 1.5px;
+  clip-path: var(--face-poly);
+  background: color-mix(in srgb, var(--hb-paper) 94%, transparent);
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action .hb-glyph,
+.hex-bloom[data-face-menu="true"] .hb-face-action .hb-icon {
+  width: var(--face-icon, 26px);
+  height: var(--face-icon, 26px);
+  max-width: none;
+  max-height: none;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action .hb-face-label {
+  font-size: var(--face-label, 10px);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  max-width: 92%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  opacity: 0.92;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action.is-theme-swatch .hb-theme-dot {
+  width: calc(var(--face-icon, 26px) * 0.62);
+  height: calc(var(--face-icon, 26px) * 0.62);
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action.folded {
+  transform: scale(0.58);
+  opacity: 0;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action.shown {
+  transform: scale(0.985);
+  opacity: 0.97;
+  filter: drop-shadow(0 3px 5px color-mix(in srgb, var(--hb-ink) 28%, transparent));
+}
+.hex-bloom[data-face-menu="true"] .hb-face-action.shown:hover,
+.hex-bloom[data-face-menu="true"] .hb-face-action.shown:focus-visible {
+  transform: scale(1.05);
+  opacity: 1;
+  z-index: 140 !important;
+}
+.hex-bloom[data-face-menu="true"] .hb-face-center.shown {
+  filter: drop-shadow(0 5px 8px color-mix(in srgb, var(--hb-ink) 38%, transparent));
+}
 
 @media (prefers-reduced-motion: reduce) {
   .hb-hex,

@@ -1138,6 +1138,9 @@
       endFx: null,
       camShake: 0,
       ambientSpin: !effectsReduced(),
+      // Chrome that lives on the sphere (face menu) keeps rotation live while
+      // it is open but must not dig, flag, long-press, pinch, or wheel-zoom.
+      menuRotateOnly: false,
       lastFrameAt: 0,
       countStyle: storedCountStyle,
       relief:
@@ -1991,6 +1994,88 @@
 
     function invalidateProjection() {
       state.projectedCache = null;
+    }
+
+    function setMenuInteraction(active) {
+      state.menuRotateOnly = !!active;
+      state.hovered = -1;
+      state.pressed = -1;
+      if (!state.menuRotateOnly) return;
+      clearTimeout(longPressTimer);
+      state.dragging = false;
+      state.dragStart = null;
+      pinching = false;
+    }
+
+    /**
+     * One real front-facing hex and its six projected neighbours, for chrome
+     * that inhabits the board instead of floating over it. Coordinates are
+     * CSS pixels in canvas space. Hexes only — the twelve Goldberg pentagons
+     * would break the seven-face patch. Pass {indices} to re-project the same
+     * patch after a rotation; it returns null once that patch turns away.
+     */
+    function getMenuPatch(options) {
+      const opts = options || {};
+      const projected = getProjected().filter((face) => face.z > 0.08);
+      const byIndex = new Map(projected.map((face) => [face.index, face]));
+      const copyFace = (face) => ({
+        index: face.index,
+        z: face.z,
+        center: { x: face.center.x, y: face.center.y },
+        boundary: face.boundary.map((point) => ({ x: point.x, y: point.y })),
+      });
+      if (Array.isArray(opts.indices) && opts.indices.length === 7) {
+        const center = byIndex.get(opts.indices[0]);
+        const ring = opts.indices.slice(1).map((index) => byIndex.get(index));
+        if (
+          center &&
+          center.boundary.length === 6 &&
+          ring.every((face) => face && face.boundary.length === 6)
+        ) {
+          return {
+            center: copyFace(center),
+            ring: ring.map(copyFace),
+            indices: opts.indices.slice(),
+          };
+        }
+        if (opts.strict) return null;
+      }
+      const candidates = projected
+        .filter((face) => {
+          const tile = state.tiles[face.index];
+          return (
+            tile &&
+            tile.boundary &&
+            tile.boundary.length === 6 &&
+            tile.neighborIndices &&
+            tile.neighborIndices.length === 6 &&
+            tile.neighborIndices.every((index) => {
+              const neighbor = state.tiles[index];
+              return (
+                byIndex.has(index) &&
+                neighbor &&
+                neighbor.boundary &&
+                neighbor.boundary.length === 6
+              );
+            })
+          );
+        })
+        .sort((a, b) => {
+          const ad = Math.hypot(a.center.x - state.centerX, a.center.y - state.centerY);
+          const bd = Math.hypot(b.center.x - state.centerX, b.center.y - state.centerY);
+          return ad - bd || b.z - a.z;
+        });
+      const center = candidates[0];
+      if (!center) return null;
+      const ring = state.tiles[center.index].neighborIndices
+        .map((index) => byIndex.get(index))
+        .filter(Boolean);
+      if (ring.length !== 6) return null;
+      return {
+        center: copyFace(center),
+        ring: ring.map(copyFace),
+        indices: [center.index].concat(ring.map((face) => face.index)),
+      };
     }
 
     function pointInPoly(x, y, poly) {
@@ -4709,6 +4794,13 @@
         e.preventDefault();
       }
       if (e.type === "touchstart" && e.touches && e.touches.length >= 2) {
+        if (state.menuRotateOnly) {
+          touchMoved = true;
+          state.dragging = false;
+          state.dragStart = null;
+          state.pressed = -1;
+          return;
+        }
         pinching = true;
         touchMoved = true;
         clearTimeout(longPressTimer);
@@ -4719,7 +4811,7 @@
         pinchStartZoom = state.zoomFactor;
         return;
       }
-      if (state.isGameOver && state.won) return;
+      if (!state.menuRotateOnly && state.isGameOver && state.won) return;
       const p = canvasPoint(e);
       touchMoved = false;
       state.dragging = true;
@@ -4727,9 +4819,9 @@
       state.dragStart = { x: p.x, y: p.y, rotY: state.rotY, rotX: state.rotX };
       state.targetRotY = state.rotY;
       state.targetRotX = state.rotX;
-      state.hovered = pickTile(p.x, p.y);
+      state.hovered = state.menuRotateOnly ? -1 : pickTile(p.x, p.y);
       state.pressed = state.hovered;
-      if (e.type === "touchstart") {
+      if (e.type === "touchstart" && !state.menuRotateOnly) {
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
           if (state.hovered >= 0 && !touchMoved) {
@@ -4753,6 +4845,7 @@
     function onPointerMove(e) {
       if (e.type === "touchmove" && e.touches && e.touches.length >= 2) {
         e.preventDefault();
+        if (state.menuRotateOnly) return;
         if (!pinching) {
           pinching = true;
           pinchStartDist = touchDistance(e.touches);
@@ -4782,9 +4875,13 @@
           state.rotY = state.targetRotY;
           state.rotX = state.targetRotX;
           invalidateProjection();
+          if (state.menuRotateOnly) {
+            scheduleFrame();
+            canvas.dispatchEvent(new CustomEvent("hexsweeper:rotation"));
+          }
         }
       }
-      state.hovered = pickTile(p.x, p.y);
+      state.hovered = state.menuRotateOnly ? -1 : pickTile(p.x, p.y);
     }
 
     function onPointerUp(e) {
@@ -4800,6 +4897,21 @@
         return;
       }
       const p = canvasPoint(e.changedTouches ? e.changedTouches[0] : e);
+      if (state.menuRotateOnly) {
+        const backgroundTap = !touchMoved && !!state.dragStart;
+        state.dragging = false;
+        state.dragStart = null;
+        state.hovered = -1;
+        state.pressed = -1;
+        touchMoved = false;
+        schedulePersist();
+        if (backgroundTap) {
+          canvas.dispatchEvent(
+            new CustomEvent("hexsweeper:menu-background-tap", { bubbles: true })
+          );
+        }
+        return;
+      }
       if (!touchMoved && state.dragStart) {
         const idx = pickTile(p.x, p.y);
         if (idx >= 0 && !state.isGameOver) {
@@ -4840,6 +4952,7 @@
       "wheel",
       (e) => {
         e.preventDefault();
+        if (state.menuRotateOnly) return;
         stopAmbientSpin();
         const delta = -e.deltaY * 0.0012;
         setZoomFactor(state.zoomFactor * (1 + delta));
@@ -5089,6 +5202,8 @@
       setSize: (id) => setDifficulty(id, true),
       setThemeIndex: (i) => applyTheme(i),
       getThemeIndex: () => themeIndex,
+      getMenuPatch,
+      setMenuInteraction,
       pauseTimer: () => stopTimer(),
       resumeTimer: () => {
         if (!state.isGameOver && !state.isFirstClick) startTimer();
