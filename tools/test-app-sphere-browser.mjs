@@ -259,6 +259,47 @@ try {
   await evaluate('document.getElementById("qc-reset").click()');
   await delay(300);
 
+  // Every theme must survive a clear, a flag and a drag with the frame loop
+  // intact. TestFlight 51 shipped Mercury with a missing interior painter:
+  // the first clear threw inside draw(), the rAF chain died, and the sphere
+  // stopped answering touch. Painters run only for revealed faces, so a
+  // theme test that never clears a face proves nothing.
+  const painterErrors = [];
+  socket.addEventListener("message", (event) => {
+    const message = JSON.parse(event.data);
+    if (message.method === "Runtime.exceptionThrown") {
+      const d = message.params.exceptionDetails;
+      painterErrors.push((d.exception && d.exception.description) || d.text || "exception");
+    }
+  });
+  for (const theme of help.themes) {
+    await evaluate(`window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === ${JSON.stringify(theme)})); void 0;`);
+    await evaluate('document.getElementById("qc-reset").click()');
+    await delay(250);
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+    await delay(60);
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
+    await waitExpression('!window.HEXSWEEPER_SPHERE_GAME.getState().isFirstClick', `${theme}: clear did not resolve`);
+    await evaluate('(() => { const g = window.HEXSWEEPER_SPHERE_GAME; const s = g.getState(); const i = s.cells.findIndex(c => !c.revealed && !c.flagged); g.flagAt(i); })()');
+    const rotBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x - 60, y: centre.y, button: "left", clickCount: 1 });
+    for (let i = 1; i <= 6; i++) {
+      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: centre.x - 60 + i * 15, y: centre.y, button: "left" });
+      await delay(20);
+    }
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x + 30, y: centre.y, button: "left", clickCount: 1 });
+    await delay(350);
+    const after = await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return { rotY: s.rotY, revealed: s.cells.filter(c => c.revealed).length, flags: s.flagsPlaced, frameAge: performance.now() - s.lastFrameAt, drawError: !!s.drawErrorReported }; })()');
+    assert.ok(after.revealed > 0, `${theme}: clear revealed nothing`);
+    assert.equal(after.flags, 1, `${theme}: flag did not plant`);
+    assert.ok(Math.abs(after.rotY - rotBefore) > 0.3, `${theme}: drag did not rotate (${rotBefore.toFixed(2)} → ${after.rotY.toFixed(2)})`);
+    assert.ok(after.frameAge < 1500, `${theme}: frame loop stalled (${Math.round(after.frameAge)}ms since last frame)`);
+    assert.equal(after.drawError, false, `${theme}: draw() threw`);
+    assert.deepEqual(painterErrors, [], `${theme}: uncaught exception — ${painterErrors.join(" | ")}`);
+  }
+  await evaluate('document.getElementById("qc-reset").click()');
+  await delay(250);
+
   // Textured materials: the sealed data URI must actually load into the renderer.
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "ion-storm")); void 0;');
   const storm = await waitExpression(`(() => {

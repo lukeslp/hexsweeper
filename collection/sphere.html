@@ -5770,6 +5770,31 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     function coreTime(now) {
       return state.reduceMotion ? 0 : now * 0.001;
     }
+    /**
+     * Mercury's exposed metal: brushed steel whose grain runs along the shell
+     * (by lat/lon, so it turns with the sphere) under one screen-locked
+     * gleam that settles just behind the rotation — the "optical inertia" the
+     * old centre-gradient decal had, without the decal.
+     */
+    function drawMetalFace(proj, tile, now) {
+      const t = coreTime(now);
+      const { lat, lon } = faceLatLon(tile);
+      const grain = 0.5 + 0.5 * Math.sin(lon * 6 + lat * 2 + t * 0.12);
+      const grain2 = 0.5 + 0.5 * Math.sin(lon * 17 - lat * 9 + t * 0.05);
+      const base = mixHex(mixHex("#182023", "#6f7c7f", grain), "#dce7e8", grain2 * 0.32);
+      fillFace(proj, base);
+      const angle = state.rotY * 0.22 + state.rotX * 0.1 + t * 0.075;
+      const hx = state.centerX + Math.cos(angle * 0.73 - 0.8) * state.scale * 0.34;
+      const hy = state.centerY + Math.sin(angle * 0.61 - 1.2) * state.scale * 0.25;
+      const gleam = ctx.createRadialGradient(hx, hy, 0, hx, hy, state.scale * 0.52);
+      gleam.addColorStop(0, "rgba(255,255,255,0.44)");
+      gleam.addColorStop(0.18, "rgba(226,244,246,0.16)");
+      gleam.addColorStop(1, "rgba(255,255,255,0)");
+      fillFace(proj, gleam);
+      // Rim faces fall off into the dark chrome of the original decal's edges.
+      const depth = faceDepth(proj);
+      if (depth < 0.35) fillFace(proj, `rgba(3,6,7,${((0.35 - depth) * 1.6).toFixed(3)})`);
+    }
     /** Brushed gold whose ribbons run along the sphere (by lat/lon), plus a view-locked sheen. */
     function drawGoldFace(proj, tile, now) {
       const t = coreTime(now);
@@ -5934,7 +5959,7 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
       }
       ctx.clip();
       const tile = state.tiles[proj.index];
-      if (profile === "metal") drawMetalCore(proj, now);
+      if (profile === "metal") drawMetalFace(proj, tile, now);
       else if (profile === "gold") drawGoldFace(proj, tile, now);
       else if (profile === "magma") drawMagmaFace(proj, tile, now);
       else if (profile === "plasma") drawPlasmaFace(proj, tile, now);
@@ -6972,7 +6997,20 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
       tickRevealAnim(now);
       if (!state.isGameOver) callVariant("tick", { now });
       tickEndFx(now);
-      draw();
+      try {
+        draw();
+      } catch (err) {
+        // A painter throwing must not take the frame loop (and with it every
+        // touch response) down for the rest of the session. Report once and
+        // keep the sphere alive; the offending theme is one tap away from
+        // being swapped out.
+        if (!state.drawErrorReported) {
+          state.drawErrorReported = true;
+          if (typeof console !== "undefined" && console.error) {
+            console.error("[hexsweeper] draw failed; keeping the frame loop alive", err);
+          }
+        }
+      }
       state.lastFrameAt = now;
       if (state.menuRotateOnly) {
         // On-sphere chrome re-projects itself on every frame the camera moved
