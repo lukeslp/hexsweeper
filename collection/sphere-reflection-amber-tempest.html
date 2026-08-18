@@ -9995,12 +9995,23 @@ void main() {
       announce("Seams · " + (next ? "On" : "Off"));
     }
 
-    // Curated theme cycle for the flower: the two mono looks plus three
-    // reflection materials with different drift mechanisms — Stratosphere
-    // (light: sky environment map), Mercury (analytic metal), Ion Storm
-    // (dark: hybrid-mapped storm on a lagging frame). Glow / Shell / Ink /
-    // Float / Card stay on the HUD cycle; Earth / Moon are web-only.
-    const FLOWER_THEMES = ["light", "dark", "stratosphere", "mercury", "ion-storm"];
+    // Theme cycle for the flower: the two mono looks, then the reflection
+    // materials — Stratosphere (light: sky environment map), Mercury
+    // (analytic metal), Ion Storm (hybrid storm on a lagging frame), Aurora
+    // (procedural curtains), Galaxy (environment dust), Gilded Ribbon
+    // (surface ribbon on a lag), Heat Lightning (hybrid, pulsing). Glow /
+    // Shell / Ink / Float / Card stay on the HUD cycle; Earth / Moon web-only.
+    const FLOWER_THEMES = [
+      "light",
+      "dark",
+      "stratosphere",
+      "mercury",
+      "ion-storm",
+      "aurora",
+      "galaxy",
+      "gilded-ribbon",
+      "heat-lightning",
+    ];
     function themeIndexById(id) {
       return THEMES.findIndex((t) => t && t.id === id);
     }
@@ -10211,7 +10222,7 @@ void main() {
             aria: () =>
               "Theme: " +
               currentThemeLabel() +
-              ". Activate to cycle Light, Dark, Stratosphere, Mercury, Ion Storm.",
+              ". Activate to cycle Light, Dark, and the reflection materials: Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning.",
             cycle: cycleFlowerTheme,
           },
           {

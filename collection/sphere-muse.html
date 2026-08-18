@@ -2411,7 +2411,7 @@ body.help-open { overflow: hidden; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Tap the menu button (bottom left) or anywhere outside the sphere to open the center menu: reset, undo, flag mode, board size, theme (Light, Dark, Stratosphere, Mercury, Ion Storm), warning style, and drag inversion. Progress autosaves. Reset or a size change starts a new sphere.</p>
+      <p>Tap the menu button (bottom left) or anywhere outside the sphere to open the center menu: reset, undo, flag mode, board size, theme (Light, Dark, then Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning), warning style, and drag inversion. Progress autosaves. Reset or a size change starts a new sphere.</p>
     </div>
     <p class="help-keys"><kbd>C</kbd> menu · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -3162,6 +3162,72 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     },
     label: "#f1e8ff",
   });
+  // The rest of the flower roster: aurora is procedural (no texture); the
+  // others carry small textures. Palettes lift the studio's fallback tones.
+  const THEME_AURORA = reflectionTheme({
+    id: "aurora",
+    name: "Aurora",
+    material: "aurora",
+    accent: "#88d2d0",
+    fallbackBg: "#02070d",
+    fallbackBgGlow: "#2e7f83",
+    fallbackCore: "#141329",
+    coveredEdge: "rgba(136,210,208,0.22)",
+    pentagonEdge: "rgba(170,230,228,0.3)",
+    hoverRing: "#b9f0ee",
+    activeRing: "#88d2d0",
+    revealGlow: "#88d2d0",
+    text: { 1: "#e9fffe", 2: "#b9f0ee", 3: "#88d2d0", 4: "#ffd7a0", 5: "#ff9f8f", 6: "#ff7180" },
+    label: "#e9fffe",
+  });
+  const THEME_GALAXY = reflectionTheme({
+    id: "galaxy",
+    name: "Galaxy",
+    material: "galaxy",
+    accent: "#d09a9e",
+    fallbackBg: "#050714",
+    fallbackBgGlow: "#49405c",
+    fallbackCore: "#08172b",
+    coveredEdge: "rgba(208,154,158,0.22)",
+    pentagonEdge: "rgba(230,190,194,0.3)",
+    hoverRing: "#f0cdd0",
+    activeRing: "#d09a9e",
+    revealGlow: "#d09a9e",
+    text: { 1: "#fff1f2", 2: "#f0cdd0", 3: "#d09a9e", 4: "#c9b8ff", 5: "#ffb27a", 6: "#ff7a9c" },
+    label: "#fff1f2",
+  });
+  const THEME_GILDED_RIBBON = reflectionTheme({
+    id: "gilded-ribbon",
+    name: "Gilded Ribbon",
+    material: "gilded-ribbon",
+    accent: "#dfa35f",
+    fallbackBg: "#080510",
+    fallbackBgGlow: "#4d3449",
+    fallbackCore: "#020103",
+    coveredEdge: "rgba(223,163,95,0.24)",
+    pentagonEdge: "rgba(240,200,140,0.32)",
+    hoverRing: "#f4cf9a",
+    activeRing: "#dfa35f",
+    revealGlow: "#dfa35f",
+    text: { 1: "#fff4e4", 2: "#f4cf9a", 3: "#dfa35f", 4: "#e0b8ff", 5: "#ff9f8f", 6: "#ff7180" },
+    label: "#fff4e4",
+  });
+  const THEME_HEAT_LIGHTNING = reflectionTheme({
+    id: "heat-lightning",
+    name: "Heat Lightning",
+    material: "heat-lightning",
+    accent: "#ffb05b",
+    fallbackBg: "#190f16",
+    fallbackBgGlow: "#7a3f53",
+    fallbackCore: "#0d1017",
+    coveredEdge: "rgba(255,176,91,0.24)",
+    pentagonEdge: "rgba(255,205,150,0.32)",
+    hoverRing: "#ffd6a3",
+    activeRing: "#ffb05b",
+    revealGlow: "#ffb05b",
+    text: { 1: "#fff2e2", 2: "#ffd6a3", 3: "#ffb05b", 4: "#ff9db1", 5: "#c9b8ff", 6: "#8ed9f5" },
+    label: "#fff2e2",
+  });
 
   const THEMES = [
     THEME_LIGHT,
@@ -3176,6 +3242,10 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
     THEME_MERCURY,
     THEME_STRATOSPHERE,
     THEME_ION_STORM,
+    THEME_AURORA,
+    THEME_GALAXY,
+    THEME_GILDED_RIBBON,
+    THEME_HEAT_LIGHTNING,
   ].filter((t) => {
     // Native app builds ship without the globe-map themes. Their daymaps are
     // the only assets fetched over the network (globeUrl falls back to an
@@ -3502,6 +3572,14 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M6 12.5h4a2 2 0 0 0 0-4 3 3 0 0 0-5.6 1" opacity="0.9"></path><path d="M11 16h6a1.6 1.6 0 0 0 0-3.2 2.4 2.4 0 0 0-4.5-.6" opacity="0.7"></path></svg>',
     "ion-storm":
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M13.2 7.5 9.8 12.4h3.4l-2.2 4.1" opacity="0.95"></path><path d="M6.5 10.5c1.4-1.2 3-1 4-.2" opacity="0.5"></path></svg>',
+    aurora:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M6.5 13.5c1.5-3 3-3 4.5 0s3 3 4.5 0" opacity="0.9"></path><path d="M7.5 9.5c1.2-2 2.4-2 3.6 0s2.4 2 3.6 0" opacity="0.5"></path></svg>',
+    galaxy:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 12c-3-2.5-1.5-6 2-6.2" opacity="0.9"></path><path d="M12 12c3 2.5 1.5 6-2 6.2" opacity="0.9"></path><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle></svg>',
+    "gilded-ribbon":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M7 15c2-6 4-6 6 0s4 6 4-1" opacity="0.9"></path></svg>',
+    "heat-lightning":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12.5 6.5 9 12h3l-1.5 5.5" opacity="0.95"></path><path d="M15.5 9.5l-1.6 2.6h1.8l-1.2 2.4" opacity="0.5"></path></svg>',
   };
 
   /** Loaded equirectangular maps (ImageData cache). */
@@ -4211,7 +4289,7 @@ window.HEXSWEEPER_REFLECTION_TEXTURE_BASE = "https://dr.eamer.dev/games/hexsweep
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -10525,12 +10603,23 @@ void main() {
       announce("Seams · " + (next ? "On" : "Off"));
     }
 
-    // Curated theme cycle for the flower: the two mono looks plus three
-    // reflection materials with different drift mechanisms — Stratosphere
-    // (light: sky environment map), Mercury (analytic metal), Ion Storm
-    // (dark: hybrid-mapped storm on a lagging frame). Glow / Shell / Ink /
-    // Float / Card stay on the HUD cycle; Earth / Moon are web-only.
-    const FLOWER_THEMES = ["light", "dark", "stratosphere", "mercury", "ion-storm"];
+    // Theme cycle for the flower: the two mono looks, then the reflection
+    // materials — Stratosphere (light: sky environment map), Mercury
+    // (analytic metal), Ion Storm (hybrid storm on a lagging frame), Aurora
+    // (procedural curtains), Galaxy (environment dust), Gilded Ribbon
+    // (surface ribbon on a lag), Heat Lightning (hybrid, pulsing). Glow /
+    // Shell / Ink / Float / Card stay on the HUD cycle; Earth / Moon web-only.
+    const FLOWER_THEMES = [
+      "light",
+      "dark",
+      "stratosphere",
+      "mercury",
+      "ion-storm",
+      "aurora",
+      "galaxy",
+      "gilded-ribbon",
+      "heat-lightning",
+    ];
     function themeIndexById(id) {
       return THEMES.findIndex((t) => t && t.id === id);
     }
@@ -10741,7 +10830,7 @@ void main() {
             aria: () =>
               "Theme: " +
               currentThemeLabel() +
-              ". Activate to cycle Light, Dark, Stratosphere, Mercury, Ion Storm.",
+              ". Activate to cycle Light, Dark, and the reflection materials: Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning.",
             cycle: cycleFlowerTheme,
           },
           {

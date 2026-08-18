@@ -873,7 +873,7 @@ def reflection_texture_boot(only: set[str] | None = None, *, mobile_only: bool =
 
 # Reflection materials shipped as canonical sphere themes (sphere.js THEMES).
 # The app seals their textures; the web root points at sphere/assets/.
-SPHERE_APP_MATERIALS = {"stratosphere", "ion-storm"}
+SPHERE_APP_MATERIALS = {"stratosphere", "ion-storm", "galaxy", "gilded-ribbon", "heat-lightning"}
 
 
 def reflection_registry_errors() -> list[str]:

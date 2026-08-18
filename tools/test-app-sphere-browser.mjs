@@ -184,7 +184,7 @@ try {
   assert.ok(help.doneH >= 44, `Done button is ${help.doneH}px tall`);
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /menu button/i, "help copy does not mention the menu button");
-  assert.match(help.text, /Stratosphere, Mercury, Ion Storm/, "help copy does not name the theme cycle");
+  assert.match(help.text, /Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning/, "help copy does not name the theme cycle");
   await evaluate('document.getElementById("help-done-btn").click()');
   await waitExpression('document.getElementById("help-overlay").hidden', "help did not close");
 
@@ -227,7 +227,7 @@ try {
   const themeTile = '#hex-bloom-stage .hb-hex[data-cat=theme]';
   assert.equal(await evaluate(`!!document.querySelector('${themeTile}')`), true, "flower has no Theme tile");
   const seen = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 9; i++) {
     if ((await evaluate('document.getElementById("hex-bloom").dataset.phase')) !== "open") {
       await evaluate('document.querySelector(".is-menu-corner .is-dock").click()');
       await waitExpression('document.getElementById("hex-bloom").dataset.phase === "open" && !!document.querySelector("#hex-bloom-stage .hb-hex[data-cat=theme]")', "flower did not reopen for the next theme");
@@ -236,7 +236,7 @@ try {
     await delay(150);
     seen.push(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'));
   }
-  assert.deepEqual(seen, ["dark", "stratosphere", "mercury", "ion-storm", "light"], `theme cycle was ${seen.join(" → ")}`);
+  assert.deepEqual(seen, ["dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning", "light"], `theme cycle was ${seen.join(" → ")}`);
   // Textured materials: the sealed data URI must actually load into the renderer.
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "ion-storm")); void 0;');
   const storm = await waitExpression(`(() => {
