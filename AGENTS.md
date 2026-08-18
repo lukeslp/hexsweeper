@@ -1,7 +1,7 @@
 # Hexsweeper (native) — agent notes
 
 Capacitor shell around three of hexsweeper's games — infinite, bounded, sphere —
-behind a picker on iOS and Android. Read `README.md` first; it
+behind a three-hex launcher (Resume in the center) on iOS and Android. Read `README.md` first; it
 explains why the bundle id says `hexodus` and why the build number starts at 7.
 
 ## The one rule

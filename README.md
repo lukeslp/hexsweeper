@@ -64,7 +64,9 @@ App Store Connect app and abandoning this one.
 | `scripts/android-build.sh` | JDK-21 Gradle wrapper for APK/AAB builds |
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
-the picker and each `www/games/*.html` is one self-contained file with fonts,
+the launcher — three hexes for Infinite, Classic, and Sphere, with Resume in
+the center when a saved run exists; each mode opens with its last-used
+settings — and each `www/games/*.html` is one self-contained file with fonts,
 CSS, and all JS already inlined; the only shared asset is the sphere help
 screen's history image under `www/assets/`. Navigation between them is plain
 links, and every game carries a top-left **‹ Games** pill — the WebView has no
