@@ -751,14 +751,14 @@ body[data-sphere-chrome="dark"] .cz-dot {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Full-screen blur plate — only intercepts when open */
+/* Full-screen tap plate — only intercepts when open. Deliberately clear:
+   the flower sits off the sphere and its Theme tile previews on the live
+   board, so nothing may fog or tint the sphere while the menu is up. */
 .hex-bloom-scrim {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: var(--hb-scrim);
-  -webkit-backdrop-filter: blur(5px) saturate(1.02);
-  backdrop-filter: blur(5px) saturate(1.02);
+  background: transparent;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -2380,7 +2380,7 @@ body.help-open { overflow: hidden; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>Tap the menu button (bottom left) or anywhere outside the sphere to open the center menu: reset, undo, flag mode, board size, theme (Light, Dark, then Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning), warning style, and drag inversion. Progress autosaves. Reset or a size change starts a new sphere.</p>
+      <p>Tap the menu button (bottom left) or anywhere outside the sphere to open the menu — it sits beside the board, so theme taps preview live: reset, undo, flag mode, board size, theme (Light, Dark, then Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning), warning style, and drag inversion. Progress autosaves. Reset or a size change starts a new sphere.</p>
     </div>
     <p class="help-keys"><kbd>C</kbd> menu · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -10001,6 +10001,34 @@ void main() {
     }
 
     // ---- Hex math (clex) ----
+    /**
+     * Where the center flower sits. It used to sit on the sphere's own
+     * center under a blur plate; with nine themes previewing live that hid
+     * the one thing the menu changes. Now the board stays sharp and the
+     * flower moves off it: below the sphere on portrait phones, beside it on
+     * wide screens, and only when neither fits does it overlap the lower rim.
+     * A flower is three rows: 2.5 × tile height, 3 tiles wide.
+     */
+    function flowerAnchor(w, h) {
+      const disk =
+        typeof game.getSphereScreen === "function" ? game.getSphereScreen() : null;
+      if (!disk || !disk.r) return { cx: w / 2, cy: h / 2 };
+      const { tileH, tileW } = tileMetrics();
+      const flowerH = tileH * 2.5;
+      const flowerW = tileW * 3;
+      const gap = Math.max(10, tileH * 0.16);
+      const bottomChrome = 76; // corner glyphs + home indicator
+      const topChrome = 64; // mines / timer hub
+      const bottomLimit = h - bottomChrome;
+      const belowCy = disk.cy + disk.r + gap + flowerH / 2;
+      if (belowCy + flowerH / 2 <= bottomLimit) return { cx: w / 2, cy: belowCy };
+      const besideCx = disk.cx + disk.r + gap + flowerW / 2;
+      if (besideCx + flowerW / 2 <= w - 12) return { cx: besideCx, cy: disk.cy };
+      // Lower rim: keep the upper two thirds of the sphere clear.
+      const rimCy = Math.min(bottomLimit - flowerH / 2, disk.cy + disk.r * 0.55);
+      return { cx: w / 2, cy: Math.max(topChrome + flowerH / 2, rimCy) };
+    }
+
     function tileMetrics() {
       const cs = getComputedStyle(root);
       const th = parseFloat(cs.getPropertyValue("--tile-h")) || 88;
@@ -10054,7 +10082,7 @@ void main() {
           cy: lowY <= highY ? Math.max(lowY, Math.min(highY, anchor.y)) : h / 2,
         };
       }
-      if (DOCK_CENTER) return { cx: w / 2, cy: h / 2 };
+      if (DOCK_CENTER) return flowerAnchor(w, h);
       const csRoot = getComputedStyle(root);
       const csDock = dock ? getComputedStyle(dock) : csRoot;
       // CSS: .hex-bloom-dock { bottom: max(2px, env(safe-area-inset-bottom)) }
@@ -11588,7 +11616,7 @@ void main() {
             ((stage.clientHeight || global.innerHeight) - 28) / 5
           )
         : 90;
-      const hex = Math.max(
+      let hex = Math.max(
         DOCK_CONTEXT ? (narrowContext ? 36 : 25) : 30,
         Math.min(
           DOCK_CONTEXT ? (narrowContext ? 52 : 66) : 90,
@@ -11597,6 +11625,17 @@ void main() {
             (DOCK_CONTEXT ? (narrowContext ? 0.94 : 0.72) : 1)
         )
       );
+      if (FIXED_CENTER) {
+        // The flower prefers the band below the sphere (see flowerAnchor).
+        // Size to that band when it can still hold a finger-sized tile
+        // (hex 31 → 62×54 tiles); otherwise keep the sphere-derived size and
+        // let the anchor fall back to beside / lower rim.
+        const stageHeight = stage.clientHeight || global.innerHeight;
+        const band = stageHeight - 76 - (disk.cy + disk.r) - Math.max(10, hex * 0.32);
+        const hexBelow = band / 5;
+        if (hexBelow >= 31) hex = Math.min(hex, hexBelow);
+        hex = Math.max(hex, 31);
+      }
       root.style.setProperty("--tile-h", (hex * 2).toFixed(1) + "px");
       root.style.setProperty("--tile-w", (hex * 1.746).toFixed(1) + "px");
     }

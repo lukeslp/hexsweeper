@@ -211,9 +211,20 @@ try {
   await fingerTap(menuBox.x, menuBox.y);
   await waitExpression('document.getElementById("hex-bloom").dataset.phase === "open" && !!document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo].shown")', "corner Menu did not open the flower on one tap");
   // Tiles fold open with a transform; wait for the rise to finish before measuring.
-  await waitExpression('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); return el && el.getBoundingClientRect().width >= 60; })()', "Undo tile never reached full size");
+  await waitExpression('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); return el && el.getBoundingClientRect().width >= 52; })()', "Undo tile never reached full size");
   const undoBox = await evaluate('(() => { const el = document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]"); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: Math.round(r.width), h: Math.round(r.height) }; })()');
   assert.ok(undoBox.w >= 44 && undoBox.h >= 44, `Undo tile is ${undoBox.w}x${undoBox.h}`);
+  // The flower sits off the sphere on a portrait phone (below it), and the
+  // scrim no longer fogs the board.
+  const placement = await evaluate(`(() => {
+    const d = window.HEXSWEEPER_SPHERE_GAME.getSphereScreen();
+    const tops = Array.from(document.querySelectorAll("#hex-bloom-stage .hb-hex")).map(e => e.getBoundingClientRect().top);
+    const scrim = getComputedStyle(document.querySelector(".hex-bloom-scrim"));
+    return { flowerTop: Math.min(...tops), sphereBottom: d.cy + d.r, blur: scrim.backdropFilter || scrim.webkitBackdropFilter || "none", bg: scrim.backgroundColor };
+  })()`);
+  assert.ok(placement.flowerTop >= placement.sphereBottom - 4, `flower (top ${Math.round(placement.flowerTop)}) overlaps the sphere (bottom ${Math.round(placement.sphereBottom)})`);
+  assert.ok(placement.blur === "none" || placement.blur === "", `scrim still blurs the board: ${placement.blur}`);
+  assert.equal(placement.bg, "rgba(0, 0, 0, 0)", `scrim still tints the board: ${placement.bg}`);
   await evaluate('document.querySelector("#hex-bloom-stage .hb-hex[data-cat=undo]").click()');
   await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().cells.filter(c => c.revealed).length === 0', "Undo did not act on the first activation");
   // The flower stays open after Undo (only Reset folds it); the corner button closes it.
