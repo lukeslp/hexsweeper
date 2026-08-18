@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 43 is the latest uploaded TestFlight build and the
+this same record. Build 44 is the latest uploaded TestFlight build and the
 checked-in project matches it.
 
 ## Archive → TestFlight
@@ -115,8 +115,11 @@ Done (updated 2026-08-11, through the App Store Connect API):
       out of it; their textures are sealed into the payload (vendored from
       hexsweeper `7c241e8`)
 - [x] Build 43 uploaded to TestFlight on 2026-08-18: Ion Storm replaces Amber
-      Cells as the dark material (payload 679KB); confirm distribution state in
-      App Store Connect before widening access
+      Cells as the dark material (payload 679KB)
+- [x] Build 44 uploaded to TestFlight on 2026-08-18: Aurora, Galaxy, Gilded
+      Ribbon, Heat Lightning join the flower cycle (nine themes; payload
+      857KB); confirm distribution state in App Store Connect before widening
+      access
 
 Still owed:
 

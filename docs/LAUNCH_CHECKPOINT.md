@@ -38,7 +38,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Build 40 uploaded to TestFlight 2026-08-17: no launch prompt, dock first-tap fix
 - [x] Build 41 uploaded to TestFlight 2026-08-18: sphere-only, corner Menu, Theme tile → Mercury, touch help sheet
 - [x] Build 42 uploaded to TestFlight 2026-08-18: Stratosphere + Amber Cells themes (textures sealed), Glow out of the cycle
-- [x] Build 43 uploaded to TestFlight 2026-08-18: Ion Storm replaces Amber Cells; confirm it processes as VALID
+- [x] Build 43 uploaded to TestFlight 2026-08-18: Ion Storm replaces Amber Cells
+- [x] Build 44 uploaded to TestFlight 2026-08-18: nine-theme flower cycle (Aurora, Galaxy, Gilded Ribbon, Heat Lightning added); confirm it processes as VALID
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
