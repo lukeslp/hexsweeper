@@ -25,7 +25,7 @@ and any network dependency is a defect.
 | 1c′ | Textured materials | Stratosphere shows the drifting sky on the mirror (light chrome, dark glass wells); Ion Storm shows the storm cloud trailing the rotation; Galaxy, Gilded Ribbon, Heat Lightning show their textures; Aurora its curtains — all offline, in airplane mode | |
 | 1d | Mercury | Mirrored WebGL body under an etched crust, liquid-metal wells on dig, gilded flags; share card includes the mirror | |
 | 2 | Sphere size | On a phone in portrait the sphere spans roughly 85% of the width; margins above and below still open the flower on tap | |
-| 3 | Help sheet | Help opens wide enough to read (≥340 pt on a phone), no keyboard hints, Settings pills and Done at least 44 pt tall, closes with × / Done / outside tap and never blocks the board afterwards | |
+| 3 | Help sheet | Help opens wide enough to read (≥340 pt on a phone), no keyboard hints, a Theme grid of nine swatches (tap one → sphere changes behind, swatch reads pressed), Settings pills and Done at least 44 pt tall, closes with × / Done / outside tap and never blocks the board afterwards | |
 | 6 | Sphere render | Sphere is centred and fully visible; no clipping at any edge | |
 | 7 | Sphere dig | Single tap reveals the intended tile — not a neighbour | |
 | 8 | Sphere flag | Long-press flags; flag stands proud of the shell | |
