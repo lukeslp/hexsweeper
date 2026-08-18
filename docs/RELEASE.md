@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 44 is the latest uploaded TestFlight build and the
+this same record. Build 46 is the latest uploaded TestFlight build, attached to 1.0, and the
 checked-in project matches it.
 
 ## Archive → TestFlight
@@ -122,8 +122,12 @@ Done (updated 2026-08-11, through the App Store Connect API):
       Ribbon, Heat Lightning join the flower cycle (nine themes; payload
       857KB)
 - [x] Build 45 uploaded 2026-08-18: launch image is now a still of the Light
-      sphere at first-frame size (was a dug Infinite plate); payload unchanged.
-      Attached to 1.0 with What's New once processed
+      sphere at first-frame size (was a dug Infinite plate); payload unchanged
+- [x] Build 46 uploaded and attached to 1.0 on 2026-08-18: the flower sits
+      below the sphere (beside it in landscape) with no scrim blur, so theme
+      taps preview on the live board (vendored from hexsweeper `e7585a0`).
+      Screenshot 03 regenerated to match. ASC has no What's New on a first
+      version; release notes stay drafted in app-store/metadata
 
 Still owed:
 
