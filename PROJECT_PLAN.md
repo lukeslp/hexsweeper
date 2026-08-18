@@ -118,7 +118,7 @@ captures with these generated ones is still an open call.
 
 ## Acceptance
 
-Picker and all three games render and are playable in the native shell with no
+Launcher and all three games render and are playable in the native shell with no
 network; dig, flag, chord, pan, and camera drag work by touch where applicable;
 safe-area insets are respected on a notched device; launch screen hands off to
 the first painted frame without a blank gap; smoke gates are green; build

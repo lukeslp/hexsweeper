@@ -5,19 +5,13 @@ are Canvas/vanilla-JS builds from
 [lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper); this repo wraps them
 for iOS and Android from the same sealed offline payload.
 
-The app opens on the real endless 2D board. **Infinite**, **Classic**, and
-**Sphere** are protected cells in that field; digging one uncovers its connected
-settings hub through the same safe-dig and flood engine used by ordinary play.
-The hub opens and folds a Clex-style bloom whose choices set in place: Infinite
-offers Light / Dark and effects, Classic offers Small / Medium / Large, and
-Sphere offers Light / Shell / Glow plus drag direction. The mode face reflects
-the selected value and starts a fresh configured run. The newest unfinished
-Infinite, Classic, or Sphere run appears as a mode-colored **Resume** cell in the center.
-Users can keep digging and flagging the surrounding field, drag it to explore,
-or zoom with pinch, wheel, and the visible −/+ controls. Visual danger uses
-nested inset hexes so counts do not compete with the larger launch labels.
-Choice positions are generated from branch data, leaving room to add more
-launch-time materials without platform-specific layout work.
+The app opens on a three-hex launcher: **Infinite**, **Classic**, and
+**Sphere**, each captioned with the setting it will load (Light / Medium / Glow
+and so on). Tapping a hex opens that game straight away; style, size, and theme
+are changed inside the game. When an unfinished Infinite, Classic, or Sphere run
+exists, the newest one fills the center seat as a mode-colored **Resume** hex.
+Appearance follows the system unless the player has chosen light or dark in a
+game.
 
 | Mode | Board | Source |
 |---|---|---|
@@ -64,9 +58,8 @@ App Store Connect app and abandoning this one.
 | `scripts/android-build.sh` | JDK-21 Gradle wrapper for APK/AAB builds |
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
-the launcher — three hexes for Infinite, Classic, and Sphere, with Resume in
-the center when a saved run exists; each mode opens with its last-used
-settings — and each `www/games/*.html` is one self-contained file with fonts,
+the three-hex launcher (Infinite, Classic, Sphere, Resume in the center), and
+each `www/games/*.html` is one self-contained file with fonts,
 CSS, and all JS already inlined; the only shared asset is the sphere help
 screen's history image under `www/assets/`. Navigation between them is plain
 links, and every game carries a top-left **‹ Games** pill — the WebView has no
@@ -78,7 +71,7 @@ read a `.ts` config, which is not worth a toolchain in a repo with no TS source.
 ## Updating the games
 
 The payload is a pinned snapshot, not a live dependency. To pull in changes to
-any of the three games, or to the picker, from a `hexsweeper` checkout:
+any of the three games, or to the launcher, from a `hexsweeper` checkout:
 
 ```bash
 python3 tools/export-collection.py --app     # writes build/app/
