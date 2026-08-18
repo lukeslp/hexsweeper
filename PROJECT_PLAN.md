@@ -10,7 +10,8 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 
 - **Static artifact** under `www/dr.eamer.dev/games/hexsweeper/` (symlink: `~/dr.eamer.dev`).
 - **`core.js`**: axial hex map, finite + endless modes, input (mouse/touch), flood reveal, flags, RAF loop, skin hooks.
-- **`tools/app-launcher.html` → `index.html`**: shared native/web three-hex launcher (Infinite, Classic, Sphere, centered Resume).
+- **`sphere/` → `index.html`**: the root is Sphere itself, sealed by the exporter, with a resume gate for saved Infinite / Classic / Sphere runs.
+- **`tools/app-launcher.html` → `launcher.html`**: shared native/web three-hex games menu (Infinite, Classic, Sphere, centered Resume).
 - **`infinite.html` / `bounded.html`**: generated web product pages from the plate and Classic collection exports.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
@@ -66,6 +67,7 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - [x] Sphere Customize panel + undo (in-run theme/board tweaks, one-step undo)
 - [x] Sphere share card that works — real capture, wired from Customize panel
 - [x] Sphere Glow theme — luminous dig centers
+- [x] Sphere Mercury theme — reflection studio material ported into the canonical engine (`sphere/mirror-material.js`), ships offline
 - [x] Sphere Earth / Moon globe-map themes (`?theme=earth|moon`); Earth uses responsive 4K/2K multi-sample gloss rendering, with textures tracked in `sphere/assets/textures/`
 - [x] Three archived model-authored visual studies on the collection desk — Kimi / Claude / Muse (`collection/sphere-kimi.html`, `-claude.html`, `-muse.html`); design specs in `sphere/takes/*.json`
 - [x] Free 360° drag tumble (was constrained camera)
@@ -217,9 +219,10 @@ The archived decorative theme remains at `collection/theme-water.html` and
 
 ## Acceptance (production)
 
-Bare root is a three-hex launcher (Infinite, Classic, Sphere) with Resume in the
-center when a run is waiting; each mode opens its game with last-used settings and
-returns through Games; newest valid Infinite, Classic, or Sphere saves can resume;
+Bare root is Sphere; a saved Infinite, Classic, or Sphere run raises the resume
+gate first. `launcher.html` is the three-hex menu (Infinite, Classic, Sphere)
+with Resume in the center when a run is waiting; each mode opens its game with
+last-used settings and returns through Games; newest valid Infinite, Classic, or Sphere saves can resume;
 launcher appearance follows system light/dark and is independent of gameplay;
 old flat-game deep links retain their behavior at `play.html`; keyboard, touch,
 forced colors, reduced motion, safe areas, and no-script navigation remain

@@ -379,7 +379,7 @@
         var flagged = Array.isArray(data.flagged) ? data.flagged.length : Number(data.flags) || 0;
         if (data.first && flagged <= 0) return;
         if (!data.first && (!Array.isArray(data.mines) || data.mines.length === 0)) return;
-        var candidate = { mode: "sphere", name: "Sphere", href: "{{SPHERE_HREF}}", savedAt: Number(data.savedAt) || 0 };
+        var candidate = { mode: "sphere", name: "Sphere", href: "{{SPHERE_HREF}}?resume=1", savedAt: Number(data.savedAt) || 0 };
         if (!best || candidate.savedAt >= best.savedAt) best = candidate;
       });
     });

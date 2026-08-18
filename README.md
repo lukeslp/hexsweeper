@@ -31,11 +31,14 @@ The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on
 |------|--------|------|
 | **Infinite** | Endless Light/Dark plate; the run persists | `infinite.html` |
 | **Classic** | Fixed neumorphic board; the run persists | `bounded.html` |
-| **Sphere** | Closed 3D Goldberg sphere | `sphere/` |
+| **Sphere** | Closed 3D Goldberg sphere | `index.html` (root) · `sphere/` (source) |
 
-The root launcher is three hexes — Infinite, Classic, Sphere — with the newest
-unfinished run in the center Resume tile. A mode tap starts a fresh run using
-the last used style, board size, or theme. Settings live inside each game.
+The root opens straight into Sphere. When an unfinished Infinite, Classic, or
+Sphere run is saved, a small dialog asks first: resume it, or play Sphere. The
+three-hex games menu — Infinite, Classic, Sphere, with the newest run in the
+center Resume tile — lives at `launcher.html`, one tap away behind every
+game's **‹ Games** pill. A mode tap starts a fresh run using the last used
+style, board size, or theme. Settings live inside each game.
 
 The former five-mode flat production surface remains at `play.html` for its
 distinct materials and mechanics:
@@ -85,7 +88,8 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 
 | File | Role |
 |------|------|
-| `index.html` | Generated three-hex launcher (web landing) |
+| `index.html` | Generated web landing: the sealed Sphere game with the resume gate |
+| `launcher.html` | Generated three-hex games menu |
 | `infinite.html` | Generated endless Light/Dark product page |
 | `bounded.html` | Generated fixed Classic product page |
 | `play.html` | Flat five-mode game source (Light/Dark/Fire/Plague/Escape) |
@@ -156,8 +160,15 @@ pens. The live multi-theme game remains available at `play.html`.
 ## Shared launcher
 
 `python3 tools/export-collection.py --app` stages the sealed Capacitor payload in
-`build/app/`. The public `index.html` and native app launcher are both rendered
-from `tools/app-launcher.html`; route and asset treatment differ by platform.
+`build/app/`. On both surfaces the root page is Sphere itself, sealed from
+`sphere/` by the exporter (`export_sphere_web` / `export_sphere_app`), and the
+games menu is rendered from `tools/app-launcher.html` to `launcher.html` (web)
+or `games/launcher.html` (app); route and asset treatment differ by platform.
+
+The root Sphere page carries a **resume gate**: if the newest saved Infinite,
+Classic, or Sphere run is unfinished, a dialog offers to resume it or play
+Sphere; `?fresh=1` and `?resume=1` (the launcher's own routes) skip it, and
+Sphere honors `?fresh=1` by starting a new board instead of restoring.
 
 The launcher is three hexes — **Infinite**, **Classic**, and **Sphere** — with an
 empty seat in the middle. Tapping a mode opens that game at once with its
@@ -210,7 +221,7 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Densities: **XS** = 162 · **S** = 362 · **M** = 1002 · **L** = 1442 · **XL** = 2252 (~17% mines; size button cycles XS→XL)
 - Flood expand: BFS ring stagger + brief flash/pop (logic opens immediately; paint catch-up; RM-safe)
 - **Chrome:** three BR glass pills — Reset·Size·Theme | Flag | Help; size/theme icons morph per state (no corner badges)
-- **Themes:** Light · Shell · Dark · Ink · **Float** (Light + contact shadow) · **Card** (Ink + contact shadow) · **Glow** (luminous dig centers) · **Earth** / **Moon** (globe-map daymaps, `?theme=earth|moon`); wells opposite the shell — `hexsweeper-sphere-theme-v6`
+- **Themes:** Light · Shell · Dark · Ink · **Float** (Light + contact shadow) · **Card** (Ink + contact shadow) · **Glow** (luminous dig centers) · **Earth** / **Moon** (globe-map daymaps, `?theme=earth|moon`) · **Mercury** (the reflection studio's Smoked Mercury material as a theme: WebGL mirrored body from `sphere/mirror-material.js`, etched crust, liquid-metal wells, gilded flags; procedural, so it also ships offline in the app; falls back to a plain metal field without WebGL); wells opposite the shell — `hexsweeper-sphere-theme-v6`
 - **Customize panel:** in-run theme/board tweaks with one-step undo; share card capture wired from the panel
 - **First visit:** short icon help modal (`hexsweeper-sphere-welcome-v1`); `?welcome=1` forces, `?welcome=0` skips
 - **Endgame FX:** lose — graph-distance mine cascade + particle burst + shock ring; win — clearance pulse + confetti-lite (`prefers-reduced-motion`: instant states)
@@ -220,9 +231,10 @@ subdivisions 6, 10, 12) and `node wheel/test-effects.js` (profile/event
 contract plus drawing-surface smoke). `node wheel/test-menu-variants.js`
 guards the Water Wheel menu-profile aliases and projected patch selection.
 
-Infinite, Classic, and Sphere are peers on the root launcher. The broader flat
-game remains at `play.html`; old root `?mode=`, `?theme=`, and `?deal=` links
-forward there.
+Sphere is the root; Infinite and Classic sit beside it on `launcher.html`. The
+broader flat game remains at `play.html`; old root `?mode=` links forward
+there, as do `?theme=` links naming a flat-only theme (fire, plague, escape and
+their aliases). `?theme=` and `?deal=` otherwise belong to Sphere now.
 
 ## Flux Sphere (experimental)
 

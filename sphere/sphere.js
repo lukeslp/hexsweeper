@@ -337,6 +337,75 @@
     revealGlow: "#5ec8ff",
   };
 
+  /**
+   * Mercury — the reflection studio's Smoked Mercury material, shipped as a
+   * first-class theme. `reflectionSurface` hands the sphere body to the WebGL
+   * renderer in sphere/mirror-material.js (lazy-booted by the reflection
+   * bridge in boot); this palette only paints the etched crust, wells, flags
+   * and mines on top. Mercury is the one material with no texture asset — the
+   * environment is analytic in the shader — so it seals into the offline app.
+   * `fallback*` colors paint a plain metal field when WebGL is unavailable.
+   */
+  const THEME_MERCURY = {
+    id: "mercury",
+    name: "Mercury",
+    chrome: "dark",
+    reflectionSurface: true,
+    material: "mercury",
+    accent: "#eaf8ff",
+    pureCovered: false,
+    pureRevealed: false,
+    bg: "rgba(0,0,0,0)",
+    bgGlow: "rgba(0,0,0,0)",
+    fallbackBg: "#050708",
+    fallbackBgGlow: "#3d484b",
+    fallbackCore: "#101719",
+    covered: "rgba(3,9,13,0.08)",
+    coveredHi: "rgba(255,255,255,0.08)",
+    coveredEdge: "rgba(222,242,250,0.20)",
+    surfaceEdgeWidth: 0.78,
+    surfacePentagonEdgeWidth: 1.05,
+    surfaceBackfaceEdgeWidth: 0.45,
+    coveredShadow: "rgba(0,0,0,0.4)",
+    tierCovered: "rgba(3,9,13,0.08)",
+    tierFlagged: "#e5222a",
+    tierNumbered: "rgba(3,7,10,0.94)",
+    tierEmpty: "rgba(0,3,6,0.97)",
+    revealed: "rgba(3,7,10,0.94)",
+    revealedEmpty: "rgba(0,3,6,0.97)",
+    revealedEdge: "rgba(208,232,242,0.34)",
+    revealedEmptyEdge: "rgba(150,181,194,0.18)",
+    valleyGroove: "rgba(222,242,250,0.28)",
+    valleyGrooveDeep: "rgba(0,0,0,0.86)",
+    flagFill: "#e5222a",
+    flagIcon: "#ffffff",
+    flagEdge: "#ff5a5f",
+    mine: "#05070a",
+    mineCore: "#05070a",
+    mineEdge: "#ff3b3f",
+    mineBurst: "#ffffff",
+    pentagon: "rgba(3,9,13,0.08)",
+    pentagonEdge: "rgba(238,248,252,0.28)",
+    hoverRing: "#ffffff",
+    activeRing: "#9ee8ff",
+    backface: "rgba(0,4,8,0.035)",
+    backfaceEdge: "rgba(214,237,246,0.075)",
+    core: "rgba(0,0,0,0)",
+    floatShadow: null,
+    text: {
+      1: "#f4fbff",
+      2: "#bcecff",
+      3: "#8ed9f5",
+      4: "#ffd7a0",
+      5: "#ff9f8f",
+      6: "#ff7180",
+    },
+    label: "#f4fbff",
+    labelStroke: "rgba(0,3,7,0.96)",
+    revealFlash: "#ffffff",
+    revealGlow: "#9ee8ff",
+  };
+
   const THEMES = [
     THEME_LIGHT,
     THEME_SHELL,
@@ -347,6 +416,7 @@
     THEME_EARTH,
     THEME_MOON,
     THEME_GLOW,
+    THEME_MERCURY,
   ].filter((t) => {
     // Native app builds ship without the globe-map themes. Their daymaps are
     // the only assets fetched over the network (globeUrl falls back to an
@@ -667,6 +737,8 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
     glow:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.35"></circle><circle cx="12" cy="12" r="7"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path></svg>',
+    mercury:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M7.5 9.5a5 5 0 0 1 6-2.5" opacity="0.9"></path><path d="M9 15.5c1.8 1.6 4.4 1.4 6-.4" opacity="0.5"></path></svg>',
   };
 
   /** Loaded equirectangular maps (ImageData cache). */
@@ -738,6 +810,98 @@
     const canvas = document.getElementById(opts.canvasId || "gameCanvas");
     if (!canvas) throw new Error("SphereSweeper: canvas not found");
     const ctx = canvas.getContext("2d");
+
+    /**
+     * Reflection bridge. Themes flagged `reflectionSurface` hand the sphere
+     * body to sphere/mirror-material.js (WebGL) on a canvas layered under the
+     * game canvas. The renderer is created lazily on the first such theme,
+     * kept across theme switches, and stopped (canvas hidden) whenever a
+     * plain theme is active. When the script is not loaded, WebGL is missing,
+     * or forced colors are on, reflectionLive() stays false and the Canvas 2D
+     * paths paint a plain metal field instead.
+     */
+    let reflection = null;
+    let reflectionCanvasEl = null;
+    function reflectionLive() {
+      return !!(
+        reflection &&
+        !reflection.failed &&
+        state.theme &&
+        state.theme.reflectionSurface
+      );
+    }
+    function reflectionBlocked() {
+      try {
+        return !!(global.matchMedia && global.matchMedia("(forced-colors: active)").matches);
+      } catch (_) {
+        return false;
+      }
+    }
+    function ensureReflectionCanvas() {
+      if (reflectionCanvasEl && reflectionCanvasEl.isConnected) return reflectionCanvasEl;
+      let el = document.getElementById("reflectionCanvas");
+      if (!el) {
+        el = document.createElement("canvas");
+        el.id = "reflectionCanvas";
+        el.setAttribute("aria-hidden", "true");
+        el.style.cssText =
+          "position:absolute;inset:0;width:100%;height:100%;display:block;" +
+          "z-index:0;pointer-events:none;transform:translateZ(0)";
+        const parent = canvas.parentNode || document.body;
+        parent.insertBefore(el, canvas);
+        // Keep the game canvas above the material without touching page CSS.
+        if (!canvas.style.position) canvas.style.position = "relative";
+        if (!canvas.style.zIndex) canvas.style.zIndex = "1";
+      }
+      reflectionCanvasEl = el;
+      return el;
+    }
+    function syncReflectionForTheme() {
+      const T = state.theme;
+      const wants = !!(T && T.reflectionSurface);
+      if (!wants) {
+        if (reflection) {
+          reflection.stop();
+          if (reflectionCanvasEl) reflectionCanvasEl.style.display = "none";
+          try {
+            delete document.body.dataset.reflectionMaterial;
+          } catch (_) {}
+        }
+        return;
+      }
+      if (!global.MirrorMaterial || reflectionBlocked()) return;
+      const el = ensureReflectionCanvas();
+      el.style.display = "";
+      if (!reflection) {
+        try {
+          reflection = global.MirrorMaterial.boot({
+            canvasId: el.id,
+            appearance: "dark",
+            material: T.material || "mercury",
+            persist: false,
+          });
+          reflection.attach({
+            getState: () => state,
+            projectTile,
+            getSphereScreen: () => ({
+              cx: state.centerX,
+              cy: state.centerY,
+              r: state.scale * 1.15,
+            }),
+          });
+        } catch (err) {
+          reflection = null;
+          try {
+            console.warn("SphereSweeper: reflection material unavailable", err);
+          } catch (_) {}
+          return;
+        }
+      } else {
+        reflection.setMaterial(T.material || "mercury", { persist: false });
+        reflection.resize();
+        reflection.start();
+      }
+    }
 
     function readStoredThemeId() {
       try {
@@ -868,6 +1032,20 @@
       poppedMines: null,
       mineDue: null,
     };
+
+    /**
+     * Reflection materials (sphere/mirror-material.js) are an optional
+     * observer of gameplay. The Canvas engine remains authoritative; these
+     * semantic events add optical response without replacing reveal, flag,
+     * mine, or end-state animation paths.
+     */
+    function emitMaterialAction(type, index, detail) {
+      try {
+        document.dispatchEvent(new CustomEvent("hexsweeper:sphere-action", {
+          detail: Object.assign({ type, index }, detail || {}),
+        }));
+      } catch (_) {}
+    }
 
     function freshCell() {
       return {
@@ -1258,7 +1436,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -1284,6 +1462,7 @@
       themeIndex = ((index % THEMES.length) + THEMES.length) % THEMES.length;
       const def = currentThemeDef();
       state.theme = themePalette(def);
+      syncReflectionForTheme();
       if (def.id === "light" || def.id === "dark") {
         const dark = def.id === "dark";
         state.appearanceAxes = dark
@@ -1817,6 +1996,7 @@
       ensureGlobeForTheme(state.theme);
       bakeGlobeTileColors();
       updateUI();
+      emitMaterialAction("reset", -1);
       callVariant("reset");
       if (!optsReset.keepPersist) clearPersist();
     }
@@ -2299,6 +2479,7 @@
       END_FX.particles.length = 0;
       END_FX.rings.length = 0;
       state.camShake = state.reduceMotion ? 0 : 14;
+      emitMaterialAction("detonate", detonatorIdx, { strength: 1 });
 
       const distMap = graphDistancesFrom(detonatorIdx);
       END_FX.mineDue = new Map();
@@ -2629,6 +2810,10 @@
         cell.neighborMines === 0 ? floodFrom(idx, { notify: false }) : new Set();
       const revealed = [idx, ...opened];
       notifyVariantReveal({ index: idx, source: "direct", revealed }, true);
+      emitMaterialAction("dig", idx, {
+        strength: Math.min(1.35, 0.72 + revealed.length / 18),
+        opened: revealed.length,
+      });
       if (isFirstResolvedDig) {
         const result = callVariant(
           "firstResolvedDig",
@@ -2686,6 +2871,7 @@
       cell.flagged = flagged;
       state.flagsPlaced += cell.flagged ? 1 : -1;
       updateUI();
+      emitMaterialAction(cell.flagged ? "flag" : "unflag", idx, { strength: 1 });
       callVariant("flag", { index: idx, flagged: cell.flagged });
       persistNow();
       return true;
@@ -2728,6 +2914,7 @@
         startWinFx();
       }
       showTerminalBanner(won);
+      emitMaterialAction("finish", -1, { won: !!won });
       emitRunCompletion(won);
       persistNow();
       return true;
@@ -2879,6 +3066,29 @@
         let sy = state.centerY * dpr - span / 2;
         sx = Math.max(0, Math.min(sw - span, sx));
         sy = Math.max(0, Math.min(sh - span, sy));
+        // Reflection themes paint the sphere body on a WebGL canvas beneath
+        // the game canvas; composite it first so share cards are not hollow.
+        const reflectionCanvas = document.getElementById("reflectionCanvas");
+        if (
+          state.theme.reflectionSurface &&
+          reflectionCanvas &&
+          reflectionCanvas.width > 0 &&
+          reflectionCanvas.height > 0
+        ) {
+          const rx = reflectionCanvas.width / Math.max(1, canvas.width);
+          const ry = reflectionCanvas.height / Math.max(1, canvas.height);
+          octx.drawImage(
+            reflectionCanvas,
+            sx * rx,
+            sy * ry,
+            span * rx,
+            span * ry,
+            (side - box) / 2,
+            26,
+            box,
+            box
+          );
+        }
         octx.drawImage(canvas, sx, sy, span, span, (side - box) / 2, 26, box, box);
       }
 
@@ -3249,6 +3459,73 @@
     }
 
     /**
+     * Reflection themes: dug faces reveal a continuous material beneath the
+     * mirrored crust. The field is drawn in screen coordinates, then clipped
+     * per cleared face, so neighboring digs join without restarting the
+     * texture at every hex. Only the "metal" profile ships today (Mercury);
+     * the reflection studio (sphere-reflection/) carries the rest.
+     */
+    function revealedCoreProfile(cell) {
+      if (!cell || !cell.revealed || cell.flagged || cell.isMine) return null;
+      const T = state.theme;
+      if (!T || !T.reflectionSurface) return null;
+      if (T.material === "mercury") return "metal";
+      return null;
+    }
+    function drawMetalCore(proj, now) {
+      const time = state.reduceMotion ? 0 : now * 0.000075;
+      const angle = state.rotY * 0.22 + state.rotX * 0.10 + time;
+      const span = state.scale * 1.55;
+      const dx = Math.cos(angle) * span;
+      const dy = Math.sin(angle) * span;
+      const metal = ctx.createLinearGradient(
+        state.centerX - dx,
+        state.centerY - dy,
+        state.centerX + dx,
+        state.centerY + dy
+      );
+      metal.addColorStop(0, "#030607");
+      metal.addColorStop(0.24, "#424d50");
+      metal.addColorStop(0.43, "#dce7e8");
+      metal.addColorStop(0.49, "#6f7c7f");
+      metal.addColorStop(0.66, "#182023");
+      metal.addColorStop(0.84, "#a8b5b7");
+      metal.addColorStop(1, "#06090a");
+      ctx.fillStyle = metal;
+      ctx.fillRect(
+        state.centerX - state.scale * 1.2,
+        state.centerY - state.scale * 1.2,
+        state.scale * 2.4,
+        state.scale * 2.4
+      );
+      // The highlight settles just behind the shell rotation, giving the
+      // exposed metal a little optical inertia rather than a scrolling decal.
+      const hx = state.centerX + Math.cos(angle * 0.73 - 0.8) * state.scale * 0.34;
+      const hy = state.centerY + Math.sin(angle * 0.61 - 1.2) * state.scale * 0.25;
+      const gleam = ctx.createRadialGradient(hx, hy, 0, hx, hy, state.scale * 0.52);
+      gleam.addColorStop(0, "rgba(255,255,255,0.44)");
+      gleam.addColorStop(0.18, "rgba(226,244,246,0.16)");
+      gleam.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gleam;
+      ctx.fillRect(
+        state.centerX - state.scale,
+        state.centerY - state.scale,
+        state.scale * 2,
+        state.scale * 2
+      );
+    }
+    function drawRevealedCore(proj, cell, now, profile) {
+      if (!profile || !cell || !cell.revealed || cell.isMine) return;
+      ctx.save();
+      if (!drawHexPath(proj)) {
+        ctx.restore();
+        return;
+      }
+      ctx.clip();
+      if (profile === "metal") drawMetalCore(proj, now);
+      ctx.restore();
+    }
+    /**
      * Radial center glow clipped to the hex face (Glow theme / wellGlow themes).
      * Empty clears run hotter; numbered wells stay softer so digits stay readable.
      */
@@ -3418,6 +3695,10 @@
 
     /** Cliff/skirt fill — into black wells vs into white wells. */
     function skirtFill(nw) {
+      if (state.theme && state.theme.reflectionSurface) {
+        const alpha = (0.5 + (1 - nw) * 0.22).toFixed(3);
+        return `rgba(2,7,11,${alpha})`;
+      }
       const well = parseCssColor(
         state.theme.revealedEmpty || state.theme.revealed || "#000000"
       );
@@ -3666,6 +3947,21 @@
 
     function coveredStyle(proj, tile, isFront) {
       const T = state.theme;
+      // Reflection themes: the WebGL canvas below owns the mirrored body.
+      // Covered cells contribute only a faint silvering and etched topology.
+      if (T.reflectionSurface) {
+        const edgeWidth = tile.isPentagon
+          ? T.surfacePentagonEdgeWidth || 1.05
+          : T.surfaceEdgeWidth || 0.78;
+        return {
+          fill: isFront ? T.covered : T.backface,
+          stroke: isFront ? T.coveredEdge : T.backfaceEdge,
+          lineWidth: isFront
+            ? edgeWidth
+            : T.surfaceBackfaceEdgeWidth || 0.45,
+          showLabel: false,
+        };
+      }
       // Flat pure covered (dark mono): white hexes, no normal shading.
       if (T.pureCovered || T.id === "dark") {
         return {
@@ -3705,6 +4001,36 @@
       };
     }
 
+    function reflectionFlagStyle(proj, theme) {
+      if (theme.material !== "mercury") {
+        return {
+          fill: theme.tierFlagged || theme.flagFill,
+          stroke: theme.flagEdge,
+          lineWidth: theme.takeFlagHalo ? 3.4 : 2,
+        };
+      }
+      // Mercury flags are small pieces of warm metal planted into cool metal.
+      // The highlight is anchored in screen space so it behaves like a sheen,
+      // while the face still rises with the ordinary flag geometry.
+      const radius = Math.max(12, Math.sqrt(Math.max(24, proj.area)) * 0.92);
+      const shine = ctx.createLinearGradient(
+        proj.center.x - radius,
+        proj.center.y + radius * 0.72,
+        proj.center.x + radius,
+        proj.center.y - radius * 0.72
+      );
+      shine.addColorStop(0, "#3f2705");
+      shine.addColorStop(0.22, "#8c5a0d");
+      shine.addColorStop(0.48, "#f4d77a");
+      shine.addColorStop(0.62, "#b67a17");
+      shine.addColorStop(1, "#4b2b04");
+      return {
+        fill: shine,
+        stroke: "#ffe7a0",
+        lineWidth: 2.15,
+      };
+    }
+
     function tileColors(idx, proj, cell, tile, now) {
       const T = state.theme;
       const lit = shadeByNormal;
@@ -3714,12 +4040,26 @@
 
       // Flags: pure fill only — no glyph (color is enough). Optional halo for takes.
       if (cell.flagged && !cell.revealed) {
+        const flag = T.reflectionSurface
+          ? reflectionFlagStyle(proj, T)
+          : {
+              fill: T.tierFlagged || T.flagFill,
+              stroke: T.flagEdge,
+              lineWidth: T.takeFlagHalo ? 3.4 : 2,
+            };
         return {
-          fill: T.tierFlagged || T.flagFill,
-          stroke: T.flagEdge,
-          lineWidth: T.takeFlagHalo ? 3.4 : 2,
+          fill: flag.fill,
+          stroke: flag.stroke,
+          lineWidth: flag.lineWidth,
           showLabel: false,
         };
+      }
+
+      // Reflection themes: the WebGL canvas below owns the continuous mirrored
+      // surface. Covered cells contribute only a faint silvering and etched
+      // topology here; revealed cells become matte wells in the branch below.
+      if (T.reflectionSurface && !cell.revealed) {
+        return coveredStyle(proj, tile, isFront);
       }
 
       // Dark mono: unrevealed hexes are always pure white — including the rim.
@@ -3750,6 +4090,29 @@
       }
 
       if (cell.revealed && visualReady) {
+        if (T.reflectionSurface) {
+          if (cell.isMine) {
+            return {
+              fill: T.mine,
+              stroke: T.mineEdge,
+              lineWidth: 2.4,
+              showLabel: true,
+              label: "✹",
+              labelColor: T.mineBurst,
+              labelStroke: T.mineCore,
+            };
+          }
+          const empty = cell.neighborMines === 0;
+          return {
+            fill: empty ? T.revealedEmpty : T.revealed,
+            stroke: empty ? T.revealedEmptyEdge : T.revealedEdge,
+            lineWidth: empty ? 0.8 : 1.25,
+            showLabel: cell.neighborMines > 0,
+            label: cell.neighborMines > 0 ? String(cell.neighborMines) : "",
+            labelColor: T.text[cell.neighborMines] || T.label,
+            labelStroke: T.labelStroke,
+          };
+        }
         const pureWell = !!(T.pureRevealed || darkMono);
         if (cell.isMine) {
           let fill = pureWell ? T.mine : lit(T.mine, proj.normalZ, 0.25);
@@ -3850,18 +4213,39 @@
       ctx.save();
       if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
 
-      const grd = ctx.createRadialGradient(
-        state.centerX,
-        state.centerY,
-        state.scale * 0.1,
-        state.centerX,
-        state.centerY,
-        state.scale * 1.35
-      );
-      grd.addColorStop(0, state.theme.bgGlow);
-      grd.addColorStop(1, state.theme.bg);
-      ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, w, h);
+      if (state.theme.reflectionSurface && reflectionLive()) {
+        // The WebGL material canvas beneath paints field and body; keep this
+        // canvas transparent so the mirror shows through.
+      } else if (state.theme.reflectionSurface) {
+        // Reflection theme without a live renderer (no WebGL, script not
+        // loaded, forced colors): paint a plain metal field so the board
+        // still reads instead of showing the page background.
+        const grd = ctx.createRadialGradient(
+          state.centerX,
+          state.centerY,
+          state.scale * 0.1,
+          state.centerX,
+          state.centerY,
+          state.scale * 1.35
+        );
+        grd.addColorStop(0, state.theme.fallbackBgGlow || "#3d484b");
+        grd.addColorStop(1, state.theme.fallbackBg || "#050708");
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+      } else {
+        const grd = ctx.createRadialGradient(
+          state.centerX,
+          state.centerY,
+          state.scale * 0.1,
+          state.centerX,
+          state.centerY,
+          state.scale * 1.35
+        );
+        grd.addColorStop(0, state.theme.bgGlow);
+        grd.addColorStop(1, state.theme.bg);
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+      }
 
       // Float themes: soft contact shadow under the sphere (light-field lift).
       if (state.theme.float) {
@@ -3893,7 +4277,14 @@
       // Glow theme: soft luminous core so dug faces feel lit from inside.
       const coreFill = state.theme.core || state.theme.backface || "#000000";
       const coreR = Math.max(12, state.scale * 1.02);
-      if (state.theme.wellGlow && state.theme.coreGlow) {
+      if (state.theme.reflectionSurface && reflectionLive()) {
+        // The analytic WebGL orb is the sphere core for this material.
+      } else if (state.theme.reflectionSurface) {
+        ctx.beginPath();
+        ctx.arc(state.centerX, state.centerY, coreR, 0, Math.PI * 2);
+        ctx.fillStyle = state.theme.fallbackCore || "#101719";
+        ctx.fill();
+      } else if (state.theme.wellGlow && state.theme.coreGlow) {
         const cg = ctx.createRadialGradient(
           state.centerX,
           state.centerY,
@@ -3954,8 +4345,12 @@
         const idx = proj.index;
         const cell = state.cells[idx];
         const tile = state.tiles[idx];
+        const coreProfile = revealedCoreProfile(cell);
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
+        if (coreProfile) {
+          colors = { ...colors, stroke: colors.fill, lineWidth: 0 };
+        }
         const h = heights[idx];
         let drawProj = proj;
         let markLift = 0;
@@ -3983,7 +4378,7 @@
           drawProj = lifted;
           markLift = h;
           if (h < -1e-6) {
-            if (styleId === "borderless") {
+            if (coreProfile || styleId === "borderless") {
               // Seamless valley floor — no per-hex grid (covered tiles keep edges).
               colors = {
                 ...colors,
@@ -4022,6 +4417,7 @@
         } else {
           drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
         }
+        drawRevealedCore(drawProj, cell, now, coreProfile);
         drawWellCenterGlow(drawProj, cell, now);
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
@@ -4448,6 +4844,13 @@
     try {
       wantDeal = /(?:\?|&)deal=1(?:&|$)/.test(location.search);
     } catch (_) {}
+    // ?fresh=1 — the launcher's "play Sphere" route: start a new board instead
+    // of restoring the autosave. The autosave is replaced once the new run
+    // persists, exactly as a Reset would.
+    let wantFresh = false;
+    try {
+      wantFresh = /(?:\?|&)fresh=1(?:&|$)/.test(location.search);
+    } catch (_) {}
 
     let restored = false;
     if (activeTake) {
@@ -4478,6 +4881,8 @@
       state.scale = state.baseScale * state.zoomFactor;
       invalidateProjection();
       dealOpeningDig();
+    } else if (wantFresh) {
+      resetGame();
     } else {
       // Restore before any welcome UI so a saved sphere is not hidden under help.
       restored = tryRestoreRun();
@@ -4498,6 +4903,9 @@
       if (!restored && !wantDeal) openHelp(true);
     }
 
+    // Reflection themes need their renderer from the first frame, not the
+    // first theme change.
+    syncReflectionForTheme();
     scheduleFrame();
 
     return {

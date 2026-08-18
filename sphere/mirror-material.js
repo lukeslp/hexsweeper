@@ -1048,6 +1048,8 @@ void main() {
         if (!gl) throw new Error("WebGL2 is unavailable");
         this.gl = gl;
         this.program = programFor(gl);
+        // Bind before the sampler uniform below; render() rebinds each frame.
+        gl.useProgram(this.program);
         this.buffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(

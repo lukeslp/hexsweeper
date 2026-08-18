@@ -7224,7 +7224,7 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "stormglass";
 
 </script>
 <script>
-/* mirror-material.js */
+/* ../sphere/mirror-material.js */
 /**
  * File Purpose: Procedural and image-backed reflection fields beneath the Canvas 2D Hexsweeper sphere.
  * Primary Functions/Classes: MirrorMaterial.boot, WebGL reflection renderer, appearance facade.
@@ -8275,6 +8275,8 @@ void main() {
         if (!gl) throw new Error("WebGL2 is unavailable");
         this.gl = gl;
         this.program = programFor(gl);
+        // Bind before the sampler uniform below; render() rebinds each frame.
+        gl.useProgram(this.program);
         this.buffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(

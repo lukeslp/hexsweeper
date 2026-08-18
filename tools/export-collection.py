@@ -113,7 +113,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere/",
         "source": "sphere",
         "css": ["dev-chrome.css", "hex-bloom.css"],
-        "scripts": ["hexasphere.js", "sphere.js", "hex-bloom.js"],
+        "scripts": ["hexasphere.js", "sphere.js", "mirror-material.js", "hex-bloom.js"],
         "boot": "initHexBloom",
         "ogImage": f"{OG}/sphere-og.png",
     },
@@ -166,7 +166,7 @@ EXPERIMENTS = [
         "scripts": [
             "../sphere/hexasphere.js",
             "sphere.js",
-            "mirror-material.js",
+            "../sphere/mirror-material.js",
             "../sphere/hex-bloom.js",
         ],
         "boot": "initHexBloom",
@@ -189,7 +189,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=mercury",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -210,7 +210,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=aurora",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -231,7 +231,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=atrium",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -252,7 +252,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=canopy",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -273,7 +273,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=portoro",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -294,7 +294,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=deco",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -315,7 +315,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=oculus",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -336,7 +336,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=galaxy",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -357,7 +357,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=gilded-ribbon",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -378,7 +378,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=ion-storm",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -399,7 +399,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=amber-tempest",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -420,7 +420,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=heat-lightning",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -441,7 +441,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=stratosphere",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -462,7 +462,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=chromatic-ink",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -483,7 +483,7 @@ EXPERIMENTS = [
         "liveHref": "../sphere-reflection/?material=amber-cells",
         "source": "sphere-reflection",
         "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "mirror-material.js", "../sphere/hex-bloom.js"],
+        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
@@ -697,7 +697,7 @@ EXPERIMENTS = [
         "take": "kimi-moon-ink-orrery",
         "source": "sphere",
         "css": ["dev-chrome.css", "hex-bloom.css"],
-        "scripts": ["hexasphere.js", "sphere.js", "hex-bloom.js"],
+        "scripts": ["hexasphere.js", "sphere.js", "mirror-material.js", "hex-bloom.js"],
         "boot": "initHexBloom",
         "ogImage": f"{OG}/sphere-og.png",
     },
@@ -715,7 +715,7 @@ EXPERIMENTS = [
         "take": "claude-amber-codex",
         "source": "sphere",
         "css": ["dev-chrome.css", "hex-bloom.css"],
-        "scripts": ["hexasphere.js", "sphere.js", "hex-bloom.js"],
+        "scripts": ["hexasphere.js", "sphere.js", "mirror-material.js", "hex-bloom.js"],
         "boot": "initHexBloom",
         "ogImage": f"{OG}/sphere-og.png",
     },
@@ -733,7 +733,7 @@ EXPERIMENTS = [
         "take": "muse-constellation-void",
         "source": "sphere",
         "css": ["dev-chrome.css", "hex-bloom.css"],
-        "scripts": ["hexasphere.js", "sphere.js", "hex-bloom.js"],
+        "scripts": ["hexasphere.js", "sphere.js", "mirror-material.js", "hex-bloom.js"],
         "boot": "initHexBloom",
         "ogImage": f"{OG}/sphere-og.png",
     },
@@ -852,7 +852,7 @@ def reflection_texture_boot() -> str:
 
 def reflection_registry_errors() -> list[str]:
     """Keep renderer, live URLs, exports, picker, and texture files in one closed set."""
-    renderer = (ROOT / "sphere-reflection" / "mirror-material.js").read_text(encoding="utf-8")
+    renderer = (ROOT / "sphere" / "mirror-material.js").read_text(encoding="utf-8")
     match = re.search(r"const MATERIAL_PRESETS = \[(.*?)\n  \];", renderer, flags=re.S)
     if not match:
         return ["mirror-material.js: MATERIAL_PRESETS registry not found"]
@@ -1499,6 +1499,9 @@ def export_sphere(exp: dict) -> str:
         'href="../"', 'href="https://dr.eamer.dev/games/hexsweeper/"'
     )
     markup = markup.replace(
+        'href="../launcher.html"', 'href="https://dr.eamer.dev/games/hexsweeper/launcher.html"'
+    )
+    markup = markup.replace(
         'href="../?mode=fire"',
         'href="https://dr.eamer.dev/games/hexsweeper/?mode=fire"',
     )
@@ -1540,8 +1543,12 @@ GAME_MENU_PILL = """<style>
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
 """
 
-APP_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "../index.html")
-WEB_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "index.html")
+# Games live beside the launcher (games/ in the app, the site root on the web),
+# so "‹ Games" is a sibling link on both surfaces. Root Sphere pages get their
+# own pill pointing down into the launcher.
+APP_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
+WEB_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
+APP_ROOT_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "games/launcher.html")
 
 # Keeps the native launch screen up until the first painted frame; without it
 # the storyboard drops the moment the WebView mounts and the player watches a
@@ -1658,7 +1665,7 @@ def export_flat_app(collection_file: str, label: str) -> str:
     markup = markup.replace("// Bare play.html opens Light.", "// Bare URL opens Light.")
     markup = markup.replace(
         "return inCollection ? `../play.html?mode=${mode}` : `?mode=${mode}`;",
-        "return inCollection ? `../index.html?mode=${mode}` : `?mode=${mode}`;",
+        "return inCollection ? `infinite.html?mode=${mode}` : `?mode=${mode}`;",
     )
     return appify(markup, label=label)
 
@@ -1723,7 +1730,7 @@ def export_sphere_app(exp: dict) -> str:
     markup = export_sphere(exp)
     markup = re.sub(
         r"<title>.*?</title>",
-        "<title>Hexsweeper · Sphere</title>",
+        "<title>Hexsweeper</title>",
         markup,
         count=1,
         flags=re.S,
@@ -1735,10 +1742,10 @@ def export_sphere_app(exp: dict) -> str:
         1,
     )
 
-    # Sphere lives at games/sphere.html, so bundle assets are one level up.
+    # Sphere is the app root (www/index.html); bundle assets sit beside it.
     markup = markup.replace(
         'src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"',
-        'src="../assets/classic-minesweeper.png"',
+        'src="assets/classic-minesweeper.png"',
     )
 
     # Drop the "Also flat Hexsweeper · Fire · Plague" row: those modes are not
@@ -1748,11 +1755,210 @@ def export_sphere_app(exp: dict) -> str:
     if "HEXSWEEPER_SPHERE_APP" not in markup:
         raise SystemExit("export_sphere_app: app flag not injected")
 
+    # Root Sphere: Games pill down into the launcher, and the resume gate for
+    # runs saved in any of the three games.
+    gate = resume_gate(infinite_href="games/infinite.html", bounded_href="games/bounded.html")
+    markup = markup.replace("</body>", f"{APP_ROOT_PILL}{gate}</body>", 1)
+    if "HEXSWEEPER_SPHERE_GAME" not in markup:
+        raise SystemExit("export_sphere_app: sphere page no longer exposes HEXSWEEPER_SPHERE_GAME")
+
     # appify's guard checks src/href only. GLOBE_TEX_BASE still appears as a
     # string constant in the inlined sphere.js, but it is unreachable here:
     # globeUrl is only called for themes carrying `globeMap`, and the THEMES
     # filter drops every one of those under HEXSWEEPER_SPHERE_APP.
-    return appify(markup, label="sphere")
+    return appify(markup, back=False, label="sphere")
+
+
+# Root pages open straight into Sphere. When a saved Infinite, Classic, or
+# Sphere run is waiting, this dialog asks before the player digs into a fresh
+# board. Detection mirrors tools/app-launcher.html; ?fresh=1 / ?resume=1 (the
+# launcher's routes) and preview params skip it. __INFINITE__ / __BOUNDED__ are
+# replaced per output surface.
+RESUME_GATE = """<style>
+#resume-gate{position:fixed;inset:0;z-index:10000;margin:auto;max-width:min(92vw,360px);
+ padding:22px 22px 18px;border:1px solid rgba(255,255,255,.16);border-radius:22px;
+ background:rgba(14,18,26,.92);color:#f2f6fb;
+ -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+ box-shadow:0 24px 60px rgba(0,0,0,.45);
+ font:400 .95rem/1.45 "IBM Plex Sans",system-ui,sans-serif}
+#resume-gate::backdrop{background:rgba(2,4,8,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#resume-gate h2{margin:0 0 6px;font-size:1.15rem;font-weight:700;letter-spacing:.01em}
+#resume-gate p{margin:0 0 16px;color:#b8c4d4}
+#resume-gate .gate-actions{display:grid;gap:10px}
+#resume-gate button{min-height:46px;padding:0 16px;border-radius:999px;border:1px solid transparent;
+ font:600 .92rem/1 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#resume-gate .gate-resume{background:#7c3aed;color:#fff}
+#resume-gate .gate-resume[data-mode="infinite"]{background:#2563eb}
+#resume-gate .gate-resume[data-mode="bounded"]{background:#0f766e}
+#resume-gate .gate-fresh{background:transparent;color:#e6edf7;border-color:rgba(255,255,255,.28)}
+#resume-gate button:focus-visible{outline:3px solid #7fc4f2;outline-offset:2px}
+body[data-sphere-chrome="light"] #resume-gate{background:rgba(255,255,255,.94);color:#141a24;
+ border-color:rgba(0,0,0,.12);box-shadow:0 24px 60px rgba(0,0,0,.22)}
+body[data-sphere-chrome="light"] #resume-gate p{color:#4a5568}
+body[data-sphere-chrome="light"] #resume-gate .gate-fresh{color:#141a24;border-color:rgba(0,0,0,.28)}
+@media (prefers-reduced-motion:no-preference){#resume-gate button{transition:transform .15s ease}
+ #resume-gate button:active{transform:scale(.97)}}
+@media (forced-colors:active){#resume-gate{border:2px solid CanvasText}#resume-gate button{border:2px solid ButtonText}}
+</style>
+<script>
+/* root: resume gate — ask before a fresh Sphere buries a saved run */
+(function () {
+  var params;
+  try { params = new URLSearchParams(location.search); } catch (_) { return; }
+  if (["fresh", "resume", "deal", "take", "welcome"].some(function (k) { return params.has(k); })) return;
+  if (typeof HTMLDialogElement !== "function") return;
+  function read(store, key) { try { return store.getItem(key); } catch (_) { return null; } }
+  function parse(raw) { if (!raw) return null; try { return JSON.parse(raw); } catch (_) { return null; } }
+  function infinite() {
+    var d = parse(read(localStorage, "hexsweeper-endless-plate-v1"));
+    if (!d || d.v !== 1 || d.endless !== true) return null;
+    if (d.first !== false || d.over !== false || Number(d.cleared) <= 0) return null;
+    return { mode: "infinite", name: "Infinite", href: "__INFINITE__", savedAt: Number(d.savedAt) || 0 };
+  }
+  function classic() {
+    var d = parse(read(localStorage, "hexsweeper-classic-run-v1"));
+    if (!d || d.v !== 1 || d.kind !== "classic" || d.endless !== false) return null;
+    if (d.first !== false || d.over !== false) return null;
+    if (["easy", "medium", "hard"].indexOf(d.difficulty) < 0) return null;
+    if (!Array.isArray(d.mines) || !d.mines.length || !Array.isArray(d.revealed) || !d.revealed.length || !Array.isArray(d.flagged)) return null;
+    return { mode: "bounded", name: "Classic", href: "__BOUNDED__?resume=1", savedAt: Number(d.savedAt) || 0 };
+  }
+  function sphere() {
+    var best = null;
+    [sessionStorage, localStorage].forEach(function (store) {
+      ["hexsweeper-sphere-run-v2", "hexsweeper-sphere-run-v1"].forEach(function (key) {
+        var d = parse(read(store, key));
+        if (!d || (d.v !== 1 && d.v !== 2) || d.kind !== "sphere") return;
+        if (d.over !== false || typeof d.first !== "boolean") return;
+        var flagged = Array.isArray(d.flagged) ? d.flagged.length : Number(d.flags) || 0;
+        if (d.first && flagged <= 0) return;
+        if (!d.first && (!Array.isArray(d.mines) || d.mines.length === 0)) return;
+        var c = { mode: "sphere", name: "Sphere", href: "", savedAt: Number(d.savedAt) || 0 };
+        if (!best || c.savedAt >= best.savedAt) best = c;
+      });
+    });
+    return best;
+  }
+  var best = [infinite(), classic(), sphere()].filter(Boolean)
+    .sort(function (a, b) { return b.savedAt - a.savedAt; })[0];
+  if (!best) return;
+  var game = window.HEXSWEEPER_SPHERE_GAME || null;
+  var isSphere = best.mode === "sphere";
+  var dlg = document.createElement("dialog");
+  dlg.id = "resume-gate";
+  dlg.setAttribute("aria-labelledby", "resume-gate-title");
+  dlg.innerHTML =
+    '<h2 id="resume-gate-title">Resume your ' + best.name + " game?</h2>" +
+    "<p>" + (isSphere
+      ? "Your last sphere is still open where you left it."
+      : "You have an unfinished " + best.name + " board waiting.") + "</p>" +
+    '<div class="gate-actions">' +
+    '<button type="button" class="gate-resume" data-mode="' + best.mode + '">Resume ' + best.name + "</button>" +
+    '<button type="button" class="gate-fresh">' + (isSphere ? "Start a new sphere" : "Play Sphere instead") + "</button>" +
+    "</div>";
+  document.body.appendChild(dlg);
+  var closed = false;
+  function finish(action) {
+    if (closed) return;
+    closed = true;
+    try { dlg.close(); } catch (_) {}
+    if (dlg.parentNode) dlg.parentNode.removeChild(dlg);
+    if (action === "resume" && !isSphere) { location.href = best.href; return; }
+    if (action === "fresh" && isSphere && game && typeof game.reset === "function") game.reset();
+    if (game && typeof game.resumeTimer === "function") game.resumeTimer();
+  }
+  dlg.querySelector(".gate-resume").addEventListener("click", function () { finish("resume"); });
+  dlg.querySelector(".gate-fresh").addEventListener("click", function () { finish("fresh"); });
+  dlg.addEventListener("cancel", function (e) { e.preventDefault(); finish("keep"); });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) finish("keep"); });
+  if (game && typeof game.pauseTimer === "function") game.pauseTimer();
+  try { dlg.showModal(); } catch (_) { finish("keep"); return; }
+  var first = dlg.querySelector(".gate-resume");
+  if (first) first.focus();
+})();
+</script>
+"""
+
+
+def resume_gate(*, infinite_href: str, bounded_href: str) -> str:
+    return RESUME_GATE.replace("__INFINITE__", infinite_href).replace("__BOUNDED__", bounded_href)
+
+
+WEB_ROOT_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
+<meta name="theme-color" content="#05070c">
+<script>
+/* Preserve bookmarks from when the flat game lived at the web root. Sphere
+   owns ?theme= now; only flat-only theme names still forward to play.html. */
+(function () {{
+  var params = new URLSearchParams(location.search);
+  var flatOnly = ["fire", "plague", "escape", "white", "minimalist", "rift", "magma-core", "biolume-reef"];
+  var theme = params.get("theme");
+  if (params.has("mode")) {{
+    location.replace("play.html" + location.search + location.hash);
+  }} else if (theme && flatOnly.indexOf(theme) >= 0) {{
+    params.delete("theme");
+    params.set("mode", theme);
+    location.replace("play.html?" + params.toString() + location.hash);
+  }}
+}})();
+</script>
+"""
+
+WEB_ROOT_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
+
+
+def export_sphere_web() -> str:
+    """The public landing: Sphere itself, sealed like the collection pen but
+    with web routing — canonical root URL, the home social card, external
+    fonts (cached across pages), a Games pill to launcher.html, and the resume
+    gate for saved runs."""
+    exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
+    markup = export_sphere(exp)
+    markup = re.sub(r"<title>.*?</title>", "<title>Hexsweeper</title>", markup, count=1, flags=re.S)
+    markup = markup.replace('<html lang="en" class="collection-export">', '<html lang="en">', 1)
+    # Root social card: the product, not the pen.
+    markup = re.sub(
+        r'<meta name="description" content="[^"]*">',
+        '<meta name="description" content="Hex minesweeper on a 3D sphere, with Infinite and Classic boards a tap away. Free, no ads, no account.">',
+        markup, count=1,
+    )
+    markup = re.sub(r'\n?<meta property="og:[^"]+" content="[^"]*">', "", markup)
+    markup = re.sub(r'\n?<meta name="twitter:[^"]+" content="[^"]*">', "", markup)
+    social = "\n".join([
+        '<meta property="og:type" content="website">',
+        '<meta property="og:title" content="Hexsweeper">',
+        '<meta property="og:description" content="Hex minesweeper on a sphere — plus Infinite and Classic boards.">',
+        f'<meta property="og:url" content="{SITE_BASE}/">',
+        f'<meta property="og:image" content="{OG}/sphere-og.png">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        '<meta name="twitter:title" content="Hexsweeper">',
+        '<meta name="twitter:description" content="Hex minesweeper on a sphere — plus Infinite and Classic boards.">',
+        f'<meta name="twitter:image" content="{OG}/sphere-og.png">',
+        WEB_ROOT_HEAD.rstrip("\n"),
+    ])
+    markup = re.sub(r'(<meta name="description" content="[^"]*">)', r"\1\n" + social.replace("\\", "\\\\"), markup, count=1)
+    # Fonts: link, don't inline — every other page shares the cached file.
+    markup = re.sub(
+        r"<style>\n/\* fonts/fonts\.css \(woff2 inlined\) \*/\n.*?\n</style>\n",
+        '<link rel="stylesheet" href="fonts/fonts.css">\n',
+        markup, count=1, flags=re.S,
+    )
+    if "fonts/fonts.css" not in markup:
+        raise SystemExit("export_sphere_web: font link not restored")
+    # The history screenshot lives beside this page.
+    markup = markup.replace(
+        'src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"',
+        'src="sphere/assets/classic-minesweeper.png"',
+    )
+    # Cross-game links: the pen points at the live site; the root can be relative.
+    markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/launcher.html"', 'href="launcher.html"')
+    markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/infinite.html"', 'href="infinite.html"')
+    markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/bounded.html"', 'href="bounded.html"')
+    gate = resume_gate(infinite_href="infinite.html", bounded_href="bounded.html")
+    markup = markup.replace("</body>", f"{WEB_ROOT_PILL}{gate}</body>", 1)
+    if "HEXSWEEPER_SPHERE_GAME" not in markup:
+        raise SystemExit("export_sphere_web: sphere page no longer exposes HEXSWEEPER_SPHERE_GAME")
+    return markup
 
 
 def render_launcher(
@@ -1779,27 +1985,28 @@ def render_launcher(
 
 
 def export_app_launcher() -> str:
-    """The native picker: three mode hexes plus a centered Resume."""
+    """The native games menu at games/launcher.html: three mode hexes plus a
+    centered Resume. Sphere is the app root, so its hex points back up."""
     fonts_css = inline_css_urls(
         (ROOT / "fonts" / "fonts.css").read_text(encoding="utf-8"), ROOT / "fonts"
     )
     markup = render_launcher(
         fonts=f"<style>\n/* fonts/fonts.css (woff2 inlined) */\n{fonts_css}\n</style>",
-        infinite_href="games/infinite.html",
-        bounded_href="games/bounded.html",
-        sphere_href="games/sphere.html",
+        infinite_href="infinite.html",
+        bounded_href="bounded.html",
+        sphere_href="../index.html",
     )
-    # The launcher is the top of the stack; it has nowhere to go back to, and
-    # unlike the games it stays pinch-zoomable — it is text and targets, not a
-    # canvas with its own gesture handling.
+    # The launcher is a menu, not a game: no back pill (Sphere is one tap away
+    # in the triad), and unlike the games it stays pinch-zoomable — it is text
+    # and targets, not a canvas with its own gesture handling.
     return appify(markup, back=False, lock_zoom=False, label="launcher")
 
 
-WEB_LAUNCHER_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
+WEB_LAUNCHER_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/launcher.html">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hexsweeper">
 <meta property="og:description" content="Choose an endless plate, a fixed classic board, or a 3D sphere.">
-<meta property="og:url" content="{SITE_BASE}/">
+<meta property="og:url" content="{SITE_BASE}/launcher.html">
 <meta property="og:image" content="{SITE_BASE}/assets/social/home-og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Hexsweeper">
@@ -1807,15 +2014,6 @@ WEB_LAUNCHER_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/">
 <meta name="twitter:image" content="{SITE_BASE}/assets/social/home-og.png">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e8eef5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c1118">
-<script>
-/* Preserve bookmarks from when the flat game lived at the web root. */
-(function () {{
-  var params = new URLSearchParams(location.search);
-  if (params.has("mode") || params.has("theme") || params.has("deal")) {{
-    location.replace("play.html" + location.search + location.hash);
-  }}
-}})();
-</script>
 """
 
 WEB_LAUNCHER_TAIL = """<noscript>
@@ -1832,7 +2030,7 @@ WEB_LAUNCHER_TAIL = """<noscript>
   <h2>Choose a board</h2>
   <a href="infinite.html">Infinite · Endless</a>
   <a href="bounded.html">Classic · Fixed</a>
-  <a href="sphere/">Sphere · 3D</a>
+  <a href="index.html">Sphere · 3D</a>
 </nav>
 </noscript>
 <script data-goatcounter="https://stats.dr.eamer.dev/count"
@@ -1841,18 +2039,19 @@ WEB_LAUNCHER_TAIL = """<noscript>
 
 
 def export_web_launcher() -> str:
-    """The public landing: the native launcher's three-hex picker, with web routes."""
+    """launcher.html: the three-hex games menu, reached from any game's Games pill."""
     return render_launcher(
         fonts='<link rel="stylesheet" href="fonts/fonts.css">',
         infinite_href="infinite.html",
         bounded_href="bounded.html",
-        sphere_href="sphere/",
+        sphere_href="index.html",
         platform_head=WEB_LAUNCHER_HEAD,
         platform_tail=WEB_LAUNCHER_TAIL,
     )
 
 
-# Native Capacitor webDir: index.html is the picker; games live under games/.
+# Native Capacitor webDir: index.html is Sphere; the launcher and the flat
+# games live under games/.
 APP_GAMES = [
     ("games/infinite.html", "theme-plate.html", "infinite"),
     ("games/bounded.html", "skin-classic.html", "bounded"),
@@ -1865,21 +2064,24 @@ def write_app_build() -> list[Path]:
     (APP_BUILD / "assets").mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
 
-    launcher = APP_BUILD / "index.html"
-    launcher.write_text(export_app_launcher(), encoding="utf-8")
-    written.append(launcher)
-
     sphere_exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
-    sphere = APP_BUILD / "games" / "sphere.html"
+    sphere = APP_BUILD / "index.html"
     sphere.write_text(export_sphere_app(sphere_exp), encoding="utf-8")
     written.append(sphere)
+
+    launcher = APP_BUILD / "games" / "launcher.html"
+    launcher.write_text(export_app_launcher(), encoding="utf-8")
+    written.append(launcher)
+    stale_sphere = APP_BUILD / "games" / "sphere.html"
+    if stale_sphere.exists():
+        stale_sphere.unlink()
 
     for out_name, collection_file, label in APP_GAMES:
         path = APP_BUILD / out_name
         path.write_text(export_flat_app(collection_file, label), encoding="utf-8")
         written.append(path)
 
-    # The sphere's help lightbox reads this from the bundle, one level up.
+    # The sphere's help lightbox reads this from the bundle, beside index.html.
     history = APP_BUILD / "assets" / "classic-minesweeper.png"
     history.write_bytes((ROOT / "sphere" / "assets" / "classic-minesweeper.png").read_bytes())
     written.append(history)
@@ -2068,7 +2270,8 @@ def main() -> int:
         if exp.get("file"):
             planned[COLLECTION / exp["file"]] = export_sphere(exp)
     planned[COLLECTION / "index.html"] = write_index(THEMES, skins, EXPERIMENTS)
-    planned[ROOT / "index.html"] = export_web_launcher()
+    planned[ROOT / "index.html"] = export_sphere_web()
+    planned[ROOT / "launcher.html"] = export_web_launcher()
     planned[ROOT / "infinite.html"] = export_flat_web(
         planned[COLLECTION / "theme-plate.html"], "infinite", "infinite.html"
     )

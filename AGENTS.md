@@ -11,12 +11,15 @@ Saved edits on Drummer are live on the public site. Prefer: edit → verify loca
 
 ## Product surface
 
-The public root `index.html` is generated from `tools/app-launcher.html` and
-offers the three structural boards: **Infinite**, **Classic**, and **Sphere**.
-`infinite.html` and `bounded.html` are generated product pages; `sphere/` is
-authored in place. The former flat production surface lives at `play.html` with
-Light / Dark / Fire / Plague / Escape. Old root `?mode=` and `?deal=` links are
-forwarded there by the launcher. Water remains a renderer/deep-link archive.
+The public root `index.html` is the Sphere game, sealed from `sphere/` by the
+exporter, with a resume gate for saved runs. `launcher.html` is generated from
+`tools/app-launcher.html` and offers the three structural boards: **Infinite**,
+**Classic**, and **Sphere**. `infinite.html` and `bounded.html` are generated
+product pages; `sphere/` is authored in place (Mercury's WebGL renderer is
+`sphere/mirror-material.js`, shared with the reflection studio). The former flat
+production surface lives at `play.html` with Light / Dark / Fire / Plague /
+Escape. Old root `?mode=` links, and `?theme=` links naming flat-only themes,
+are forwarded there by the root page. Water remains a renderer/deep-link archive.
 Do not re-expose the skin lab from production chrome.
 
 ## Docs to keep in sync
@@ -35,7 +38,7 @@ python3 tools/export-collection.py
 python3 tools/export-collection.py --check   # drift guard
 ```
 
-Do not hand-edit root `index.html`, `infinite.html`, `bounded.html`,
+Do not hand-edit root `index.html`, `launcher.html`, `infinite.html`, `bounded.html`,
 `collection/theme-*.html`, `collection/skin-*.html`, or
 `collection/sphere.html` — they are generated. The desk UI lives in
 `tools/export-collection.py` (`write_index`): **Open** + **Copy HTML** on
