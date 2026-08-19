@@ -472,7 +472,7 @@
     id: "aurora",
     name: "Aurora",
     material: "aurora",
-    warn: { count: "numerals", relief: "extruded", seams: true },
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#88d2d0",
     fallbackBg: "#02070d",
     fallbackBgGlow: "#2e7f83",
@@ -3925,7 +3925,7 @@
       galaxy: "blackhole",
     };
     // Whole-sphere effects seen through the cleared faces (one paint per frame).
-    const INTERIOR_EFFECTS = { galaxy: "blackhole", "heat-lightning": "lightning" };
+    const INTERIOR_EFFECTS = { galaxy: "blackhole", "heat-lightning": "lightning", aurora: "curtains" };
     function interiorEffect() {
       const T = state.theme;
       return (T && T.reflectionSurface && INTERIOR_EFFECTS[T.material]) || null;
@@ -4186,11 +4186,80 @@
       ctx.fillRect(cx - R * 1.2, cy - R * 1.2, R * 2.4, R * 2.4);
       ctx.restore();
     }
+    /**
+     * Aurora's interior: curtains. Five sinuous vertical sheets of light
+     * hang inside the shell (after the aurora-curtain clock) — hue drifting
+     * green → teal → violet, each sheet a wide soft stroke built from three
+     * passes of falling alpha instead of shadowBlur (cheap on phones), over
+     * a polar-night field with a handful of stars and a low horizon glow.
+     */
+    function drawAuroraCurtains(now) {
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const t = coreTime(now);
+      const top = cy - R * 1.2, bottom = cy + R * 1.2;
+      const field = ctx.createLinearGradient(0, top, 0, bottom);
+      field.addColorStop(0, "#02040c");
+      field.addColorStop(0.55, "#04101a");
+      field.addColorStop(1, "#071a24");
+      ctx.fillStyle = field;
+      ctx.fillRect(cx - R * 1.3, top, R * 2.6, R * 2.4);
+      for (let i = 0; i < 70; i++) {
+        const sx = cx + (coreHash(i, 2, 1.7) - 0.5) * R * 2.3;
+        const sy = top + coreHash(i, 5, 2.3) * R * 1.7;
+        const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 2 + i));
+        ctx.fillStyle = `rgba(220,235,255,${(0.6 * tw).toFixed(3)})`;
+        ctx.fillRect(sx, sy, 1.4, 1.4);
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      const curtains = 4;
+      const ribs = 15; // thin sub-strokes across each sheet, bell-weighted → soft edges
+      for (let c = 0; c < curtains; c++) {
+        const baseX = cx + ((c + 0.5) / curtains - 0.5) * R * 2.0 + Math.sin(t * 0.11 + c) * R * 0.1;
+        const phase = t * 0.3 + c * 0.9;
+        const hue = 145 + (c % 3) * 32 + Math.sin(phase * 0.7) * 22;
+        const width = R * (0.30 + (c % 2) * 0.08);
+        // Sheets are brightest near their top edge and fade toward the horizon.
+        const fade = ctx.createLinearGradient(0, top + R * 0.2, 0, bottom);
+        const bright = 0.30 + 0.08 * Math.sin(phase);
+        fade.addColorStop(0, `hsla(${hue.toFixed(1)},90%,72%,${bright.toFixed(3)})`);
+        fade.addColorStop(0.45, `hsla(${(hue + 10).toFixed(1)},85%,58%,${(bright * 0.7).toFixed(3)})`);
+        fade.addColorStop(1, `hsla(${(hue + 30).toFixed(1)},80%,50%,0)`);
+        ctx.strokeStyle = fade;
+        for (let r = 0; r < ribs; r++) {
+          const u = (r / (ribs - 1)) * 2 - 1; // -1..1 across the sheet
+          const w = Math.exp(-u * u * 2.2); // bell
+          ctx.globalAlpha = w;
+          ctx.lineWidth = Math.max(1, width / ribs * 1.9);
+          ctx.beginPath();
+          for (let y = top; y <= bottom; y += R * 0.035) {
+            const f = (y - top) / (bottom - top);
+            const wob = Math.sin(phase + f * 4.2 + u * 0.4) * R * (0.14 + c * 0.012) + Math.sin(phase * 1.7 + f * 9) * R * 0.05;
+            const x = baseX + u * width * 0.5 + wob + Math.sin(t * 0.2 + f * 3) * R * 0.03;
+            if (y === top) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+      // Low horizon glow.
+      const hg = ctx.createLinearGradient(0, cy + R * 0.5, 0, bottom);
+      hg.addColorStop(0, "rgba(80,220,180,0)");
+      hg.addColorStop(1, "rgba(80,220,180,0.18)");
+      ctx.fillStyle = hg;
+      ctx.fillRect(cx - R * 1.3, cy + R * 0.4, R * 2.6, R * 0.9);
+      ctx.restore();
+    }
     /** Paint the theme's interior effect once, clipped to the cleared faces. */
     function drawInteriorEffect(now, holes) {
       const effect = interiorEffect();
       if (!effect || !holes.length) return;
       ctx.save();
+      // Never past the shell: clip to the sphere's disc first, then to the holes.
+      ctx.beginPath();
+      ctx.arc(state.centerX, state.centerY, state.scale * 0.985, 0, Math.PI * 2);
+      ctx.clip();
       ctx.beginPath();
       for (const h of holes) {
         h.boundary.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
@@ -4199,6 +4268,7 @@
       ctx.clip();
       if (effect === "blackhole") drawBlackHole(now);
       else if (effect === "lightning") drawLightningBolts(now);
+      else if (effect === "curtains") drawAuroraCurtains(now);
       ctx.restore();
     }
     function interiorEffectLive() {
@@ -5128,7 +5198,9 @@
         }
         drawRevealedCore(drawProj, cell, now, coreProfile);
         drawWellCenterGlow(drawProj, cell, now);
-        if (effectId && cell.revealed && !cell.isMine && !cell.flagged && drawProj.z > 0.02) {
+        // Only faces that squarely face the viewer are windows; near the rim
+        // the recessed polygons go edge-on and the effect bled past the shell.
+        if (effectId && cell.revealed && !cell.isMine && !cell.flagged && drawProj.z > 0.22) {
           // A window onto the interior effect: the digit repaints above it.
           effectHoles.push(drawProj);
           effectMarks.push([tile, drawProj, cell, colors, markLift]);
