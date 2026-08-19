@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 56 is the latest uploaded TestFlight build, attached to 1.0, and the
+this same record. Build 57 is the latest uploaded TestFlight build, attached to 1.0, and the
 checked-in project matches it.
 
 ## Archive → TestFlight
@@ -57,12 +57,12 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-Current Android identity is `versionCode 11`, `versionName 1.0-test`, targeting
+Current Android identity is `versionCode 12`, `versionName 1.0-test`, targeting
 API 36 with minimum API 24. The direct test APK is debug-signed with the same
-certificate as builds 1–10 so testers can upgrade in place. Build 11 (2026-08-18,
-payload `0da1e04`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
+certificate as builds 1–11 so testers can upgrade in place. Build 12 (2026-08-18,
+payload `77ec5ed`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
 (APK served from `/home/coolhand/html/downloads/android/hexsweeper/` on Drummer;
-the page keeps `index.html.bak-before-build11`). The release AAB remains
+the page keeps `index.html.bak-before-build12`). The release AAB remains
 deliberately unsigned. Create and
 retain the Play signing key outside this repository, then use Android Studio's
 **Build → Generate Signed App Bundle** for the first store upload. Do not commit
@@ -191,6 +191,11 @@ Done (updated 2026-08-11, through the App Store Connect API):
       physics), its tutorial page-2 art redrawn, and the sheet's Board tab
       carries a wave button that opens it (vendored from hexsweeper
       `0da1e04`)
+- [x] Build 57 uploaded and attached to 1.0 on 2026-08-18: Stratosphere
+      flags red; Ion Storm (cobalt), Aurora (verdigris) and Heat Lightning
+      (copper) back to plain seamless metals with depth — their interior
+      effects unmapped; Galaxy's black hole and Stratosphere's sky stay
+      (vendored from hexsweeper `77ec5ed`)
 
 Still owed:
 
