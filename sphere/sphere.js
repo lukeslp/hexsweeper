@@ -489,7 +489,7 @@
     id: "galaxy",
     name: "Galaxy",
     material: "galaxy",
-    warn: { count: "numerals", relief: "extruded", seams: false },
+    warn: { count: "rings", relief: "extruded", seams: false },
     accent: "#d09a9e",
     fallbackBg: "#050714",
     fallbackBgGlow: "#49405c",
@@ -499,8 +499,10 @@
     hoverRing: "#f0cdd0",
     activeRing: "#d09a9e",
     revealGlow: "#d09a9e",
-    text: { 1: "#fff1f2", 2: "#f0cdd0", 3: "#d09a9e", 4: "#c9b8ff", 5: "#ffb27a", 6: "#ff7a9c" },
-    label: "#fff1f2",
+    // Counts are nested rings here, in black and white — no colour on the hole.
+    text: { 1: "rgba(255,255,255,0.72)", 2: "rgba(255,255,255,0.72)", 3: "rgba(255,255,255,0.72)", 4: "rgba(255,255,255,0.72)", 5: "rgba(255,255,255,0.72)", 6: "rgba(255,255,255,0.72)" },
+    label: "rgba(255,255,255,0.85)",
+    labelStroke: "rgba(0,0,0,0.85)",
   });
   const THEME_GILDED_RIBBON = reflectionTheme({
     id: "gilded-ribbon",
@@ -3992,7 +3994,7 @@
     function drawBlackHole(now) {
       const cx = state.centerX, cy = state.centerY, R = state.scale;
       const t = coreTime(now);
-      const rs = R * 0.11; // horizon radius on screen
+      const rs = R * 0.16; // horizon radius on screen
       // Deep field.
       const field = ctx.createRadialGradient(cx, cy, rs, cx, cy, R * 1.25);
       field.addColorStop(0, "#0a0716");
@@ -4009,20 +4011,36 @@
         const r = r0 + (rs * rs * 1.6) / Math.max(r0, rs);
         const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
         const tw = 0.5 + 0.5 * Math.abs(Math.sin(t * (0.5 + coreHash(i, 9, 0.7)) + i));
-        const near = Math.max(0, 1 - (r0 - rs) / (R * 0.5)); // stretched into arcs near the hole
         const sz = (0.5 + coreHash(i, 4, 6.2) * 1.4) * Math.max(0.6, R / 260);
-        ctx.fillStyle = `rgba(255,${235 + Math.round(coreHash(i, 1, 2) * 20)},${215 + Math.round(coreHash(i, 3, 2) * 40)},${(tw * (0.6 + 0.4 * near)).toFixed(3)})`;
-        if (near > 0.35) {
-          // Tangential smear: the closer to the horizon, the longer the arc.
-          ctx.beginPath();
-          ctx.arc(cx, cy, r, a - near * 0.22, a + near * 0.22);
-          ctx.lineWidth = sz;
-          ctx.strokeStyle = ctx.fillStyle;
-          ctx.stroke();
-        } else {
-          ctx.beginPath();
-          ctx.arc(x, y, sz, 0, Math.PI * 2);
-          ctx.fill();
+        ctx.fillStyle = `rgba(255,${235 + Math.round(coreHash(i, 1, 2) * 20)},${215 + Math.round(coreHash(i, 3, 2) * 40)},${(tw * 0.75).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(x, y, sz, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Something falls in now and then: a star spirals from the rim to the
+      // horizon over ~2.4 s, brightening and stretching as it goes.
+      const slot = Math.floor(now / 6500);
+      if (!state.reduceMotion && coreHash(slot, 51, 0.13) < 0.7) {
+        const start = slot * 6500 + coreHash(slot, 53, 0.29) * 3500;
+        const age = (now - start) / 2400;
+        if (age > 0 && age < 1) {
+          const a0 = coreHash(slot, 57, 0.61) * Math.PI * 2;
+          const dir = coreHash(slot, 59, 0.71) < 0.5 ? 1 : -1;
+          const rr = R * 1.15 - (R * 1.15 - rs * 1.05) * Math.pow(age, 0.8);
+          const ang = a0 + dir * age * age * 7;
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.lineCap = "round";
+          for (let k = 0; k < 8; k++) {
+            const ka = Math.max(0, age - k * 0.025);
+            const kr = R * 1.15 - (R * 1.15 - rs * 1.05) * Math.pow(ka, 0.8);
+            const kang = a0 + dir * ka * ka * 7;
+            ctx.fillStyle = `rgba(255,${240 - k * 10},${220 - k * 14},${(0.9 * (1 - k / 8) * (0.4 + 0.6 * age)).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(kang) * kr, cy + Math.sin(kang) * kr, Math.max(0.8, R * 0.012 * (1 - k / 10)), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
         }
       }
       // Accretion disc: particles on a tilted ellipse, Keplerian speeds.
@@ -4030,13 +4048,13 @@
       const tilt = 0.30;
       const near = [], far = [];
       for (let i = 0; i < N; i++) {
-        const rf = 0.15 + Math.pow(coreHash(i, 7, 2.9), 1.3) * 0.42; // fraction of R
+        const rf = 0.21 + Math.pow(coreHash(i, 7, 2.9), 1.3) * 0.42; // fraction of R
         const r = R * rf;
         const w = state.reduceMotion ? 0 : 0.35 / Math.pow(rf, 1.5);
         const phi = coreHash(i, 3, 5.1) * Math.PI * 2 + t * w;
         const px = Math.cos(phi) * r;
         const py = Math.sin(phi) * r * tilt;
-        const heat = 1 - (rf - 0.15) / 0.42; // 1 at the inner edge
+        const heat = 1 - (rf - 0.21) / 0.42; // 1 at the inner edge
         const doppler = 0.62 + 0.38 * Math.cos(phi); // approaching side brighter
         const cr = 255, cg = Math.round(120 + heat * 130), cb = Math.round(50 + heat * 170);
         const alpha = (0.28 + heat * 0.55) * doppler;
