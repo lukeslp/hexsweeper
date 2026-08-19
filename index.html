@@ -1428,11 +1428,11 @@ body.help-open { overflow: hidden; }
 .help-size { display: grid; place-items: center; line-height: 1.05; }
 .help-size b { font-size: 0.86rem; }
 .help-size small { font-size: 0.56rem; font-weight: 500; opacity: 0.7; }
-.help-egg-hint { margin: -0.35rem 0 0.9rem; font-size: 0.68rem; opacity: 0.55; font-style: italic; }
+.help-egg-row { margin: -0.3rem 0 0.7rem; display: flex; justify-content: flex-end; opacity: 0.6; }
 /* The quiet door: a sinking hex under two waves, inline with the hint. */
 .help-egg-door {
   appearance: none; display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; margin: -8px 0 -6px 2px; padding: 0; vertical-align: middle;
+  width: 30px; height: 30px; margin: 0; padding: 0; vertical-align: middle;
   border: 1px solid color-mix(in srgb, var(--text-main) 22%, transparent); border-radius: 999px;
   background: transparent; color: var(--text-main); cursor: pointer;
 }
@@ -1653,7 +1653,7 @@ body.help-open { overflow: hidden; }
       <span class="help-packs-cap">Board size <em>· starts a new sphere · best times live here</em></span>
       <div class="help-size-grid" id="help-size-grid"></div>
     </div>
-    <p class="help-egg-hint" id="help-egg-hint">There is a second sphere. Patience with the mine count finds it — or
+    <p class="help-egg-row" id="help-egg-row">
       <button type="button" class="help-egg-door" id="help-wheel-btn" aria-label="Open the Water Wheel" title="Water Wheel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l4 2.3v4.6L12 12 8 9.9V5.3z"/><path d="M2.5 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2.5 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>
       </button></p>
@@ -2768,7 +2768,10 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel/";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v1";
+  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v2";
+  // v1 stored X relative to the old default (drag right → face moves right).
+  // The default flipped in v2, so a v1 "invert X" is v2 "normal" and vice versa.
+  const INVERT_STORAGE_KEY_LEGACY = "hexsweeper-sphere-invert-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v2";
   const RUN_STORAGE_KEY_LEGACY = "hexsweeper-sphere-run-v1";
@@ -3060,9 +3063,22 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel/";
     function readStoredInvert() {
       try {
         const raw = localStorage.getItem(INVERT_STORAGE_KEY);
-        if (!raw) return { x: false, y: false };
-        const data = JSON.parse(raw);
-        return { x: !!data.x, y: !!data.y };
+        if (raw) {
+          const data = JSON.parse(raw);
+          return { x: !!data.x, y: !!data.y };
+        }
+        const legacy = localStorage.getItem(INVERT_STORAGE_KEY_LEGACY);
+        if (legacy) {
+          // Migrate: the X default flipped, so the stored X flag flips with it.
+          const data = JSON.parse(legacy);
+          const migrated = { x: !data.x, y: !!data.y };
+          try {
+            localStorage.setItem(INVERT_STORAGE_KEY, JSON.stringify(migrated));
+            localStorage.removeItem(INVERT_STORAGE_KEY_LEGACY);
+          } catch (_) {}
+          return migrated;
+        }
+        return { x: false, y: false };
       } catch (_) {
         return { x: false, y: false };
       }
@@ -7552,7 +7568,10 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel/";
           clearTimeout(longPressTimer);
           state.pressed = -1;
           // Free tumble — keep continuous angles (do not wrap mid-drag).
-          const sx = state.invertDragX ? -1 : 1;
+          // Default: drag right turns the sphere so the face under the finger
+          // moves left (X mirrors the way Y already felt to Luke); Invert X
+          // restores finger-following. Y follows the finger by default.
+          const sx = state.invertDragX ? 1 : -1;
           const sy = state.invertDragY ? -1 : 1;
           // Near 1:1 tracking: the face under the finger follows the finger
           // (a fixed rad/px overshot 2× on phones and 4× on desktops).

@@ -607,11 +607,11 @@ body.help-open { overflow: hidden; }
 .help-size { display: grid; place-items: center; line-height: 1.05; }
 .help-size b { font-size: 0.86rem; }
 .help-size small { font-size: 0.56rem; font-weight: 500; opacity: 0.7; }
-.help-egg-hint { margin: -0.35rem 0 0.9rem; font-size: 0.68rem; opacity: 0.55; font-style: italic; }
+.help-egg-row { margin: -0.3rem 0 0.7rem; display: flex; justify-content: flex-end; opacity: 0.6; }
 /* The quiet door: a sinking hex under two waves, inline with the hint. */
 .help-egg-door {
   appearance: none; display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; margin: -8px 0 -6px 2px; padding: 0; vertical-align: middle;
+  width: 30px; height: 30px; margin: 0; padding: 0; vertical-align: middle;
   border: 1px solid color-mix(in srgb, var(--text-main) 22%, transparent); border-radius: 999px;
   background: transparent; color: var(--text-main); cursor: pointer;
 }
@@ -868,7 +868,7 @@ body.help-open { overflow: hidden; }
       <span class="help-packs-cap">Board size <em>· starts a new sphere · best times live here</em></span>
       <div class="help-size-grid" id="help-size-grid"></div>
     </div>
-    <p class="help-egg-hint" id="help-egg-hint">There is a second sphere. Patience with the mine count finds it — or
+    <p class="help-egg-row" id="help-egg-row">
       <button type="button" class="help-egg-door" id="help-wheel-btn" aria-label="Open the Water Wheel" title="Water Wheel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l4 2.3v4.6L12 12 8 9.9V5.3z"/><path d="M2.5 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2.5 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>
       </button></p>

@@ -813,7 +813,10 @@
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v1";
+  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v2";
+  // v1 stored X relative to the old default (drag right → face moves right).
+  // The default flipped in v2, so a v1 "invert X" is v2 "normal" and vice versa.
+  const INVERT_STORAGE_KEY_LEGACY = "hexsweeper-sphere-invert-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v2";
   const RUN_STORAGE_KEY_LEGACY = "hexsweeper-sphere-run-v1";
@@ -1105,9 +1108,22 @@
     function readStoredInvert() {
       try {
         const raw = localStorage.getItem(INVERT_STORAGE_KEY);
-        if (!raw) return { x: false, y: false };
-        const data = JSON.parse(raw);
-        return { x: !!data.x, y: !!data.y };
+        if (raw) {
+          const data = JSON.parse(raw);
+          return { x: !!data.x, y: !!data.y };
+        }
+        const legacy = localStorage.getItem(INVERT_STORAGE_KEY_LEGACY);
+        if (legacy) {
+          // Migrate: the X default flipped, so the stored X flag flips with it.
+          const data = JSON.parse(legacy);
+          const migrated = { x: !data.x, y: !!data.y };
+          try {
+            localStorage.setItem(INVERT_STORAGE_KEY, JSON.stringify(migrated));
+            localStorage.removeItem(INVERT_STORAGE_KEY_LEGACY);
+          } catch (_) {}
+          return migrated;
+        }
+        return { x: false, y: false };
       } catch (_) {
         return { x: false, y: false };
       }
@@ -5597,7 +5613,10 @@
           clearTimeout(longPressTimer);
           state.pressed = -1;
           // Free tumble — keep continuous angles (do not wrap mid-drag).
-          const sx = state.invertDragX ? -1 : 1;
+          // Default: drag right turns the sphere so the face under the finger
+          // moves left (X mirrors the way Y already felt to Luke); Invert X
+          // restores finger-following. Y follows the finger by default.
+          const sx = state.invertDragX ? 1 : -1;
           const sy = state.invertDragY ? -1 : 1;
           // Near 1:1 tracking: the face under the finger follows the finger
           // (a fixed rad/px overshot 2× on phones and 4× on desktops).

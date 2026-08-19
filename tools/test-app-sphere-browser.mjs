@@ -361,7 +361,7 @@ try {
   await evaluate('document.getElementById("help-tab-board").click()');
   assert.equal(await evaluate('document.querySelector("#help-size-grid .help-size[data-size=xsmall] [data-best]").textContent.trim()'), "Best 42s", "XS pill does not show the best time");
   assert.equal(await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium] [data-best]").hidden'), true, "M pill shows a best it never earned");
-  assert.match(await evaluate('document.getElementById("help-egg-hint").textContent'), /second sphere/i, "the settings sheet lost its Wheel hint");
+  assert.equal(await evaluate('!!document.getElementById("help-egg-hint")'), false, "the patience sentence is back on the sheet");
   await evaluate('document.getElementById("help-done-btn").click()');
   await waitExpression('document.getElementById("help-overlay").hidden', "help did not close after the win");
   await evaluate('document.getElementById("qc-reset").click()');
