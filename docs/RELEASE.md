@@ -12,12 +12,10 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 58 is the latest uploaded TestFlight build, attached to 1.0. The
-checked-in project is at **59** (payload `b6f1c68`), archived and exported to
-`~/hexsweeper-build/export/Hexsweeper.ipa` but **not yet uploaded**: App Store
-Connect returned error 90382 (daily upload limit for the app) on 2026-08-18.
-Upload it with `xcrun altool --upload-app` and attach with `asc_ship.py attach
-… --build 59` on 2026-08-19.
+this same record. Build 59 is the latest uploaded TestFlight build, attached to 1.0, and the
+checked-in project matches it. (App Store Connect enforces a per-app daily
+upload cap — error 90382 after ~15 uploads on 2026-08-18; it cleared within
+the hour.)
 
 ## Archive → TestFlight
 
@@ -61,12 +59,12 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-Current Android identity is `versionCode 14`, `versionName 1.0-test`, targeting
+Current Android identity is `versionCode 15`, `versionName 1.0-test`, targeting
 API 36 with minimum API 24. The direct test APK is debug-signed with the same
-certificate as builds 1–13 so testers can upgrade in place. Build 14 (2026-08-18,
-payload `b6f1c68`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
+certificate as builds 1–14 so testers can upgrade in place. Build 15 (2026-08-18,
+payload `c5a8a9c`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
 (APK served from `/home/coolhand/html/downloads/android/hexsweeper/` on Drummer;
-the page keeps `index.html.bak-before-build14`). The release AAB remains
+the page keeps `index.html.bak-before-build15`). The release AAB remains
 deliberately unsigned. Create and
 retain the Play signing key outside this repository, then use Android Studio's
 **Build → Generate Signed App Bundle** for the first store upload. Do not commit
@@ -204,12 +202,13 @@ Done (updated 2026-08-11, through the App Store Connect API):
       sensitivity follows the sphere's screen size (~1.3× finger tracking;
       direction unchanged — the face follows the finger on both axes),
       same in the Wheel (vendored from hexsweeper `fd781ee`)
-- [ ] Build 59 archived + exported 2026-08-18, **upload deferred to 2026-08-19**
-      (ASC daily upload limit, error 90382): Aurora, Ion Storm, Gilded
-      Ribbon, Heat Lightning, Stratosphere clear to mono wells with depth +
-      seams on the Light/Dark model; only Mercury's liquid metal and
-      Galaxy's black hole remain as interiors (vendored from hexsweeper
-      `b6f1c68`; Android test 14 already carries it)
+- [x] Build 59 uploaded and attached to 1.0 on 2026-08-18 (after the daily
+      cap cleared): Aurora, Ion Storm, Gilded Ribbon, Heat Lightning,
+      Stratosphere clear to mono wells with depth + seams on the Light/Dark
+      model; only Mercury's liquid metal and Galaxy's black hole remain as
+      interiors; horizontal drag mirrored by default (Invert X = finger-
+      following; stored prefs migrate v1→v2); the Board-tab Wheel door is
+      icon-only (vendored from hexsweeper `c5a8a9c`)
 
 Still owed:
 

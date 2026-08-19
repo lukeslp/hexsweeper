@@ -28,13 +28,13 @@ and any network dependency is a defect.
 | 2a | Mercury clears | On Mercury, clear a face and keep playing: liquid-metal wells (the build-50 look), sphere keeps answering drag and tap (build 51 froze here; build 52 had the wrong cores) | |
 | 2d | Tabbed sheet | ? opens on the last-used tab; Play · Themes · Board · Settings each ≥ 44 pt; one panel at a time; Done/× on every tab | |
 | 2b | Best times | Win an XS sphere: banner reads *First clear at this size*; ? shows *Best …* under XS; a slower win keeps the old best | |
-| 2c | Water Wheel | Hold the mine count at the top (water rises through it) **or** tap the wave button on the sheet's Board tab → the Water Wheel opens with its own tutorial (page 2: the flower over the half-sunk wheel, a tap in the open sea) and a Sphere pill top-left clear of the status bar; the wheel bobs gently on the water, dips when spun, hops on a quench, slams on a detonation, and taps still land on the intended face; Sphere returns to the resumed run | |
+| 2c | Water Wheel | Hold the mine count at the top (water rises through it) **or** tap the wave button on the sheet's Board tab (icon only, no hint sentence) → the Water Wheel opens with its own tutorial (page 2: the flower over the half-sunk wheel, a tap in the open sea) and a Sphere pill top-left clear of the status bar; the wheel bobs gently on the water, dips when spun, hops on a quench, slams on a detonation, and taps still land on the intended face; Sphere returns to the resumed run | |
 | 3 | Settings sheet | ? opens wide enough to read (≥340 pt on a phone), no keyboard hints; Theme grid (nine, Themes tab), Board size (XS–XL, new sphere on change, Board tab), Invert, Effects (Settings tab) all apply live and read pressed; no Warnings group (themes own depth/seams/marks: Light/Dark depth+seams, mirror materials depth, no seams except Aurora); Done ≥ 44 pt; "Show the tutorial again" reopens the tutorial; closes with × / Done / outside tap and never blocks the board afterwards | |
 | 6 | Sphere render | Sphere is centred and fully visible; no clipping at any edge | |
 | 7 | Sphere dig | Single tap reveals the intended tile — not a neighbour | |
 | 8 | Sphere flag | Long-press flags; flag stands proud of the shell | |
 | 9 | Sphere chord | Tapping a satisfied number opens its neighbours | |
-| 10 | Sphere camera | One-finger drag tumbles freely and the face under the finger stays close to the finger (drag right → it moves right, drag down → down; ~1.3× tracking at any zoom); pinch zooms; no accidental digs while dragging | |
+| 10 | Sphere camera | One-finger drag tumbles freely: drag down → the face under the finger moves down; drag right → it moves **left** (mirrored X is the default; Settings → Invert X flips it); ~1.3× tracking at any zoom; pinch zooms; no accidental digs while dragging | |
 | 11 | Sphere flood | Clearing an empty region animates outward and settles correctly | |
 | 12 | Sphere sizes | XS through XL all render; **note the smallest size you can still tap reliably** | |
 | 13 | Sphere themes | All seven cycle; no theme shows a missing texture or flat grey | |
