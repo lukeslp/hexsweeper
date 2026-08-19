@@ -10,7 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` is 57 for the release candidate (quiet bar + settings sheet + native image share + sphere-attached interiors + best times + hidden Water Wheel)
+- [x] `CURRENT_PROJECT_VERSION` is 58 for the release candidate (quiet bar + settings sheet + native image share + sphere-attached interiors + best times + hidden Water Wheel)
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [x] Archive signs cleanly under team `596T7J7FB6`
@@ -52,7 +52,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Build 54 uploaded 2026-08-18: cores only on Mercury + Galaxy, the other mirror themes clear to matte wells with depth + seams, contrasting flags on Gilded Ribbon/Heat Lightning
 - [x] Build 55 uploaded 2026-08-18: porcelain/cobalt/gold/ivory interiors, Galaxy black hole, Heat Lightning bolts; **black hole bled past the rim on device**
 - [x] Build 56 uploaded 2026-08-18: interiors round two on every mirror theme, rim bleed fixed, B&W ring counts on Galaxy, the Wheel floats, Board-tab door to the Wheel
-- [x] Build 57 uploaded 2026-08-18: Stratosphere red flags; Ion Storm/Aurora/Heat Lightning plain seamless metals (cobalt/verdigris/copper); attached to 1.0 as the release candidate
+- [x] Build 57 uploaded 2026-08-18: Stratosphere red flags; Ion Storm/Aurora/Heat Lightning plain seamless metals (cobalt/verdigris/copper)
+- [x] Build 58 uploaded 2026-08-18: scale-aware drag (~1.3× tracking, both engines); attached to 1.0 as the release candidate
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network

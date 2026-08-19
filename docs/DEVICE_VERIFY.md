@@ -34,7 +34,7 @@ and any network dependency is a defect.
 | 7 | Sphere dig | Single tap reveals the intended tile — not a neighbour | |
 | 8 | Sphere flag | Long-press flags; flag stands proud of the shell | |
 | 9 | Sphere chord | Tapping a satisfied number opens its neighbours | |
-| 10 | Sphere camera | One-finger drag tumbles freely; pinch zooms; no accidental digs while dragging | |
+| 10 | Sphere camera | One-finger drag tumbles freely and the face under the finger stays close to the finger (drag right → it moves right, drag down → down; ~1.3× tracking at any zoom); pinch zooms; no accidental digs while dragging | |
 | 11 | Sphere flood | Clearing an empty region animates outward and settles correctly | |
 | 12 | Sphere sizes | XS through XL all render; **note the smallest size you can still tap reliably** | |
 | 13 | Sphere themes | All seven cycle; no theme shows a missing texture or flat grey | |
