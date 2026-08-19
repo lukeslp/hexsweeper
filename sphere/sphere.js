@@ -3925,7 +3925,7 @@
       galaxy: "blackhole",
     };
     // Whole-sphere effects seen through the cleared faces (one paint per frame).
-    const INTERIOR_EFFECTS = { galaxy: "blackhole", "heat-lightning": "lightning", aurora: "curtains" };
+    const INTERIOR_EFFECTS = { galaxy: "blackhole", "heat-lightning": "lightning", aurora: "curtains", "ion-storm": "plasma" };
     function interiorEffect() {
       const T = state.theme;
       return (T && T.reflectionSurface && INTERIOR_EFFECTS[T.material]) || null;
@@ -4251,6 +4251,65 @@
       ctx.fillRect(cx - R * 1.3, cy + R * 0.4, R * 2.6, R * 0.9);
       ctx.restore();
     }
+    /**
+     * Ion Storm's interior: a plasma globe over the cobalt. Seven filaments
+     * wander out from a pulsing core to the shell, each a jittered polyline
+     * whose end drifts slowly and jitters fast (plasma-curtain / storm-gate
+     * language); every second or so one filament flares white. Drawn with
+     * additive blending so the metal underneath still reads.
+     */
+    function drawPlasmaFilaments(now) {
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const t = coreTime(now);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      // Core.
+      const pulse = 0.5 + 0.5 * Math.sin(t * 2.3);
+      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * (0.16 + pulse * 0.03));
+      core.addColorStop(0, `rgba(240,248,255,${(0.55 + pulse * 0.25).toFixed(3)})`);
+      core.addColorStop(0.35, "rgba(160,205,255,0.35)");
+      core.addColorStop(1, "rgba(120,160,255,0)");
+      ctx.fillStyle = core;
+      ctx.fillRect(cx - R * 0.25, cy - R * 0.25, R * 0.5, R * 0.5);
+      const filaments = 7;
+      const jitterSlot = Math.floor(now / 55); // fast jitter, ~18 Hz
+      for (let f = 0; f < filaments; f++) {
+        const baseAng = (f / filaments) * Math.PI * 2 + t * 0.12 * (f % 2 ? 1 : -1) + Math.sin(t * 0.4 + f) * 0.35;
+        const endR = R * (0.92 + Math.sin(t * 0.7 + f * 1.7) * 0.05);
+        const flare = coreHash(Math.floor(now / 900), 61 + f, 0.41) > 0.86 ? 1 : 0;
+        const segs = 10;
+        const pts = [];
+        for (let i = 0; i <= segs; i++) {
+          const u = i / segs;
+          const r = R * 0.05 + (endR - R * 0.05) * u;
+          const wig = (coreHash(jitterSlot, 67 + i, f + 0.3) - 0.5) * 0.28 * Math.sin(u * Math.PI) + Math.sin(t * 3 + u * 6 + f) * 0.05 * Math.sin(u * Math.PI);
+          const a = baseAng + wig;
+          pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+        }
+        const path = () => {
+          ctx.beginPath();
+          pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+        };
+        path();
+        ctx.lineWidth = Math.max(3, R * 0.03) * (1 + flare);
+        ctx.strokeStyle = `rgba(150,120,255,${(0.16 + flare * 0.2).toFixed(3)})`;
+        ctx.stroke();
+        path();
+        ctx.lineWidth = Math.max(1, R * 0.008) * (1 + flare * 0.6);
+        ctx.strokeStyle = `rgba(232,240,255,${(0.55 + flare * 0.45).toFixed(3)})`;
+        ctx.stroke();
+        // Where the filament meets the shell, a small bloom.
+        const end = pts[segs];
+        const bloom = ctx.createRadialGradient(end[0], end[1], 0, end[0], end[1], R * 0.07);
+        bloom.addColorStop(0, `rgba(200,220,255,${(0.35 + flare * 0.4).toFixed(3)})`);
+        bloom.addColorStop(1, "rgba(150,120,255,0)");
+        ctx.fillStyle = bloom;
+        ctx.fillRect(end[0] - R * 0.08, end[1] - R * 0.08, R * 0.16, R * 0.16);
+      }
+      ctx.restore();
+    }
     /** Paint the theme's interior effect once, clipped to the cleared faces. */
     function drawInteriorEffect(now, holes) {
       const effect = interiorEffect();
@@ -4269,6 +4328,7 @@
       if (effect === "blackhole") drawBlackHole(now);
       else if (effect === "lightning") drawLightningBolts(now);
       else if (effect === "curtains") drawAuroraCurtains(now);
+      else if (effect === "plasma") drawPlasmaFilaments(now);
       ctx.restore();
     }
     function interiorEffectLive() {
