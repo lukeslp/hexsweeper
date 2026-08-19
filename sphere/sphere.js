@@ -428,7 +428,7 @@
     name: "Stratosphere",
     chrome: "light",
     material: "stratosphere",
-    warn: { count: "numerals", relief: "extruded", seams: false },
+    warn: { count: "numerals", relief: "extruded", seams: true },
     accent: "#1d6fa9",
     fallbackBg: "#e7f2fa",
     fallbackBgGlow: "#ffffff",
@@ -436,6 +436,15 @@
     hoverRing: "#1d6fa9",
     activeRing: "#0f4f80",
     flagEdge: "#ffd6d8",
+    // Mono wells, white: the sky theme clears to porcelain, not to a dark pit.
+    tierNumbered: "#f4f8fb",
+    tierEmpty: "#ffffff",
+    revealed: "#f4f8fb",
+    revealedEmpty: "#ffffff",
+    revealedEdge: "rgba(11,37,64,0.22)",
+    revealedEmptyEdge: "rgba(11,37,64,0.14)",
+    valleyGroove: "rgba(11,37,64,0.16)",
+    valleyGrooveDeep: "rgba(11,37,64,0.32)",
     // Wells open onto bright sky glass, so numbers go dark on a light stroke.
     text: { 1: "#0b2540", 2: "#123c66", 3: "#1d5a8f", 4: "#7a2d10", 5: "#8f1d1d", 6: "#5a0f2c" },
     label: "#0b2540",
@@ -446,7 +455,7 @@
     name: "Ion Storm",
     chrome: "dark",
     material: "ion-storm",
-    warn: { count: "numerals", relief: "extruded", seams: false },
+    warn: { count: "numerals", relief: "extruded", seams: true },
     accent: "#c893dc",
     fallbackBg: "#060a19",
     fallbackBgGlow: "#175fa2",
@@ -472,7 +481,7 @@
     id: "aurora",
     name: "Aurora",
     material: "aurora",
-    warn: { count: "numerals", relief: "extruded", seams: false },
+    warn: { count: "numerals", relief: "extruded", seams: true },
     accent: "#88d2d0",
     fallbackBg: "#02070d",
     fallbackBgGlow: "#2e7f83",
@@ -508,7 +517,7 @@
     id: "gilded-ribbon",
     name: "Gilded Ribbon",
     material: "gilded-ribbon",
-    warn: { count: "numerals", relief: "extruded", seams: false },
+    warn: { count: "numerals", relief: "extruded", seams: true },
     accent: "#dfa35f",
     fallbackBg: "#080510",
     fallbackBgGlow: "#4d3449",
@@ -525,7 +534,7 @@
     id: "heat-lightning",
     name: "Heat Lightning",
     material: "heat-lightning",
-    warn: { count: "numerals", relief: "extruded", seams: false },
+    warn: { count: "numerals", relief: "extruded", seams: true },
     accent: "#ffb05b",
     fallbackBg: "#190f16",
     fallbackBgGlow: "#7a3f53",
@@ -3914,19 +3923,18 @@
       return state.reduceMotion ? 0 : now * 0.001;
     }
     /** Galaxy: indigo dust with a fixed star field that twinkles. */
+    // Only Mercury (liquid metal) and Galaxy (black hole) carry an interior.
+    // Aurora, Ion Storm, Gilded Ribbon, Heat Lightning and Stratosphere clear
+    // to mono wells with depth and seams, on the Light/Dark model. The other
+    // palettes/painters stay below for a one-line revert.
     const CORE_PROFILES = {
       mercury: "metal",
-      "ion-storm": "cobalt",
-      "gilded-ribbon": "gold",
-      stratosphere: "light",
-      "heat-lightning": "copper",
-      aurora: "verdigris",
       galaxy: "blackhole",
     };
     // Whole-sphere effects seen through the cleared faces (one paint per frame).
     // Only two themes carry a whole-sphere effect now; Ion Storm, Aurora and
     // Heat Lightning are plain themed metals (their painters stay for a revert).
-    const INTERIOR_EFFECTS = { galaxy: "blackhole", stratosphere: "clouds" };
+    const INTERIOR_EFFECTS = { galaxy: "blackhole" };
     function interiorEffect() {
       const T = state.theme;
       return (T && T.reflectionSurface && INTERIOR_EFFECTS[T.material]) || null;

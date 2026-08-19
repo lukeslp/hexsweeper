@@ -217,13 +217,13 @@ try {
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "theme grid did not apply Galaxy");
   assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "galaxy", "theme grid did not mark Galaxy pressed");
-  // Themes own the warning treatment: mirror materials = depth, no seams (Aurora keeps seams); Light/Dark = depth + seams.
+  // Themes own the warning treatment: depth + seams everywhere except Mercury and Galaxy (continuous interiors, no seams).
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=mercury]").click()');
   assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Mercury did not set depth + no seams");
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
   assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Galaxy did not set depth + no seams");
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=stratosphere]").click()');
-  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Stratosphere did not set depth + no seams");
+  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/true", "Stratosphere did not set depth + seams");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=easy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().difficulty'), "easy", "size pill did not start a Small sphere");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium]").click()');
