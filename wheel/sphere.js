@@ -1376,8 +1376,10 @@
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      state.centerX = w / 2;
-      state.centerY = h / 2;
+      state.baseCenterX = w / 2;
+      state.baseCenterY = h / 2;
+      state.centerX = state.baseCenterX + BOB.x;
+      state.centerY = state.baseCenterY + BOB.y;
       state.baseScale = Math.min(w, h) * BASE_SCALE_FRAC;
       syncScale();
       state.projectedCache = null;
@@ -1571,7 +1573,7 @@
     }
 
     function rotKey() {
-      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}`;
+      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}|${state.centerX.toFixed(2)}|${state.centerY.toFixed(2)}`;
     }
 
     /** Project all tiles once per frame; cull back hemisphere for pick + draw. */
@@ -2632,6 +2634,7 @@
       const idx = state.armedMineIdx;
       if (idx < 0 || state.isGameOver) return;
       if (wheelFx && effectEvent) wheelFx.emit("detonate", effectEvent);
+      bobImpulse(state.scale * 2.4, (Math.random() - 0.5) * state.scale * 0.8); // slam
       clearArmedMine();
       state.detonatorIdx = idx;
       if (wheelAlert) {
@@ -3960,7 +3963,7 @@
       return Math.round(
         Math.max(
           -40,
-          Math.min(h + 40, state.centerY + state.waterRetreatVisual + tide)
+          Math.min(h + 40, (state.baseCenterY != null ? state.baseCenterY : state.centerY) + state.waterRetreatVisual + tide)
         )
       );
     }
@@ -4298,6 +4301,7 @@
       cell.doused = true;
       cell.flagged = false;
       cell.revealed = true;
+      bobImpulse(-state.scale * 0.9, 0); // the wheel hops when a mine dies
       cell.animReveal = 1;
       cell._wetMs = 0;
       cell._dousedAt = now;
@@ -4781,9 +4785,55 @@
       else requestAnimationFrame(loop);
     }
 
+    /**
+     * Buoyancy. The wheel floats: a spring–damper on its vertical bob and a
+     * lighter one on horizontal sway, forced by a two-frequency swell so it
+     * never quite settles, pushed down when the player spins it (a turning
+     * wheel churns), given a hop on a quench and a slam on a detonation.
+     * Everything projects through state.centerX/Y so picking, water and
+     * effects follow the body; the waterline itself is anchored to the frame.
+     */
+    const BOB = { x: 0, y: 0, vx: 0, vy: 0, lastRotY: null, lastRotX: null, lastTs: 0 };
+    function bobImpulse(vy, vx) {
+      if (state.reduceMotion) return;
+      BOB.vy += vy || 0;
+      BOB.vx += vx || 0;
+    }
+    function tickBob(now) {
+      const dt = Math.min(0.05, Math.max(0.001, (now - (BOB.lastTs || now)) / 1000));
+      BOB.lastTs = now;
+      const R = state.scale * 1.15;
+      if (state.reduceMotion) {
+        BOB.x = BOB.y = BOB.vx = BOB.vy = 0;
+      } else {
+        const t = now * 0.001;
+        const swell = (Math.sin(t * 0.9) * 0.6 + Math.sin(t * 1.63 + 1.2) * 0.4) * R * 0.022;
+        const dY = BOB.lastRotY == null ? 0 : angleDelta(BOB.lastRotY, state.rotY);
+        const dX = BOB.lastRotX == null ? 0 : angleDelta(BOB.lastRotX, state.rotX);
+        BOB.lastRotY = state.rotY;
+        BOB.lastRotX = state.rotX;
+        const churn = Math.min(0.25, Math.hypot(dY, dX));
+        // Vertical: k = 14, c = 3.2 → a slow, underdamped bob (~1.7 s period).
+        const ay = -14 * (BOB.y - swell) - 3.2 * BOB.vy + churn * R * 9;
+        BOB.vy += ay * dt;
+        BOB.y += BOB.vy * dt;
+        // Sway follows the direction of spin, lightly.
+        const ax = -18 * BOB.x - 4 * BOB.vx + dY * R * 4;
+        BOB.vx += ax * dt;
+        BOB.x += BOB.vx * dt;
+        BOB.y = Math.max(-R * 0.06, Math.min(R * 0.06, BOB.y));
+        BOB.x = Math.max(-R * 0.025, Math.min(R * 0.025, BOB.x));
+      }
+      if (state.baseCenterX != null) {
+        state.centerX = state.baseCenterX + BOB.x;
+        state.centerY = state.baseCenterY + BOB.y;
+      }
+    }
+
     function loop(ts) {
       state.rafScheduled = false;
       const now = ts || performance.now();
+      tickBob(now);
       tickMenuZoom(now);
       tickAmbientSpin(now);
       tickRevealAnim(now);

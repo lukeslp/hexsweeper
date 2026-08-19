@@ -210,6 +210,7 @@ try {
   assert.equal(await evaluate('document.getElementById("help-theme-grid").getBoundingClientRect().height > 40'), true, "theme grid is not visible on the Themes tab");
   await evaluate('document.getElementById("help-tab-board").click()');
   assert.equal(await evaluate('document.getElementById("help-size-grid").getBoundingClientRect().height > 30 && document.getElementById("help-theme-grid").getBoundingClientRect().height === 0'), true, "Board tab did not swap themes for sizes");
+  assert.ok(await evaluate('(() => { const b = document.getElementById("help-wheel-btn"); const r = b && b.getBoundingClientRect(); return !!r && r.width >= 24 && r.height >= 24; })()'), "Board tab has no Water Wheel door button");
   await evaluate('document.getElementById("help-tab-settings").click()');
   assert.equal(await evaluate('document.querySelector("#help-controls [data-ctl=invert]").getBoundingClientRect().height > 30'), true, "Settings tab does not show Invert");
   await evaluate('document.getElementById("help-tab-themes").click()');
