@@ -10,7 +10,7 @@ Gate before widening TestFlight or submitting for review.
 
 ## Build identity
 
-- [x] `CURRENT_PROJECT_VERSION` is 55 for the release candidate (quiet bar + settings sheet + native image share + sphere-attached interiors + best times + hidden Water Wheel)
+- [x] `CURRENT_PROJECT_VERSION` is 56 for the release candidate (quiet bar + settings sheet + native image share + sphere-attached interiors + best times + hidden Water Wheel)
 - [ ] `MARKETING_VERSION` set for the intended release
 - [ ] Display name reads **Hexsweeper** on the home screen
 - [x] Archive signs cleanly under team `596T7J7FB6`
@@ -50,7 +50,8 @@ rather than contaminated — every field was null, so this was fill-in.
 - [x] Build 52 uploaded 2026-08-18: Mercury interior restored, frame loop survives painter errors, every-theme clear contract + WebKit probe; best times per size; the Water Wheel as a hidden second sphere (`www/wheel.html`); **Mercury's cores were wrong** (interiors pass had replaced them)
 - [x] Build 53 uploaded 2026-08-18: build-50 dig cores restored on every mirror theme; tabbed ? sheet (Play · Themes · Board · Settings)
 - [x] Build 54 uploaded 2026-08-18: cores only on Mercury + Galaxy, the other mirror themes clear to matte wells with depth + seams, contrasting flags on Gilded Ribbon/Heat Lightning
-- [x] Build 55 uploaded 2026-08-18: porcelain/cobalt/gold/ivory interiors, Galaxy black hole, Heat Lightning bolts; attached to 1.0 as the release candidate
+- [x] Build 55 uploaded 2026-08-18: porcelain/cobalt/gold/ivory interiors, Galaxy black hole, Heat Lightning bolts; **black hole bled past the rim on device**
+- [x] Build 56 uploaded 2026-08-18: interiors round two on every mirror theme, rim bleed fixed, B&W ring counts on Galaxy, the Wheel floats, Board-tab door to the Wheel; attached to 1.0 as the release candidate
 - [x] Nothing submitted for App Review
 - [ ] **Privacy nutrition labels — ASC web UI only, no API.** Select
       "Data Not Collected" for every category: the app makes no network
