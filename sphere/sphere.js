@@ -3925,7 +3925,7 @@
       galaxy: "blackhole",
     };
     // Whole-sphere effects seen through the cleared faces (one paint per frame).
-    const INTERIOR_EFFECTS = { galaxy: "blackhole", "heat-lightning": "lightning", aurora: "curtains", "ion-storm": "plasma" };
+    const INTERIOR_EFFECTS = { galaxy: "blackhole", "heat-lightning": "lightning", aurora: "curtains", "ion-storm": "plasma", stratosphere: "clouds" };
     function interiorEffect() {
       const T = state.theme;
       return (T && T.reflectionSurface && INTERIOR_EFFECTS[T.material]) || null;
@@ -4310,6 +4310,58 @@
       }
       ctx.restore();
     }
+    /**
+     * Stratosphere's interior: sky. A blue that deepens toward the top of the
+     * shell washes over the porcelain, and two layers of soft cumulus puffs
+     * drift across at different speeds (parallax) and wrap — after the
+     * cloud / ambient-sky clocks. Puffs are radial gradients, no sprites,
+     * no noise; digits stay dark on the light field.
+     */
+    function drawSkyClouds(now) {
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const t = coreTime(now);
+      const sky = ctx.createLinearGradient(0, cy - R * 1.1, 0, cy + R * 1.1);
+      sky.addColorStop(0, "rgba(48,122,190,0.78)");
+      sky.addColorStop(0.5, "rgba(130,184,230,0.52)");
+      sky.addColorStop(1, "rgba(220,236,248,0.25)");
+      ctx.fillStyle = sky;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      // A soft sun low on one side.
+      const sun = ctx.createRadialGradient(cx + R * 0.55, cy - R * 0.55, 0, cx + R * 0.55, cy - R * 0.55, R * 0.7);
+      sun.addColorStop(0, "rgba(255,250,235,0.55)");
+      sun.addColorStop(0.3, "rgba(255,246,220,0.18)");
+      sun.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = sun;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      const layers = [
+        { n: 7, speed: 0.045, y0: -0.55, size: 0.30, alpha: 0.55 },
+        { n: 5, speed: 0.025, y0: 0.15, size: 0.42, alpha: 0.42 },
+      ];
+      layers.forEach((L, li) => {
+        for (let i = 0; i < L.n; i++) {
+          const span = R * 2.8;
+          const px = cx - R * 1.4 + (((coreHash(i, 71 + li, 0.5) * span + t * L.speed * R) % span) + span) % span;
+          const py = cy + R * (L.y0 + (coreHash(i, 73 + li, 0.9) - 0.5) * 0.7);
+          const rad = R * L.size * (0.7 + coreHash(i, 79 + li, 1.3) * 0.6);
+          // A shaded underside first, so the puff has a belly, then three
+          // white lobes so it reads as cumulus rather than a disc.
+          const under = ctx.createRadialGradient(px, py + rad * 0.35, 0, px, py + rad * 0.35, rad * 0.9);
+          under.addColorStop(0, "rgba(110,150,195,0.22)");
+          under.addColorStop(1, "rgba(110,150,195,0)");
+          ctx.fillStyle = under;
+          ctx.fillRect(px - rad, py - rad * 0.6, rad * 2, rad * 2);
+          for (let k = 0; k < 3; k++) {
+            const ox = (k - 1) * rad * 0.55, oy = k === 1 ? -rad * 0.25 : rad * 0.05;
+            const g = ctx.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, rad * (k === 1 ? 0.7 : 0.55));
+            g.addColorStop(0, `rgba(255,255,255,${L.alpha.toFixed(2)})`);
+            g.addColorStop(0.55, `rgba(255,255,255,${(L.alpha * 0.45).toFixed(2)})`);
+            g.addColorStop(1, "rgba(255,255,255,0)");
+            ctx.fillStyle = g;
+            ctx.fillRect(px + ox - rad, py + oy - rad, rad * 2, rad * 2);
+          }
+        }
+      });
+    }
     /** Paint the theme's interior effect once, clipped to the cleared faces. */
     function drawInteriorEffect(now, holes) {
       const effect = interiorEffect();
@@ -4329,6 +4381,7 @@
       else if (effect === "lightning") drawLightningBolts(now);
       else if (effect === "curtains") drawAuroraCurtains(now);
       else if (effect === "plasma") drawPlasmaFilaments(now);
+      else if (effect === "clouds") drawSkyClouds(now);
       ctx.restore();
     }
     function interiorEffectLive() {
