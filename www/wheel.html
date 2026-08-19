@@ -4934,6 +4934,18 @@ window.HEXSWEEPER_SPHERE_APP = true;
         state.baseScale * state.zoomFactor * state.menuZoomFactor;
     }
 
+    /**
+     * Re-measure the canvas and rebuild its backing store.
+     *
+     * iOS drops or mis-times the resize event on orientation change: the one
+     * event can arrive while the layout still reports the old size, and none
+     * follows, so the bitmap stays portrait-shaped inside a landscape element
+     * and WebKit stretches it — the board looks squashed and never recovers,
+     * because nothing changes size again. Hence three defences: listen for
+     * orientationchange and visualViewport resizes too, re-measure on the next
+     * two frames after any of them, and have the frame loop notice a bitmap
+     * that no longer matches its element (see syncCanvasSize).
+     */
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = canvas.clientWidth || window.innerWidth;
@@ -4948,6 +4960,41 @@ window.HEXSWEEPER_SPHERE_APP = true;
       state.baseScale = Math.min(w, h) * BASE_SCALE_FRAC;
       syncScale();
       state.projectedCache = null;
+      state.canvasCssW = w;
+      state.canvasCssH = h;
+      state.canvasDpr = dpr;
+    }
+
+    /** Cheap per-frame guard: the element's size is the truth, the bitmap follows. */
+    function syncCanvasSize() {
+      const w = canvas.clientWidth || window.innerWidth;
+      const h = canvas.clientHeight || window.innerHeight;
+      if (!w || !h) return false;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Compare the bitmap against what this element needs, not against what
+      // we last recorded: iOS can leave a correctly-sized element wearing a
+      // stale backing store, and then nothing changes size again.
+      if (
+        w === state.canvasCssW &&
+        h === state.canvasCssH &&
+        dpr === state.canvasDpr &&
+        canvas.width === Math.round(w * dpr) &&
+        canvas.height === Math.round(h * dpr)
+      ) {
+        return false;
+      }
+      resize();
+      return true;
+    }
+
+    /** Orientation changes settle over a frame or two on iOS; measure again. */
+    function resizeSoon() {
+      resize();
+      requestAnimationFrame(() => {
+        resize();
+        requestAnimationFrame(resize);
+      });
+      setTimeout(resize, 250);
     }
 
     function setZoomFactor(factor) {
@@ -8398,6 +8445,7 @@ window.HEXSWEEPER_SPHERE_APP = true;
     function loop(ts) {
       state.rafScheduled = false;
       const now = ts || performance.now();
+      syncCanvasSize();
       tickBob(now);
       tickMenuZoom(now);
       tickAmbientSpin(now);
@@ -8722,7 +8770,11 @@ window.HEXSWEEPER_SPHERE_APP = true;
     syncCountStyleChrome();
     if (opts.theme) state.theme = Object.assign({}, state.theme, opts.theme);
 
-    window.addEventListener("resize", resize);
+    window.addEventListener("resize", resizeSoon);
+    window.addEventListener("orientationchange", resizeSoon);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", resizeSoon);
+    }
     // Flush on every leave path so F5 / mobile background never loses a dig.
     window.addEventListener("pagehide", () => {
       pauseWheel("pagehide");

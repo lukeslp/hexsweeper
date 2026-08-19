@@ -46,7 +46,7 @@ and any network dependency is a defect.
 | 19 | Reduced Motion | Launcher and endgame effects become instant states | |
 | 20 | Outbound links | Credits open in the system browser and return cleanly; the game is never replaced in-place | |
 | 20a | Share | On game end, Share opens the iOS share sheet with the card **as an image** — Messages, Instagram, Bluesky, Photos appear (not a Files-only sheet); cancelling returns cleanly; the banner reads Share · Undo · New sphere | |
-| 21 | Rotation | Portrait ↔ landscape reflows without losing the run or hiding the quiet bar or the open sheet | |
+| 21 | Rotation | Portrait ↔ landscape reflows without losing the run or hiding the quiet bar or the open sheet; **the sphere stays round in both, and returning to portrait looks exactly as it did before the trip** (build 59 stayed stretched); repeat with the sheet open and while a run is in progress | |
 | 22 | Android Back | System Back closes the sheet when open, returns from the Water Wheel to the sphere, otherwise exits or follows documented platform behaviour without losing the run | |
 | 23 | Android system bars | Content clears status/navigation/gesture insets in both orientations | |
 

@@ -12,7 +12,7 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 59 is the latest uploaded TestFlight build, attached to 1.0, and the
+this same record. Build 60 is the latest uploaded TestFlight build, attached to 1.0, and the
 checked-in project matches it. (App Store Connect enforces a per-app daily
 upload cap — error 90382 after ~15 uploads on 2026-08-18; it cleared within
 the hour.)
@@ -59,12 +59,12 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-Current Android identity is `versionCode 15`, `versionName 1.0-test`, targeting
+Current Android identity is `versionCode 16`, `versionName 1.0-test`, targeting
 API 36 with minimum API 24. The direct test APK is debug-signed with the same
-certificate as builds 1–14 so testers can upgrade in place. Build 15 (2026-08-18,
-payload `c5a8a9c`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
+certificate as builds 1–15 so testers can upgrade in place. Build 16 (2026-08-18,
+payload `9db1a58`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
 (APK served from `/home/coolhand/html/downloads/android/hexsweeper/` on Drummer;
-the page keeps `index.html.bak-before-build15`). The release AAB remains
+the page keeps `index.html.bak-before-build16`). The release AAB remains
 deliberately unsigned. Create and
 retain the Play signing key outside this repository, then use Android Studio's
 **Build → Generate Signed App Bundle** for the first store upload. Do not commit
@@ -209,6 +209,12 @@ Done (updated 2026-08-11, through the App Store Connect API):
       interiors; horizontal drag mirrored by default (Invert X = finger-
       following; stored prefs migrate v1→v2); the Board-tab Wheel door is
       icon-only (vendored from hexsweeper `c5a8a9c`)
+- [x] Build 60 uploaded and attached to 1.0 on 2026-08-18: rotation fix —
+      the canvas backing store now heals itself whenever it stops matching
+      its element, so a landscape trip no longer leaves the board stretched
+      in portrait (iOS drops or mis-times the orientation resize); the
+      mirror canvas carries the same guard (vendored from hexsweeper
+      `9db1a58`)
 
 Still owed:
 
