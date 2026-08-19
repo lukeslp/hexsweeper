@@ -20,7 +20,7 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 
 - [x] **Rolled back the interiors pass** (`7938944`): Mercury's liquid-metal wells and the other six mirror cores are the build-50 reference again; hollow shells and lat/lon interiors are gone. Themes still own count/relief/seams (mirror materials depth + no seams; Light/Dark depth + seams).
 - [x] The ? sheet is tabbed — Play · Themes · Board · Settings (`f32a0b2`).
-- [x] Only Mercury and Galaxy keep a dig core; Stratosphere, Ion Storm, Aurora, Gilded Ribbon, Heat Lightning clear to matte wells with depth + seams; Gilded Ribbon flags red, Heat Lightning flags blue (`027d005`).
+- [x] Interiors (`5a2a2e5`): Mercury liquid metal, Ion Storm cobalt, Gilded Ribbon gold, Stratosphere porcelain, Heat Lightning ivory — palette-driven `drawMetalCore`, seamless with depth; Galaxy's black hole (lensed stars, Keplerian disc, photon ring) and Heat Lightning's bolts painted once per frame through the cleared faces; Aurora plain wells with seams; flags red on Gilded Ribbon, steel blue on Heat Lightning.
 
 - [x] Regression fixed: TestFlight 51's Mercury called a deleted interior painter; the first clear threw inside `draw()`, the frame loop died and the sphere stopped answering touch. `drawMetalFace` (grain by lat/lon, view-locked gleam) replaces it; `loop()` survives a painter exception; the app contract now clears, flags and drags on every theme with uncaught exceptions captured, and a Playwright WebKit probe covers the engine iOS actually runs.
 - [x] Best times per board size (`hexsweeper-sphere-best-v1`): win banner + size pills on the settings sheet.
