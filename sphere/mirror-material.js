@@ -1128,6 +1128,12 @@ void main() {
       };
       this.onSphereAction = (event) => this.handleSphereAction(event.detail || {});
       addEventListener("resize", this.onResize, { passive: true });
+      // iOS can drop or mis-time the rotation resize; re-measure over the next
+      // frames and let the render loop notice a stale backing store.
+      addEventListener("orientationchange", this.onResize, { passive: true });
+      if (window.visualViewport) {
+        visualViewport.addEventListener("resize", this.onResize, { passive: true });
+      }
       addEventListener("pointermove", this.onPointerMove, { passive: true });
       document.addEventListener("visibilitychange", this.onVisibility);
       document.addEventListener("hexsweeper:sphere-action", this.onSphereAction);
@@ -1393,6 +1399,8 @@ void main() {
       const cssWidth = this.canvas.clientWidth || innerWidth;
       const cssHeight = this.canvas.clientHeight || innerHeight;
       if (!cssWidth || !cssHeight) return;
+      this.cssW = cssWidth;
+      this.cssH = cssHeight;
       const dpr = Math.min(devicePixelRatio || 1, 1.5);
       const quality = this.mobile ? 0.58 : 0.74;
       const edgeCap = this.mobile ? 820 : 1280;
@@ -1443,6 +1451,13 @@ void main() {
 
     loop(time) {
       this.frame = 0;
+      // Self-heal a backing store the rotation left behind (see resize()).
+      if (
+        (this.canvas.clientWidth || 0) !== this.cssW ||
+        (this.canvas.clientHeight || 0) !== this.cssH
+      ) {
+        this.resize();
+      }
       const menuOpen = document.body.classList.contains("hex-bloom-open");
       const frameMs = menuOpen ? 120 : this.mobile ? 33 : 22;
       if (time - this.lastPaintAt >= frameMs) {

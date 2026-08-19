@@ -420,6 +420,28 @@ try {
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "mercury")); void 0;');
   await delay(400);
 
+  // Rotation: the canvas bitmap must always match its element, and a stale
+  // backing store (iOS drops/mis-times the orientation resize) must heal
+  // itself within a frame — build 59 stayed squashed in portrait forever.
+  const matches = '(() => { const c = document.getElementById("gameCanvas"); const dpr = Math.min(devicePixelRatio || 1, 2); return c.width === Math.round(c.clientWidth * dpr) && c.height === Math.round(c.clientHeight * dpr); })()';
+  const sized = async (label) => {
+    // The guarantee is "heals within a frame or two", not "synchronously".
+    await waitFor(async () => evaluate(matches), `${label}: canvas bitmap never matched its element`);
+    return evaluate('(() => { const c = document.getElementById("gameCanvas"); return { w: c.clientWidth, h: c.clientHeight, bw: c.width, bh: c.height }; })()');
+  };
+  await sized("portrait");
+  await send("Emulation.setDeviceMetricsOverride", { width: 844, height: 390, deviceScaleFactor: 2, mobile: true });
+  await delay(500);
+  const land = await sized("landscape");
+  assert.ok(land.w > land.h, `landscape did not apply (${land.w}x${land.h})`);
+  await evaluate('(() => { const c = document.getElementById("gameCanvas"); c.width = 780; c.height = 1688; })()');
+  await waitExpression(matches, "a stale canvas bitmap did not heal itself");
+  await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+  await delay(500);
+  const back = await sized("back to portrait");
+  assert.ok(back.h > back.w, `portrait did not restore (${back.w}x${back.h})`);
+  assert.ok(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getSphereScreen().r > 40'), "sphere collapsed after the rotation round trip");
+
   if (process.env.HEXSWEEPER_APP_SCREENSHOT) {
     const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
     await writeFile(process.env.HEXSWEEPER_APP_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
