@@ -2404,7 +2404,7 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     name: "Stratosphere",
     chrome: "light",
     material: "stratosphere",
-    warn: { count: "numerals", relief: "extruded", seams: true },
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#1d6fa9",
     fallbackBg: "#e7f2fa",
     fallbackBgGlow: "#ffffff",
@@ -2422,7 +2422,7 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     name: "Ion Storm",
     chrome: "dark",
     material: "ion-storm",
-    warn: { count: "numerals", relief: "extruded", seams: true },
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#c893dc",
     fallbackBg: "#060a19",
     fallbackBgGlow: "#175fa2",
@@ -2482,7 +2482,7 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     id: "gilded-ribbon",
     name: "Gilded Ribbon",
     material: "gilded-ribbon",
-    warn: { count: "numerals", relief: "extruded", seams: true },
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#dfa35f",
     fallbackBg: "#080510",
     fallbackBgGlow: "#4d3449",
@@ -2499,7 +2499,7 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     id: "heat-lightning",
     name: "Heat Lightning",
     material: "heat-lightning",
-    warn: { count: "numerals", relief: "extruded", seams: true },
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#ffb05b",
     fallbackBg: "#190f16",
     fallbackBgGlow: "#7a3f53",
@@ -2509,8 +2509,10 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     hoverRing: "#ffd6a3",
     activeRing: "#ffb05b",
     revealGlow: "#ffb05b",
-    text: { 1: "#fff2e2", 2: "#ffd6a3", 3: "#ffb05b", 4: "#ff9db1", 5: "#c9b8ff", 6: "#8ed9f5" },
-    label: "#fff2e2",
+    // Wells open onto ivory, so numbers go dark on a light stroke.
+    text: { 1: "#4a1a08", 2: "#7a2a10", 3: "#a33a12", 4: "#5a1440", 5: "#2a2a7a", 6: "#0b4a5a" },
+    label: "#3a1408",
+    labelStroke: "rgba(255,246,230,0.85)",
   });
 
   // The two mono looks keep the classic read: numbers, depth, seams.
@@ -5872,12 +5874,12 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       if (!cell || !cell.revealed || cell.flagged || cell.isMine) return null;
       const T = state.theme;
       if (!T || !T.reflectionSurface) return null;
-      // Only two materials keep a core in the cleared face: Mercury's liquid
-      // metal and Galaxy's star field. The rest clear to a plain matte well
-      // with depth and seams — the texture stays on the shell, not in it.
-      if (T.material === "mercury") return "metal";
-      if (T.material === "galaxy") return "galaxy";
-      return null;
+      // Per-face cores: view-locked metal decals (Mercury's liquid metal is
+      // the reference; Ion Storm cobalt, Gilded Ribbon gold) and two light
+      // surfaces (Stratosphere porcelain, Heat Lightning ivory). Galaxy's
+      // cleared faces are holes onto the black hole painted once per frame
+      // by drawInteriorEffect; Aurora clears to a plain well.
+      return CORE_PROFILES[T.material] || null;
     }
     // Deterministic per-face hash for procedural cores.
     function coreHash(x, y, seed) {
@@ -5888,33 +5890,31 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       return state.reduceMotion ? 0 : now * 0.001;
     }
     /** Galaxy: indigo dust with a fixed star field that twinkles. */
-    function drawGalaxyCore(proj, now) {
-      const t = coreTime(now);
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const base = ctx.createRadialGradient(cx + R * 0.15, cy - R * 0.1, R * 0.05, cx, cy, R * 1.2);
-      base.addColorStop(0, "#3a2b52");
-      base.addColorStop(0.45, "#141232");
-      base.addColorStop(1, "#050714");
-      ctx.fillStyle = base;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      const dust = ctx.createLinearGradient(cx - R, cy + R * 0.4, cx + R, cy - R * 0.5);
-      dust.addColorStop(0, "rgba(208,154,158,0)");
-      dust.addColorStop(0.5, "rgba(208,154,158,0.16)");
-      dust.addColorStop(1, "rgba(120,110,200,0)");
-      ctx.fillStyle = dust;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      for (let i = 0; i < 90; i++) {
-        const sx = cx + (coreHash(i, 2, 1.1) - 0.5) * R * 2.4;
-        const sy = cy + (coreHash(i, 5, 3.3) - 0.5) * R * 2.4;
-        const tw = 0.45 + 0.55 * Math.abs(Math.sin(t * (0.6 + coreHash(i, 9, 0.7)) + i));
-        const r = (0.6 + coreHash(i, 4, 6.2) * 1.6) * Math.max(0.6, R / 260);
-        ctx.fillStyle = `rgba(255,${230 + Math.round(coreHash(i, 1, 2) * 25)},${210 + Math.round(coreHash(i, 3, 2) * 45)},${tw.toFixed(3)})`;
-        ctx.beginPath();
-        ctx.arc(sx, sy, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    const CORE_PROFILES = {
+      mercury: "metal",
+      "ion-storm": "cobalt",
+      "gilded-ribbon": "gold",
+      stratosphere: "light",
+      "heat-lightning": "ivory",
+      galaxy: "blackhole",
+    };
+    // Whole-sphere effects seen through the cleared faces (one paint per frame).
+    const INTERIOR_EFFECTS = { galaxy: "blackhole", "heat-lightning": "lightning" };
+    function interiorEffect() {
+      const T = state.theme;
+      return (T && T.reflectionSurface && INTERIOR_EFFECTS[T.material]) || null;
     }
-    function drawMetalCore(proj, now) {
+    // Metal decals: seven stops along a view-locked band + a gleam that lags
+    // the rotation. Mercury's is the reference; the others recolour it.
+    const METAL_PALETTES = {
+      metal: { stops: ["#030607", "#424d50", "#dce7e8", "#6f7c7f", "#182023", "#a8b5b7", "#06090a"], gleam: ["rgba(255,255,255,0.44)", "rgba(226,244,246,0.16)"] },
+      cobalt: { stops: ["#020714", "#12306a", "#9cc8ff", "#2a5cb0", "#071a3a", "#6fa2e8", "#030a1c"], gleam: ["rgba(214,234,255,0.5)", "rgba(160,200,255,0.16)"] },
+      gold: { stops: ["#2a1603", "#8a5a0e", "#ffeeb0", "#c48d1c", "#3d2405", "#e0b352", "#1c0f03"], gleam: ["rgba(255,247,215,0.5)", "rgba(255,236,190,0.16)"] },
+      light: { stops: ["#c9d9e6", "#f7fbfe", "#ffffff", "#e8f1f8", "#d3e1ec", "#ffffff", "#c4d5e3"], gleam: ["rgba(255,255,255,0.55)", "rgba(255,255,255,0.18)"] },
+      ivory: { stops: ["#e9d2ad", "#fff2d6", "#fffaf0", "#f6dfb8", "#e6c797", "#fff6e6", "#dfbe8f"], gleam: ["rgba(255,255,255,0.5)", "rgba(255,246,225,0.18)"] },
+    };
+    function drawMetalCore(proj, now, profile) {
+      const pal = METAL_PALETTES[profile] || METAL_PALETTES.metal;
       const time = state.reduceMotion ? 0 : now * 0.000075;
       const angle = state.rotY * 0.22 + state.rotX * 0.10 + time;
       const span = state.scale * 1.55;
@@ -5926,13 +5926,14 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
         state.centerX + dx,
         state.centerY + dy
       );
-      metal.addColorStop(0, "#030607");
-      metal.addColorStop(0.24, "#424d50");
-      metal.addColorStop(0.43, "#dce7e8");
-      metal.addColorStop(0.49, "#6f7c7f");
-      metal.addColorStop(0.66, "#182023");
-      metal.addColorStop(0.84, "#a8b5b7");
-      metal.addColorStop(1, "#06090a");
+      const [s0, s1, s2, s3, s4, s5, s6] = pal.stops;
+      metal.addColorStop(0, s0);
+      metal.addColorStop(0.24, s1);
+      metal.addColorStop(0.43, s2);
+      metal.addColorStop(0.49, s3);
+      metal.addColorStop(0.66, s4);
+      metal.addColorStop(0.84, s5);
+      metal.addColorStop(1, s6);
       ctx.fillStyle = metal;
       ctx.fillRect(
         state.centerX - state.scale * 1.2,
@@ -5945,8 +5946,8 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       const hx = state.centerX + Math.cos(angle * 0.73 - 0.8) * state.scale * 0.34;
       const hy = state.centerY + Math.sin(angle * 0.61 - 1.2) * state.scale * 0.25;
       const gleam = ctx.createRadialGradient(hx, hy, 0, hx, hy, state.scale * 0.52);
-      gleam.addColorStop(0, "rgba(255,255,255,0.44)");
-      gleam.addColorStop(0.18, "rgba(226,244,246,0.16)");
+      gleam.addColorStop(0, pal.gleam[0]);
+      gleam.addColorStop(0.18, pal.gleam[1]);
       gleam.addColorStop(1, "rgba(255,255,255,0)");
       ctx.fillStyle = gleam;
       ctx.fillRect(
@@ -5956,6 +5957,216 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
         state.scale * 2
       );
     }
+    /**
+     * Galaxy's interior: a black hole at the sphere's centre. Canvas 2D take
+     * on the lensing clocks — a star field pushed outward by the mass
+     * (r' = r + rs²/r, stars inside the horizon are swallowed), a Keplerian
+     * accretion disc of particles (inner ones hot and fast, Doppler-bright on
+     * the approaching side), the far side of the disc lensed up over the top
+     * and under the bottom of the hole, a photon ring, and the horizon itself.
+     */
+    function drawBlackHole(now) {
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const t = coreTime(now);
+      const rs = R * 0.11; // horizon radius on screen
+      // Deep field.
+      const field = ctx.createRadialGradient(cx, cy, rs, cx, cy, R * 1.25);
+      field.addColorStop(0, "#0a0716");
+      field.addColorStop(0.55, "#120d26");
+      field.addColorStop(1, "#04030c");
+      ctx.fillStyle = field;
+      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      // Lensed stars: fixed polar positions, apparent radius pushed out by the mass.
+      const spin = t * 0.02;
+      for (let i = 0; i < 170; i++) {
+        const r0 = R * (0.05 + Math.pow(coreHash(i, 2, 1.1), 0.7) * 1.25);
+        if (r0 < rs * 1.15) continue; // swallowed
+        const a = coreHash(i, 5, 3.3) * Math.PI * 2 + spin;
+        const r = r0 + (rs * rs * 1.6) / Math.max(r0, rs);
+        const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+        const tw = 0.5 + 0.5 * Math.abs(Math.sin(t * (0.5 + coreHash(i, 9, 0.7)) + i));
+        const near = Math.max(0, 1 - (r0 - rs) / (R * 0.5)); // stretched into arcs near the hole
+        const sz = (0.5 + coreHash(i, 4, 6.2) * 1.4) * Math.max(0.6, R / 260);
+        ctx.fillStyle = `rgba(255,${235 + Math.round(coreHash(i, 1, 2) * 20)},${215 + Math.round(coreHash(i, 3, 2) * 40)},${(tw * (0.6 + 0.4 * near)).toFixed(3)})`;
+        if (near > 0.35) {
+          // Tangential smear: the closer to the horizon, the longer the arc.
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, a - near * 0.22, a + near * 0.22);
+          ctx.lineWidth = sz;
+          ctx.strokeStyle = ctx.fillStyle;
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(x, y, sz, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      // Accretion disc: particles on a tilted ellipse, Keplerian speeds.
+      const N = 150;
+      const tilt = 0.30;
+      const near = [], far = [];
+      for (let i = 0; i < N; i++) {
+        const rf = 0.15 + Math.pow(coreHash(i, 7, 2.9), 1.3) * 0.42; // fraction of R
+        const r = R * rf;
+        const w = state.reduceMotion ? 0 : 0.35 / Math.pow(rf, 1.5);
+        const phi = coreHash(i, 3, 5.1) * Math.PI * 2 + t * w;
+        const px = Math.cos(phi) * r;
+        const py = Math.sin(phi) * r * tilt;
+        const heat = 1 - (rf - 0.15) / 0.42; // 1 at the inner edge
+        const doppler = 0.62 + 0.38 * Math.cos(phi); // approaching side brighter
+        const cr = 255, cg = Math.round(120 + heat * 130), cb = Math.round(50 + heat * 170);
+        const alpha = (0.28 + heat * 0.55) * doppler;
+        const size = (0.7 + heat * 1.3) * Math.max(0.6, R / 240);
+        (py < 0 ? far : near).push({ px, py, cr, cg, cb, alpha, size, r, phi });
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const dot = (x, y, p, k, sz, trail) => {
+        ctx.fillStyle = `rgba(${p.cr},${p.cg},${p.cb},${(p.alpha * k).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(x, y, sz, 0, Math.PI * 2);
+        ctx.fill();
+        if (trail) {
+          // Short tangential streak in the direction of travel (Keplerian: inner is faster).
+          const len = sz * (2.5 + 5 * (p.r < R * 0.3 ? 1 : 0.4));
+          ctx.strokeStyle = `rgba(${p.cr},${p.cg},${p.cb},${(p.alpha * k * 0.45).toFixed(3)})`;
+          ctx.lineWidth = Math.max(0.6, sz * 0.8);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + Math.sin(p.phi) * len, y - Math.cos(p.phi) * len * tilt);
+          ctx.stroke();
+        }
+      };
+      // Far side (behind the hole), dimmer.
+      for (const p of far) dot(cx + p.px, cy + p.py, p, 0.55, p.size, true);
+      // Lensed images of the far side: lifted over the top and folded under the bottom.
+      for (const p of far) {
+        const k = Math.max(0.2, 1 - (p.r - rs) / (R * 0.5));
+        dot(cx + p.px * 0.62, cy - (Math.abs(p.py) * 0.35 + rs * 1.55), p, 0.5 * k + 0.12, p.size * 0.9);
+        dot(cx + p.px * 0.62, cy + (Math.abs(p.py) * 0.22 + rs * 1.28), p, 0.28 * k + 0.06, p.size * 0.8);
+      }
+      // Disc glow.
+      const glow = ctx.createRadialGradient(cx, cy, rs * 0.9, cx, cy, R * 0.6);
+      glow.addColorStop(0, "rgba(255,190,120,0.30)");
+      glow.addColorStop(0.35, "rgba(255,140,80,0.10)");
+      glow.addColorStop(1, "rgba(255,120,60,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(cx - R * 0.7, cy - R * 0.7, R * 1.4, R * 1.4);
+      ctx.restore();
+      // Event horizon + photon ring.
+      const hole = ctx.createRadialGradient(cx, cy, rs * 0.7, cx, cy, rs * 1.08);
+      hole.addColorStop(0, "#000000");
+      hole.addColorStop(0.9, "#000000");
+      hole.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = hole;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rs * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.beginPath();
+      ctx.arc(cx, cy, rs * 1.16, 0, Math.PI * 2);
+      ctx.lineWidth = Math.max(1, R * 0.012);
+      ctx.strokeStyle = `rgba(255,225,190,${(0.72 + 0.16 * Math.sin(t * 0.7)).toFixed(3)})`;
+      ctx.shadowColor = "rgba(255,200,140,0.9)";
+      ctx.shadowBlur = Math.max(4, R * 0.04);
+      ctx.stroke();
+      ctx.restore();
+      // Near side of the disc, in front of the hole.
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const p of near) dot(cx + p.px, cy + p.py, p, 1, p.size, true);
+      ctx.restore();
+    }
+    /**
+     * Heat Lightning's interior: bolts flicker across the ivory inside every
+     * few seconds — a branching polyline from the rim toward the centre with
+     * a hot core and a warm halo, gone in a quarter second. Deterministic
+     * per second-slot so a spinning sphere and a still one agree.
+     */
+    function drawLightningBolts(now) {
+      if (state.reduceMotion) return;
+      const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const slot = Math.floor(now / 1700);
+      const chance = coreHash(slot, 11, 0.37);
+      if (chance > 0.62) return; // this slot is quiet
+      const start = slot * 1700 + coreHash(slot, 13, 0.91) * 1200;
+      const age = now - start;
+      if (age < 0 || age > 260) return;
+      const flash = age < 40 ? age / 40 : Math.max(0, 1 - (age - 40) / 220);
+      const bolts = 1 + (coreHash(slot, 17, 0.5) > 0.6 ? 1 : 0);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      for (let b = 0; b < bolts; b++) {
+        const a0 = coreHash(slot, 19 + b, 0.7) * Math.PI * 2;
+        let x = cx + Math.cos(a0) * R * 1.05, y = cy + Math.sin(a0) * R * 1.05;
+        const tx = cx + (coreHash(slot, 23 + b, 1.3) - 0.5) * R * 0.5;
+        const ty = cy + (coreHash(slot, 29 + b, 1.7) - 0.5) * R * 0.5;
+        const pts = [[x, y]];
+        const segs = 9;
+        for (let i = 1; i <= segs; i++) {
+          const f = i / segs;
+          const jx = (coreHash(slot, 31 + i, b + 0.2) - 0.5) * R * 0.22 * (1 - f * 0.6);
+          const jy = (coreHash(slot, 37 + i, b + 0.4) - 0.5) * R * 0.22 * (1 - f * 0.6);
+          pts.push([x + (tx - x) * f + jx, y + (ty - y) * f + jy]);
+        }
+        const path = () => {
+          ctx.beginPath();
+          pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+        };
+        path();
+        ctx.lineWidth = Math.max(4, R * 0.05);
+        ctx.strokeStyle = `rgba(255,170,90,${(0.22 * flash).toFixed(3)})`;
+        ctx.stroke();
+        path();
+        ctx.lineWidth = Math.max(1.2, R * 0.012);
+        ctx.strokeStyle = `rgba(255,250,235,${(0.95 * flash).toFixed(3)})`;
+        ctx.stroke();
+        // One branch off the middle.
+        const m = pts[4];
+        const bx = m[0] + (coreHash(slot, 41 + b, 2.2) - 0.5) * R * 0.5;
+        const by = m[1] + (coreHash(slot, 43 + b, 2.6) - 0.5) * R * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(m[0], m[1]);
+        ctx.lineTo((m[0] + bx) / 2 + (coreHash(slot, 47, b) - 0.5) * R * 0.1, (m[1] + by) / 2);
+        ctx.lineTo(bx, by);
+        ctx.lineWidth = Math.max(0.8, R * 0.007);
+        ctx.strokeStyle = `rgba(255,240,215,${(0.7 * flash).toFixed(3)})`;
+        ctx.stroke();
+      }
+      // The whole interior brightens with the flash.
+      const wash = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.1);
+      wash.addColorStop(0, `rgba(255,236,200,${(0.22 * flash).toFixed(3)})`);
+      wash.addColorStop(1, "rgba(255,200,140,0)");
+      ctx.fillStyle = wash;
+      ctx.fillRect(cx - R * 1.2, cy - R * 1.2, R * 2.4, R * 2.4);
+      ctx.restore();
+    }
+    /** Paint the theme's interior effect once, clipped to the cleared faces. */
+    function drawInteriorEffect(now, holes) {
+      const effect = interiorEffect();
+      if (!effect || !holes.length) return;
+      ctx.save();
+      ctx.beginPath();
+      for (const h of holes) {
+        h.boundary.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
+        ctx.closePath();
+      }
+      ctx.clip();
+      if (effect === "blackhole") drawBlackHole(now);
+      else if (effect === "lightning") drawLightningBolts(now);
+      ctx.restore();
+    }
+    function interiorEffectLive() {
+      if (state.reduceMotion || !interiorEffect()) return false;
+      for (let i = 0; i < state.cells.length; i++) {
+        const c = state.cells[i];
+        if (c.revealed && !c.isMine) return true;
+      }
+      return false;
+    }
     function drawRevealedCore(proj, cell, now, profile) {
       if (!profile || !cell || !cell.revealed || cell.isMine) return;
       ctx.save();
@@ -5964,8 +6175,8 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
         return;
       }
       ctx.clip();
-      if (profile === "metal") drawMetalCore(proj, now);
-      else if (profile === "galaxy") drawGalaxyCore(proj, now);
+      if (METAL_PALETTES[profile]) drawMetalCore(proj, now, profile);
+      // "blackhole" paints nothing per face: drawInteriorEffect shows through.
       ctx.restore();
     }
     /**
@@ -6875,12 +7086,21 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
         }
         drawRevealedCore(drawProj, cell, now, coreProfile);
         drawWellCenterGlow(drawProj, cell, now);
-        paintCountMark(tile, drawProj, cell, colors, markLift);
+        if (effectId && cell.revealed && !cell.isMine && !cell.flagged && drawProj.z > 0.02) {
+          // A window onto the interior effect: the digit repaints above it.
+          effectHoles.push(drawProj);
+          effectMarks.push([tile, drawProj, cell, colors, markLift]);
+        } else {
+          paintCountMark(tile, drawProj, cell, colors, markLift);
+        }
       }
 
       // Flags stand above the shell, so they paint after their neighbors
       // (still back-to-front among themselves) or the shell clips their skirts.
       const proudFlags = [];
+      const effectId = interiorEffect();
+      const effectHoles = [];
+      const effectMarks = [];
       for (const proj of projected) {
         const idx = proj.index;
         const cell = state.cells[idx];
@@ -6903,6 +7123,10 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
         drawTile(proj);
       }
       for (const proj of proudFlags) drawTile(proj);
+      if (effectHoles.length) {
+        drawInteriorEffect(now, effectHoles);
+        for (const m of effectMarks) paintCountMark(m[0], m[1], m[2], m[3], m[4]);
+      }
 
       // Raised pass: hover/press on covered or flagged, lifted over its tier.
       // Reflection themes skip it: the shell is a continuous mirror on the
@@ -6964,6 +7188,7 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       if (END_FX.active) return true;
       if (state.camShake > 0.2) return true;
       if (state.isGameOver && END_FX.particles.length) return true;
+      if (interiorEffectLive()) return true;
       if (state.reduceMotion) return false;
       return (
         Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
