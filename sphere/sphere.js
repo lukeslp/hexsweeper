@@ -4121,21 +4121,44 @@
       ctx.restore();
     }
     /**
-     * Heat Lightning's interior: bolts flicker across the ivory inside every
-     * few seconds — a branching polyline from the rim toward the centre with
-     * a hot core and a warm halo, gone in a quarter second. Deterministic
-     * per second-slot so a spinning sphere and a still one agree.
+     * Heat Lightning's interior: heat lightning proper — a warm cloud deck
+     * inside the ivory that flickers as sheet flashes light it from within
+     * (lightning-field's cloud-base illumination), and every few seconds a
+     * bolt breaks through: a branching polyline from the rim toward the
+     * centre with a hot core and a warm halo, gone in a quarter second.
+     * Deterministic per slot so a spinning sphere and a still one agree.
      */
     function drawLightningBolts(now) {
-      if (state.reduceMotion) return;
       const cx = state.centerX, cy = state.centerY, R = state.scale;
+      const t = coreTime(now);
+      // Cloud deck: soft ochre puffs, always faintly present.
       const slot = Math.floor(now / 1700);
       const chance = coreHash(slot, 11, 0.37);
-      if (chance > 0.62) return; // this slot is quiet
       const start = slot * 1700 + coreHash(slot, 13, 0.91) * 1200;
       const age = now - start;
-      if (age < 0 || age > 260) return;
-      const flash = age < 40 ? age / 40 : Math.max(0, 1 - (age - 40) / 220);
+      const boltOn = !state.reduceMotion && chance <= 0.62 && age >= 0 && age <= 260;
+      const flash = boltOn ? (age < 40 ? age / 40 : Math.max(0, 1 - (age - 40) / 220)) : 0;
+      // Sheet flashes: quicker, softer, more frequent than bolts — a cloud lit from inside.
+      const sheetSlot = Math.floor(now / 700);
+      const sheetOn = !state.reduceMotion && coreHash(sheetSlot, 83, 0.19) > 0.72;
+      const sheetAge = now - (sheetSlot * 700 + coreHash(sheetSlot, 89, 0.23) * 400);
+      const sheet = sheetOn && sheetAge >= 0 && sheetAge < 180 ? Math.sin((sheetAge / 180) * Math.PI) : 0;
+      const sheetX = cx + (coreHash(sheetSlot, 97, 0.31) - 0.5) * R * 1.4;
+      const sheetY = cy + (coreHash(sheetSlot, 101, 0.37) - 0.5) * R * 1.2;
+      for (let i = 0; i < 9; i++) {
+        const px = cx + (coreHash(i, 103, 0.7) - 0.5) * R * 2.0 + Math.sin(t * 0.05 + i) * R * 0.05;
+        const py = cy + (coreHash(i, 107, 0.9) - 0.5) * R * 1.8;
+        const rad = R * (0.22 + coreHash(i, 109, 1.1) * 0.22);
+        const near = sheet ? Math.max(0, 1 - Math.hypot(px - sheetX, py - sheetY) / (R * 0.9)) : 0;
+        const lit = 0.09 + sheet * near * 0.55 + flash * 0.25;
+        const g = ctx.createRadialGradient(px, py, 0, px, py, rad);
+        g.addColorStop(0, `rgba(255,${210 - Math.round(near * 30)},${150 - Math.round(near * 40)},${lit.toFixed(3)})`);
+        g.addColorStop(0.6, `rgba(230,170,120,${(lit * 0.45).toFixed(3)})`);
+        g.addColorStop(1, "rgba(200,140,110,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(px - rad, py - rad, rad * 2, rad * 2);
+      }
+      if (!boltOn) return;
       const bolts = 1 + (coreHash(slot, 17, 0.5) > 0.6 ? 1 : 0);
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
@@ -4185,182 +4208,6 @@
       ctx.fillStyle = wash;
       ctx.fillRect(cx - R * 1.2, cy - R * 1.2, R * 2.4, R * 2.4);
       ctx.restore();
-    }
-    /**
-     * Aurora's interior: curtains. Five sinuous vertical sheets of light
-     * hang inside the shell (after the aurora-curtain clock) — hue drifting
-     * green → teal → violet, each sheet a wide soft stroke built from three
-     * passes of falling alpha instead of shadowBlur (cheap on phones), over
-     * a polar-night field with a handful of stars and a low horizon glow.
-     */
-    function drawAuroraCurtains(now) {
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const t = coreTime(now);
-      const top = cy - R * 1.2, bottom = cy + R * 1.2;
-      const field = ctx.createLinearGradient(0, top, 0, bottom);
-      field.addColorStop(0, "#02040c");
-      field.addColorStop(0.55, "#04101a");
-      field.addColorStop(1, "#071a24");
-      ctx.fillStyle = field;
-      ctx.fillRect(cx - R * 1.3, top, R * 2.6, R * 2.4);
-      for (let i = 0; i < 70; i++) {
-        const sx = cx + (coreHash(i, 2, 1.7) - 0.5) * R * 2.3;
-        const sy = top + coreHash(i, 5, 2.3) * R * 1.7;
-        const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 2 + i));
-        ctx.fillStyle = `rgba(220,235,255,${(0.6 * tw).toFixed(3)})`;
-        ctx.fillRect(sx, sy, 1.4, 1.4);
-      }
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.lineCap = "round";
-      const curtains = 4;
-      const ribs = 15; // thin sub-strokes across each sheet, bell-weighted → soft edges
-      for (let c = 0; c < curtains; c++) {
-        const baseX = cx + ((c + 0.5) / curtains - 0.5) * R * 2.0 + Math.sin(t * 0.11 + c) * R * 0.1;
-        const phase = t * 0.3 + c * 0.9;
-        const hue = 145 + (c % 3) * 32 + Math.sin(phase * 0.7) * 22;
-        const width = R * (0.30 + (c % 2) * 0.08);
-        // Sheets are brightest near their top edge and fade toward the horizon.
-        const fade = ctx.createLinearGradient(0, top + R * 0.2, 0, bottom);
-        const bright = 0.30 + 0.08 * Math.sin(phase);
-        fade.addColorStop(0, `hsla(${hue.toFixed(1)},90%,72%,${bright.toFixed(3)})`);
-        fade.addColorStop(0.45, `hsla(${(hue + 10).toFixed(1)},85%,58%,${(bright * 0.7).toFixed(3)})`);
-        fade.addColorStop(1, `hsla(${(hue + 30).toFixed(1)},80%,50%,0)`);
-        ctx.strokeStyle = fade;
-        for (let r = 0; r < ribs; r++) {
-          const u = (r / (ribs - 1)) * 2 - 1; // -1..1 across the sheet
-          const w = Math.exp(-u * u * 2.2); // bell
-          ctx.globalAlpha = w;
-          ctx.lineWidth = Math.max(1, width / ribs * 1.9);
-          ctx.beginPath();
-          for (let y = top; y <= bottom; y += R * 0.035) {
-            const f = (y - top) / (bottom - top);
-            const wob = Math.sin(phase + f * 4.2 + u * 0.4) * R * (0.14 + c * 0.012) + Math.sin(phase * 1.7 + f * 9) * R * 0.05;
-            const x = baseX + u * width * 0.5 + wob + Math.sin(t * 0.2 + f * 3) * R * 0.03;
-            if (y === top) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        }
-      }
-      ctx.globalAlpha = 1;
-      // Low horizon glow.
-      const hg = ctx.createLinearGradient(0, cy + R * 0.5, 0, bottom);
-      hg.addColorStop(0, "rgba(80,220,180,0)");
-      hg.addColorStop(1, "rgba(80,220,180,0.18)");
-      ctx.fillStyle = hg;
-      ctx.fillRect(cx - R * 1.3, cy + R * 0.4, R * 2.6, R * 0.9);
-      ctx.restore();
-    }
-    /**
-     * Ion Storm's interior: a plasma globe over the cobalt. Seven filaments
-     * wander out from a pulsing core to the shell, each a jittered polyline
-     * whose end drifts slowly and jitters fast (plasma-curtain / storm-gate
-     * language); every second or so one filament flares white. Drawn with
-     * additive blending so the metal underneath still reads.
-     */
-    function drawPlasmaFilaments(now) {
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const t = coreTime(now);
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      // Core.
-      const pulse = 0.5 + 0.5 * Math.sin(t * 2.3);
-      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * (0.16 + pulse * 0.03));
-      core.addColorStop(0, `rgba(240,248,255,${(0.55 + pulse * 0.25).toFixed(3)})`);
-      core.addColorStop(0.35, "rgba(160,205,255,0.35)");
-      core.addColorStop(1, "rgba(120,160,255,0)");
-      ctx.fillStyle = core;
-      ctx.fillRect(cx - R * 0.25, cy - R * 0.25, R * 0.5, R * 0.5);
-      const filaments = 7;
-      const jitterSlot = Math.floor(now / 55); // fast jitter, ~18 Hz
-      for (let f = 0; f < filaments; f++) {
-        const baseAng = (f / filaments) * Math.PI * 2 + t * 0.12 * (f % 2 ? 1 : -1) + Math.sin(t * 0.4 + f) * 0.35;
-        const endR = R * (0.92 + Math.sin(t * 0.7 + f * 1.7) * 0.05);
-        const flare = coreHash(Math.floor(now / 900), 61 + f, 0.41) > 0.86 ? 1 : 0;
-        const segs = 10;
-        const pts = [];
-        for (let i = 0; i <= segs; i++) {
-          const u = i / segs;
-          const r = R * 0.05 + (endR - R * 0.05) * u;
-          const wig = (coreHash(jitterSlot, 67 + i, f + 0.3) - 0.5) * 0.28 * Math.sin(u * Math.PI) + Math.sin(t * 3 + u * 6 + f) * 0.05 * Math.sin(u * Math.PI);
-          const a = baseAng + wig;
-          pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
-        }
-        const path = () => {
-          ctx.beginPath();
-          pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
-        };
-        path();
-        ctx.lineWidth = Math.max(3, R * 0.03) * (1 + flare);
-        ctx.strokeStyle = `rgba(150,120,255,${(0.16 + flare * 0.2).toFixed(3)})`;
-        ctx.stroke();
-        path();
-        ctx.lineWidth = Math.max(1, R * 0.008) * (1 + flare * 0.6);
-        ctx.strokeStyle = `rgba(232,240,255,${(0.55 + flare * 0.45).toFixed(3)})`;
-        ctx.stroke();
-        // Where the filament meets the shell, a small bloom.
-        const end = pts[segs];
-        const bloom = ctx.createRadialGradient(end[0], end[1], 0, end[0], end[1], R * 0.07);
-        bloom.addColorStop(0, `rgba(200,220,255,${(0.35 + flare * 0.4).toFixed(3)})`);
-        bloom.addColorStop(1, "rgba(150,120,255,0)");
-        ctx.fillStyle = bloom;
-        ctx.fillRect(end[0] - R * 0.08, end[1] - R * 0.08, R * 0.16, R * 0.16);
-      }
-      ctx.restore();
-    }
-    /**
-     * Stratosphere's interior: sky. A blue that deepens toward the top of the
-     * shell washes over the porcelain, and two layers of soft cumulus puffs
-     * drift across at different speeds (parallax) and wrap — after the
-     * cloud / ambient-sky clocks. Puffs are radial gradients, no sprites,
-     * no noise; digits stay dark on the light field.
-     */
-    function drawSkyClouds(now) {
-      const cx = state.centerX, cy = state.centerY, R = state.scale;
-      const t = coreTime(now);
-      const sky = ctx.createLinearGradient(0, cy - R * 1.1, 0, cy + R * 1.1);
-      sky.addColorStop(0, "rgba(48,122,190,0.78)");
-      sky.addColorStop(0.5, "rgba(130,184,230,0.52)");
-      sky.addColorStop(1, "rgba(220,236,248,0.25)");
-      ctx.fillStyle = sky;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      // A soft sun low on one side.
-      const sun = ctx.createRadialGradient(cx + R * 0.55, cy - R * 0.55, 0, cx + R * 0.55, cy - R * 0.55, R * 0.7);
-      sun.addColorStop(0, "rgba(255,250,235,0.55)");
-      sun.addColorStop(0.3, "rgba(255,246,220,0.18)");
-      sun.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = sun;
-      ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
-      const layers = [
-        { n: 7, speed: 0.045, y0: -0.55, size: 0.30, alpha: 0.55 },
-        { n: 5, speed: 0.025, y0: 0.15, size: 0.42, alpha: 0.42 },
-      ];
-      layers.forEach((L, li) => {
-        for (let i = 0; i < L.n; i++) {
-          const span = R * 2.8;
-          const px = cx - R * 1.4 + (((coreHash(i, 71 + li, 0.5) * span + t * L.speed * R) % span) + span) % span;
-          const py = cy + R * (L.y0 + (coreHash(i, 73 + li, 0.9) - 0.5) * 0.7);
-          const rad = R * L.size * (0.7 + coreHash(i, 79 + li, 1.3) * 0.6);
-          // A shaded underside first, so the puff has a belly, then three
-          // white lobes so it reads as cumulus rather than a disc.
-          const under = ctx.createRadialGradient(px, py + rad * 0.35, 0, px, py + rad * 0.35, rad * 0.9);
-          under.addColorStop(0, "rgba(110,150,195,0.22)");
-          under.addColorStop(1, "rgba(110,150,195,0)");
-          ctx.fillStyle = under;
-          ctx.fillRect(px - rad, py - rad * 0.6, rad * 2, rad * 2);
-          for (let k = 0; k < 3; k++) {
-            const ox = (k - 1) * rad * 0.55, oy = k === 1 ? -rad * 0.25 : rad * 0.05;
-            const g = ctx.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, rad * (k === 1 ? 0.7 : 0.55));
-            g.addColorStop(0, `rgba(255,255,255,${L.alpha.toFixed(2)})`);
-            g.addColorStop(0.55, `rgba(255,255,255,${(L.alpha * 0.45).toFixed(2)})`);
-            g.addColorStop(1, "rgba(255,255,255,0)");
-            ctx.fillStyle = g;
-            ctx.fillRect(px + ox - rad, py + oy - rad, rad * 2, rad * 2);
-          }
-        }
-      });
     }
     /** Paint the theme's interior effect once, clipped to the cleared faces. */
     function drawInteriorEffect(now, holes) {
