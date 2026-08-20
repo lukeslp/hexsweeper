@@ -215,6 +215,12 @@ Done (updated 2026-08-11, through the App Store Connect API):
       in portrait (iOS drops or mis-times the orientation resize); the
       mirror canvas carries the same guard (vendored from hexsweeper
       `9db1a58`)
+- [ ] Build 61 staged 2026-08-20: theme roster converges on the canonical
+      nine (Shell/Ink/Float/Card/Earth/Moon/Glow shelved from the cycle);
+      help sheet documents the real keys (T, S/M/L; dead C removed)
+      (vendored from hexsweeper `da4194e`). Android test 17 ships the
+      same payload. TestFlight upload pending a login-keychain unlock
+      for SSH sessions on this Mac.
 
 Still owed:
 
@@ -242,3 +248,26 @@ xcrun simctl io <udid> screenshot shot.png      # 1320x2868
 Upload is a three-step dance per image: reserve (`POST /v1/appScreenshots`),
 PUT each `uploadOperations` chunk, then commit with the file's **MD5** in
 `sourceFileChecksum`. Set type `APP_IPHONE_67` covers 6.9".
+
+## Amazon Appstore (Fire tablets)
+
+Assets staged under `app-store/amazon/`:
+
+- `images/icon-512.png` and `images/icon-114.png` — resized from the App
+  Store master icon.
+- `images/feature-1024x500.png` — landscape crop of the Mercury store
+  capture (real gameplay, no text overlay).
+- `en-US/` — listing copy adapted from the iOS metadata. The plain name
+  "Hexsweeper" is expected to be available on Amazon; the "3D" suffix was
+  an Apple name-collision workaround only.
+
+Submission checklist (all manual, in the Amazon developer console):
+
+- Build the store APK with `cd android && ./gradlew assembleRelease` —
+  Amazon re-signs uploads, so the unsigned release APK is correct; do not
+  submit the debug-signed direct-download APK. Bump `versionName` from
+  `1.0-test` to `1.0` first.
+- Complete the IARC content-rating questionnaire (no known blockers).
+- Data collection: none (same answers as the iOS privacy manifest).
+- Sideload-verify on a Fire tablet or emulator per `docs/DEVICE_VERIFY.md`
+  before publishing.

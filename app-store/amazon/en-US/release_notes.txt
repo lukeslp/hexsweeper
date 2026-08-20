@@ -1,0 +1,1 @@
+First release: hexagonal minesweeper on a 3D sphere. Nine looks (Light, Dark, and seven mirrored materials), undo, autosave, five board sizes. Fully offline — no account, no ads.
