@@ -1664,11 +1664,13 @@ body.help-open { overflow: hidden; }
       <li><span class="act">Tap</span><span>Clear a face</span></li>
       <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Place a flag</span></li>
       <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
+      <li><span class="act">Double-tap</span><span>On a number whose flags are all placed, clear the rest</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
       <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Flags mark where you think a mine is.</p>
+      <p>Once a number has as many flags around it as it says, double-tap the number to clear its remaining neighbors in one go. It goes by your flags, not by the board — if one is in the wrong place, that shortcut finds the mine.</p>
       <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet — Themes, Board (size and your best times) and Settings (drag inversion, effects) are the tabs above; each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
     </div>
     <p class="help-keys"><kbd>T</kbd> theme · <kbd>S</kbd>/<kbd>M</kbd>/<kbd>L</kbd> size · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
@@ -2054,6 +2056,8 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
   const REVEAL_CAP_MS = 880;
   const REVEAL_LERP = 0.18;
   const REVEAL_FLASH_MS = 240;
+  /** Chord: a second tap on the same open face inside this window. */
+  const CHORD_TAP_MS = 300;
   const IDLE_FRAME_MS = 200;
   /** Blast phases (ms) match flat Soft UI: charge 0–300 · shock from 260 · scatter 300+ */
   const BLAST_CHARGE_MS = 300;
@@ -5283,6 +5287,61 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       return true;
     }
 
+    /**
+     * Chord a satisfied number: when the flags touching an open face match its
+     * count, clear every neighbour that is neither flagged nor already open.
+     * This trusts the flags rather than the board — a misplaced one detonates,
+     * exactly as chording does on the flat game. One undo step covers the lot.
+     */
+    function chordAt(idx) {
+      const cell = state.cells[idx];
+      if (!cell || !cell.revealed || cell.isMine || state.isGameOver) return false;
+      if (!cell.neighborMines) return false;
+      let flagged = 0;
+      const targets = [];
+      for (const n of state.tiles[idx].neighborIndices) {
+        const c = state.cells[n];
+        if (!c) continue;
+        if (c.flagged) flagged++;
+        else if (!c.revealed) targets.push(n);
+      }
+      if (flagged !== cell.neighborMines || !targets.length) return false;
+      const admitted = targets.filter((n) => variantAdmitsReveal(n, "chord"));
+      if (!admitted.length) return false;
+
+      captureUndo();
+      const opened = new Set();
+      let detonated = -1;
+      for (const n of admitted) {
+        const c = state.cells[n];
+        if (c.revealed || c.flagged) continue;
+        c.revealed = true;
+        // Distance 1: the ring lands together, one step behind the face tapped.
+        scheduleRevealVisual(n, 1);
+        opened.add(n);
+        if (c.isMine) {
+          c.animReveal = 1;
+          if (detonated < 0) detonated = n;
+        } else if (c.neighborMines === 0) {
+          for (const f of floodFrom(n, { notify: false })) opened.add(f);
+        }
+      }
+      const revealed = Array.from(opened);
+      if (detonated >= 0) state.detonatorIdx = detonated;
+      notifyVariantReveal({ index: idx, source: "chord", revealed }, true);
+      emitMaterialAction("dig", idx, {
+        strength: Math.min(1.35, 0.72 + revealed.length / 18),
+        opened: revealed.length,
+      });
+      if (detonated >= 0) {
+        gameOver(false);
+        return true;
+      }
+      if (!state.isGameOver) checkWin();
+      persistNow();
+      return true;
+    }
+
     function tickRevealAnim(now) {
       let busy = false;
       for (let i = 0; i < state.cells.length; i++) {
@@ -7595,6 +7654,8 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     let longPressTimer = null;
     let touchMoved = false;
     let pinching = false;
+    let lastTapIdx = -1;
+    let lastTapAt = 0;
     let pinchStartDist = 0;
     let pinchStartZoom = 1;
 
@@ -7729,8 +7790,25 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       if (!touchMoved && state.dragStart) {
         const idx = pickTile(p.x, p.y);
         if (idx >= 0 && !state.isGameOver) {
-          if (state.flagMode || e.button === 2 || e.ctrlKey) toggleFlag(idx);
-          else reveal(idx);
+          if (state.flagMode || e.button === 2 || e.ctrlKey) {
+            toggleFlag(idx);
+            lastTapIdx = -1;
+          } else {
+            // Second tap on the same open face chords it. A single tap there
+            // still does nothing, so nothing that worked before changes.
+            const tapAt = performance.now();
+            const again = idx === lastTapIdx && tapAt - lastTapAt < CHORD_TAP_MS;
+            const face = state.cells[idx];
+            if (again && face && face.revealed) {
+              chordAt(idx);
+              lastTapIdx = -1;
+              lastTapAt = 0;
+            } else {
+              reveal(idx);
+              lastTapIdx = idx;
+              lastTapAt = tapAt;
+            }
+          }
         } else if (state.isGameOver) {
           requestReset({ force: true });
         }
@@ -8015,6 +8093,7 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       canUndo: () => !!undoSnapshot,
       floodFrom,
       digAt: (index) => reveal(index),
+      chordAt: (index) => chordAt(index),
       flagAt: (index) => toggleFlag(index),
       getState: () => state,
       getBestTimes: () => readBestTimes(),
