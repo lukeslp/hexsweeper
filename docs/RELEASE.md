@@ -215,12 +215,17 @@ Done (updated 2026-08-11, through the App Store Connect API):
       in portrait (iOS drops or mis-times the orientation resize); the
       mirror canvas carries the same guard (vendored from hexsweeper
       `9db1a58`)
-- [ ] Build 61 staged 2026-08-20: theme roster converges on the canonical
-      nine (Shell/Ink/Float/Card/Earth/Moon/Glow shelved from the cycle);
-      help sheet documents the real keys (T, S/M/L; dead C removed)
-      (vendored from hexsweeper `da4194e`). Android test 17 ships the
-      same payload. TestFlight upload pending a login-keychain unlock
-      for SSH sessions on this Mac.
+- [x] Build 61 uploaded and attached to 1.0 on 2026-08-19: theme roster
+      converges on the canonical nine (Shell/Ink/Float/Card/Earth/Moon/Glow
+      shelved from the cycle); help sheet documents the real keys (T, S/M/L;
+      dead C removed) (vendored from hexsweeper `da4194e`). Android test 17
+      ships the same payload. Archived, exported and uploaded from a local
+      terminal — the SSH login-keychain lock (`errSecInternalComponent` on
+      codesign) does not apply there, so no unlock was needed. Processing
+      took ~40 minutes. Screenshots regenerated at 61 and uploaded (six 6.9"
+      iPhone, six iPad 13"), replacing the build-51 sets; description,
+      keywords and promotional text pushed. No What's New — App Store
+      Connect has no such field for a first release.
 
 Still owed:
 
