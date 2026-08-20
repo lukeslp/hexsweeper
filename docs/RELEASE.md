@@ -59,12 +59,16 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-Current Android identity is `versionCode 16`, `versionName 1.0-test`, targeting
+Current Android identity is `versionCode 19`, `versionName 1.0-test`, targeting
 API 36 with minimum API 24. The direct test APK is debug-signed with the same
-certificate as builds 1–15 so testers can upgrade in place. Build 16 (2026-08-18,
-payload `9db1a58`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
+certificate as builds 1–15 so testers can upgrade in place. Build 19 (2026-08-19,
+payload `4c04cab`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
 (APK served from `/home/coolhand/html/downloads/android/hexsweeper/` on Drummer;
-the page keeps `index.html.bak-before-build16`). The release AAB remains
+17 and 16 stay as fallbacks). There is no 18: `versionCode` 18 was bumped for
+build 62 but no APK was cut before 19 superseded it. The curated download page
+and `catalog.json` are patched in place, never regenerated — see
+`downloads/CURATED_DO_NOT_REGENERATE.md` on Drummer; each publish leaves an
+`index.html.bak-before-…` beside the page. The release AAB remains
 deliberately unsigned. Create and
 retain the Play signing key outside this repository, then use Android Studio's
 **Build → Generate Signed App Bundle** for the first store upload. Do not commit
@@ -235,6 +239,17 @@ Done (updated 2026-08-11, through the App Store Connect API):
       (vendored from hexsweeper `d0a91f7`). Android versionCode 18 ships the
       same payload. Processed in ~3 minutes. Screenshots unchanged — chording
       alters no visuals. Supersedes 61.
+- [x] Build 63 uploaded and attached to 1.0 on 2026-08-19 — release candidate:
+      chording on both spheres and in flag mode, since a flag on an open face
+      does nothing and flags-then-clear is the sequence it exists for. On the
+      Wheel a chord onto a bad flag arms the mine instead of ending the run,
+      and drowned mines count alongside flags because they cannot be flagged.
+      The Wheel drops its tutorial entirely — it is an easter egg. Fixes a
+      native-bundle escape: the bloom's Home did a bare `location.href = '../'`,
+      which from the payload root stranded the WebView with no way back; Home
+      now reads `HEXSWEEPER_HOME_HREF` and the exporter refuses to ship a bare
+      climb (vendored from hexsweeper `4c04cab`). Android test 19 ships the
+      same payload. Screenshots unchanged. Supersedes 62.
 
 Still owed:
 
