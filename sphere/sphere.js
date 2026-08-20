@@ -5775,24 +5775,22 @@
       if (!touchMoved && state.dragStart) {
         const idx = pickTile(p.x, p.y);
         if (idx >= 0 && !state.isGameOver) {
-          if (state.flagMode || e.button === 2 || e.ctrlKey) {
-            toggleFlag(idx);
+          // Second tap on the same open face chords it — in flag mode too,
+          // since a flag on an open face does nothing and that is exactly
+          // where you want it: flags down, then clear around them. A single
+          // tap on an open face is still inert, as it always was.
+          const face = state.cells[idx];
+          const tapAt = performance.now();
+          const again = idx === lastTapIdx && tapAt - lastTapAt < CHORD_TAP_MS;
+          if (again && face && face.revealed) {
+            chordAt(idx);
             lastTapIdx = -1;
+            lastTapAt = 0;
           } else {
-            // Second tap on the same open face chords it. A single tap there
-            // still does nothing, so nothing that worked before changes.
-            const tapAt = performance.now();
-            const again = idx === lastTapIdx && tapAt - lastTapAt < CHORD_TAP_MS;
-            const face = state.cells[idx];
-            if (again && face && face.revealed) {
-              chordAt(idx);
-              lastTapIdx = -1;
-              lastTapAt = 0;
-            } else {
-              reveal(idx);
-              lastTapIdx = idx;
-              lastTapAt = tapAt;
-            }
+            if (state.flagMode || e.button === 2 || e.ctrlKey) toggleFlag(idx);
+            else reveal(idx);
+            lastTapIdx = idx;
+            lastTapAt = tapAt;
           }
         } else if (state.isGameOver) {
           requestReset({ force: true });

@@ -1360,7 +1360,10 @@
     }
 
     function doHome() {
-      global.location.href = "../";
+      // The native bundle has no parent to climb to — leaving the payload
+      // root strands the WebView with no way back. The app build points this
+      // at its own sphere; on the web "../" is the games index as before.
+      global.location.href = global.HEXSWEEPER_HOME_HREF || "../";
     }
 
     function categories() {

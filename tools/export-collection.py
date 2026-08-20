@@ -1828,11 +1828,17 @@ def export_wheel_app() -> str:
         raise SystemExit("export_wheel_app: tutorial key is still pre-set")
     markup = markup.replace(
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;",
-        "window.HEXSWEEPER_SPHERE_APP = true;",
+        'window.HEXSWEEPER_SPHERE_APP = true;\n'
+        'window.HEXSWEEPER_HOME_HREF = "index.html";',
         1,
     )
     if "HEXSWEEPER_SPHERE_APP" not in markup:
         raise SystemExit("export_wheel_app: app flag not injected")
+    if "HEXSWEEPER_HOME_HREF" not in markup:
+        raise SystemExit("export_wheel_app: home href not injected")
+    # A bare climb out of the payload root strands the WebView (see appify).
+    if 'location.href = "../"' in markup:
+        raise SystemExit("export_wheel_app: bare parent navigation would escape the bundle")
     markup = markup.replace("</body>", f"{APP_WHEEL_BACK_PILL}</body>", 1)
     if 'class="app-back" href="index.html"' not in markup:
         raise SystemExit("export_wheel_app: Sphere pill missing")

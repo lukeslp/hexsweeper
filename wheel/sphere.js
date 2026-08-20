@@ -42,6 +42,8 @@
   const REVEAL_CAP_MS = 880;
   const REVEAL_LERP = 0.18;
   const REVEAL_FLASH_MS = 240;
+  /** Chord: a second tap on the same open face inside this window. */
+  const CHORD_TAP_MS = 300;
   const IDLE_FRAME_MS = 200;
   /** Blast phases (ms) match flat Soft UI: charge 0–300 · shock from 260 · scatter 300+ */
   const BLAST_CHARGE_MS = 300;
@@ -2744,6 +2746,63 @@
       persistNow();
     }
 
+    /**
+     * Chord a satisfied number: clear the neighbours that are left once
+     * everything around the face is accounted for.
+     *
+     * Two things differ from the flat game. Drowned mines count alongside
+     * flags — they cannot be flagged, so without that a number touching one
+     * could never be chorded at all. And digging a mine here arms it rather
+     * than ending the run, exactly as a direct dig does: the chord lights the
+     * fuse and you still get to drown it. Only one mine can be armed, so the
+     * first one found is the one that lights and the rest stay covered.
+     */
+    function chordAt(idx) {
+      const cell = state.cells[idx];
+      if (
+        !cell ||
+        !cell.revealed ||
+        cell.isMine ||
+        state.isGameOver ||
+        state.armedMineIdx >= 0
+      ) return false;
+      if (!cell.neighborMines) return false;
+      let accounted = 0;
+      const targets = [];
+      for (const n of state.tiles[idx].neighborIndices) {
+        const c = state.cells[n];
+        if (!c) continue;
+        if (c.flagged || (c.doused && c.isMine)) accounted++;
+        else if (!c.revealed) targets.push(n);
+      }
+      if (accounted !== cell.neighborMines || !targets.length) return false;
+
+      captureUndo();
+      let armed = -1;
+      for (const n of targets) {
+        const c = state.cells[n];
+        if (c.isMine) {
+          if (armed < 0) armed = n;
+          continue;
+        }
+        c.revealed = true;
+        // Distance 1: the ring lands together, one step behind the face tapped.
+        scheduleRevealVisual(n, 1);
+        if (c.neighborMines === 0) floodFrom(n);
+      }
+      if (armed >= 0) {
+        const mine = state.cells[armed];
+        mine.revealed = true;
+        scheduleRevealVisual(armed, 1);
+        mine.animReveal = 1;
+        armMine(armed);
+        return true;
+      }
+      checkWin();
+      persistNow();
+      return true;
+    }
+
     function tickRevealAnim(now) {
       let busy = false;
       for (let i = 0; i < state.cells.length; i++) {
@@ -4925,6 +4984,8 @@
     let longPressTimer = null;
     let touchMoved = false;
     let pinching = false;
+    let lastTapIdx = -1;
+    let lastTapAt = 0;
     let pinchStartDist = 0;
     let pinchStartZoom = 1;
 
@@ -5066,8 +5127,22 @@
       if (!touchMoved && state.dragStart) {
         const idx = pickTile(p.x, p.y);
         if (idx >= 0 && !state.isGameOver) {
-          if (state.flagMode || e.button === 2 || e.ctrlKey) toggleFlag(idx);
-          else reveal(idx);
+          // Second tap on the same open face chords it — in flag mode too,
+          // since a flag on an open face does nothing and that is exactly
+          // where you want it: flags down, then clear around them.
+          const face = state.cells[idx];
+          const tapAt = performance.now();
+          const again = idx === lastTapIdx && tapAt - lastTapAt < CHORD_TAP_MS;
+          if (again && face && face.revealed) {
+            chordAt(idx);
+            lastTapIdx = -1;
+            lastTapAt = 0;
+          } else {
+            if (state.flagMode || e.button === 2 || e.ctrlKey) toggleFlag(idx);
+            else reveal(idx);
+            lastTapIdx = idx;
+            lastTapAt = tapAt;
+          }
         } else if (state.isGameOver) {
           requestReset({ force: true });
         }
@@ -5354,19 +5429,12 @@
       if (!restored) resetGame();
     }
 
+    // The Water Wheel is an easter egg — you arrive in the game, not in a
+    // tour. The three-step walkthrough stays on the help button for anyone
+    // who wants it, and ?welcome=1 still forces it for a look.
     try {
-      const forceWelcome = /(?:\?|&)welcome=1[;,]?(?:&|$)/.test(location.search);
-      const skipWelcome =
-        /(?:\?|&)welcome=0[;,]?(?:&|$)/.test(location.search) ||
-        restored ||
-        wantDeal ||
-        !!activeTake;
-      if (forceWelcome) openHelp(true);
-      else if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openHelp(true);
-    } catch (_) {
-      // Storage blocked — only show help on a truly fresh first board.
-      if (!restored && !wantDeal) openHelp(true);
-    }
+      if (/(?:\?|&)welcome=1[;,]?(?:&|$)/.test(location.search)) openHelp(true);
+    } catch (_) {}
 
     scheduleFrame();
 
@@ -5375,6 +5443,7 @@
       undo: () => restoreUndo(),
       canUndo: () => !!undoSnapshot,
       floodFrom,
+      chordAt: (index) => chordAt(index),
       getState: () => state,
       pickTile,
       projectTile,
