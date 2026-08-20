@@ -2798,10 +2798,12 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v2";
-  // v1 stored X relative to the old default (drag right → face moves right).
-  // The default flipped in v2, so a v1 "invert X" is v2 "normal" and vice versa.
-  const INVERT_STORAGE_KEY_LEGACY = "hexsweeper-sphere-invert-v1";
+  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v3";
+  // The X default has flipped twice. v1 and v3 both follow the finger, so a v1
+  // flag carries over untouched; v2 mirrored X by default, so its flag means
+  // the opposite of v3's and flips on the way in.
+  const INVERT_STORAGE_KEY_V2 = "hexsweeper-sphere-invert-v2";
+  const INVERT_STORAGE_KEY_V1 = "hexsweeper-sphere-invert-v1";
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v2";
   const RUN_STORAGE_KEY_LEGACY = "hexsweeper-sphere-run-v1";
@@ -3090,6 +3092,19 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       return opts.difficulty || "medium";
     }
 
+    /**
+     * Carry an older invert pref onto the current key, flipping X when that
+     * version's default was the mirrored one.
+     */
+    function adoptInvert(data, flipX, oldKey) {
+      const migrated = { x: flipX ? !data.x : !!data.x, y: !!data.y };
+      try {
+        localStorage.setItem(INVERT_STORAGE_KEY, JSON.stringify(migrated));
+        localStorage.removeItem(oldKey);
+      } catch (_) {}
+      return migrated;
+    }
+
     function readStoredInvert() {
       try {
         const raw = localStorage.getItem(INVERT_STORAGE_KEY);
@@ -3097,17 +3112,10 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
           const data = JSON.parse(raw);
           return { x: !!data.x, y: !!data.y };
         }
-        const legacy = localStorage.getItem(INVERT_STORAGE_KEY_LEGACY);
-        if (legacy) {
-          // Migrate: the X default flipped, so the stored X flag flips with it.
-          const data = JSON.parse(legacy);
-          const migrated = { x: !data.x, y: !!data.y };
-          try {
-            localStorage.setItem(INVERT_STORAGE_KEY, JSON.stringify(migrated));
-            localStorage.removeItem(INVERT_STORAGE_KEY_LEGACY);
-          } catch (_) {}
-          return migrated;
-        }
+        const v2 = localStorage.getItem(INVERT_STORAGE_KEY_V2);
+        if (v2) return adoptInvert(JSON.parse(v2), true, INVERT_STORAGE_KEY_V2);
+        const v1 = localStorage.getItem(INVERT_STORAGE_KEY_V1);
+        if (v1) return adoptInvert(JSON.parse(v1), false, INVERT_STORAGE_KEY_V1);
         return { x: false, y: false };
       } catch (_) {
         return { x: false, y: false };
@@ -7646,10 +7654,10 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
           clearTimeout(longPressTimer);
           state.pressed = -1;
           // Free tumble — keep continuous angles (do not wrap mid-drag).
-          // Default: drag right turns the sphere so the face under the finger
-          // moves left (X mirrors the way Y already felt to Luke); Invert X
-          // restores finger-following. Y follows the finger by default.
-          const sx = state.invertDragX ? 1 : -1;
+          // Both axes follow the finger: drag right and the face under it
+          // travels right, drag down and it travels down. Invert X / Invert Y
+          // each mirror their own axis for a camera-style feel.
+          const sx = state.invertDragX ? -1 : 1;
           const sy = state.invertDragY ? -1 : 1;
           // Near 1:1 tracking: the face under the finger follows the finger
           // (a fixed rad/px overshot 2× on phones and 4× on desktops).
