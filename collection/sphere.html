@@ -1257,6 +1257,14 @@ body.help-open { overflow: hidden; }
   padding: 0.05em 0.28em;
   color: var(--text-main);
 }
+.help-keylist kbd {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.92em;
+  border: 1px solid color-mix(in srgb, var(--text-main) 18%, transparent);
+  border-radius: 3px;
+  padding: 0.05em 0.28em;
+  color: var(--text-main);
+}
 .help-more {
   margin: 0 0 0.75rem;
   font-size: 0.68rem;
@@ -1648,6 +1656,7 @@ body.help-open { overflow: hidden; }
       <button type="button" role="tab" class="help-tab" id="help-tab-themes" aria-controls="help-panel-themes" aria-selected="false" data-tab="themes" tabindex="-1">Themes</button>
       <button type="button" role="tab" class="help-tab" id="help-tab-board" aria-controls="help-panel-board" aria-selected="false" data-tab="board" tabindex="-1">Board</button>
       <button type="button" role="tab" class="help-tab" id="help-tab-settings" aria-controls="help-panel-settings" aria-selected="false" data-tab="settings" tabindex="-1">Settings</button>
+      <button type="button" role="tab" class="help-tab help-desk-only" id="help-tab-keys" aria-controls="help-panel-keys" aria-selected="false" data-tab="keys" tabindex="-1">Keys</button>
     </div>
     <section class="help-tabpanel" role="tabpanel" id="help-panel-play" aria-labelledby="help-tab-play" data-tab="play">
     <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Clear a face; place a flag where you think a mine is. Your first clear is always safe.</p>
@@ -1694,6 +1703,23 @@ body.help-open { overflow: hidden; }
       <span class="help-packs-cap">Settings</span>
       <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
       <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
+    </div>
+    </section>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-keys" aria-labelledby="help-tab-keys" data-tab="keys" hidden>
+    <ul class="help-controls help-keylist" aria-label="Keyboard shortcuts">
+      <li><span class="act"><kbd>?</kbd></span><span>Open or close this sheet</span></li>
+      <li><span class="act"><kbd>Esc</kbd></span><span>Close this sheet</span></li>
+      <li><span class="act"><kbd>F</kbd></span><span>Toggle flag mode</span></li>
+      <li><span class="act"><kbd>R</kbd></span><span>New sphere</span></li>
+      <li><span class="act"><kbd>T</kbd></span><span>Cycle theme</span></li>
+      <li><span class="act"><kbd>N</kbd></span><span>Cycle count style</span></li>
+      <li><span class="act"><kbd>S</kbd></span><span>Small board</span></li>
+      <li><span class="act"><kbd>M</kbd></span><span>Medium board</span></li>
+      <li><span class="act"><kbd>L</kbd></span><span>Large board</span></li>
+    </ul>
+    <div class="help-body">
+      <p>Shortcuts work whether this sheet is open or closed — the only exception is while you are typing in a field. XS and XL boards have no shortcut; pick them from the Board tab.</p>
+      <p>This tab appears wherever a keyboard plausibly does, so a tablet with one attached gets it too.</p>
     </div>
     </section>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
@@ -9991,13 +10017,21 @@ const sphereChrome = initQuietChrome(sphereGame);
   if (helpBtn) helpBtn.addEventListener("click", syncAll);
   window.HEXSWEEPER_SYNC_SETTINGS = syncAll;
 
-  // Tabs: Play · Themes · Board · Settings. The last tab is remembered so a
-  // player who lives in Themes lands there; roving tabindex + arrow keys.
+  // Tabs: Play · Themes · Board · Settings · Keys. The last tab is remembered
+  // so a player who lives in Themes lands there; roving tabindex + arrow keys.
+  // Keys only exists where a keyboard plausibly does — this mirrors the CSS
+  // that hides .help-desk-only, so one build ships everywhere and the surface
+  // decides. A remembered "keys" falls back to Play on a bare touch screen.
   const TAB_KEY = "hexsweeper-sphere-sheet-tab-v1";
   const tabs = Array.from(document.querySelectorAll("#help-tabs .help-tab"));
   const panels = Array.from(document.querySelectorAll(".help-tabpanel"));
+  const TOUCH_ONLY = "(hover: none) and (pointer: coarse)";
+  const keyboardLikely = () =>
+    typeof matchMedia !== "function" || !matchMedia(TOUCH_ONLY).matches;
+  const usable = (t) => t.dataset.tab !== "keys" || keyboardLikely();
+  const liveTabs = () => tabs.filter(usable);
   function showTab(id, focus) {
-    if (!tabs.some((t) => t.dataset.tab === id)) id = "play";
+    if (!liveTabs().some((t) => t.dataset.tab === id)) id = "play";
     tabs.forEach((t) => {
       const on = t.dataset.tab === id;
       t.setAttribute("aria-selected", on ? "true" : "false");
@@ -10009,13 +10043,16 @@ const sphereChrome = initQuietChrome(sphereGame);
     const panel = document.getElementById("help-panel");
     if (panel) panel.scrollTop = 0;
   }
-  tabs.forEach((t, i) => {
+  tabs.forEach((t) => {
     t.addEventListener("click", () => showTab(t.dataset.tab));
     t.addEventListener("keydown", (e) => {
-      const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : e.key === "Home" ? -i : e.key === "End" ? tabs.length - 1 - i : 0;
+      const live = liveTabs();
+      const i = live.indexOf(t);
+      if (i < 0) return;
+      const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : e.key === "Home" ? -i : e.key === "End" ? live.length - 1 - i : 0;
       if (!dir) return;
       e.preventDefault();
-      showTab(tabs[(i + dir + tabs.length) % tabs.length].dataset.tab, true);
+      showTab(live[(i + dir + live.length) % live.length].dataset.tab, true);
     });
   });
   let stored = "play";
