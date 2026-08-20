@@ -552,16 +552,13 @@
   THEME_LIGHT.warn = { count: "numerals", relief: "extruded", seams: true };
   THEME_DARK.warn = { count: "numerals", relief: "extruded", seams: true };
 
+  // The registered set matches the iOS app roster (help-sheet ROSTER).
+  // Shelved, not deleted — THEME_SHELL/INK/FLOAT/CARD/EARTH/MOON/GLOW stay
+  // defined above but out of the cycle, same pattern as THEME_WATER in the
+  // wheel fork: a stored legacy id falls back to default via readStoredThemeId.
   const THEMES = [
     THEME_LIGHT,
-    THEME_SHELL,
     THEME_DARK,
-    THEME_INK,
-    THEME_FLOAT,
-    THEME_CARD,
-    THEME_EARTH,
-    THEME_MOON,
-    THEME_GLOW,
     THEME_MERCURY,
     THEME_STRATOSPHERE,
     THEME_ION_STORM,
@@ -5855,7 +5852,7 @@
     });
     resize();
 
-    // Deep-link theme: ?theme=earth|moon|light|…
+    // Deep-link theme: ?theme=light|dark|mercury|… (registered ids only)
     try {
       const tid = new URLSearchParams(location.search).get("theme");
       if (tid) {
