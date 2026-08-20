@@ -226,6 +226,15 @@ Done (updated 2026-08-11, through the App Store Connect API):
       iPhone, six iPad 13"), replacing the build-51 sets; description,
       keywords and promotional text pushed. No What's New — App Store
       Connect has no such field for a first release.
+- [x] Build 62 uploaded and attached to 1.0 on 2026-08-19: chording on the
+      sphere — double-tap a number whose flags are all placed and the rest of
+      its neighbours clear at once. Matches the flat game: it goes by the
+      flags, not the board, so a misplaced one detonates and the mine that
+      blows becomes the detonator. Zeros cascade through the flood, and the
+      whole chord is one undo step. Help sheet documents it under Play
+      (vendored from hexsweeper `d0a91f7`). Android versionCode 18 ships the
+      same payload. Processed in ~3 minutes. Screenshots unchanged — chording
+      alters no visuals. Supersedes 61.
 
 Still owed:
 
