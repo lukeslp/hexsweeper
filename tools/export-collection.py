@@ -989,13 +989,13 @@ def inline_skin_assets(markup: str) -> str:
     )
     core = safe_script((ROOT / "core.js").read_text(encoding="utf-8"))
     markup = re.sub(
-        r'<script src="\.\./core\.js"></script>\s*',
+        r'<script src="\.\./core\.js(?:\?v=[0-9a-z]+)?"></script>\s*',
         f"<script>\n/* core.js */\n{core}\n</script>\n",
         markup,
         count=1,
     )
     markup = re.sub(
-        r'<script src="core\.js"></script>\s*',
+        r'<script src="core\.js(?:\?v=[0-9a-z]+)?"></script>\s*',
         f"<script>\n/* core.js */\n{core}\n</script>\n",
         markup,
         count=1,
@@ -1138,7 +1138,7 @@ def export_theme(theme: dict, source: str) -> str:
 
     core = safe_script((ROOT / "core.js").read_text(encoding="utf-8"))
     markup = re.sub(
-        r'<script src="core\.js"></script>\s*',
+        r'<script src="core\.js(?:\?v=[0-9a-z]+)?"></script>\s*',
         f"{onepager_boot(theme)}<script>\n/* core.js */\n{core}\n</script>\n",
         markup,
         count=1,
