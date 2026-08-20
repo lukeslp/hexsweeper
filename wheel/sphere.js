@@ -1350,8 +1350,6 @@
       if (!helpOverlay) return;
       pauseWheel("help");
       if (fromWelcome) markWelcomeSeen = true;
-      if (global.WheelTutorial && typeof global.WheelTutorial.reset === "function")
-        global.WheelTutorial.reset();
       helpFocusReturn =
         document.activeElement && document.activeElement !== document.body
           ? document.activeElement

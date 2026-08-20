@@ -1276,12 +1276,6 @@
       announce(b.textContent || "Effects changed");
     }
 
-    function doHelp() {
-      const b = document.getElementById("help-btn");
-      if (b) b.click();
-      if (state.phase === "open" || state.phase === "rising") collapse();
-    }
-
     function doHome() {
       // The native bundle has no parent to climb to — leaving the payload
       // root strands the WebView with no way back. The app build points this
@@ -1907,23 +1901,6 @@
         announce(on ? "Flag mode" : "Dig mode");
       });
 
-      // Help — corner seat, lower right
-      helpCorner.textContent = "";
-      dockHelpBtn = makeHex({
-        cls: "is-dock is-dock-help",
-        label: "",
-        icon: "help",
-        iconOnly: true,
-        ariaLabel: "Help",
-      });
-      dockHelpBtn.title = "Help";
-      dockHelpBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        ignoreOutsideUntil = Date.now() + 250;
-        doHelp();
-      });
-      helpCorner.appendChild(dockHelpBtn);
 
       dock.appendChild(dockResetBtn);
       dock.appendChild(dockBtn);
