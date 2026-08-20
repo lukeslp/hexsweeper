@@ -250,12 +250,19 @@ Done (updated 2026-08-11, through the App Store Connect API):
       now reads `HEXSWEEPER_HOME_HREF` and the exporter refuses to ship a bare
       climb (vendored from hexsweeper `4c04cab`). Android test 19 ships the
       same payload. Screenshots unchanged. Supersedes 62.
+- [x] **1.0 submitted for App Store review on 2026-08-19** with build 63
+      attached. ASC reports `WAITING_FOR_REVIEW`, release type
+      `AFTER_APPROVAL`. What is live on dr.eamer.dev and what is in the
+      submitted binary are the same payload, hexsweeper `4c04cab`.
 
 Still owed:
 
 - [ ] **App Privacy nutrition labels — must be done in the ASC web UI.** The
       API has no endpoint for them (`appPrivacyDetails` → "URL path is not
-      valid"). Answer: no data collected, of any kind.
+      valid"). Answer: no data collected, of any kind. Apple gates submission
+      on this section, so 1.0 reaching `WAITING_FOR_REVIEW` implies it was
+      answered; the API cannot confirm it, so this box stays for a human to
+      tick after checking the web UI.
 - [ ] `docs/DEVICE_VERIFY.md` signed on hardware
 - [x] iPad screenshots — done 2026-08-18 (six at 2064×2752, uploaded)
 - [x] The ASC device capture `02-sphere.png` (HUD caught mid-render) is gone
