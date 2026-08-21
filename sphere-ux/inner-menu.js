@@ -8,8 +8,8 @@
  *   of them can be occluded by the sphere, because there is nothing for the
  *   sphere to occlude — the shell is one flat rectangle to the DOM.
  *
- *   So this menu is not DOM. Seven hexes live at radius SEAT_R inside the
- *   unit shell, as real geometry in sphere space. Each frame they are rotated
+ *   So this menu is not DOM. Seven hexes live on a plane through the middle
+ *   of the shell, as real geometry in sphere space. Each frame they are rotated
  *   and projected by the same camera the board uses and handed to sphere.js,
  *   which merges them into its one back-to-front sort. The sphere's own faces
  *   then pass in front of them as it turns, for free — no clipping, no
@@ -38,18 +38,32 @@
 (function (global) {
   "use strict";
 
-  /* Geometry. Angular hex radius and ring spread are locked together: six
-   * hexes touch their neighbour when the ring sits at hexR * sqrt(3). */
-  const SEAT_R = 0.46; // radius inside the unit shell — near the core
-  const HEX_A = 0.28; // angular radius of one seat, radians
-  const RING_A = HEX_A * Math.sqrt(3);
+  /* Geometry — hex-bloom's seven-hex flower, taken verbatim.
+   *
+   *      [NW]  [NE]
+   *   [W] [centre] [E]
+   *      [SW]  [SE]
+   *
+   * Pointy-top hexes (the same silhouette as --hex-clip in hex-bloom.css:
+   * polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)), six of
+   * them on one perfect ring at sqrt(3) x the circumradius, which is exactly
+   * where regular hexes share a flat side.
+   *
+   * Crucially the cluster is FLAT — a plane through the sphere's centre, not
+   * a patch of an inner sphere. The first cut curved each seat onto an inner
+   * shell so every hex tilted to face outward, which is the "weird tilt".
+   * A plane keeps all seven coplanar and square to the camera at open time,
+   * so it reads as the same menu the other docks use; it still rotates with
+   * the sphere, and the shell still occludes it. */
+  const HEX_R = 0.2; // circumradius, sphere radius = 1
+  const RING_R = HEX_R * Math.sqrt(3); // centre-to-centre of touching hexes
   const OPEN_MS = 420;
   const CLOSE_MS = 260;
   // How far the shell is allowed to split. Deliberately short of a full
   // eggshell open: the point is that the rims still overlap the flower, so the
   // shell visibly eats into the seats nearest it. Open it all the way and the
   // menu sits in clear air, which is the flat DOM dock again with extra steps.
-  const SPLIT_MAX = 0.52;
+  const SPLIT_MAX = 0.62;
 
   function norm(v) {
     const l = Math.hypot(v.x, v.y, v.z) || 1;
@@ -68,12 +82,6 @@
       z: a.x * b.y - a.y * b.x,
     };
   }
-  /** Any unit vector perpendicular to d, chosen to avoid the degenerate axis. */
-  function perp(d) {
-    const seed = Math.abs(d.y) < 0.9 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
-    return norm(cross(d, seed));
-  }
-
   /**
    * Undo the renderer's Y-then-X camera rotation. Seats are placed in
    * unrotated sphere space, so "put the menu where the player is looking"
@@ -90,15 +98,16 @@
     return { x: r.x * cy - z1 * sy, y: y1, z: r.x * sy + z1 * cy };
   }
 
-  /** A hexagon of angular radius `a` around unit direction d, on radius R. */
-  function hexAround(d, a, R) {
-    const e1 = perp(d);
-    const e2 = norm(cross(d, e1));
+  /**
+   * A pointy-top hexagon of circumradius R centred at `c`, lying in the plane
+   * spanned by u and v. Vertices start at +90 degrees so a point faces "up"
+   * along v, matching hex-bloom's clip path.
+   */
+  function hexPlanar(c, u, v, R) {
     const pts = [];
     for (let i = 0; i < 6; i++) {
-      const t = (Math.PI / 3) * i + Math.PI / 6;
-      const off = add(scale(e1, Math.cos(t) * Math.sin(a)), scale(e2, Math.sin(t) * Math.sin(a)));
-      pts.push(scale(norm(add(scale(d, Math.cos(a)), off)), R));
+      const t = Math.PI / 2 + (Math.PI / 3) * i;
+      pts.push(add(c, add(scale(u, Math.cos(t) * R), scale(v, Math.sin(t) * R))));
     }
     return pts;
   }
@@ -115,36 +124,30 @@
     let progress = 0; // 0 closed, 1 fully bloomed
     let lastT = 0; // paint-clock stamp, for the bloom tween
     let axis = { x: 0, y: 0, z: 1 }; // local-space direction the flower faces
+    let basisU = { x: 1, y: 0, z: 0 }; // local-space screen-right
+    let basisV = { x: 0, y: 1, z: 0 }; // local-space screen-up
     let seats = [];
     let lastProjected = [];
 
     /* ---- seats ------------------------------------------------------ */
 
     const ACTIONS = [
-      {
-        id: "close",
-        label: () => "Close",
-        run: () => close(),
-      },
+    /*
+     * Seat order follows hex-bloom's own map, so muscle memory carries over:
+     *
+     *        [Theme] [Size]            NW  NE
+     *   [Undo] [Restart] [Flag]      W  centre  E
+     *        [Seams] [Close]           SW  SE
+     *
+     * Listed centre-first, then the ring anticlockwise from due east, which is
+     * the order seatGeometry() builds.
+     */
       {
         id: "restart",
         label: () => "Restart",
         run: () => {
           game.reset();
           say("Board restarted.");
-        },
-      },
-      {
-        id: "undo",
-        label: () => "Undo",
-        enabled: () => !!(game.canUndo && game.canUndo()),
-        run: () => {
-          if (game.canUndo && !game.canUndo()) {
-            say("Nothing to undo.");
-            return;
-          }
-          game.undo();
-          say("Undone.");
         },
       },
       {
@@ -155,6 +158,20 @@
           const next = !game.getState().flagMode;
           game.setFlagMode(next);
           say(next ? "Flag mode on." : "Flag mode off.");
+        },
+      },
+      {
+        id: "size",
+        label: () => {
+          const n = game.getState().cells.length;
+          return n ? `${n}` : "Size";
+        },
+        run: () => {
+          const cur = game.getState().difficulty;
+          const i = SIZES.indexOf(cur);
+          const next = SIZES[(i < 0 ? 0 : i + 1) % SIZES.length];
+          game.setSize(next);
+          say(`Board size ${next}.`);
         },
       },
       {
@@ -173,17 +190,16 @@
         },
       },
       {
-        id: "size",
-        label: () => {
-          const n = game.getState().cells.length;
-          return n ? `${n}` : "Size";
-        },
+        id: "undo",
+        label: () => "Undo",
+        enabled: () => !!(game.canUndo && game.canUndo()),
         run: () => {
-          const cur = game.getState().difficulty;
-          const i = SIZES.indexOf(cur);
-          const next = SIZES[(i < 0 ? 0 : i + 1) % SIZES.length];
-          game.setSize(next);
-          say(`Board size ${next}.`);
+          if (game.canUndo && !game.canUndo()) {
+            say("Nothing to undo.");
+            return;
+          }
+          game.undo();
+          say("Undone.");
         },
       },
       {
@@ -196,27 +212,36 @@
           say(next ? "Seams on." : "Seams off.");
         },
       },
+      {
+        id: "close",
+        label: () => "Close",
+        run: () => close(),
+      },
     ];
 
-    /** Rebuild seat geometry around the current view axis. */
+    /**
+     * Lay the seven seats out on a plane through the sphere's centre.
+     *
+     * Seat order is hex-bloom's: centre first, then E, NE, NW, W, SW, SE —
+     * the ring walked anticlockwise from due east, so the same action lands in
+     * the same place it does on every other dock.
+     */
     function seatGeometry() {
-      const u = perp(axis);
-      const v = norm(cross(axis, u));
-      const dirs = [axis];
+      // Screen-aligned basis, so the flower is square to the camera when it
+      // opens, instead of picking an arbitrary roll.
+      const u = basisU;
+      const v = basisV;
+      const centers = [{ x: 0, y: 0, z: 0 }];
       for (let i = 0; i < 6; i++) {
         const t = (Math.PI / 3) * i;
-        const off = add(
-          scale(u, Math.cos(t) * Math.sin(RING_A)),
-          scale(v, Math.sin(t) * Math.sin(RING_A))
+        centers.push(
+          add(scale(u, Math.cos(t) * RING_R), scale(v, Math.sin(t) * RING_R))
         );
-        dirs.push(norm(add(scale(axis, Math.cos(RING_A)), off)));
       }
-      seats = dirs.map((d, i) => ({
+      seats = centers.map((c, i) => ({
         action: ACTIONS[i],
-        dir: d,
-        // Cached at full bloom; the open tween scales toward these.
-        hex: hexAround(d, HEX_A, SEAT_R),
-        center: scale(d, SEAT_R),
+        center: c,
+        hex: hexPlanar(c, u, v, HEX_R),
       }));
     }
 
@@ -275,7 +300,11 @@
     function show(instant) {
       if (open) return;
       const st = game.getState();
+      // Unrotating the three camera axes gives a screen-aligned frame in local
+      // space: the flower opens square to the viewer and then rides the mesh.
       axis = unrotate({ x: 0, y: 0, z: 1 }, st.rotY, st.rotX);
+      basisU = unrotate({ x: 1, y: 0, z: 0 }, st.rotY, st.rotX);
+      basisV = unrotate({ x: 0, y: 1, z: 0 }, st.rotY, st.rotX);
       seatGeometry();
       open = true;
       progress = reduceMotion || instant ? 1 : 0;
@@ -353,18 +382,21 @@
     function paint(ctx, proj, now) {
       const seat = proj.seat;
       const action = seat.action;
-      const front = proj.facing;
-      // Seats behind the sphere's core dim out; they are still drawn, because
-      // watching one sink away is how the depth reads.
-      const vis = Math.max(0, Math.min(1, (front + 0.62) / 1.0));
-      if (vis <= 0.02) return;
+      // Solid, not translucent. The seats used to dim by facing, which made
+      // sense when they were curved onto an inner sphere and each one turned
+      // away independently — on a flat coplanar cluster it just washed the
+      // whole menu out to ~70%, which is the "obscured" complaint again from
+      // the other side. Depth now comes from two honest places: the shell
+      // occluding the seats, and the plane foreshortening as it turns.
+      const vis = 1;
       const st = game.getState();
       const dark = !(st.theme && st.theme.chrome === "light");
       const enabled = !action.enabled || action.enabled();
       const on = action.pressed && action.pressed();
 
       ctx.save();
-      ctx.globalAlpha = (0.28 + 0.72 * vis) * Math.min(1, progress * 1.6);
+      // Bloom fade only — nothing else touches seat opacity.
+      ctx.globalAlpha = Math.min(1, progress * 1.6);
       ctx.beginPath();
       proj.boundary.forEach((pt, i) => (i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
       ctx.closePath();
