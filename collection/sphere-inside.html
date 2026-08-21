@@ -7386,6 +7386,37 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
       ctx.save();
       if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
 
+      // Chamber inverts the world. Once the sphere has turned itself inside
+      // out you are standing in it, so the page behind must become the same
+      // wall you are looking at — otherwise the dark back-hemisphere rim stops
+      // at the silhouette and reads as an annulus floating on white daylight.
+      // Lerped on the chamber's own progress so the background turns with the
+      // fold rather than snapping.
+      const invert =
+        state.chromeProjectionMode === "chamber"
+          ? smoothUnit(state.chromeProjectionProgress)
+          : 0;
+      let bgGlowCol = state.theme.bgGlow;
+      let bgCol = state.theme.bg;
+      if (invert > 0) {
+        const wall = state.theme.backface || "#000000";
+        // Match the wall's own tint ramp rather than pure backface, or the
+        // background and the rim meet with a visible step exactly at the
+        // silhouette. tileColors() tints the wall by 0.05 + rim * 0.13, and
+        // rim peaks at the edge-on faces on the outline — so 0.18 out there,
+        // 0.05 at the centre where the faces look straight back at you.
+        bgGlowCol = colorMix(
+          bgGlowCol,
+          colorMix(wall, state.theme.coveredEdge, 0.05),
+          invert
+        );
+        bgCol = colorMix(
+          bgCol,
+          colorMix(wall, state.theme.coveredEdge, 0.18),
+          invert
+        );
+      }
+
       const grd = ctx.createRadialGradient(
         state.centerX,
         state.centerY,
@@ -7394,8 +7425,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
         state.centerY,
         state.scale * 1.35
       );
-      grd.addColorStop(0, state.theme.bgGlow);
-      grd.addColorStop(1, state.theme.bg);
+      grd.addColorStop(0, bgGlowCol);
+      grd.addColorStop(1, bgCol);
       ctx.fillStyle = grd;
       ctx.fillRect(0, 0, w, h);
 
@@ -7653,16 +7684,15 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
-      // While the inner menu is open the shell turns translucent so the menu
-      // reads through it. The faces still pass visibly over the tiles as the
-      // sphere turns — that occlusion is the entire point of seating it
-      // inside rather than floating it on top.
+      // The inner menu never fades the shell. It splits it (setChromeShell)
+      // and sits in the cavity, so the shell paints over any seat still
+      // behind it at full strength — the shell hides the menu, not the
+      // reverse. Fading it was the first cut and it wrecked the sphere.
       const innerTiles = innerMenuActive() ? innerMenu.project(now) || [] : [];
-      const shellFade = innerTiles.length ? innerMenu.shellAlpha() : 1;
 
       function drawChromeTile(proj) {
         const alpha =
-          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj) * shellFade;
+          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj);
         if (alpha <= 0.001) return;
         if (alpha >= 0.999) {
           drawTile(proj);
@@ -11647,9 +11677,13 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
  *   z-index, no per-tile polygon subtraction. Turn the sphere far enough and a
  *   seat goes round the back and is gone.
  *
- *   The shell fades while the menu is open (sphere.js applies shellAlpha) so
- *   the menu reads through it. It does not vanish: seeing tiles slide over the
- *   seats is the effect, not an artefact of it.
+ *   The shell is NOT faded, dimmed or made translucent. That was the first cut
+ *   and it was wrong for exactly the reason the DOM docks are wrong: it
+ *   destroys the shell in order to show the menu. Here the shell stays fully
+ *   opaque and simply *splits* — the menu drives setChromeShell("eggshell") as
+ *   it blooms — so the seats are revealed through the cavity and the shell
+ *   halves occlude whatever still sits behind them. The shell hides the menu,
+ *   never the other way round.
  *
  * Primary Functions/Classes: initInnerMenu(game)
  * Inputs: the SphereSweeper API — projectLocalPoint, setInnerMenu, getState,
@@ -11667,12 +11701,16 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
 
   /* Geometry. Angular hex radius and ring spread are locked together: six
    * hexes touch their neighbour when the ring sits at hexR * sqrt(3). */
-  const SEAT_R = 0.68; // radius inside the unit shell
+  const SEAT_R = 0.46; // radius inside the unit shell — near the core
   const HEX_A = 0.28; // angular radius of one seat, radians
   const RING_A = HEX_A * Math.sqrt(3);
   const OPEN_MS = 420;
   const CLOSE_MS = 260;
-  const SHELL_ALPHA = 0.26; // how far the shell fades back when open
+  // How far the shell is allowed to split. Deliberately short of a full
+  // eggshell open: the point is that the rims still overlap the flower, so the
+  // shell visibly eats into the seats nearest it. Open it all the way and the
+  // menu sits in clear air, which is the flat DOM dock again with extra steps.
+  const SPLIT_MAX = 0.52;
 
   function norm(v) {
     const l = Math.hypot(v.x, v.y, v.z) || 1;
@@ -11866,7 +11904,20 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
       progress = open
         ? Math.min(1, progress + step)
         : Math.max(0, progress - step);
+      splitShell();
       if (!open && progress === 0) finishClose();
+    }
+
+    /**
+     * Open the shell itself rather than fading it. setChromeShell partitions
+     * the live mesh into two rigid halves about the current view and moves
+     * them apart — the eggshell study's geometry, reused here as the aperture
+     * the menu is seen through.
+     */
+    function splitShell() {
+      if (!game.setChromeShell) return;
+      const p = ease(Math.max(0, Math.min(1, progress)));
+      game.setChromeShell("eggshell", p * SPLIT_MAX);
     }
 
     function animating() {
@@ -11894,8 +11945,9 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
       panel.hidden = false;
       syncButtons();
       lastT = 0;
+      splitShell();
       if (game.scheduleFrame) game.scheduleFrame();
-      say("Menu open inside the sphere. Turn the sphere to reach a seat.");
+      say("Menu open inside the sphere. The shell has split to show it.");
       const first = panel.querySelector("button");
       if (first) first.focus();
     }
@@ -11914,6 +11966,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
 
     function finishClose() {
       lastProjected = [];
+      if (game.setChromeShell) game.setChromeShell(null, 0);
       panel.hidden = true;
       game.setMenuInteraction(false);
       game.resumeTimer();
@@ -11925,11 +11978,6 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
 
     function isOpen() {
       return open || progress > 0.001;
-    }
-
-    function shellAlpha() {
-      // Fade in step with the bloom so nothing pops.
-      return 1 - (1 - SHELL_ALPHA) * progress;
     }
 
     /**
@@ -12086,7 +12134,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
 
     /* ---- wiring ------------------------------------------------------ */
 
-    game.setInnerMenu({ isOpen, project, paint, shellAlpha, tap, animating });
+    game.setInnerMenu({ isOpen, project, paint, tap, animating });
 
     // A tap on empty space with the menu open closes it, matching every other
     // dock. sphere.js only emits this once the menu declined the tap.
@@ -12146,7 +12194,12 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "inside";
     const spin = Number(q.get("spin"));
     if (spin && game.orbitBy) game.orbitBy(spin, 0);
   } else {
-    initHexBloom(game);
+    const bloom = initHexBloom(game);
+    // Same ?open=1 capture aid the inside dock uses, so the spatial docks
+    // (chamber, eggshell, faces) can be photographed in their open state.
+    if (bloom && q.get("open") === "1") {
+      requestAnimationFrame(() => (bloom.open || bloom.toggle)());
+    }
   }
 })();
 (function () {

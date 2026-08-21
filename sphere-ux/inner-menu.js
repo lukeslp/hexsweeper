@@ -16,9 +16,13 @@
  *   z-index, no per-tile polygon subtraction. Turn the sphere far enough and a
  *   seat goes round the back and is gone.
  *
- *   The shell fades while the menu is open (sphere.js applies shellAlpha) so
- *   the menu reads through it. It does not vanish: seeing tiles slide over the
- *   seats is the effect, not an artefact of it.
+ *   The shell is NOT faded, dimmed or made translucent. That was the first cut
+ *   and it was wrong for exactly the reason the DOM docks are wrong: it
+ *   destroys the shell in order to show the menu. Here the shell stays fully
+ *   opaque and simply *splits* — the menu drives setChromeShell("eggshell") as
+ *   it blooms — so the seats are revealed through the cavity and the shell
+ *   halves occlude whatever still sits behind them. The shell hides the menu,
+ *   never the other way round.
  *
  * Primary Functions/Classes: initInnerMenu(game)
  * Inputs: the SphereSweeper API — projectLocalPoint, setInnerMenu, getState,
@@ -36,12 +40,16 @@
 
   /* Geometry. Angular hex radius and ring spread are locked together: six
    * hexes touch their neighbour when the ring sits at hexR * sqrt(3). */
-  const SEAT_R = 0.68; // radius inside the unit shell
+  const SEAT_R = 0.46; // radius inside the unit shell — near the core
   const HEX_A = 0.28; // angular radius of one seat, radians
   const RING_A = HEX_A * Math.sqrt(3);
   const OPEN_MS = 420;
   const CLOSE_MS = 260;
-  const SHELL_ALPHA = 0.26; // how far the shell fades back when open
+  // How far the shell is allowed to split. Deliberately short of a full
+  // eggshell open: the point is that the rims still overlap the flower, so the
+  // shell visibly eats into the seats nearest it. Open it all the way and the
+  // menu sits in clear air, which is the flat DOM dock again with extra steps.
+  const SPLIT_MAX = 0.52;
 
   function norm(v) {
     const l = Math.hypot(v.x, v.y, v.z) || 1;
@@ -235,7 +243,20 @@
       progress = open
         ? Math.min(1, progress + step)
         : Math.max(0, progress - step);
+      splitShell();
       if (!open && progress === 0) finishClose();
+    }
+
+    /**
+     * Open the shell itself rather than fading it. setChromeShell partitions
+     * the live mesh into two rigid halves about the current view and moves
+     * them apart — the eggshell study's geometry, reused here as the aperture
+     * the menu is seen through.
+     */
+    function splitShell() {
+      if (!game.setChromeShell) return;
+      const p = ease(Math.max(0, Math.min(1, progress)));
+      game.setChromeShell("eggshell", p * SPLIT_MAX);
     }
 
     function animating() {
@@ -263,8 +284,9 @@
       panel.hidden = false;
       syncButtons();
       lastT = 0;
+      splitShell();
       if (game.scheduleFrame) game.scheduleFrame();
-      say("Menu open inside the sphere. Turn the sphere to reach a seat.");
+      say("Menu open inside the sphere. The shell has split to show it.");
       const first = panel.querySelector("button");
       if (first) first.focus();
     }
@@ -283,6 +305,7 @@
 
     function finishClose() {
       lastProjected = [];
+      if (game.setChromeShell) game.setChromeShell(null, 0);
       panel.hidden = true;
       game.setMenuInteraction(false);
       game.resumeTimer();
@@ -294,11 +317,6 @@
 
     function isOpen() {
       return open || progress > 0.001;
-    }
-
-    function shellAlpha() {
-      // Fade in step with the bloom so nothing pops.
-      return 1 - (1 - SHELL_ALPHA) * progress;
     }
 
     /**
@@ -455,7 +473,7 @@
 
     /* ---- wiring ------------------------------------------------------ */
 
-    game.setInnerMenu({ isOpen, project, paint, shellAlpha, tap, animating });
+    game.setInnerMenu({ isOpen, project, paint, tap, animating });
 
     // A tap on empty space with the menu open closes it, matching every other
     // dock. sphere.js only emits this once the menu declined the tap.

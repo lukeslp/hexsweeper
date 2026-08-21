@@ -4099,6 +4099,37 @@
       ctx.save();
       if (shakeX || shakeY) ctx.translate(shakeX, shakeY);
 
+      // Chamber inverts the world. Once the sphere has turned itself inside
+      // out you are standing in it, so the page behind must become the same
+      // wall you are looking at — otherwise the dark back-hemisphere rim stops
+      // at the silhouette and reads as an annulus floating on white daylight.
+      // Lerped on the chamber's own progress so the background turns with the
+      // fold rather than snapping.
+      const invert =
+        state.chromeProjectionMode === "chamber"
+          ? smoothUnit(state.chromeProjectionProgress)
+          : 0;
+      let bgGlowCol = state.theme.bgGlow;
+      let bgCol = state.theme.bg;
+      if (invert > 0) {
+        const wall = state.theme.backface || "#000000";
+        // Match the wall's own tint ramp rather than pure backface, or the
+        // background and the rim meet with a visible step exactly at the
+        // silhouette. tileColors() tints the wall by 0.05 + rim * 0.13, and
+        // rim peaks at the edge-on faces on the outline — so 0.18 out there,
+        // 0.05 at the centre where the faces look straight back at you.
+        bgGlowCol = colorMix(
+          bgGlowCol,
+          colorMix(wall, state.theme.coveredEdge, 0.05),
+          invert
+        );
+        bgCol = colorMix(
+          bgCol,
+          colorMix(wall, state.theme.coveredEdge, 0.18),
+          invert
+        );
+      }
+
       const grd = ctx.createRadialGradient(
         state.centerX,
         state.centerY,
@@ -4107,8 +4138,8 @@
         state.centerY,
         state.scale * 1.35
       );
-      grd.addColorStop(0, state.theme.bgGlow);
-      grd.addColorStop(1, state.theme.bg);
+      grd.addColorStop(0, bgGlowCol);
+      grd.addColorStop(1, bgCol);
       ctx.fillStyle = grd;
       ctx.fillRect(0, 0, w, h);
 
@@ -4366,16 +4397,15 @@
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
-      // While the inner menu is open the shell turns translucent so the menu
-      // reads through it. The faces still pass visibly over the tiles as the
-      // sphere turns — that occlusion is the entire point of seating it
-      // inside rather than floating it on top.
+      // The inner menu never fades the shell. It splits it (setChromeShell)
+      // and sits in the cavity, so the shell paints over any seat still
+      // behind it at full strength — the shell hides the menu, not the
+      // reverse. Fading it was the first cut and it wrecked the sphere.
       const innerTiles = innerMenuActive() ? innerMenu.project(now) || [] : [];
-      const shellFade = innerTiles.length ? innerMenu.shellAlpha() : 1;
 
       function drawChromeTile(proj) {
         const alpha =
-          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj) * shellFade;
+          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj);
         if (alpha <= 0.001) return;
         if (alpha >= 0.999) {
           drawTile(proj);
