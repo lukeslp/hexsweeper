@@ -5117,6 +5117,13 @@
       getMenuPatch,
       setInnerMenu,
       projectLocalPoint,
+      /**
+       * Project a point that is already in camera space — rotation applied,
+       * perspective divide still to do. This is what a billboarded overlay
+       * needs: geometry that keeps facing the viewer while the mesh turns
+       * behind it, but still sorts against that mesh by depth.
+       */
+      projectCameraPoint: (p) => projectRotated(p),
       scheduleFrame: () => scheduleFrame(),
       setChromeProjection,
       setChromeShell,

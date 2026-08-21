@@ -8404,6 +8404,13 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
       getMenuPatch,
       setInnerMenu,
       projectLocalPoint,
+      /**
+       * Project a point that is already in camera space — rotation applied,
+       * perspective divide still to do. This is what a billboarded overlay
+       * needs: geometry that keeps facing the viewer while the mesh turns
+       * behind it, but still sorts against that mesh by depth.
+       */
+      projectCameraPoint: (p) => projectRotated(p),
       scheduleFrame: () => scheduleFrame(),
       setChromeProjection,
       setChromeShell,
@@ -11728,7 +11735,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
 })(window);
 
 </script>
-<script src="inner-menu.js?v=20260821r"></script>
+<script src="inner-menu.js?v=20260821s"></script>
 <script>
 (function () {
   const game = SphereSweeper.boot({ canvasId: "gameCanvas" });

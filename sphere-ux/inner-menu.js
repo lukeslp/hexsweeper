@@ -57,6 +57,7 @@
    * the sphere, and the shell still occludes it. */
   const HEX_R = 0.2; // circumradius, sphere radius = 1
   const RING_R = HEX_R * Math.sqrt(3); // centre-to-centre of touching hexes
+  const PLANE_Z = 0; // camera-space depth: the sphere's own centre
   const OPEN_MS = 420;
   const CLOSE_MS = 260;
   // How far the shell is allowed to split. Deliberately short of a full
@@ -82,22 +83,6 @@
       z: a.x * b.y - a.y * b.x,
     };
   }
-  /**
-   * Undo the renderer's Y-then-X camera rotation. Seats are placed in
-   * unrotated sphere space, so "put the menu where the player is looking"
-   * means projecting the view axis back through the inverse camera once, at
-   * open time. After that the seats simply ride the sphere.
-   */
-  function unrotate(r, rotY, rotX) {
-    const cx = Math.cos(rotX);
-    const sx = Math.sin(rotX);
-    const y1 = r.y * cx + r.z * sx;
-    const z1 = -r.y * sx + r.z * cx;
-    const cy = Math.cos(rotY);
-    const sy = Math.sin(rotY);
-    return { x: r.x * cy - z1 * sy, y: y1, z: r.x * sy + z1 * cy };
-  }
-
   /**
    * A pointy-top hexagon of circumradius R centred at `c`, lying in the plane
    * spanned by u and v. Vertices start at +90 degrees so a point faces "up"
@@ -236,12 +221,8 @@
     let open = false;
     let progress = 0; // 0 closed, 1 fully bloomed
     let lastT = 0; // paint-clock stamp, for the bloom tween
-    let axis = { x: 0, y: 0, z: 1 }; // local-space direction the flower faces
-    let basisU = { x: 1, y: 0, z: 0 }; // local-space screen-right
-    let basisV = { x: 0, y: 1, z: 0 }; // local-space screen-up
     let seats = [];
     let lastProjected = [];
-    let planeFacing = 1; // camera-space z of the cluster's normal
 
     /* ---- seats ------------------------------------------------------ */
 
@@ -334,28 +315,38 @@
     ];
 
     /**
-     * Lay the seven seats out on a plane through the sphere's centre.
+     * Lay the seven seats out in CAMERA space, on the plane through the
+     * sphere's centre.
      *
-     * Seat order is hex-bloom's: centre first, then E, NE, NW, W, SW, SE —
-     * the ring walked anticlockwise from due east, so the same action lands in
-     * the same place it does on every other dock.
+     * Camera space, not sphere space, is the whole point of this revision.
+     * Seats fixed to the mesh turned away with it, so the menu foreshortened
+     * to slivers and eventually vanished round the back — unreadable exactly
+     * when you were moving the camera to look at it. Chamber's menu is DOM and
+     * therefore always square-on; this matches that. The seats keep facing the
+     * viewer while the shell turns behind them, and because they are still
+     * geometry at a real depth they still sort against that shell, so it still
+     * occludes them.
+     *
+     * Seat order is hex-bloom's: centre first, then the ring anticlockwise
+     * from due east, so the same action lands in the same place it does on
+     * every other dock.
      */
+    const CAM_U = { x: 1, y: 0, z: 0 };
+    const CAM_V = { x: 0, y: 1, z: 0 };
     function seatGeometry() {
-      // Screen-aligned basis, so the flower is square to the camera when it
-      // opens, instead of picking an arbitrary roll.
-      const u = basisU;
-      const v = basisV;
-      const centers = [{ x: 0, y: 0, z: 0 }];
+      const centers = [{ x: 0, y: 0, z: PLANE_Z }];
       for (let i = 0; i < 6; i++) {
         const t = (Math.PI / 3) * i;
-        centers.push(
-          add(scale(u, Math.cos(t) * RING_R), scale(v, Math.sin(t) * RING_R))
-        );
+        centers.push({
+          x: Math.cos(t) * RING_R,
+          y: Math.sin(t) * RING_R,
+          z: PLANE_Z,
+        });
       }
       seats = centers.map((c, i) => ({
         action: ACTIONS[i],
         center: c,
-        hex: hexPlanar(c, u, v, HEX_R),
+        hex: hexPlanar(c, CAM_U, CAM_V, HEX_R),
       }));
     }
 
@@ -413,12 +404,6 @@
      */
     function show(instant) {
       if (open) return;
-      const st = game.getState();
-      // Unrotating the three camera axes gives a screen-aligned frame in local
-      // space: the flower opens square to the viewer and then rides the mesh.
-      axis = unrotate({ x: 0, y: 0, z: 1 }, st.rotY, st.rotX);
-      basisU = unrotate({ x: 1, y: 0, z: 0 }, st.rotY, st.rotX);
-      basisV = unrotate({ x: 0, y: 1, z: 0 }, st.rotY, st.rotX);
       seatGeometry();
       open = true;
       progress = reduceMotion || instant ? 1 : 0;
@@ -426,6 +411,7 @@
       game.pauseTimer();
       panel.hidden = false;
       syncButtons();
+      syncOpener();
       lastT = 0;
       splitShell();
       if (game.scheduleFrame) game.scheduleFrame();
@@ -446,8 +432,14 @@
       if (game.scheduleFrame) game.scheduleFrame();
     }
 
+    function syncOpener() {
+      const btn = opener();
+      if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
     function finishClose() {
       lastProjected = [];
+      syncOpener();
       if (game.setChromeShell) game.setChromeShell(null, 0);
       panel.hidden = true;
       game.setMenuInteraction(false);
@@ -475,8 +467,8 @@
       const grow = 0.18 + 0.82 * p;
       const out = [];
       for (const seat of seats) {
-        const boundary = seat.hex.map((pt) => game.projectLocalPoint(scale(pt, grow)));
-        const center = game.projectLocalPoint(scale(seat.center, grow));
+        const boundary = seat.hex.map((pt) => game.projectCameraPoint(scale(pt, grow)));
+        const center = game.projectCameraPoint(scale(seat.center, grow));
         let z = center.z;
         for (const b of boundary) z += b.z;
         z /= boundary.length + 1;
@@ -489,9 +481,6 @@
           facing: center.z,
         });
       }
-      // How square-on the whole cluster is: the camera-space z of its unit
-      // normal. 1 is dead ahead, 0 is edge-on, negative is turned away.
-      planeFacing = game.projectLocalPoint(axis).z;
       lastProjected = out;
       return out;
     }
@@ -595,15 +584,10 @@
      */
     function tap(x, y) {
       if (!open || progress < 0.6) return false;
-      // Gate on the cluster, not the seat.
-      //
-      // This used to require each seat's own z > 0.02, which was fine when the
-      // seats curved onto an inner sphere and each faced outward on its own.
-      // On a flat plane through the sphere's centre every seat sits at z = 0
-      // exactly, so the test rejected all seven, tap() always returned false,
-      // and sphere.js then read the tap as a background tap — which closed the
-      // menu. The menu was not dead; every click was a close.
-      if (planeFacing <= 0.25) return false;
+      // No facing gate any more: the cluster is billboarded, so it is always
+      // square to the viewer and always hittable. (The old per-seat z > 0.02
+      // test rejected all seven once the seats became coplanar at z = 0, which
+      // made every click read as a background tap and close the menu.)
       const hits = lastProjected
         .filter((p) => pointIn(x, y, p.boundary))
         // Nearest wins if the projection ever overlaps two seats.
@@ -682,6 +666,49 @@
         close();
       }
     });
+
+    /*
+     * Tapping off the sphere opens the menu, exactly as chamber does — the
+     * same guard hex-bloom uses at hex-bloom.js:2845, so the two docks answer
+     * the same gesture and can be toggled between without relearning anything:
+     * a quick, stationary pointerup outside the sphere's own disk.
+     *
+     * Capture phase, and real controls are excluded, so the opener pill and
+     * the HUD keep their own handlers instead of being swallowed here.
+     */
+    let downAt = 0;
+    let downX = 0;
+    let downY = 0;
+    document.addEventListener(
+      "pointerdown",
+      (e) => {
+        downAt = Date.now();
+        downX = e.clientX;
+        downY = e.clientY;
+      },
+      true
+    );
+    document.addEventListener(
+      "pointerup",
+      (e) => {
+        if (open) return;
+        if (Date.now() - downAt > 350) return;
+        if (Math.hypot(e.clientX - downX, e.clientY - downY) > 8) return;
+        if (
+          e.target &&
+          e.target.closest &&
+          e.target.closest("button, a, input, select, [role='button']")
+        ) {
+          return;
+        }
+        const disc = game.getSphereScreen ? game.getSphereScreen() : null;
+        if (disc && Math.hypot(e.clientX - disc.cx, e.clientY - disc.cy) <= disc.r) {
+          return;
+        }
+        show();
+      },
+      true
+    );
 
     return { show, close, toggle: () => (open ? close() : show()), isOpen };
   }
