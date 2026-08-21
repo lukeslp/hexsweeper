@@ -1934,6 +1934,16 @@ def render_launcher(
 ) -> str:
     """Render the shared three-board launcher for one platform."""
     template = (ROOT / "tools" / "app-launcher.html").read_text(encoding="utf-8")
+    # tools/app-launcher.html is served publicly in its own right, so it carries
+    # its own GoatCounter tag. Drop it here: platform_tail adds the one that
+    # belongs to this render (web keeps it, the app build strips it again),
+    # otherwise launcher.html ships the snippet twice.
+    template = re.sub(
+        r'\s*<script\s+data-goatcounter="[^"]+"\s+async\s+src="[^"]+/count\.js"></script>',
+        "",
+        template,
+        flags=re.S,
+    )
     replacements = {
         "{{FONTS}}": fonts,
         "{{INFINITE_HREF}}": infinite_href,
@@ -1950,6 +1960,14 @@ def render_launcher(
         raise SystemExit("render_launcher: unresolved placeholder(s): " + ", ".join(unresolved))
     return markup
 
+
+# The analytics tag every public page carries (standing rule). Generated pages
+# must emit it from here rather than have it hand-added afterwards: a hand-edit
+# to a generated file is silently reverted by the next export, which is exactly
+# how collection/index.html lost its tag and launcher.html grew a second one.
+# The app build strips it again in appify() — native bundles stay offline.
+GOATCOUNTER_TAG = """<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>"""
 
 WEB_LAUNCHER_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/launcher.html">
 <meta property="og:type" content="website">
@@ -1982,9 +2000,7 @@ WEB_LAUNCHER_TAIL = """<noscript>
   <a href="index.html">Sphere · 3D</a>
 </nav>
 </noscript>
-<script data-goatcounter="https://stats.dr.eamer.dev/count"
-        async src="https://stats.dr.eamer.dev/count.js"></script>
-"""
+""" + GOATCOUNTER_TAG + "\n"
 
 
 def export_web_launcher() -> str:
@@ -2160,6 +2176,7 @@ footer a{{color:var(--accent)}}
   }});
 }})();
 </script>
+{GOATCOUNTER_TAG}
 </body>
 </html>
 """
