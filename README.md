@@ -133,6 +133,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/sphere-muse.html` | Visual take: Starlit Void |
 | `collection/sphere-face-takeover.html` | Control study: seven real sphere faces become the menu |
 | `collection/sphere-equator-ribbon.html` | Archived V1: draggable depth-sorted equator ribbon |
+| `collection/sphere-inside.html` | The menu inside the sphere: seats drawn as real geometry in the renderer's own depth sort, so the board's faces occlude them as it turns (`sphere-ux/inner-menu.js`, live at `../sphere-ux/?dock=inside`) |
 | `collection/sphere-eggshell.html` | Spatial study V4: fast interlocking split with a renderer-native inner shell |
 | `collection/sphere-chamber.html` | Spatial study V4: continuous center-out fold into a tessellated inner chamber |
 | `collection/sphere-polar-capstan.html` | Rejected archive: faceted control spindle |

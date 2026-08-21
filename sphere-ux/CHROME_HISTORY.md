@@ -87,6 +87,7 @@ Collection desk: `https://dr.eamer.dev/games/hexsweeper/collection/` (includes B
 | 2026-08-10 | `?dock=eggshell` V4 cuts the open to 260ms and paints rear-facing faces from the lower shell as its actual inner bowl. The former circular CSS stand-in is removed; the visible interior now shares the shell's exact tessellation and motion. | **Keep** — immediate response with a structurally honest inside surface |
 | 2026-08-10 | `?dock=chamber` V4 replaces the global two-step inversion with a shared-vertex, center-out fold wave. The front seven faces dissolve into a real aperture, the rear hemisphere becomes a shaded tessellated wall, and the decorative gray veil/rim are gone. | **Keep testing** — one continuous enclosure gesture with a readable settled chamber |
 | 2026-08-11 | Face Takeover, Eggshell, and Inside Chamber keep sphere rotation live while their menus are open. Drag and arrow keys rotate the shell without permitting dig, flag, long-press, pinch, or wheel-zoom side effects; a stationary background tap still closes. | **Current** — spatial chrome remains a manipulable object instead of freezing into a modal illustration |
+| 2026-08-21 | `?dock=inside` stops pretending. The menu is no longer DOM at all: seven seats live at radius 0.68 inside the shell as real geometry, are projected by the game camera every frame, and are merged into the renderer's one back-to-front sort. The board's own faces therefore occlude them for free — turn the sphere and the tiles swallow the flower, edge-on seats show their extruded sides, and a far seat is simply gone. The shell fades to 26% while it is open so the menu reads through, and only near-side seats accept a tap: rotating one to the front *is* the interaction. | **Trial** — the first dock with true depth against the board; answers the long-standing "depth tied to the sphere" note above without the per-tile hinge tilt that read wrong |
 | 2026-08-10 | `?dock=capstan` raises a faceted three-tier control spindle from the north pole, with Reset stamped into its top. | **Rejected; archived V1** — obscures the sphere and loses control order |
 | 2026-08-10 | `?dock=crown` locks Reset and six geodesic vanes into one polar cap. | **Captured prior art; archived V1** — petals have promise for other menus and visuals, not this one |
 | 2026-08-10 | `?dock=drill` telescopes three concentric control annuli toward a polar aperture. | **Rejected; archived V1** — reads as decoration around a bore |
@@ -116,7 +117,10 @@ Current 9-tile bloom, suspected reasons it doesn't sit well:
 - **A. Split play/settings** — dock = Dig/Flag · Restart · Help (maybe Size); *all* appearance moves into the ? modal next to the Surface row (that pattern already landed and was liked). Bloom shrinks to 3–4 tiles or disappears. **Built 2026-08-09 behind `?dock=split`** — flip the flag to compare; promoting it to default would also let the dead sub-bloom machinery (addSubmenu / leafOffsets / LEAF_RING, unused since the flatten) be deleted.
 - **B. True flower** — exactly 6 primaries on the ring-1 hexagon around the seed; symmetric bloom. Needs merges: Bg/Shell/Dug → one "Ink" rotation (or tap = shell, long-press = bg), Seams+3D → one "Surface" rotation.
 - **C. 3-3 symmetric rows** — halfway house if 6 is too aggressive.
-- **D. Depth, other techniques** (dome retry list):
+- **D. Depth, other techniques** (dome retry list) — **partly answered 2026-08-21 by
+  `?dock=inside`**, which drops the CSS-depth family entirely and puts the seats in
+  the renderer, where the sphere can occlude them. The items below remain the
+  options for any dock that must stay in the DOM:
   - whole-cluster tilt: one `rotateX` on the stage, not per-tile hinges — no gaps, no scale compensation;
   - concave bowl: continue the sphere's curvature instead of inverting it;
   - hover-only lift: depth as motion (tile comes toward you on hover), flat at rest;

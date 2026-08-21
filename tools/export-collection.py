@@ -568,6 +568,27 @@ EXPERIMENTS = [
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
+        "id": "sphere-inside",
+        "title": "Sphere UX · Inside",
+        "ogTitle": "Hexsweeper 3D — Menu Inside the Sphere",
+        "ogDescription": "The Hexsweeper menu seated inside the globe, occluded by the board's own faces as it turns.",
+        "tag": "Experiment · in-renderer menu",
+        "blurb": "Seven seats live inside the shell as real geometry, sorted among the board's faces — turn the sphere and the tiles swallow them.",
+        "filter": "sphere ux inside interior depth occlusion canvas menu experiment",
+        "swatch": ("#0c1016", "#ecf4ff", "#48bed7", "#8a97a8"),
+        "file": "sphere-inside.html",
+        "href": "sphere-inside.html",
+        "liveHref": "../sphere-ux/?dock=inside",
+        "source": "sphere-ux",
+        "css": ["dev-chrome.css", "hex-bloom.css"],
+        # inner-menu.js replaces hex-bloom for this dock, but hex-bloom.css
+        # still carries the shared page chrome the study page renders.
+        "scripts": ["hexasphere.js", "sphere.js", "hex-bloom.js", "inner-menu.js"],
+        "boot": "initHexBloom",
+        "dockMode": "inside",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
         "id": "sphere-eggshell",
         "title": "Sphere UX · Eggshell",
         "ogTitle": "Hexsweeper 3D — Eggshell",

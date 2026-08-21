@@ -319,6 +319,28 @@ body[data-sphere-chrome="dark"] .settings-stack {
 .hud-btn[aria-expanded="true"] { opacity: 1; }
 
 /* Help — upper right */
+/* ?dock=inside opener. Deliberately plain: the menu it opens is the study,
+   and a second styled dock would compete with it. */
+.inner-menu-opener {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 40;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: 600 15px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.inner-menu-opener:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
 .hud-help-fixed {
   position: fixed;
   top: max(10px, env(safe-area-inset-top));
@@ -910,10 +932,50 @@ button, a, input[type="range"] { touch-action: manipulation; }
 </div>
 
 <script src="hexasphere.js?v=20260820a"></script>
-<script src="sphere.js?v=20260820a"></script>
+<script src="sphere.js?v=20260821e"></script>
 <script src="hex-bloom.js?v=20260820a"></script>
+<script src="inner-menu.js?v=20260821e"></script>
 <script>
-initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));
+(function () {
+  const game = SphereSweeper.boot({ canvasId: "gameCanvas" });
+  // ?dock=inside is the one dock that is not DOM, so it replaces hex-bloom
+  // outright rather than being a mode inside it. Every other dock still
+  // routes through initHexBloom untouched.
+  // Same resolution order hex-bloom uses: the frozen collection study sets the
+  // global and has no query string, the live page uses ?dock=.
+  const q = new URLSearchParams(location.search);
+  const dock = String(
+    window.HEXSWEEPER_SPHERE_DOCK_MODE || q.get("dock") || ""
+  );
+  if (dock === "inside" && typeof initInnerMenu === "function") {
+    const menu = initInnerMenu(game);
+    const btn = document.createElement("button");
+    btn.id = "inner-menu-open";
+    btn.type = "button";
+    btn.className = "inner-menu-opener";
+    btn.textContent = "Menu";
+    btn.setAttribute("aria-haspopup", "true");
+    btn.setAttribute("aria-expanded", "false");
+    btn.addEventListener("click", () => {
+      menu.toggle();
+      btn.setAttribute("aria-expanded", menu.isOpen() ? "true" : "false");
+    });
+    document.body.appendChild(btn);
+    // ?open=1 blooms on arrival. The frozen collection study wants the menu
+    // already up, and it gives headless capture something to photograph.
+    // The frozen study arrives with the menu already up; live visitors tap.
+    if (q.get("open") === "1" || window.HEXSWEEPER_SPHERE_DOCK_MODE) {
+      menu.show(true);
+      btn.setAttribute("aria-expanded", "true");
+    }
+    // ?spin=<px> turns the sphere on arrival, so a still can show the menu
+    // half-swallowed by the shell. Study/capture aid, not player-facing.
+    const spin = Number(q.get("spin"));
+    if (spin && game.orbitBy) game.orbitBy(spin, 0);
+  } else {
+    initHexBloom(game);
+  }
+})();
 (function () {
   const lb = document.getElementById("history-lightbox");
   const openBtn = document.getElementById("help-history-btn");

@@ -2413,6 +2413,28 @@ body[data-sphere-chrome="dark"] .settings-stack {
 .hud-btn[aria-expanded="true"] { opacity: 1; }
 
 /* Help — upper right */
+/* ?dock=inside opener. Deliberately plain: the menu it opens is the study,
+   and a second styled dock would compete with it. */
+.inner-menu-opener {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 40;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: 600 15px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.inner-menu-opener:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
 .hud-help-fixed {
   position: fixed;
   top: max(10px, env(safe-area-inset-top));
@@ -4963,6 +4985,37 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
       }
       invalidateProjection();
       scheduleFrame();
+    }
+
+    /**
+     * Inner-menu bridge.
+     *
+     * A menu that lives *inside* the sphere cannot be a DOM overlay. The
+     * canvas is one opaque element, so no z-index will ever put a menu tile
+     * behind a board tile — every previous dock could only fake depth. Here
+     * the menu hands us projected polygons each frame and we merge them into
+     * the same back-to-front sort the shell already uses, so the sphere's own
+     * faces occlude them for free as it turns.
+     *
+     * The split: the renderer owns depth, paint order and the shell fade; the
+     * menu owns seat geometry, labels and hit-testing. None of this runs
+     * unless a menu registers *and* reports itself open, so the default sphere
+     * is untouched.
+     */
+    let innerMenu = null;
+    function setInnerMenu(api) {
+      innerMenu = api || null;
+      scheduleFrame();
+    }
+    function innerMenuActive() {
+      return !!(innerMenu && innerMenu.isOpen && innerMenu.isOpen());
+    }
+    /**
+     * Project a point given in unrotated sphere space, where radius 1 is the
+     * shell. The inner menu seats itself below that and rides the same camera.
+     */
+    function projectLocalPoint(p) {
+      return projectPoint(p, state.rotY, state.rotX);
     }
 
     function setMenuInteraction(active) {
@@ -7600,9 +7653,16 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
+      // While the inner menu is open the shell turns translucent so the menu
+      // reads through it. The faces still pass visibly over the tiles as the
+      // sphere turns — that occlusion is the entire point of seating it
+      // inside rather than floating it on top.
+      const innerTiles = innerMenuActive() ? innerMenu.project(now) || [] : [];
+      const shellFade = innerTiles.length ? innerMenu.shellAlpha() : 1;
+
       function drawChromeTile(proj) {
         const alpha =
-          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj);
+          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj) * shellFade;
         if (alpha <= 0.001) return;
         if (alpha >= 0.999) {
           drawTile(proj);
@@ -7616,8 +7676,20 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
 
       // Flags stand above the shell, so they paint after their neighbors
       // (still back-to-front among themselves) or the shell clips their skirts.
+      // One list, one sort: menu tiles are ordinary projected polygons and take
+      // their place among the faces by depth like anything else.
+      const drawList = innerTiles.length
+        ? projected
+            .concat(innerTiles)
+            .sort((a, b) => a.center.depth - b.center.depth || a.z - b.z)
+        : projected;
+
       const proudFlags = [];
-      for (const proj of projected) {
+      for (const proj of drawList) {
+        if (proj.innerMenu) {
+          innerMenu.paint(ctx, proj, now);
+          continue;
+        }
         const idx = proj.index;
         const cell = state.cells[idx];
         // Hover/press on activatable covered faces draw in the raised pass.
@@ -7688,6 +7760,10 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
     }
 
     function frameNeedsPaint(now) {
+      // The inner menu blooms and fades off the paint clock, so the loop has
+      // to stay alive while it moves or it would animate at the 200ms idle
+      // cadence — or not at all, once the loop parked.
+      if (innerMenu && innerMenu.animating && innerMenu.animating()) return true;
       if (state.ambientSpin && !state.reduceMotion) return true;
       // Ripple, tide and caustics are all time-driven; keep the loop alive.
       if (state.theme && state.theme.waterScene && !state.reduceMotion) return true;
@@ -7867,6 +7943,19 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
       }
       const p = canvasPoint(e.changedTouches ? e.changedTouches[0] : e);
       if (state.menuRotateOnly) {
+        // A tap that lands on an inner-menu seat is the menu's, not the
+        // background's — otherwise every activation would also close it.
+        if (!touchMoved && state.dragStart && innerMenuActive()) {
+          if (innerMenu.tap(p.x, p.y)) {
+            state.dragging = false;
+            state.dragStart = null;
+            state.hovered = -1;
+            state.pressed = -1;
+            touchMoved = false;
+            schedulePersist();
+            return;
+          }
+        }
         const backgroundTap = !touchMoved && !!state.dragStart;
         state.dragging = false;
         state.dragStart = null;
@@ -8212,6 +8301,9 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
         r: state.scale * 1.15,
       }),
       getMenuPatch,
+      setInnerMenu,
+      projectLocalPoint,
+      scheduleFrame: () => scheduleFrame(),
       setChromeProjection,
       setChromeShell,
       setMenuInteraction,
@@ -11535,8 +11627,48 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "lid";
 })(window);
 
 </script>
+<script src="inner-menu.js?v=20260821e"></script>
 <script>
-initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));
+(function () {
+  const game = SphereSweeper.boot({ canvasId: "gameCanvas" });
+  // ?dock=inside is the one dock that is not DOM, so it replaces hex-bloom
+  // outright rather than being a mode inside it. Every other dock still
+  // routes through initHexBloom untouched.
+  // Same resolution order hex-bloom uses: the frozen collection study sets the
+  // global and has no query string, the live page uses ?dock=.
+  const q = new URLSearchParams(location.search);
+  const dock = String(
+    window.HEXSWEEPER_SPHERE_DOCK_MODE || q.get("dock") || ""
+  );
+  if (dock === "inside" && typeof initInnerMenu === "function") {
+    const menu = initInnerMenu(game);
+    const btn = document.createElement("button");
+    btn.id = "inner-menu-open";
+    btn.type = "button";
+    btn.className = "inner-menu-opener";
+    btn.textContent = "Menu";
+    btn.setAttribute("aria-haspopup", "true");
+    btn.setAttribute("aria-expanded", "false");
+    btn.addEventListener("click", () => {
+      menu.toggle();
+      btn.setAttribute("aria-expanded", menu.isOpen() ? "true" : "false");
+    });
+    document.body.appendChild(btn);
+    // ?open=1 blooms on arrival. The frozen collection study wants the menu
+    // already up, and it gives headless capture something to photograph.
+    // The frozen study arrives with the menu already up; live visitors tap.
+    if (q.get("open") === "1" || window.HEXSWEEPER_SPHERE_DOCK_MODE) {
+      menu.show(true);
+      btn.setAttribute("aria-expanded", "true");
+    }
+    // ?spin=<px> turns the sphere on arrival, so a still can show the menu
+    // half-swallowed by the shell. Study/capture aid, not player-facing.
+    const spin = Number(q.get("spin"));
+    if (spin && game.orbitBy) game.orbitBy(spin, 0);
+  } else {
+    initHexBloom(game);
+  }
+})();
 (function () {
   const lb = document.getElementById("history-lightbox");
   const openBtn = document.getElementById("help-history-btn");

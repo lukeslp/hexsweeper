@@ -1700,6 +1700,37 @@
       scheduleFrame();
     }
 
+    /**
+     * Inner-menu bridge.
+     *
+     * A menu that lives *inside* the sphere cannot be a DOM overlay. The
+     * canvas is one opaque element, so no z-index will ever put a menu tile
+     * behind a board tile — every previous dock could only fake depth. Here
+     * the menu hands us projected polygons each frame and we merge them into
+     * the same back-to-front sort the shell already uses, so the sphere's own
+     * faces occlude them for free as it turns.
+     *
+     * The split: the renderer owns depth, paint order and the shell fade; the
+     * menu owns seat geometry, labels and hit-testing. None of this runs
+     * unless a menu registers *and* reports itself open, so the default sphere
+     * is untouched.
+     */
+    let innerMenu = null;
+    function setInnerMenu(api) {
+      innerMenu = api || null;
+      scheduleFrame();
+    }
+    function innerMenuActive() {
+      return !!(innerMenu && innerMenu.isOpen && innerMenu.isOpen());
+    }
+    /**
+     * Project a point given in unrotated sphere space, where radius 1 is the
+     * shell. The inner menu seats itself below that and rides the same camera.
+     */
+    function projectLocalPoint(p) {
+      return projectPoint(p, state.rotY, state.rotX);
+    }
+
     function setMenuInteraction(active) {
       state.menuRotateOnly = !!active;
       state.hovered = -1;
@@ -4335,9 +4366,16 @@
         paintCountMark(tile, drawProj, cell, colors, markLift);
       }
 
+      // While the inner menu is open the shell turns translucent so the menu
+      // reads through it. The faces still pass visibly over the tiles as the
+      // sphere turns — that occlusion is the entire point of seating it
+      // inside rather than floating it on top.
+      const innerTiles = innerMenuActive() ? innerMenu.project(now) || [] : [];
+      const shellFade = innerTiles.length ? innerMenu.shellAlpha() : 1;
+
       function drawChromeTile(proj) {
         const alpha =
-          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj);
+          chamberFaceAlpha(proj.index) * chamberBackAlpha(proj) * shellFade;
         if (alpha <= 0.001) return;
         if (alpha >= 0.999) {
           drawTile(proj);
@@ -4351,8 +4389,20 @@
 
       // Flags stand above the shell, so they paint after their neighbors
       // (still back-to-front among themselves) or the shell clips their skirts.
+      // One list, one sort: menu tiles are ordinary projected polygons and take
+      // their place among the faces by depth like anything else.
+      const drawList = innerTiles.length
+        ? projected
+            .concat(innerTiles)
+            .sort((a, b) => a.center.depth - b.center.depth || a.z - b.z)
+        : projected;
+
       const proudFlags = [];
-      for (const proj of projected) {
+      for (const proj of drawList) {
+        if (proj.innerMenu) {
+          innerMenu.paint(ctx, proj, now);
+          continue;
+        }
         const idx = proj.index;
         const cell = state.cells[idx];
         // Hover/press on activatable covered faces draw in the raised pass.
@@ -4423,6 +4473,10 @@
     }
 
     function frameNeedsPaint(now) {
+      // The inner menu blooms and fades off the paint clock, so the loop has
+      // to stay alive while it moves or it would animate at the 200ms idle
+      // cadence — or not at all, once the loop parked.
+      if (innerMenu && innerMenu.animating && innerMenu.animating()) return true;
       if (state.ambientSpin && !state.reduceMotion) return true;
       // Ripple, tide and caustics are all time-driven; keep the loop alive.
       if (state.theme && state.theme.waterScene && !state.reduceMotion) return true;
@@ -4602,6 +4656,19 @@
       }
       const p = canvasPoint(e.changedTouches ? e.changedTouches[0] : e);
       if (state.menuRotateOnly) {
+        // A tap that lands on an inner-menu seat is the menu's, not the
+        // background's — otherwise every activation would also close it.
+        if (!touchMoved && state.dragStart && innerMenuActive()) {
+          if (innerMenu.tap(p.x, p.y)) {
+            state.dragging = false;
+            state.dragStart = null;
+            state.hovered = -1;
+            state.pressed = -1;
+            touchMoved = false;
+            schedulePersist();
+            return;
+          }
+        }
         const backgroundTap = !touchMoved && !!state.dragStart;
         state.dragging = false;
         state.dragStart = null;
@@ -4947,6 +5014,9 @@
         r: state.scale * 1.15,
       }),
       getMenuPatch,
+      setInnerMenu,
+      projectLocalPoint,
+      scheduleFrame: () => scheduleFrame(),
       setChromeProjection,
       setChromeShell,
       setMenuInteraction,
