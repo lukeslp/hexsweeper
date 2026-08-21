@@ -568,6 +568,32 @@ EXPERIMENTS = [
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
+        "id": "sphere-interior",
+        "title": "Sphere UX · Interior play",
+        "ogTitle": "Hexsweeper 3D — Played from Inside",
+        "ogDescription": "The Hexsweeper board turned inside out and played from within, with the wall running past every corner.",
+        "tag": "Experiment · inside-out play",
+        "blurb": "Not a menu: the concave chamber becomes the board. Stand inside the sphere and clear the wall around you.",
+        "filter": "sphere ux interior inside chamber concave play mode experiment",
+        "swatch": ("#0b0d12", "#ffffff", "#8d97a6", "#1d2430"),
+        "file": "sphere-interior.html",
+        "href": "sphere-interior.html",
+        "liveHref": "../sphere-ux/?play=inside",
+        "source": "sphere-ux",
+        "css": ["dev-chrome.css", "hex-bloom.css"],
+        # hex-bloom is loaded but never booted here: interior play has no dock.
+        "scripts": [
+            "hexasphere.js",
+            "sphere.js",
+            "hex-bloom.js",
+            "inner-menu.js",
+            "interior-chrome.js",
+        ],
+        "boot": "initHexBloom",
+        "playMode": "inside",
+        "ogImage": f"{OG}/sphere-og.png",
+    },
+    {
         "id": "sphere-inside",
         "title": "Sphere UX · Inside",
         "ogTitle": "Hexsweeper 3D — Menu Inside the Sphere",
@@ -1488,6 +1514,12 @@ def export_sphere(exp: dict) -> str:
         if dock_mode
         else ""
     )
+    play_mode = exp.get("playMode")
+    play_line = (
+        f"window.HEXSWEEPER_SPHERE_PLAY = {json.dumps(play_mode)};\n"
+        if play_mode
+        else ""
+    )
     reflection_material = exp.get("reflectionMaterial")
     reflection_material_line = (
         "window.HEXSWEEPER_REFLECTION_MATERIAL = "
@@ -1524,6 +1556,7 @@ def export_sphere(exp: dict) -> str:
         "window.HEXSWEEPER_SPHERE_COLLECTION = true;\n"
         f"{take_line}"
         f"{dock_line}"
+        f"{play_line}"
         f"{reflection_texture_line}"
         f"{reflection_material_line}"
         "</script>\n"

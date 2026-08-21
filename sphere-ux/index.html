@@ -932,9 +932,10 @@ button, a, input[type="range"] { touch-action: manipulation; }
 </div>
 
 <script src="hexasphere.js?v=20260820a"></script>
-<script src="sphere.js?v=20260821s"></script>
+<script src="sphere.js?v=20260821u"></script>
 <script src="hex-bloom.js?v=20260820a"></script>
-<script src="inner-menu.js?v=20260821s"></script>
+<script src="inner-menu.js?v=20260821u"></script>
+<script src="interior-chrome.js?v=20260821u"></script>
 <script>
 (function () {
   const game = SphereSweeper.boot({ canvasId: "gameCanvas" });
@@ -947,7 +948,16 @@ button, a, input[type="range"] { touch-action: manipulation; }
   const dock = String(
     window.HEXSWEEPER_SPHERE_DOCK_MODE || q.get("dock") || ""
   );
-  if (dock === "inside" && typeof initInnerMenu === "function") {
+  // ?play=inside — stand inside the sphere and play the wall. No dock and no
+  // spatial menu: the concave view IS the board, and the ordinary HUD (?,
+  // Reset, Customize) is the chrome, the same shape of simple modal the
+  // shipping sphere uses.
+  const play = String(window.HEXSWEEPER_SPHERE_PLAY || q.get("play") || "");
+  if (play === "inside" && typeof game.setInteriorPlay === "function") {
+    game.setInteriorPlay(true);
+    document.body.setAttribute("data-interior-play", "true");
+    if (typeof initInteriorChrome === "function") initInteriorChrome(game);
+  } else if (dock === "inside" && typeof initInnerMenu === "function") {
     const menu = initInnerMenu(game);
     const btn = document.createElement("button");
     btn.id = "inner-menu-open";

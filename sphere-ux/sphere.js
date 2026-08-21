@@ -750,6 +750,7 @@
       chromeProjectionMode: null,
       chromeProjectionProgress: 0,
       chromeProjectionScale: 1.48,
+      interiorPlay: false,
 
       // Eggshell is a renderer-native split of whole faces. Membership is
       // frozen when the menu starts opening so the interlocking seam cannot
@@ -1388,6 +1389,10 @@
       state.baseScale = Math.min(w, h) * BASE_SCALE_FRAC;
       state.scale = state.baseScale * state.zoomFactor;
       state.projectedCache = null;
+      // The chamber's scale is derived from the viewport, and interior play
+      // holds that projection open indefinitely — so it has to be recomputed
+      // here or the wall stops filling the frame after a rotate or resize.
+      if (state.interiorPlay) setChromeProjection("chamber", 1);
     }
 
     function setZoomFactor(factor) {
@@ -1636,6 +1641,25 @@
         ? null
         : Math.max(0, Math.min(1, Number(foldPinRaw)));
 
+    /**
+     * Interior play: stand inside the sphere and play the wall.
+     *
+     * The chamber projection was only ever a menu affordance — opened with the
+     * dock, torn down with it. This makes it a mode that simply stays on, with
+     * no dock and no spatial menu, so the concave view is the board rather
+     * than a backdrop for chrome. Everything else about play is untouched:
+     * digging, flagging, drag-to-rotate and the ordinary HUD all behave
+     * exactly as they do outside.
+     */
+    function setInteriorPlay(on) {
+      state.interiorPlay = !!on;
+      if (state.interiorPlay) {
+        setChromeProjection("chamber", 1);
+      } else {
+        setChromeProjection(null, 0);
+      }
+    }
+
     function setChromeProjection(mode, progress) {
       const nextMode = mode === "chamber" ? "chamber" : null;
       const nextProgress = nextMode
@@ -1825,7 +1849,20 @@
     }
 
     function pickTile(px, py) {
-      const projected = getProjected().filter((p) => p.z > 0.02);
+      // Paint order is the truth: whatever was drawn last at this point is
+      // what the player is looking at, and getProjected() is already in draw
+      // order, so walking it backwards finds it.
+      //
+      // Outside the sphere the z filter only stops you picking through to the
+      // far side, which is culled anyway. Inside the chamber the wall you are
+      // looking at IS the far hemisphere, so that same filter would make the
+      // entire interior unclickable — which is why interior play needs it
+      // dropped rather than inverted.
+      const all = getProjected();
+      const projected =
+        state.chromeProjectionMode === "chamber"
+          ? all
+          : all.filter((p) => p.z > 0.02);
       for (let i = projected.length - 1; i >= 0; i--) {
         const p = projected[i];
         if (pointInPoly(px, py, p.boundary)) return p.index;
@@ -4524,6 +4561,10 @@
     let edgeBlurBuf = null;
     function drawChamberEdgeBlur() {
       if (state.chromeProjectionMode !== "chamber") return;
+      // Interior play keeps the chamber on permanently, and this blur means
+      // "the board is not the live layer" — which is the opposite of true
+      // there. It belongs to the dock, not to the projection.
+      if (state.interiorPlay) return;
       const amt = smoothUnit(state.chromeProjectionProgress);
       if (amt <= 0.02 || state.reduceMotion) return;
       const w = canvas.clientWidth || window.innerWidth;
@@ -5116,6 +5157,7 @@
       }),
       getMenuPatch,
       setInnerMenu,
+      setInteriorPlay,
       projectLocalPoint,
       /**
        * Project a point that is already in camera space — rotation applied,
