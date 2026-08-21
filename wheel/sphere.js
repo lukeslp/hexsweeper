@@ -16,9 +16,9 @@
  * Idle: ambient yaw until first canvas interaction (off under reduced motion).
  * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
- * Wheel: click a mine to arm its fuse; spin it under the fixed trough to quench it.
- * Wheel: a fuse expiring underwater spends the mine and chords its satisfied
- *   neighbours instead of killing (drownedBlast).
+ * Wheel: click a mine to arm its fuse; spin it under the fixed trough to blow it.
+ * Wheel: drowning a mine detonates it underwater — it is spent and chords its
+ *   satisfied neighbours instead of killing (drownedBlast). No silent quench.
  * Persist: autosave mid-run (localStorage + sessionStorage `hexwheel-run-v3`).
  * Soft/hard browser reload restores; only UX Reset (or size change) clears the run.
  * No window.confirm dialogs — Reset/size are deliberate. Welcome help only once, not over a restored run.
@@ -2712,11 +2712,12 @@
     function detonateArmedMine(effectEvent) {
       const idx = state.armedMineIdx;
       if (idx < 0 || state.isGameOver) return;
-      if (wheelFx && effectEvent) wheelFx.emit("detonate", effectEvent);
       if (effectEvent && effectEvent.underwater) {
-        drownedBlast(idx);
+        // drownedBlast emits its own detonation, so do not double-fire here.
+        drownedBlast(idx, effectEvent);
         return;
       }
+      if (wheelFx && effectEvent) wheelFx.emit("detonate", effectEvent);
       bobImpulse(state.scale * 2.4, (Math.random() - 0.5) * state.scale * 0.8); // slam
       clearArmedMine();
       state.detonatorIdx = idx;
@@ -2729,15 +2730,17 @@
     }
 
     /**
-     * A mine that blows underwater. The water takes the blast instead of the
+     * A mine going off underwater — the Wheel's one good outcome, reached
+     * either by holding the armed face under (drownArmedMine) or by letting
+     * its fuse run out down there. The water takes the blast instead of the
      * player, and the shock sets off every satisfied number the mine was
-     * touching — the drowning does not clear a ring of its own, it *chords*.
+     * touching: the drowning does not clear a ring of its own, it *chords*.
      *
-     * The order is the mechanic. The mine resolves first, into the same
-     * doused state a clean quench leaves behind; because a doused mine counts
-     * as accounted, numbers that were one short a moment ago are satisfied
-     * the instant the sea takes it, and those are exactly the ones that fire.
-     * It counts as a rescue too, so the next fuse is shorter.
+     * The order is the mechanic. The mine resolves first, into the doused
+     * state the old silent quench used to leave behind; because a doused mine
+     * counts as accounted, numbers that were one short a moment ago are
+     * satisfied the instant the sea takes it, and those are exactly the ones
+     * that fire. It counts as a rescue too, so the next fuse is shorter.
      *
      * It is not a free pass, and that is the point of letting it happen. The
      * chords trust the flags, not the board: an unflagged face that turns out
@@ -2745,10 +2748,13 @@
      * wherever the sphere is pointing. Only one may light across the whole
      * blast, as everywhere else on the Wheel.
      */
-    function drownedBlast(idx) {
+    function drownedBlast(idx, effectEvent) {
       const mine = state.cells[idx];
       if (!mine) return;
       const now = performance.now();
+      if (wheelFx && effectEvent) {
+        wheelFx.emit("detonate", { ...effectEvent, underwater: true });
+      }
       clearArmedMine();
       // Muffled — a shove through the hull, not the surface slam a dry
       // detonation gives.
@@ -2783,8 +2789,8 @@
       }
       setWheelAlert(
         opened.size
-          ? `BLAST DROWNED · ${opened.size} FACE${opened.size === 1 ? "" : "S"} CLEARED`
-          : "BLAST DROWNED · NOTHING TO SET OFF",
+          ? `BLOWN UNDER · ${opened.size} FACE${opened.size === 1 ? "" : "S"} CLEARED`
+          : "BLOWN UNDER · NOTHING TO SET OFF",
         "safe",
         1700
       );
@@ -4396,9 +4402,12 @@
     // —— Water wheel ——————————————————————————————————————————————————
     //
     // The sphere is the wheel and the fixed waterline is its trough:
-    //   · click a mine → a fuse starts; drown the armed face to quench it
-    //   · let that fuse expire underwater → the mine is spent, not fatal, and
-    //     the blast sets off a chord on every satisfied number it touched
+    //   · click a mine → a fuse starts
+    //   · hold the armed face under, or let its fuse expire down there → the
+    //     sea does not defuse it, it contains it: the mine detonates
+    //     underwater, is spent, and sets off a chord on every satisfied
+    //     number it was touching
+    //   · let the fuse expire above the waterline → that one still kills
     //   · submerge any ordinary flag → the chalk mark washes off
     // Flags never reveal whether they were right. Every rescue shortens the
     // next fuse and makes the sea retreat, so water is mercy rather than an
@@ -4406,7 +4415,8 @@
     const WHEEL = {
       FUSE_MS: [3000, 2200, 1600],
       ASSIST_FUSE_MS: 5000,
-      QUENCH_DWELL_MS: 220,
+      // How long the armed mine must stay under before the sea sets it off.
+      DROWN_DWELL_MS: 220,
       WASH_DWELL_MS: 700,
       lastTs: 0,
     };
@@ -4527,28 +4537,23 @@
       ctx.restore();
     }
 
-    function quenchArmedMine(cell, now, proj, surf) {
-      if (wheelFx && proj) {
-        wheelFx.emit("quench", {
-          x: proj.center.x,
-          y: proj.center.y,
-          surfaceY: surfaceYAt(proj.center.x, surf, now),
-          r: wheelFaceRadius(proj),
-        });
-      }
-      cell.doused = true;
-      cell.flagged = false;
-      cell.revealed = true;
-      bobImpulse(-state.scale * 0.9, 0); // the wheel hops when a mine dies
-      cell.animReveal = 1;
-      cell._wetMs = 0;
-      cell._dousedAt = now;
-      state.rescueCount += 1;
-      clearArmedMine();
-      setWheelAlert("MINE QUENCHED · THE SEA RETREATS", "safe", 1700);
-      updateUI();
-      checkWin();
-      persistNow();
+    /**
+     * The armed mine has been held under long enough. The sea does not defuse
+     * it — it *contains* it: the mine goes off down there, and an underwater
+     * detonation on the Wheel is a chord.
+     *
+     * Luke, 2026-08-21: drowning IS the explosion. There is no separate silent
+     * quench any more, so this and a fuse that simply runs out below the
+     * waterline are the same event and share drownedBlast().
+     */
+    function drownArmedMine(cell, now, proj, surf) {
+      drownedBlast(proj.index, {
+        x: proj.center.x,
+        y: proj.center.y,
+        surfaceY: surfaceYAt(proj.center.x, surf, now),
+        r: wheelFaceRadius(proj),
+        underwater: true,
+      });
     }
 
     function stepWaterWheel(projected, now, surf) {
@@ -4646,12 +4651,12 @@
             if (cell._wetMs > 0) {
               drawDwellRing(
                 proj,
-                Math.min(1, cell._wetMs / WHEEL.QUENCH_DWELL_MS)
+                Math.min(1, cell._wetMs / WHEEL.DROWN_DWELL_MS)
               );
             }
           }
-          if (cell._wetMs >= WHEEL.QUENCH_DWELL_MS) {
-            quenchArmedMine(cell, now, proj, surf);
+          if (cell._wetMs >= WHEEL.DROWN_DWELL_MS) {
+            drownArmedMine(cell, now, proj, surf);
             return;
           }
           continue;

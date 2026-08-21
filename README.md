@@ -326,15 +326,23 @@ The material study credits Matthias Hurrle (`@atzedent`) for the supplied reflec
 ## Water Wheel
 
 [`wheel/`](wheel/) is the gameplay cut of the former water-theme experiment.
-Clicking a mine starts a short fuse; rotate that face beneath the fixed,
-wavy waterline to quench it. Quenched mines stay inert across refresh, while
-ordinary flags wash off without revealing whether they were correct. **A fuse
-that runs out underwater does not end the run — it chords.** `drownedBlast` in
-[`wheel/sphere.js`](wheel/sphere.js) resolves the mine first, into the same
-doused state a clean quench leaves behind, and counts it as a rescue; because a
-doused mine counts as accounted, every number it was touching that was one
-short is satisfied the instant the sea takes it, and each of those fires a full
-chord. The order *is* the mechanic. Satisfaction is re-read per neighbour
+Clicking a mine starts a short fuse; rotate that face beneath the fixed, wavy
+waterline before it runs out. **The sea does not defuse the mine — it contains
+it.** Holding the armed face under (`drownArmedMine`, after `DROWN_DWELL_MS`)
+detonates it down there, and so does a fuse that simply expires below the
+waterline; both route through the same `drownedBlast` in
+[`wheel/sphere.js`](wheel/sphere.js). Only a fuse that runs out *above* the
+waterline still ends the run. There is no longer a silent quench — the old
+`quench` effect channel is kept in `effects.js` for profile compatibility but
+the game no longer emits it.
+
+An underwater detonation **chords**. `drownedBlast` resolves the mine first,
+into the doused state the quench used to leave behind, and counts it as a
+rescue; because a doused mine counts as accounted, every number it was touching
+that was one short is satisfied the instant the sea takes it, and each of those
+fires a full chord. The order *is* the mechanic. Drowned mines stay inert
+across refresh, while ordinary flags wash off without revealing whether they
+were correct. Satisfaction is re-read per neighbour
 rather than snapshotted, so a number whose targets an earlier chord already
 took simply does not fire — no face opens twice, no count goes stale mid-blast.
 It is not a free pass: the chords trust the flags, not the board, so an

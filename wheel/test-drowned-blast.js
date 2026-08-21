@@ -30,7 +30,14 @@ function lift(name) {
   throw new Error(`${name}() braces never close`);
 }
 
-const NAMES = ["chordTargets", "chordClear", "lightChordMine", "chordAt", "drownedBlast"];
+const NAMES = [
+  "chordTargets",
+  "chordClear",
+  "lightChordMine",
+  "chordAt",
+  "drownedBlast",
+  "drownArmedMine",
+];
 const body = NAMES.map(lift).join("\n\n");
 
 /*
@@ -99,6 +106,7 @@ function makeBoard() {
 }
 
 function run(state, entry, at) {
+  // `at` is the argument list for the entry point (defaults to [0]).
   const calls = {
     armMine: [],
     flood: [],
@@ -110,6 +118,7 @@ function run(state, entry, at) {
     bob: 0,
     clearArmed: 0,
     captureUndo: 0,
+    fx: [],
   };
   const deps = {
     state,
@@ -136,14 +145,20 @@ function run(state, entry, at) {
     // Present so an accidental undo capture inside the blast is caught: it
     // would snapshot a revealed-but-not-doused mine and corrupt the rewind.
     captureUndo: () => calls.captureUndo++,
+    wheelFx: { emit: (type, event) => calls.fx.push([type, event]) },
+    surfaceYAt: () => 500,
+    wheelFaceRadius: () => 20,
     Math,
     String,
     Set,
   };
   const names = Object.keys(deps);
-  const make = new Function(...names, `${body}\nreturn { drownedBlast, chordAt };`);
+  const make = new Function(
+    ...names,
+    `${body}\nreturn { drownedBlast, chordAt, drownArmedMine };`
+  );
   const api = make(...names.map((n) => deps[n]));
-  api[entry === undefined ? "drownedBlast" : entry](at === undefined ? 0 : at);
+  api[entry === undefined ? "drownedBlast" : entry](...(at === undefined ? [0] : at));
   return calls;
 }
 
@@ -191,7 +206,7 @@ ok(calls.armMine.length === 0, "nothing re-arms");
 ok(state.cells[10].revealed, "the former mine slot clears as an ordinary face");
 ok(calls.checkWin === 1 && calls.persist === 1, "the win is checked and the run saved");
 ok(
-  /BLAST DROWNED · 4 FACES CLEARED/.test(calls.alert[0] || ""),
+  /BLOWN UNDER · 4 FACES CLEARED/.test(calls.alert[0] || ""),
   "the alert counts the faces: " + calls.alert[0]
 );
 
@@ -217,7 +232,7 @@ console.log("chordAt — the tap chord still behaves");
 state = makeBoard();
 state.armedMineIdx = -1;
 state.cells[0].doused = true; // face 1 and 6 are satisfied by the doused mine
-calls = run(state, "chordAt", 1);
+calls = run(state, "chordAt", [1]);
 ok(calls.captureUndo === 1, "a tap chord takes exactly one undo snapshot");
 ok(state.cells[7].revealed && state.cells[8].revealed, "its targets clear");
 ok(!state.cells[12].revealed, "only the tapped face chords, not its siblings");
@@ -227,23 +242,50 @@ console.log("chordAt — an unsatisfied number is inert");
 state = makeBoard();
 state.armedMineIdx = -1;
 state.cells[0].doused = true;
-calls = run(state, "chordAt", 3); // face 3 is still one short
+calls = run(state, "chordAt", [3]); // face 3 is still one short
 ok(calls.captureUndo === 0, "no undo snapshot is taken");
 ok(!state.cells[11].revealed, "nothing opens");
 
 console.log("chordAt — a live fuse blocks chording");
 state = makeBoard();
 state.cells[0].doused = true; // armedMineIdx is still 0
-calls = run(state, "chordAt", 1);
+calls = run(state, "chordAt", [1]);
 ok(calls.captureUndo === 0 && !state.cells[7].revealed, "the chord is refused");
 
 console.log("chordAt — a chord onto a mine lights it");
 state = makeBoard();
 state.armedMineIdx = -1;
 state.cells[0].doused = true;
-calls = run(state, "chordAt", 2); // face 2's only target is mine 10
+calls = run(state, "chordAt", [2]); // face 2's only target is mine 10
 ok(calls.armMine.length === 1 && calls.armMine[0] === 10, "the mine arms");
 ok(calls.checkWin === 0, "no win check while a fuse is live");
+
+/*
+ * drownArmedMine() is the deliberate drowning — Luke's rule that the sea
+ * contains the blast rather than defusing it. It must be the same event as a
+ * fuse expiring underwater, fx included.
+ */
+console.log("drownArmedMine — holding it under detonates it, it does not quench");
+state = makeBoard();
+const proj = { index: 0, center: { x: 100, y: 600 } };
+calls = run(state, "drownArmedMine", [state.cells[0], 1000, proj, {}]);
+ok(state.cells[0].doused, "the held mine is spent");
+ok(
+  state.cells[7].revealed && state.cells[8].revealed && state.cells[12].revealed,
+  "it chords exactly as a fuse expiring underwater does"
+);
+ok(calls.fx.length === 1 && calls.fx[0][0] === "detonate", "it fires a detonation, not a quench");
+ok(calls.fx[0][1].underwater === true, "the detonation is flagged underwater");
+ok(
+  !calls.fx.some(([type]) => type === "quench"),
+  "the quench channel is no longer emitted by the game"
+);
+
+console.log("drownedBlast — a fuse expiring underwater emits the same detonation");
+state = makeBoard();
+calls = run(state, "drownedBlast", [0, { x: 1, y: 2, surfaceY: 3, r: 4, underwater: true }]);
+ok(calls.fx.length === 1 && calls.fx[0][0] === "detonate", "one detonation is emitted");
+ok(calls.fx[0][1].underwater === true, "still flagged underwater");
 
 if (failures) {
   console.error(`\nWater Wheel drowned-blast tests — ${failures} FAILED`);
