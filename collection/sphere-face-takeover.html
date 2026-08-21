@@ -3312,9 +3312,6 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "faces";
 (function (global) {
   "use strict";
 
-  // Chamber aperture radius, as a fraction of the short viewport edge. Sized
-  // to the DOM menu that sits in it, so it does not grow with the zoom.
-  const CHAMBER_APERTURE_R = 0.17;
 
   /**
    * Board sizes (Goldberg dual faces = 10n²+2), mines ≈17%.
@@ -4936,9 +4933,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "faces";
       state.chromeProjectionMode = nextMode;
       state.chromeProjectionProgress = nextProgress;
       if (nextMode) {
-        // The seven-tile aperture Set that used to be chosen here is gone:
-        // chamberFaceAlpha() now cuts the hole in screen space so it can stay
-        // put while the mesh turns under it. Nothing reads a tile list any more.
+        // No aperture is cut at all now (see the note by chamberBackAlpha),
+        // so there is no tile list to choose here either.
         const w = canvas.clientWidth || window.innerWidth;
         const h = canvas.clientHeight || window.innerHeight;
         const baseR = Math.max(1, state.scale);
@@ -7558,46 +7554,22 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "faces";
         ctx.restore();
       }
 
-      /**
-       * The aperture belongs to the menu, not to a set of tiles.
+      /*
+       * There is deliberately no aperture any more.
        *
-       * It used to be a fixed Set of seven tile indices chosen when the
-       * chamber opened, which meant the hole was welded to the mesh: rotate
-       * and it wandered off with the faces that owned it, leaving the menu
-       * lying on solid tiles and a gap somewhere else. Now it is a soft disc
-       * in *screen* space, centred where the menu sits. Faces dissolve as they
-       * drift into it and come back as they leave, so the sphere can turn
-       * underneath a stationary hole and never show a seam.
+       * Two versions of one mistake died here. First a fixed Set of seven tile
+       * indices, welded to the mesh so the hole wandered off when you turned
+       * the sphere. Then a soft disc in screen space, which stayed put but
+       * could never match the menu's silhouette — the shell is large hexes and
+       * the hole is a circle, so a ragged black corona always poked out around
+       * the menu, showing the dark interior through the gap.
        *
-       * Radius is viewport px rather than sphere units on purpose: the menu is
-       * DOM and does not scale with the chamber zoom, so neither should the
-       * hole it needs.
-       *
-       * Near hemisphere only — the back faces are the wall you are meant to
-       * see *through* the hole, so punching them out too would open the
-       * chamber straight to the background.
+       * Luke's call: keep the tiles exactly as they are, dig state and all,
+       * and simply do not lift any. The menu is opaque and covers what it
+       * covers; nothing needs filling in because nothing is removed. This also
+       * retires the seam question outright — there is nothing to keep in sync
+       * while the sphere rotates.
        */
-      function chamberFaceAlpha(proj) {
-        if (state.chromeProjectionMode !== "chamber") return 1;
-        const open = smoothUnit((state.chromeProjectionProgress - 0.04) / 0.3);
-        if (open <= 0 || proj.z <= -0.05) return 1;
-        const r = Math.min(w, h) * CHAMBER_APERTURE_R;
-        // Narrow feather. A wide one left a ring of ~50%-alpha faces
-        // compositing over the dark wall, and a half-lit white hex on black
-        // is a grey smudge — which is exactly the "shadow" under the menu.
-        const feather = Math.max(1, r * 0.14);
-        const d = Math.hypot(
-          proj.center.x - state.centerX,
-          proj.center.y - state.centerY
-        );
-        const inside = 1 - smoothUnit((d - (r - feather)) / feather);
-        if (inside <= 0) return 1;
-        const a = 1 - open * inside;
-        // Snap the ends: a face is in the hole or out of it, never a ghost.
-        if (a < 0.5) return 0;
-        return a > 0.92 ? 1 : a;
-      }
-
       function chamberBackAlpha(proj) {
         if (
           state.chromeProjectionMode !== "chamber" ||
@@ -7723,7 +7695,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "faces";
 
       function drawChromeTile(proj) {
         const alpha =
-          chamberFaceAlpha(proj) * chamberBackAlpha(proj);
+          chamberBackAlpha(proj);
         if (alpha <= 0.001) return;
         if (alpha >= 0.999) {
           drawTile(proj);
@@ -7776,10 +7748,8 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "faces";
       ) {
         const idx = highlightIdx;
         const base = projected.find((p) => p.index === idx && p.z > 0.02);
-        const faceAlpha = base ? chamberFaceAlpha(base.index) : 0;
-        if (base && faceAlpha > 0.001) {
+        if (base) {
           ctx.save();
-          ctx.globalAlpha *= faceAlpha;
           const tile = state.tiles[idx];
           const cell = state.cells[idx];
           let colors = drawColorsForStyle(
@@ -11688,7 +11658,7 @@ window.HEXSWEEPER_SPHERE_DOCK_MODE = "faces";
 })(window);
 
 </script>
-<script src="inner-menu.js?v=20260821n"></script>
+<script src="inner-menu.js?v=20260821p"></script>
 <script>
 (function () {
   const game = SphereSweeper.boot({ canvasId: "gameCanvas" });

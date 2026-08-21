@@ -112,6 +112,119 @@
     return pts;
   }
 
+  /*
+   * hex-bloom's icon glyphs, copied verbatim from its ICONS table
+   * (sphere-ux/hex-bloom.js:268) so this dock reads as the same menu.
+   *
+   * Copied, not imported: hex-bloom keeps ICONS private inside its IIFE and
+   * exports only initHexBloom. The duplication is deliberate and the two are
+   * cross-referenced — if you restyle a glyph there, restyle it here. This is
+   * the price of the menu living in the canvas, which is the one place the
+   * sphere can occlude it.
+   *
+   * 24x24 viewBox, and hex-bloom's wrapper supplies the defaults these rely
+   * on: fill="none" stroke="currentColor" stroke-width="2.15", round caps and
+   * joins. Per-element fill/stroke attributes override that.
+   */
+  const ICONS = {
+    reset:
+      '<path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"/><path d="M20 3.5V8h-4.5"/>' +
+      '<path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"/><path d="M4 20.5V16h4.5"/>',
+    undo: '<path d="M4 4v5h5"/><path d="M4.8 8.2A8.3 8.3 0 1 1 4 16"/>',
+    flag: '<path d="M6 21.2V3.6"/><path d="M6 4.4h11.6l-2.9 4 2.9 4H6"/>',
+    close: '<path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/>',
+    size:
+      '<path d="M12 3 4.5 7.5v9L12 21l7.5-4.5v-9L12 3Z"/>' +
+      '<path d="M12 8 8.5 10v4L12 16l3.5-2v-4L12 8Z"/>',
+    seamsOn:
+      '<path d="m7.2 5.5 4.8 2.75v5.5L7.2 16.5l-4.8-2.75v-5.5L7.2 5.5Z"/>' +
+      '<path d="m16.8 5.5 4.8 2.75v5.5l-4.8 2.75-4.8-2.75v-5.5l4.8-2.75Z"/>',
+    seamsOff:
+      '<path d="M7.2 5.5h9.6l4.8 2.75v5.5l-4.8 2.75H7.2l-4.8-2.75v-5.5L7.2 5.5Z"/>',
+    dayNightLight:
+      '<circle cx="12" cy="12" r="9" fill="#000" stroke="#000"/>' +
+      '<path d="M12 3a9 9 0 0 1 0 18Z" fill="#fff" stroke="none"/>' +
+      '<circle cx="12" cy="12" r="4.7" fill="#000" stroke="none"/>' +
+      '<path d="M12 7.3a4.7 4.7 0 0 0 0 9.4Z" fill="#fff" stroke="none"/>' +
+      '<circle cx="12" cy="12" r="9" fill="none" stroke="#000"/>',
+    dayNightDark:
+      '<circle cx="12" cy="12" r="9" fill="#fff" stroke="#000"/>' +
+      '<path d="M12 3a9 9 0 0 0 0 18Z" fill="#000" stroke="none"/>' +
+      '<circle cx="12" cy="12" r="4.7" fill="#fff" stroke="none"/>' +
+      '<path d="M12 7.3a4.7 4.7 0 0 1 0 9.4Z" fill="#000" stroke="none"/>' +
+      '<circle cx="12" cy="12" r="9" fill="none" stroke="#000"/>',
+  };
+
+  // hex-bloom.css:518-528 — the two glyphs that carry colour.
+  const ICON_RESET = "#ffd400";
+  const ICON_UNDO = "#18a64a";
+  const ICON_FLAG_ON = "#ff2200";
+
+  /**
+   * Compile one SVG fragment into Path2D ops. Only the three element kinds the
+   * table actually uses are handled; anything else would silently vanish, so
+   * keep this in step if a copied glyph gains a new primitive.
+   */
+  const iconCache = new Map();
+  function iconOps(name) {
+    if (iconCache.has(name)) return iconCache.get(name);
+    const markup = ICONS[name] || "";
+    const ops = [];
+    const re = /<(path|circle|line)\b([^>]*)>/g;
+    let m;
+    while ((m = re.exec(markup))) {
+      const kind = m[1];
+      const attrs = m[2];
+      const at = (k) => {
+        const g = attrs.match(new RegExp(k + '="([^"]*)"'));
+        return g ? g[1] : null;
+      };
+      const num = (k) => Number(at(k)) || 0;
+      let path;
+      if (kind === "path") {
+        path = new Path2D(at("d") || "");
+      } else if (kind === "circle") {
+        path = new Path2D();
+        path.arc(num("cx"), num("cy"), num("r"), 0, Math.PI * 2);
+      } else {
+        path = new Path2D();
+        path.moveTo(num("x1"), num("y1"));
+        path.lineTo(num("x2"), num("y2"));
+      }
+      ops.push({ path, fill: at("fill"), stroke: at("stroke") });
+    }
+    iconCache.set(name, ops);
+    return ops;
+  }
+
+  /** Paint a compiled glyph centred at (cx, cy), `size` px across. */
+  function drawIcon(ctx, name, cx, cy, size, ink) {
+    const ops = iconOps(name);
+    if (!ops.length) return;
+    ctx.save();
+    ctx.translate(cx, cy);
+    // The viewBox is 24 wide and its origin is the top-left, so scale then
+    // shift by half. Scaling also scales stroke-width, exactly as SVG does.
+    ctx.scale(size / 24, size / 24);
+    ctx.translate(-12, -12);
+    ctx.lineWidth = 2.15;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (const op of ops) {
+      const fill = op.fill == null ? "none" : op.fill;
+      const stroke = op.stroke == null ? "currentColor" : op.stroke;
+      if (fill !== "none") {
+        ctx.fillStyle = fill === "currentColor" ? ink : fill;
+        ctx.fill(op.path);
+      }
+      if (stroke !== "none") {
+        ctx.strokeStyle = stroke === "currentColor" ? ink : stroke;
+        ctx.stroke(op.path);
+      }
+    }
+    ctx.restore();
+  }
+
   const SIZES = ["xsmall", "easy", "medium", "hard", "xlarge"];
 
   function initInnerMenu(game) {
@@ -128,6 +241,7 @@
     let basisV = { x: 0, y: 1, z: 0 }; // local-space screen-up
     let seats = [];
     let lastProjected = [];
+    let planeFacing = 1; // camera-space z of the cluster's normal
 
     /* ---- seats ------------------------------------------------------ */
 
@@ -375,8 +489,38 @@
           facing: center.z,
         });
       }
+      // How square-on the whole cluster is: the camera-space z of its unit
+      // normal. 1 is dead ahead, 0 is edge-on, negative is turned away.
+      planeFacing = game.projectLocalPoint(axis).z;
       lastProjected = out;
       return out;
+    }
+
+    /**
+     * Glyph and tint per seat, mirroring hex-bloom's icon menu. Note that the
+     * plate itself never changes: hex-bloom.css:515 is explicit that "state
+     * lives in the glyphs only", so Flag going red and Seams changing shape is
+     * the whole of the state readout.
+     */
+    function seatGlyph(action) {
+      const t = game.getState().theme || {};
+      const dark = t.chrome !== "light";
+      switch (action.id) {
+        case "restart":
+          return { name: "reset", tint: ICON_RESET };
+        case "undo":
+          return { name: "undo", tint: ICON_UNDO };
+        case "flag":
+          return { name: "flag", tint: action.pressed() ? ICON_FLAG_ON : null };
+        case "size":
+          return { name: "size", tint: null };
+        case "theme":
+          return { name: dark ? "dayNightDark" : "dayNightLight", tint: null };
+        case "seams":
+          return { name: action.pressed() ? "seamsOn" : "seamsOff", tint: null };
+        default:
+          return { name: "close", tint: null };
+      }
     }
 
     function paint(ctx, proj, now) {
@@ -392,7 +536,6 @@
       const st = game.getState();
       const dark = !(st.theme && st.theme.chrome === "light");
       const enabled = !action.enabled || action.enabled();
-      const on = action.pressed && action.pressed();
 
       ctx.save();
       // Bloom fade only — nothing else touches seat opacity.
@@ -403,30 +546,30 @@
 
       const base = dark ? "12,16,22" : "252,253,255";
       const ink = dark ? "236,244,255" : "17,21,28";
-      ctx.fillStyle = on
-        ? `rgba(${dark ? "72,190,215" : "24,120,150"},${0.85 * vis + 0.12})`
-        : `rgba(${base},${0.72 + 0.2 * vis})`;
+      ctx.fillStyle = `rgba(${base},${0.72 + 0.2 * vis})`;
       ctx.fill();
       ctx.lineWidth = action.id === "close" ? 2.4 : 1.6;
       ctx.strokeStyle = `rgba(${ink},${0.35 + 0.5 * vis})`;
       ctx.stroke();
 
-      // Label: upright in screen space, never rotated with the geometry, and
-      // dropped entirely once the seat is too small or too far to read.
-      const w = Math.hypot(
+      // Glyph, upright in screen space — never rotated with the geometry, and
+      // dropped once the seat is too small for it to mean anything. hex-bloom
+      // sizes its primary icon near 0.34 of the tile height; across * 0.42 of
+      // the point-to-point width lands in the same place.
+      const across = Math.hypot(
         proj.boundary[0].x - proj.boundary[3].x,
         proj.boundary[0].y - proj.boundary[3].y
       );
-      if (w > 34 && vis > 0.42) {
-        const size = Math.max(9, Math.min(15, w * 0.2));
-        ctx.font = `600 ${size.toFixed(1)}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.globalAlpha = (0.4 + 0.6 * vis) * Math.min(1, progress * 1.6);
-        ctx.fillStyle = on
-          ? `rgba(${dark ? "6,14,18" : "250,253,255"},0.96)`
-          : `rgba(${ink},${enabled ? 0.94 : 0.4})`;
-        ctx.fillText(action.label(), proj.center.x, proj.center.y);
+      if (across > 18) {
+        const glyph = seatGlyph(action);
+        drawIcon(
+          ctx,
+          glyph.name,
+          proj.center.x,
+          proj.center.y,
+          across * 0.42,
+          glyph.tint || (enabled ? `rgb(${ink})` : `rgba(${ink},0.4)`)
+        );
       }
       ctx.restore();
     }
@@ -452,9 +595,19 @@
      */
     function tap(x, y) {
       if (!open || progress < 0.6) return false;
+      // Gate on the cluster, not the seat.
+      //
+      // This used to require each seat's own z > 0.02, which was fine when the
+      // seats curved onto an inner sphere and each faced outward on its own.
+      // On a flat plane through the sphere's centre every seat sits at z = 0
+      // exactly, so the test rejected all seven, tap() always returned false,
+      // and sphere.js then read the tap as a background tap — which closed the
+      // menu. The menu was not dead; every click was a close.
+      if (planeFacing <= 0.25) return false;
       const hits = lastProjected
-        .filter((p) => p.facing > 0.02 && pointIn(x, y, p.boundary))
-        .sort((a, b) => b.facing - a.facing);
+        .filter((p) => pointIn(x, y, p.boundary))
+        // Nearest wins if the projection ever overlaps two seats.
+        .sort((a, b) => b.center.depth - a.center.depth);
       if (!hits.length) return false;
       activate(hits[0].seat.action);
       return true;
