@@ -237,7 +237,11 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at
 subdivisions 6, 10, 12) and `node wheel/test-effects.js` (profile/event
 contract plus drawing-surface smoke). `node wheel/test-menu-variants.js`
-guards the Water Wheel menu-profile aliases and projected patch selection.
+guards the Water Wheel menu-profile aliases and projected patch selection, and
+`node wheel/test-drowned-blast.js` guards both the tap chord and the
+drowned-detonation chord (it lifts `chordTargets`/`chordClear`/`lightChordMine`
+/`chordAt`/`drownedBlast` straight out of `wheel/sphere.js` by brace balancing,
+so renaming one fails the test rather than skipping it).
 
 Sphere is the root; Infinite and Classic sit beside it on `launcher.html`. The
 broader flat game remains at `play.html`; old root `?mode=` links forward
@@ -324,7 +328,26 @@ The material study credits Matthias Hurrle (`@atzedent`) for the supplied reflec
 [`wheel/`](wheel/) is the gameplay cut of the former water-theme experiment.
 Clicking a mine starts a short fuse; rotate that face beneath the fixed,
 wavy waterline to quench it. Quenched mines stay inert across refresh, while
-ordinary flags wash off without revealing whether they were correct. The
+ordinary flags wash off without revealing whether they were correct. **A fuse
+that runs out underwater does not end the run — it chords.** `drownedBlast` in
+[`wheel/sphere.js`](wheel/sphere.js) resolves the mine first, into the same
+doused state a clean quench leaves behind, and counts it as a rescue; because a
+doused mine counts as accounted, every number it was touching that was one
+short is satisfied the instant the sea takes it, and each of those fires a full
+chord. The order *is* the mechanic. Satisfaction is re-read per neighbour
+rather than snapshotted, so a number whose targets an earlier chord already
+took simply does not fire — no face opens twice, no count goes stale mid-blast.
+It is not a free pass: the chords trust the flags, not the board, so an
+unflagged face that turns out to be a mine is uncovered and armed where it
+stands, and only one may light across the whole blast. Undo rewinds the dig
+that armed the mine, blast and all — `drownedBlast` deliberately takes no
+snapshot of its own, since at that point the mine is already `revealed`.
+Above the waterline the fuse still ends the run.
+
+The chord rule lives in two shared halves — `chordTargets()` (is this face
+satisfied, and what would it open) and `chordClear()` (open them, cascade
+zeros, hand back the first mine without arming it) — so the tap chord and the
+drowned blast cannot drift apart. The
 water renderer uses the existing Canvas 2D/offscreen-buffer path and keeps
 refraction concentrated near the surface so the rescue face remains readable.
 Its event effects are isolated in [`wheel/effects.js`](wheel/effects.js) and
@@ -336,8 +359,9 @@ seven-tile flower, a real-face takeover (`?menu=takeover`), and the same
 real-face arrangement selected and styled below the waterline
 (`?menu=underwater`). A short tap outside the sphere exposes the menu in all
 three; the face variants use a temporary camera zoom and restore the player's
-exact saved zoom when closed. A three-step illustrated Dig / Menu / Quench
-tour replaces the former introductory modal.
+exact saved zoom when closed. The Wheel is an easter egg and opens straight
+into the game — the illustrated Dig / Menu / Quench tour was removed in
+`4c04cab`; the on-canvas alert line carries the rules as they come up.
 
 ## Dodecahedron campaign (experimental)
 

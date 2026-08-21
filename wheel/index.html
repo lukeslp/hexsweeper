@@ -760,7 +760,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
 <div class="canvas-container">
   <canvas id="gameCanvas" tabindex="0" aria-label="Hex sphere minesweeper board" aria-describedby="wheel-instructions"></canvas>
 </div>
-<p class="sr-only" id="wheel-instructions">Drag or use the arrow keys to rotate. If a mine is armed, move it beneath the waterline before its timer expires.</p>
+<p class="sr-only" id="wheel-instructions">Drag or use the arrow keys to rotate. If a mine is armed, move it beneath the waterline before its timer expires. A fuse that expires underwater is drowned rather than fatal: the mine is spent, and the blast sets off a chord on every satisfied number it was touching.</p>
 <button type="button" id="open-menu-a11y" class="sr-only" aria-controls="hex-bloom-stage">Open game menu</button>
 <div class="wheel-alert" id="wheel-alert" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
@@ -841,7 +841,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
 <script src="hexasphere.js?v=wheel3"></script>
 <script src="effects.js?v=wheel1"></script>
 <script src="menu-variants.js?v=wheel4"></script>
-<script src="sphere.js?v=wheel14"></script>
+<script src="sphere.js?v=wheel16"></script>
 <script src="hex-bloom.js?v=wheel7"></script>
 <script>
 const wheelGame = SphereSweeper.boot({ canvasId: "gameCanvas" });
