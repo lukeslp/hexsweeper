@@ -7781,12 +7781,82 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
         }
       }
 
+      drawChamberEdgeBlur();
+
       drawEndFxOverlay(now);
       ctx.restore();
 
       // Screen space, after the shake transform is released — otherwise
       // the waterline shudders loose from the horizon on a detonation.
       if (state.theme.waterScene) drawWaterPass(w, h, waterY);
+    }
+
+    /**
+     * Chamber only: soften the board toward the viewport edges while its menu
+     * is up.
+     *
+     * Two jobs. It deepens the "you are standing inside this" read now that
+     * the wall runs past every corner — the periphery falls out of focus the
+     * way it would if you were really in there. And it says, without a scrim
+     * or a dark hole, that the board is not the live layer: with the shell
+     * drawn flat and fully lit the tiles look playable, but taps only rotate
+     * or close, so there was no cue you were in a menu at all, let alone how
+     * to leave it.
+     *
+     * Done as one masked blurred copy rather than a per-tile effect: a single
+     * offscreen pass, only while the chamber is open, costing nothing the rest
+     * of the time.
+     */
+    let edgeBlurBuf = null;
+    function drawChamberEdgeBlur() {
+      if (state.chromeProjectionMode !== "chamber") return;
+      const amt = smoothUnit(state.chromeProjectionProgress);
+      if (amt <= 0.02 || state.reduceMotion) return;
+      const w = canvas.clientWidth || window.innerWidth;
+      const h = canvas.clientHeight || window.innerHeight;
+      if (!w || !h) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      if (!edgeBlurBuf) edgeBlurBuf = document.createElement("canvas");
+      if (
+        edgeBlurBuf.width !== canvas.width ||
+        edgeBlurBuf.height !== canvas.height
+      ) {
+        edgeBlurBuf.width = canvas.width;
+        edgeBlurBuf.height = canvas.height;
+      }
+      const b = edgeBlurBuf.getContext("2d");
+      if (!b) return;
+      b.setTransform(1, 0, 0, 1, 0, 0);
+      b.clearRect(0, 0, edgeBlurBuf.width, edgeBlurBuf.height);
+      // A blurred copy of everything painted so far. ctx.filter is a no-op on
+      // engines that lack it, which degrades to an identical copy — invisible
+      // rather than wrong.
+      b.filter = "blur(" + (7 * amt * dpr).toFixed(2) + "px)";
+      b.drawImage(canvas, 0, 0);
+      b.filter = "none";
+      // Keep only its outer part, ramping in from the middle.
+      b.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const g = b.createRadialGradient(
+        state.centerX,
+        state.centerY,
+        Math.min(w, h) * 0.3,
+        state.centerX,
+        state.centerY,
+        Math.hypot(w, h) * 0.55
+      );
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, "rgba(0,0,0," + amt.toFixed(3) + ")");
+      b.globalCompositeOperation = "destination-in";
+      b.fillStyle = g;
+      b.fillRect(0, 0, w, h);
+      b.globalCompositeOperation = "source-over";
+      // Lay it back over the sharp board with the shake transform released —
+      // the copy already contains that offset.
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.drawImage(edgeBlurBuf, 0, 0, w, h);
+      ctx.restore();
     }
 
     function frameNeedsPaint(now) {
@@ -11657,7 +11727,7 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
 })(window);
 
 </script>
-<script src="inner-menu.js?v=20260821p"></script>
+<script src="inner-menu.js?v=20260821r"></script>
 <script>
 (function () {
   const game = SphereSweeper.boot({ canvasId: "gameCanvas" });

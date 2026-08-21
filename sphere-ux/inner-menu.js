@@ -616,7 +616,17 @@
     function activate(action) {
       action.run();
       syncButtons();
-      if (action.id !== "close" && action.id !== "size") seatGeometry();
+      // Re-apply the split after every action, not just some.
+      //
+      // Size (and anything else that rebuilds the board) replaces state.tiles,
+      // which invalidates the shell's two-group partition. setChromeShell
+      // rebuilds that partition when the tile count changes — but only when it
+      // is called, and advance() is a no-op once the bloom has settled, so
+      // nothing was calling it. The stale array then read `undefined || 1` for
+      // every new tile, dropping the whole mesh into one half: the sphere
+      // moved as a single lump and the dock looked broken.
+      splitShell();
+      if (game.scheduleFrame) game.scheduleFrame();
     }
 
     /* ---- accessible mirror ------------------------------------------- */
