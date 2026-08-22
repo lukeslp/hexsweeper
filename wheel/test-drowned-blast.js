@@ -155,7 +155,7 @@ function run(state, entry, at) {
   const names = Object.keys(deps);
   const make = new Function(
     ...names,
-    `${body}\nreturn { drownedBlast, chordAt, drownArmedMine };`
+    `${body}\nreturn { drownedBlast, chordAt, drownArmedMine, chordTargets };`
   );
   const api = make(...names.map((n) => deps[n]));
   api[entry === undefined ? "drownedBlast" : entry](...(at === undefined ? [0] : at));
@@ -286,6 +286,58 @@ state = makeBoard();
 calls = run(state, "drownedBlast", [0, { x: 1, y: 2, surfaceY: 3, r: 4, underwater: true }]);
 ok(calls.fx.length === 1 && calls.fx[0][0] === "detonate", "one detonation is emitted");
 ok(calls.fx[0][1].underwater === true, "still flagged underwater");
+
+/*
+ * The rule Luke asked after: a mine that has just gone off must count toward
+ * its neighbours' totals, or nothing around it could ever be satisfied and the
+ * blast would be inert. Asserted directly on chordTargets, both ways round.
+ */
+console.log("chordTargets — the detonated mine counts toward its neighbours");
+state = makeBoard();
+let api = null;
+{
+  const calls = { probe: true };
+  // Reuse the harness purely to build the closure, then poke chordTargets.
+  const deps = {
+    state,
+    performance: { now: () => 1000 },
+    clearArmedMine: () => {},
+    bobImpulse: () => {},
+    scheduleRevealVisual: () => {},
+    floodFrom: () => new Set(),
+    armMine: () => {},
+    setWheelAlert: () => {},
+    updateUI: () => {},
+    checkWin: () => {},
+    persistNow: () => {},
+    scheduleFrame: () => {},
+    captureUndo: () => {},
+    wheelFx: { emit: () => {} },
+    surfaceYAt: () => 500,
+    wheelFaceRadius: () => 20,
+    Math,
+    String,
+    Set,
+  };
+  const names = Object.keys(deps);
+  api = new Function(...names, `${body}\nreturn { chordTargets };`)(
+    ...names.map((n) => deps[n])
+  );
+  void calls;
+}
+// Face 1 is an open "1" whose only mine neighbour is face 0.
+ok(api.chordTargets(1) === null, "before it blows, face 1 is one short and cannot chord");
+state.cells[0].doused = true;
+const after = api.chordTargets(1);
+ok(
+  Array.isArray(after) && after.length === 2,
+  "once it is doused the same face is satisfied and offers its two targets"
+);
+// Face 2 needs the flag AND the spent mine to add up.
+ok(
+  Array.isArray(api.chordTargets(2)),
+  "a face counting one flag plus the spent mine is satisfied too"
+);
 
 if (failures) {
   console.error(`\nWater Wheel drowned-blast tests — ${failures} FAILED`);

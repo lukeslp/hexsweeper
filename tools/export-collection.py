@@ -121,10 +121,10 @@ EXPERIMENTS = [
     {
         "id": "water-wheel",
         "title": "Hexsweeper 3D · Water Wheel",
-        "ogTitle": "Hexsweeper 3D — Water Wheel",
-        "ogDescription": "Strike a mine, spin its face beneath the waterline, and quench it before the fuse expires.",
+        "ogTitle": "Hexsweeper — The Water Wheel",
+        "ogDescription": "Strike a mine and the fuse lights. Spin its face under the waterline and the sea does not defuse it \u2014 it contains it: the mine goes off down there, and the blast clears the numbers it was touching.",
         "tag": "Game variant · live",
-        "blurb": "The sphere becomes the rescue mechanism: armed mines must rotate underwater before they detonate, while ordinary flags wash away.",
+        "blurb": "The sphere is the rescue mechanism, and the rescue is an explosion: drown an armed mine and it detonates underwater, chording every satisfied number it touched. Ordinary flags just wash away.",
         "filter": "sphere water wheel douse quench mine fuse rotate liquid gameplay variant experiment",
         "swatch": ("#06263a", "#1c7896", "#8fe9f2", "#ff5a4f"),
         "file": "water-wheel.html",
@@ -142,7 +142,7 @@ EXPERIMENTS = [
         "boot": "initHexBloom",
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D; no frameworks.",
         "welcomeKey": "hexwheel-tutorial-v1",
-        "ogImage": f"{OG}/sphere-og.png",
+        "ogImage": f"{OG}/wheel-og.png",
     },
     {
         "id": "sphere-reflection",
