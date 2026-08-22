@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+  File Purpose: shareable entry point for one sphere-ux optical-illusion
+    experiment. Exists only because the experiments are query-string variants
+    of a single document, and static hosting serves the same file — and so the
+    same Open Graph tags — for every query. A crawler asked for
+    `?dock=chamber` cannot be told these three apart.
+
+    So each experiment gets a real URL of its own carrying its own card, which
+    then hands the visitor straight to the live page. This is not a copy of the
+    experiment: it holds no game code and cannot drift from it.
+  Author: Luke Steuber <luke@lukesteuber.com>
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hexsweeper — The Sphere Turns Itself Inside Out</title>
+<meta name="description" content="An optical-illusion UX experiment: the globe folds through itself into a chamber around the menu, and the board you were looking at becomes the room you are standing in.">
+<link rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/sphere-ux/chamber.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Hexsweeper">
+<meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/sphere-ux/chamber.html">
+<meta property="og:title" content="Hexsweeper — The Sphere Turns Itself Inside Out">
+<meta property="og:description" content="An optical-illusion UX experiment: the globe folds through itself into a chamber around the menu, and the board you were looking at becomes the room you are standing in.">
+<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-chamber-og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hexsweeper — The Sphere Turns Itself Inside Out">
+<meta name="twitter:description" content="An optical-illusion UX experiment: the globe folds through itself into a chamber around the menu, and the board you were looking at becomes the room you are standing in.">
+<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-chamber-og.png">
+<style>
+  html,body{height:100%;margin:0;background:#ffffff;color:#111}
+  @media(prefers-color-scheme:dark){html,body{background:#0b0d12;color:#edf3fb}}
+  main{min-height:100%;display:grid;place-items:center;text-align:center;
+    font:400 16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}
+  a{color:inherit}
+</style>
+<script>location.replace("./?dock=chamber");</script>
+</head>
+<body>
+<main>
+  <p><strong>Hexsweeper — The Sphere Turns Itself Inside Out</strong><br>
+  Opening the experiment&hellip; <a href="./?dock=chamber">continue</a> if it does not.</p>
+</main>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

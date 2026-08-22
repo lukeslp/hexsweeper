@@ -30,6 +30,16 @@
   const GLYPH = {
     undo: '<path d="M4 4v5h5"/><path d="M4.8 8.2A8.3 8.3 0 1 1 4 16"/>',
     flag: '<path d="M6 21.2V3.6"/><path d="M6 4.4h11.6l-2.9 4 2.9 4H6"/>',
+    reset:
+      '<path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"/><path d="M20 3.5V8h-4.5"/>' +
+      '<path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"/><path d="M4 20.5V16h4.5"/>',
+    sliders:
+      '<path d="M4 6h5M13 6h7M4 12h10M18 12h2M4 18h2M10 18h10"/>' +
+      '<path d="M9 3v6M14 9v6M10 15v6"/>',
+    help:
+      '<circle cx="12" cy="12" r="9"/>' +
+      '<path d="M9.2 9.2a2.8 2.8 0 1 1 3.9 2.6c-.9.5-1.6 1.1-1.6 2.2"/>' +
+      '<path d="M12 17.2h.01"/>',
   };
 
   function svg(name) {
@@ -95,8 +105,41 @@
       return b;
     }
 
+    /*
+     * Reset, Customize and Help are relocated, not reimplemented.
+     *
+     * They exist already in index.html's corner HUD and are wired by
+     * sphere.js — but out at the viewport edges they were unreachable in this
+     * mode, and they looked nothing like the bar. Rather than duplicate their
+     * behaviour (and the bugs that would drift between two copies), these
+     * buttons forward a click to the originals, and the originals are hidden.
+     * One implementation, one set of handlers, moved inboard and restyled to
+     * match Undo and Flag.
+     */
+    function forward(id) {
+      const el = document.getElementById(id);
+      if (el) el.click();
+    }
+
     const undo = button("Undo", "undo");
     const flag = button("Flag mode", "flag");
+    const reset = button("Reset", "reset");
+    const customize = button("Customize board", "sliders");
+    const help = button("Help", "help");
+
+    reset.addEventListener("click", () => {
+      forward("reset-btn");
+      paint();
+    });
+    customize.addEventListener("click", () => forward("customize-btn"));
+    help.addEventListener("click", () => forward("help-btn"));
+
+    // Hide the corner originals now that the bar carries them.
+    const hide = document.createElement("style");
+    hide.textContent =
+      "body[data-interior-play='true'] .hud-cluster," +
+      "body[data-interior-play='true'] .hud-help-fixed{display:none !important}";
+    document.head.appendChild(hide);
 
     undo.addEventListener("click", () => {
       if (game.canUndo && !game.canUndo()) return;

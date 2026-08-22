@@ -4349,6 +4349,28 @@
         const tile = state.tiles[idx];
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
+        if (state.interiorPlay) {
+          // Grazing faces catch less light. Standing inside, the face dead
+          // ahead has its normal along the view axis (|normalZ| = 1) while the
+          // ones wrapping past your shoulders at the equator are edge-on
+          // (|normalZ| = 0). That is the real curvature term, and because the
+          // tiles are large it steps face by face — where the radial wash in
+          // drawInteriorShading() is only a smooth screen-space approximation
+          // of the same thing. The two are tuned to sit on top of each other.
+          //
+          // Kept deliberately gentle. At full strength it dimmed almost
+          // everything, because most faces you can see in here are grazing —
+          // the board went uniformly grey and lost the crisp black/white the
+          // game is read by. This is a facet accent over the wash, not the
+          // main light.
+          const dim = 1 - (0.62 + 0.38 * Math.abs(proj.normalZ || 0));
+          if (dim > 0.005) {
+            colors = Object.assign({}, colors, {
+              fill: colorMix(colors.fill, "#000000", dim * 0.5),
+              stroke: colorMix(colors.stroke, "#000000", dim * 0.35),
+            });
+          }
+        }
         const h = heights[idx];
         let drawProj = proj;
         let markLift = 0;
@@ -4532,6 +4554,7 @@
         }
       }
 
+      drawInteriorShading();
       drawChamberEdgeBlur();
 
       drawEndFxOverlay(now);
@@ -4540,6 +4563,52 @@
       // Screen space, after the shake transform is released — otherwise
       // the waterline shudders loose from the horizon on a detonation.
       if (state.theme.waterScene) drawWaterPass(w, h, waterY);
+    }
+
+    /**
+     * Interior play: light the cavity.
+     *
+     * The concave wall was flat-lit, so it read as wallpaper rather than as
+     * something curving away around you — every hex the same value whether it
+     * was straight ahead or bending past your shoulder. Standing inside a
+     * sphere, the surface directly in front is nearest and brightest and the
+     * light falls off as the wall turns away toward the periphery.
+     *
+     * Multiply rather than an overlay: it scales what is already there, so a
+     * white face dims to grey while a black face stays black. The contrast
+     * direction of the board — and therefore its readability — is preserved
+     * exactly, which an alpha wash over the top would have flattened.
+     *
+     * One gradient, not a per-face term. Shading each hex separately either
+     * seams along the tile edges or double-darkens where the two hemispheres
+     * overlap in this projection; a single smooth falloff has neither problem
+     * and still steps visibly from hex to hex because the tiles are large.
+     */
+    function drawInteriorShading() {
+      if (!state.interiorPlay) return;
+      const w = canvas.clientWidth || window.innerWidth;
+      const h = canvas.clientHeight || window.innerHeight;
+      if (!w || !h) return;
+      const near = Math.min(w, h) * 0.12;
+      const far = Math.hypot(w, h) * 0.62;
+      const g = ctx.createRadialGradient(
+        state.centerX,
+        state.centerY,
+        near,
+        state.centerX,
+        state.centerY,
+        far
+      );
+      // White is the identity for multiply, so the centre is untouched and
+      // only the periphery loses light.
+      g.addColorStop(0, "rgb(255,255,255)");
+      g.addColorStop(0.55, "rgb(206,209,215)");
+      g.addColorStop(1, "rgb(104,108,118)");
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
     }
 
     /**
