@@ -270,6 +270,12 @@ Done (updated 2026-08-11, through the App Store Connect API):
       iOS slots). Android versionCode 21 (not published; test 20 stays on the
       download page). App Previews rendered with `scripts/store-preview.mjs`
       (24 s, 886x1920 and 1200x1600, H.264 30 fps) from the sealed payload.
+- [x] Build 66 (1.0.1) uploaded 2026-09-02 and attached to 1.0.1 in place of
+      65: icon is now the Dark-theme board sitting low in the frame, earthrise
+      style (`scratch: earth-dark-b-rise`; composed from a `store-shots` render,
+      not `generate-icon.py`'s own render). Android versionCode 22, unpublished.
+      Previews for both families are uploaded and processed on 1.0.1 with the
+      poster frame at 13 s.
 - [x] **1.0 submitted for App Store review on 2026-08-19** with build 63
       attached. ASC reports `WAITING_FOR_REVIEW`, release type
       `AFTER_APPROVAL`. What is live on dr.eamer.dev and what is in the
