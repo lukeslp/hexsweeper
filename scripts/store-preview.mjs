@@ -27,13 +27,13 @@ const FPS = 30;
 // and is upscaled to the store size by ffmpeg.
 const dprArg = process.argv.find((a) => a.startsWith("--dpr="));
 // Frames before the mirror material has booted show a flat wireframe; skip them.
-const LEAD_MS = 1500;
+const LEAD_MS = 3500;
 // Software GL cannot paint 30 fps at store size, so the timeline runs slowed by
 // SLOWMO and the capture is sped back up: every 1/30 s of the final cut is a
 // real painted frame. Reveal animations play SLOWMO× faster as a result.
 const slowArg = process.argv.find((a) => a.startsWith("--slowmo="));
 const SLOWMO = slowArg ? Number(slowArg.split("=")[1]) || 2.5 : 2.5;
-const DURATION_MS = 24000 * SLOWMO + 1500; // 24 s of footage after the lead-in, slowed
+const DURATION_MS = 24000 * SLOWMO + 3500; // 24 s of footage after the lead-in, slowed
 if (dprArg) device.dpr = Number(dprArg.split("=")[1]) || device.dpr;
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -101,7 +101,7 @@ const TIMELINE = `
   const mineCovered = (c, i) => !c.revealed && c.isMine && !c.flagged && (tiles[i].neighborIndices || []).some(k => cells[k].revealed);
 
   // Spin driver: eases targetRotY/targetRotX toward waypoints between events.
-  const start = performance.now() + 1500; const K = ${SLOWMO};
+  const start = performance.now() + 3500; const K = ${SLOWMO};
   let spins = [];
   function spinTo(atMs, rotY, rotX, overMs) { spins.push({ atMs: atMs * K, rotY, rotX, overMs: overMs * K }); }
   const evs = [];
@@ -141,7 +141,7 @@ const TIMELINE = `
       st.rotY = st.targetRotY; st.rotX = st.targetRotX;
     }
     window.__previewT = t;
-    if (t < ${DURATION_MS} - 1500 + 500) requestAnimationFrame(tick); else window.__previewDone = true;
+    if (t < ${DURATION_MS} - 3500 + 500) requestAnimationFrame(tick); else window.__previewDone = true;
   }
   requestAnimationFrame(tick);
   return true;
