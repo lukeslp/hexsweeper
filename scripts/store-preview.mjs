@@ -196,9 +196,13 @@ try {
     await writeFile(join(framesDir, `f${String(k).padStart(5, "0")}.jpg`), Buffer.from(frames[fi].data, "base64"));
   }
   const out = join(outDir, `preview-${family}.mp4`);
+  // App Store Connect rejects a preview with no audio track (MOV_RESAVE_STEREO):
+  // mux a silent 48 kHz stereo AAC track alongside the video.
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", join(framesDir, "f%05d.jpg"),
+    "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
     "-vf", `scale=${device.out.replace("x", ":")}:flags=lanczos,format=yuv420p`, "-c:v", "libx264", "-profile:v", "high", "-level", "4.0",
-    "-b:v", "11M", "-maxrate", "12M", "-bufsize", "24M", "-r", String(FPS), "-movflags", "+faststart", out]);
+    "-b:v", "11M", "-maxrate", "12M", "-bufsize", "24M", "-r", String(FPS),
+    "-c:a", "aac", "-b:a", "256k", "-ac", "2", "-shortest", "-movflags", "+faststart", out]);
   console.log(`captured ${captured.toFixed(1)}s slowed ${SLOWMO}x → ${total.toFixed(1)}s at ${sourceFps.toFixed(1)} effective fps (dpr ${device.dpr}) → ${out} (${n} frames @ ${FPS} fps, ${device.out})`);
 } finally {
   chrome.kill("SIGTERM");
