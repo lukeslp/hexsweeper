@@ -575,12 +575,10 @@
   const SIZE_STORAGE_KEY = "hexwheel-size-v2";
   const NEST_STORAGE_KEY = "hexwheel-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexwheel-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexwheel-invert-v3";
-  // The X default has flipped twice. v1 and v3 both follow the finger, so a v1
-  // flag carries over untouched; v2 mirrored X by default, so its flag means
-  // the opposite of v3's and flips on the way in.
-  const INVERT_STORAGE_KEY_V2 = "hexwheel-invert-v2";
-  const INVERT_STORAGE_KEY_V1 = "hexwheel-invert-v1";
+  const INVERT_STORAGE_KEY = "hexwheel-invert-v4";
+  // v4 starts every device at the finger-following default on both axes; the
+  // earlier keys are dropped, not migrated (see sphere/sphere.js).
+  const INVERT_LEGACY_KEYS = ["hexwheel-invert-v3", "hexwheel-invert-v2", "hexwheel-invert-v1"];
   const WELCOME_KEY = "hexwheel-tutorial-v1";
   const RUN_STORAGE_KEY = "hexwheel-run-v3";
   const RUN_STORAGE_KEY_LEGACY = "hexwheel-run-v2";
@@ -697,30 +695,14 @@
       return opts.difficulty || "easy";
     }
 
-    /**
-     * Carry an older invert pref onto the current key, flipping X when that
-     * version's default was the mirrored one.
-     */
-    function adoptInvert(data, flipX, oldKey) {
-      const migrated = { x: flipX ? !data.x : !!data.x, y: !!data.y };
-      try {
-        localStorage.setItem(INVERT_STORAGE_KEY, JSON.stringify(migrated));
-        localStorage.removeItem(oldKey);
-      } catch (_) {}
-      return migrated;
-    }
-
     function readStoredInvert() {
       try {
+        for (const key of INVERT_LEGACY_KEYS) localStorage.removeItem(key);
         const raw = localStorage.getItem(INVERT_STORAGE_KEY);
         if (raw) {
           const data = JSON.parse(raw);
           return { x: !!data.x, y: !!data.y };
         }
-        const v2 = localStorage.getItem(INVERT_STORAGE_KEY_V2);
-        if (v2) return adoptInvert(JSON.parse(v2), true, INVERT_STORAGE_KEY_V2);
-        const v1 = localStorage.getItem(INVERT_STORAGE_KEY_V1);
-        if (v1) return adoptInvert(JSON.parse(v1), false, INVERT_STORAGE_KEY_V1);
         return { x: false, y: false };
       } catch (_) {
         return { x: false, y: false };

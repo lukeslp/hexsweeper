@@ -200,10 +200,13 @@ try {
   assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);
   assert.equal(await evaluate('!!document.getElementById("help-warn-grid")'), false, "Warnings group is still on the sheet (themes own it now)");
   assert.ok(help.invert && help.effects, "invert / effects pills missing from the sheet");
-  // The sheet is tabbed: Play · Themes · Board · Settings; one panel at a time; last tab remembered.
+  // The sheet is tabbed: Play · Themes · Board · Settings · Keys; one panel at a time; last tab remembered.
+  // Keys is the keyboard guide and collapses to nothing on a touch device.
   const tabs = await evaluate('Array.from(document.querySelectorAll("#help-tabs [role=tab]")).map(t => t.dataset.tab + ":" + t.getAttribute("aria-selected") + ":" + Math.round(t.getBoundingClientRect().height))');
-  assert.deepEqual(tabs.map(t => t.split(":")[0]), ["play", "themes", "board", "settings"], `sheet tabs are ${tabs.join(",")}`);
-  assert.ok(tabs.every(t => Number(t.split(":")[2]) >= 44), `sheet tabs under 44pt: ${tabs.join(",")}`);
+  assert.deepEqual(tabs.map(t => t.split(":")[0]), ["play", "themes", "board", "settings", "keys"], `sheet tabs are ${tabs.join(",")}`);
+  const keysTab = tabs.find(t => t.startsWith("keys:"));
+  assert.equal(Number(keysTab.split(":")[2]), 0, `keyboard tab shows on a touch device: ${keysTab}`);
+  assert.ok(tabs.filter(t => !t.startsWith("keys:")).every(t => Number(t.split(":")[2]) >= 44), `sheet tabs under 44pt: ${tabs.join(",")}`);
   assert.equal(await evaluate('Array.from(document.querySelectorAll(".help-tabpanel")).filter(p => !p.hidden).map(p => p.dataset.tab).join(",")'), "play", "sheet did not open on the Play tab");
   await evaluate('document.getElementById("help-tab-themes").click()');
   assert.equal(await evaluate('Array.from(document.querySelectorAll(".help-tabpanel")).filter(p => !p.hidden).map(p => p.dataset.tab).join(",")'), "themes", "Themes tab did not show only the themes panel");
