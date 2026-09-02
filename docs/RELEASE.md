@@ -280,6 +280,10 @@ Done (updated 2026-08-11, through the App Store Connect API):
       66: same earthrise icon, limb raised to the top third with a red flag in
       frame (`scratch: earth-dark-a-third`). Promotional text refreshed for
       1.0.1. Android versionCode 23, unpublished.
+- [x] Build 68 (1.0.1) uploaded 2026-09-02 and attached to 1.0.1 in place of
+      67: icon is a centred 78% crop of the Heat Lightning board (copper metal
+      core, blue flag) — the mono earthrise reads too austere. Android
+      versionCode 24, unpublished.
 - [x] **1.0 submitted for App Store review on 2026-08-19** with build 63
       attached. ASC reports `WAITING_FOR_REVIEW`, release type
       `AFTER_APPROVAL`. What is live on dr.eamer.dev and what is in the

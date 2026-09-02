@@ -7,7 +7,7 @@ android {
         applicationId "app.hexodus.ios"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 23
+        versionCode 24
         versionName "1.0.1-test"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
