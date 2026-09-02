@@ -1,1 +1,1 @@
-Minesweeper on a hexagonal 3D sphere. Spin it, read the numbers, clear it. Nine looks, undo, autosave. Offline: no account, no ads, no tracking.
+Minesweeper on a hexagonal 3D sphere. 1.0.1: the sphere follows your finger, and three looks clear to cobalt, gold and copper. Nine looks, undo, autosave. Fully offline.
