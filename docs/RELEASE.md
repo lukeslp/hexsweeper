@@ -250,6 +250,20 @@ Done (updated 2026-08-11, through the App Store Connect API):
       now reads `HEXSWEEPER_HOME_HREF` and the exporter refuses to ship a bare
       climb (vendored from hexsweeper `4c04cab`). Android test 19 ships the
       same payload. Screenshots unchanged. Supersedes 62.
+- [x] 1.0 (63) approved and Ready for Sale on 2026-09-01 after 13 days in
+      Waiting for Review; an expedited-review request was filed that evening
+      through the App Review contact form, and a pending program agreement had
+      been accepted the same day.
+- [x] Build 64 (1.0.1) uploaded 2026-09-01 and attached to the new 1.0.1
+      version (What's New set from `app-store/metadata/en-US/release_notes.txt`;
+      not submitted). Invert prefs move to a v4 key with no migration so every
+      device starts finger-following on both axes; Ion Storm, Gilded Ribbon and
+      Heat Lightning clear to seamless cobalt, gold and copper cores; Stratosphere
+      keeps porcelain wells and its cliff walls take the light fill; app icon is
+      a straight crop of an Ion Storm TestFlight screenshot (vendored from
+      hexsweeper `d9a75aa`). Android test 20 (versionName 1.0.1-test) ships the
+      same payload and is live at dr.eamer.dev/downloads/apps/hexsweeper/.
+      Screenshots unchanged.
 - [x] **1.0 submitted for App Store review on 2026-08-19** with build 63
       attached. ASC reports `WAITING_FOR_REVIEW`, release type
       `AFTER_APPROVAL`. What is live on dr.eamer.dev and what is in the

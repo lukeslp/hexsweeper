@@ -40,8 +40,8 @@ hexsweeper change that never gets re-vendored — fails the build.
 ## Build numbers
 
 App Store Connect already holds builds 1–6 under this bundle id from the retired
-app and has received builds through 63 (1.0 build 63 was submitted for review on
-2026-08-20). Set `CURRENT_PROJECT_VERSION` above the
+app and has received builds through 64. 1.0 (63) was submitted 2026-08-20 and
+approved 2026-09-01; 1.0.1 (64) was uploaded the same day. Set `CURRENT_PROJECT_VERSION` above the
 latest uploaded build for every iOS upload. Android starts at `versionCode 1`
 and increments independently for every Play upload.
 
