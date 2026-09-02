@@ -284,6 +284,11 @@ Done (updated 2026-08-11, through the App Store Connect API):
       67: icon is a centred 78% crop of the Heat Lightning board (copper metal
       core, blue flag) — the mono earthrise reads too austere. Android
       versionCode 24, unpublished.
+- [x] Build 69 (1.0.1) uploaded 2026-09-02 and attached to 1.0.1 in place of
+      68: icon is the Dark board with its centre on the bottom-right corner of
+      the frame (radius 1.08× the icon), limb arcing across the top-left with
+      the red flag pair on the edge (`scratch: corner-dark-a-br-108`). Android
+      versionCode 25, unpublished.
 - [x] **1.0 submitted for App Store review on 2026-08-19** with build 63
       attached. ASC reports `WAITING_FOR_REVIEW`, release type
       `AFTER_APPROVAL`. What is live on dr.eamer.dev and what is in the
