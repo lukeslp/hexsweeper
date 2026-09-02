@@ -2471,7 +2471,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
     name: "Ion Storm",
     chrome: "dark",
     material: "ion-storm",
-    warn: { count: "numerals", relief: "extruded", seams: true },
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#c893dc",
     fallbackBg: "#060a19",
     fallbackBgGlow: "#175fa2",
@@ -2533,7 +2533,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
     id: "gilded-ribbon",
     name: "Gilded Ribbon",
     material: "gilded-ribbon",
-    warn: { count: "numerals", relief: "extruded", seams: true },
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#dfa35f",
     fallbackBg: "#080510",
     fallbackBgGlow: "#4d3449",
@@ -2550,7 +2550,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
     id: "heat-lightning",
     name: "Heat Lightning",
     material: "heat-lightning",
-    warn: { count: "numerals", relief: "extruded", seams: true },
+    warn: { count: "numerals", relief: "extruded", seams: false },
     accent: "#ffb05b",
     fallbackBg: "#190f16",
     fallbackBgGlow: "#7a3f53",
@@ -2826,12 +2826,17 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v3";
-  // The X default has flipped twice. v1 and v3 both follow the finger, so a v1
-  // flag carries over untouched; v2 mirrored X by default, so its flag means
-  // the opposite of v3's and flips on the way in.
-  const INVERT_STORAGE_KEY_V2 = "hexsweeper-sphere-invert-v2";
-  const INVERT_STORAGE_KEY_V1 = "hexsweeper-sphere-invert-v1";
+  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v4";
+  // v4 starts every device at the finger-following default on both axes.
+  // The earlier keys were set while the X default flipped back and forth, so
+  // a stored flag no longer says what the player wanted; they are dropped,
+  // not migrated. Invert stays available in Settings for anyone who prefers
+  // the camera-style feel.
+  const INVERT_LEGACY_KEYS = [
+    "hexsweeper-sphere-invert-v3",
+    "hexsweeper-sphere-invert-v2",
+    "hexsweeper-sphere-invert-v1",
+  ];
   const WELCOME_KEY = "hexsweeper-sphere-welcome-v1";
   const RUN_STORAGE_KEY = "hexsweeper-sphere-run-v2";
   const RUN_STORAGE_KEY_LEGACY = "hexsweeper-sphere-run-v1";
@@ -3120,30 +3125,15 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       return opts.difficulty || "medium";
     }
 
-    /**
-     * Carry an older invert pref onto the current key, flipping X when that
-     * version's default was the mirrored one.
-     */
-    function adoptInvert(data, flipX, oldKey) {
-      const migrated = { x: flipX ? !data.x : !!data.x, y: !!data.y };
-      try {
-        localStorage.setItem(INVERT_STORAGE_KEY, JSON.stringify(migrated));
-        localStorage.removeItem(oldKey);
-      } catch (_) {}
-      return migrated;
-    }
-
     function readStoredInvert() {
       try {
+        // Older keys are cleared rather than carried over (see the v4 note).
+        for (const key of INVERT_LEGACY_KEYS) localStorage.removeItem(key);
         const raw = localStorage.getItem(INVERT_STORAGE_KEY);
         if (raw) {
           const data = JSON.parse(raw);
           return { x: !!data.x, y: !!data.y };
         }
-        const v2 = localStorage.getItem(INVERT_STORAGE_KEY_V2);
-        if (v2) return adoptInvert(JSON.parse(v2), true, INVERT_STORAGE_KEY_V2);
-        const v1 = localStorage.getItem(INVERT_STORAGE_KEY_V1);
-        if (v1) return adoptInvert(JSON.parse(v1), false, INVERT_STORAGE_KEY_V1);
         return { x: false, y: false };
       } catch (_) {
         return { x: false, y: false };
@@ -6062,13 +6052,16 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       return state.reduceMotion ? 0 : now * 0.001;
     }
     /** Galaxy: indigo dust with a fixed star field that twinkles. */
-    // Only Mercury (liquid metal) and Galaxy (black hole) carry an interior.
-    // Aurora, Ion Storm, Gilded Ribbon, Heat Lightning and Stratosphere clear
-    // to mono wells with depth and seams, on the Light/Dark model. The other
-    // palettes/painters stay below for a one-line revert.
+    // Mercury (liquid metal), Galaxy (black hole), and the three dark metals
+    // (Ion Storm cobalt, Gilded Ribbon gold, Heat Lightning copper) clear to a
+    // continuous interior with depth and no seams. Stratosphere and Aurora
+    // clear to mono wells with depth and seams, on the Light/Dark model.
     const CORE_PROFILES = {
       mercury: "metal",
       galaxy: "blackhole",
+      "ion-storm": "cobalt",
+      "gilded-ribbon": "gold",
+      "heat-lightning": "copper",
     };
     // Whole-sphere effects seen through the cleared faces (one paint per frame).
     // Only two themes carry a whole-sphere effect now; Ion Storm, Aurora and
@@ -6747,14 +6740,16 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
 
     /** Cliff/skirt fill — into black wells vs into white wells. */
     function skirtFill(nw) {
-      if (state.theme && state.theme.reflectionSurface) {
-        const alpha = (0.5 + (1 - nw) * 0.22).toFixed(3);
-        return `rgba(2,7,11,${alpha})`;
-      }
       const well = parseCssColor(
         state.theme.revealedEmpty || state.theme.revealed || "#000000"
       );
       const lightWell = (well[0] + well[1] + well[2]) / 3 > 128;
+      // Mirror themes with dark wells drop into shadow; a mirror theme that
+      // clears to white (Stratosphere) takes the light cliff below instead.
+      if (state.theme && state.theme.reflectionSurface && !lightWell) {
+        const alpha = (0.5 + (1 - nw) * 0.22).toFixed(3);
+        return `rgba(2,7,11,${alpha})`;
+      }
       if (lightWell) {
         return colorMix("#2a2a2a", "#c8c8c8", 1 - nw);
       }

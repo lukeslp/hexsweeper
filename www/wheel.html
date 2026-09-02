@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  Quick Take: Hexsweeper 3D — Water Wheel — The sphere becomes the rescue mechanism: armed mines must rotate underwater before they detonate, while ordinary flags wash away.
+  Quick Take: Hexsweeper — The Water Wheel — The sphere is the rescue mechanism, and the rescue is an explosion: drown an armed mine and it detonates underwater, chording every satisfied number it touched. Ordinary flags just wash away.
   Stack: Vanilla HTML, CSS, and JavaScript; Canvas 2D; no frameworks.
   Source: https://dr.eamer.dev/games/hexsweeper/collection/water-wheel.html
   Live: https://dr.eamer.dev/games/hexsweeper/wheel/
@@ -13,16 +13,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>Hexsweeper · Water Wheel</title>
-<meta name="description" content="Strike a mine, spin its face beneath the waterline, and quench it before the fuse expires.">
+<meta name="description" content="Strike a mine and the fuse lights. Spin its face under the waterline and the sea does not defuse it — it contains it: the mine goes off down there, and the blast clears the numbers it was touching.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Hexsweeper 3D — Water Wheel">
-<meta property="og:description" content="Strike a mine, spin its face beneath the waterline, and quench it before the fuse expires.">
+<meta property="og:title" content="Hexsweeper — The Water Wheel">
+<meta property="og:description" content="Strike a mine and the fuse lights. Spin its face under the waterline and the sea does not defuse it — it contains it: the mine goes off down there, and the blast clears the numbers it was touching.">
 <meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/collection/water-wheel.html">
-<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
+<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/wheel-og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Hexsweeper 3D — Water Wheel">
-<meta name="twitter:description" content="Strike a mine, spin its face beneath the waterline, and quench it before the fuse expires.">
-<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
+<meta name="twitter:title" content="Hexsweeper — The Water Wheel">
+<meta name="twitter:description" content="Strike a mine and the fuse lights. Spin its face under the waterline and the sea does not defuse it — it contains it: the mine goes off down there, and the blast clears the numbers it was touching.">
+<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/wheel-og.png">
 <style>
 /* fonts/fonts.css (woff2 inlined) */
 /*
@@ -2325,7 +2325,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
 <div class="canvas-container">
   <canvas id="gameCanvas" tabindex="0" aria-label="Hex sphere minesweeper board" aria-describedby="wheel-instructions"></canvas>
 </div>
-<p class="sr-only" id="wheel-instructions">Drag or use the arrow keys to rotate. If a mine is armed, move it beneath the waterline before its timer expires.</p>
+<p class="sr-only" id="wheel-instructions">Drag or use the arrow keys to rotate. If a mine is armed, move it beneath the waterline before its timer expires. Holding the armed face under, or letting its fuse expire down there, detonates the mine underwater instead of defusing it: the mine is spent and the blast sets off a chord on every satisfied number it was touching. Only a fuse that expires above the waterline ends the run.</p>
 <button type="button" id="open-menu-a11y" class="sr-only" aria-controls="hex-bloom-stage">Open game menu</button>
 <div class="wheel-alert" id="wheel-alert" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
@@ -3278,7 +3278,9 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
  * Idle: ambient yaw until first canvas interaction (off under reduced motion).
  * Win: share card (sphere snapshot + time + mine count) via Web Share / download.
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
- * Wheel: click a mine to arm its fuse; spin it under the fixed trough to quench it.
+ * Wheel: click a mine to arm its fuse; spin it under the fixed trough to blow it.
+ * Wheel: drowning a mine detonates it underwater — it is spent and chords its
+ *   satisfied neighbours instead of killing (drownedBlast). No silent quench.
  * Persist: autosave mid-run (localStorage + sessionStorage `hexwheel-run-v3`).
  * Soft/hard browser reload restores; only UX Reset (or size change) clears the run.
  * No window.confirm dialogs — Reset/size are deliberate. Welcome help only once, not over a restored run.
@@ -3835,12 +3837,10 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
   const SIZE_STORAGE_KEY = "hexwheel-size-v2";
   const NEST_STORAGE_KEY = "hexwheel-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexwheel-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexwheel-invert-v3";
-  // The X default has flipped twice. v1 and v3 both follow the finger, so a v1
-  // flag carries over untouched; v2 mirrored X by default, so its flag means
-  // the opposite of v3's and flips on the way in.
-  const INVERT_STORAGE_KEY_V2 = "hexwheel-invert-v2";
-  const INVERT_STORAGE_KEY_V1 = "hexwheel-invert-v1";
+  const INVERT_STORAGE_KEY = "hexwheel-invert-v4";
+  // v4 starts every device at the finger-following default on both axes; the
+  // earlier keys are dropped, not migrated (see sphere/sphere.js).
+  const INVERT_LEGACY_KEYS = ["hexwheel-invert-v3", "hexwheel-invert-v2", "hexwheel-invert-v1"];
   const WELCOME_KEY = "hexwheel-tutorial-v1";
   const RUN_STORAGE_KEY = "hexwheel-run-v3";
   const RUN_STORAGE_KEY_LEGACY = "hexwheel-run-v2";
@@ -3957,30 +3957,14 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       return opts.difficulty || "easy";
     }
 
-    /**
-     * Carry an older invert pref onto the current key, flipping X when that
-     * version's default was the mirrored one.
-     */
-    function adoptInvert(data, flipX, oldKey) {
-      const migrated = { x: flipX ? !data.x : !!data.x, y: !!data.y };
-      try {
-        localStorage.setItem(INVERT_STORAGE_KEY, JSON.stringify(migrated));
-        localStorage.removeItem(oldKey);
-      } catch (_) {}
-      return migrated;
-    }
-
     function readStoredInvert() {
       try {
+        for (const key of INVERT_LEGACY_KEYS) localStorage.removeItem(key);
         const raw = localStorage.getItem(INVERT_STORAGE_KEY);
         if (raw) {
           const data = JSON.parse(raw);
           return { x: !!data.x, y: !!data.y };
         }
-        const v2 = localStorage.getItem(INVERT_STORAGE_KEY_V2);
-        if (v2) return adoptInvert(JSON.parse(v2), true, INVERT_STORAGE_KEY_V2);
-        const v1 = localStorage.getItem(INVERT_STORAGE_KEY_V1);
-        if (v1) return adoptInvert(JSON.parse(v1), false, INVERT_STORAGE_KEY_V1);
         return { x: false, y: false };
       } catch (_) {
         return { x: false, y: false };
@@ -5963,9 +5947,20 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       persistNow();
     }
 
+    /**
+     * The fuse expires. Above the water that is the end of the run; under it
+     * the sea takes the blast instead of the player, and the shock has to go
+     * somewhere — it goes into the six faces the mine was touching. A drowned
+     * detonation chords.
+     */
     function detonateArmedMine(effectEvent) {
       const idx = state.armedMineIdx;
       if (idx < 0 || state.isGameOver) return;
+      if (effectEvent && effectEvent.underwater) {
+        // drownedBlast emits its own detonation, so do not double-fire here.
+        drownedBlast(idx, effectEvent);
+        return;
+      }
       if (wheelFx && effectEvent) wheelFx.emit("detonate", effectEvent);
       bobImpulse(state.scale * 2.4, (Math.random() - 0.5) * state.scale * 0.8); // slam
       clearArmedMine();
@@ -5976,6 +5971,76 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
         wheelAlert.hidden = true;
       }
       gameOver(false);
+    }
+
+    /**
+     * A mine going off underwater — the Wheel's one good outcome, reached
+     * either by holding the armed face under (drownArmedMine) or by letting
+     * its fuse run out down there. The water takes the blast instead of the
+     * player, and the shock sets off every satisfied number the mine was
+     * touching: the drowning does not clear a ring of its own, it *chords*.
+     *
+     * The order is the mechanic. The mine resolves first, into the doused
+     * state the old silent quench used to leave behind; because a doused mine
+     * counts as accounted, numbers that were one short a moment ago are
+     * satisfied the instant the sea takes it, and those are exactly the ones
+     * that fire. It counts as a rescue too, so the next fuse is shorter.
+     *
+     * It is not a free pass, and that is the point of letting it happen. The
+     * chords trust the flags, not the board: an unflagged face that turns out
+     * to be a mine is uncovered and armed on the spot, with its fuse starting
+     * wherever the sphere is pointing. Only one may light across the whole
+     * blast, as everywhere else on the Wheel.
+     */
+    function drownedBlast(idx, effectEvent) {
+      const mine = state.cells[idx];
+      if (!mine) return;
+      const now = performance.now();
+      if (wheelFx && effectEvent) {
+        wheelFx.emit("detonate", { ...effectEvent, underwater: true });
+      }
+      clearArmedMine();
+      // Muffled — a shove through the hull, not the surface slam a dry
+      // detonation gives.
+      bobImpulse(state.scale * 1.5, (Math.random() - 0.5) * state.scale * 0.5);
+      // Resolve the mine before reading the neighbours: their counts only add
+      // up once it is doused, and that is what arms the chords below.
+      mine.doused = true;
+      mine.flagged = false;
+      mine.revealed = true;
+      mine.animReveal = 1;
+      mine._wetMs = 0;
+      mine._dousedAt = now;
+      state.rescueCount += 1;
+
+      // Satisfaction is re-read per neighbour rather than snapshotted, so a
+      // number whose targets an earlier chord already took simply does not
+      // fire — no face opens twice and no count goes stale mid-blast.
+      const opened = new Set();
+      let armed = -1;
+      for (const n of state.tiles[idx].neighborIndices) {
+        const targets = chordTargets(n);
+        if (!targets) continue;
+        const found = chordClear(targets, opened);
+        if (armed < 0) armed = found;
+      }
+
+      updateUI();
+      if (armed >= 0) {
+        // lightChordMine → armMine owns the alert, the frame and the save.
+        lightChordMine(armed);
+        return;
+      }
+      setWheelAlert(
+        opened.size
+          ? `BLOWN UNDER · ${opened.size} FACE${opened.size === 1 ? "" : "S"} CLEARED`
+          : "BLOWN UNDER · NOTHING TO SET OFF",
+        "safe",
+        1700
+      );
+      checkWin();
+      persistNow();
+      scheduleFrame();
     }
 
     function reveal(idx) {
@@ -6007,26 +6072,18 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
     }
 
     /**
-     * Chord a satisfied number: clear the neighbours that are left once
-     * everything around the face is accounted for.
+     * The satisfaction half of a chord: the covered faces a chord on `idx`
+     * would open, or null when the face is not a chordable number or its
+     * count is not yet accounted for.
      *
-     * Two things differ from the flat game. Drowned mines count alongside
-     * flags — they cannot be flagged, so without that a number touching one
-     * could never be chorded at all. And digging a mine here arms it rather
-     * than ending the run, exactly as a direct dig does: the chord lights the
-     * fuse and you still get to drown it. Only one mine can be armed, so the
-     * first one found is the one that lights and the rest stay covered.
+     * Drowned mines count alongside flags — they cannot be flagged, so
+     * without that a number touching one could never be chorded at all.
      */
-    function chordAt(idx) {
+    function chordTargets(idx) {
       const cell = state.cells[idx];
-      if (
-        !cell ||
-        !cell.revealed ||
-        cell.isMine ||
-        state.isGameOver ||
-        state.armedMineIdx >= 0
-      ) return false;
-      if (!cell.neighborMines) return false;
+      if (!cell || !cell.revealed || cell.isMine || !cell.neighborMines) {
+        return null;
+      }
       let accounted = 0;
       const targets = [];
       for (const n of state.tiles[idx].neighborIndices) {
@@ -6035,27 +6092,66 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
         if (c.flagged || (c.doused && c.isMine)) accounted++;
         else if (!c.revealed) targets.push(n);
       }
-      if (accounted !== cell.neighborMines || !targets.length) return false;
+      if (accounted !== cell.neighborMines || !targets.length) return null;
+      return targets;
+    }
 
-      captureUndo();
-      let armed = -1;
+    /**
+     * The clearing half: open every safe target, cascade the zeros, and hand
+     * back the first mine uncovered *without* arming it. The caller decides,
+     * because a drowned blast fires several chords at once and only one mine
+     * may light across all of them. Targets already opened by an earlier
+     * chord in the same blast are skipped rather than re-animated.
+     */
+    function chordClear(targets, opened) {
+      let mine = -1;
       for (const n of targets) {
         const c = state.cells[n];
+        if (!c) continue;
         if (c.isMine) {
-          if (armed < 0) armed = n;
+          if (mine < 0) mine = n;
           continue;
         }
+        if (c.revealed) continue;
         c.revealed = true;
-        // Distance 1: the ring lands together, one step behind the face tapped.
+        // Distance 1: the ring lands together, one step behind the trigger.
         scheduleRevealVisual(n, 1);
-        if (c.neighborMines === 0) floodFrom(n);
+        if (opened) opened.add(n);
+        if (c.neighborMines === 0) {
+          const flooded = floodFrom(n);
+          if (opened) for (const f of flooded) opened.add(f);
+        }
       }
+      return mine;
+    }
+
+    /** Uncover a mine a chord walked into and light its fuse. */
+    function lightChordMine(idx) {
+      const mine = state.cells[idx];
+      mine.revealed = true;
+      scheduleRevealVisual(idx, 1);
+      mine.animReveal = 1;
+      armMine(idx);
+    }
+
+    /**
+     * Chord a satisfied number: clear the neighbours that are left once
+     * everything around the face is accounted for.
+     *
+     * Digging a mine here arms it rather than ending the run, exactly as a
+     * direct dig does: the chord lights the fuse and you still get to drown
+     * it. Only one mine can be armed, so the first one found is the one that
+     * lights and the rest stay covered.
+     */
+    function chordAt(idx) {
+      if (state.isGameOver || state.armedMineIdx >= 0) return false;
+      const targets = chordTargets(idx);
+      if (!targets) return false;
+
+      captureUndo();
+      const armed = chordClear(targets);
       if (armed >= 0) {
-        const mine = state.cells[armed];
-        mine.revealed = true;
-        scheduleRevealVisual(armed, 1);
-        mine.animReveal = 1;
-        armMine(armed);
+        lightChordMine(armed);
         return true;
       }
       checkWin();
@@ -7550,7 +7646,12 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
     // —— Water wheel ——————————————————————————————————————————————————
     //
     // The sphere is the wheel and the fixed waterline is its trough:
-    //   · click a mine → a fuse starts; drown the armed face to quench it
+    //   · click a mine → a fuse starts
+    //   · hold the armed face under, or let its fuse expire down there → the
+    //     sea does not defuse it, it contains it: the mine detonates
+    //     underwater, is spent, and sets off a chord on every satisfied
+    //     number it was touching
+    //   · let the fuse expire above the waterline → that one still kills
     //   · submerge any ordinary flag → the chalk mark washes off
     // Flags never reveal whether they were right. Every rescue shortens the
     // next fuse and makes the sea retreat, so water is mercy rather than an
@@ -7558,7 +7659,8 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
     const WHEEL = {
       FUSE_MS: [3000, 2200, 1600],
       ASSIST_FUSE_MS: 5000,
-      QUENCH_DWELL_MS: 220,
+      // How long the armed mine must stay under before the sea sets it off.
+      DROWN_DWELL_MS: 220,
       WASH_DWELL_MS: 700,
       lastTs: 0,
     };
@@ -7679,28 +7781,23 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       ctx.restore();
     }
 
-    function quenchArmedMine(cell, now, proj, surf) {
-      if (wheelFx && proj) {
-        wheelFx.emit("quench", {
-          x: proj.center.x,
-          y: proj.center.y,
-          surfaceY: surfaceYAt(proj.center.x, surf, now),
-          r: wheelFaceRadius(proj),
-        });
-      }
-      cell.doused = true;
-      cell.flagged = false;
-      cell.revealed = true;
-      bobImpulse(-state.scale * 0.9, 0); // the wheel hops when a mine dies
-      cell.animReveal = 1;
-      cell._wetMs = 0;
-      cell._dousedAt = now;
-      state.rescueCount += 1;
-      clearArmedMine();
-      setWheelAlert("MINE QUENCHED · THE SEA RETREATS", "safe", 1700);
-      updateUI();
-      checkWin();
-      persistNow();
+    /**
+     * The armed mine has been held under long enough. The sea does not defuse
+     * it — it *contains* it: the mine goes off down there, and an underwater
+     * detonation on the Wheel is a chord.
+     *
+     * Luke, 2026-08-21: drowning IS the explosion. There is no separate silent
+     * quench any more, so this and a fuse that simply runs out below the
+     * waterline are the same event and share drownedBlast().
+     */
+    function drownArmedMine(cell, now, proj, surf) {
+      drownedBlast(proj.index, {
+        x: proj.center.x,
+        y: proj.center.y,
+        surfaceY: surfaceYAt(proj.center.x, surf, now),
+        r: wheelFaceRadius(proj),
+        underwater: true,
+      });
     }
 
     function stepWaterWheel(projected, now, surf) {
@@ -7798,12 +7895,12 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
             if (cell._wetMs > 0) {
               drawDwellRing(
                 proj,
-                Math.min(1, cell._wetMs / WHEEL.QUENCH_DWELL_MS)
+                Math.min(1, cell._wetMs / WHEEL.DROWN_DWELL_MS)
               );
             }
           }
-          if (cell._wetMs >= WHEEL.QUENCH_DWELL_MS) {
-            quenchArmedMine(cell, now, proj, surf);
+          if (cell._wetMs >= WHEEL.DROWN_DWELL_MS) {
+            drownArmedMine(cell, now, proj, surf);
             return;
           }
           continue;

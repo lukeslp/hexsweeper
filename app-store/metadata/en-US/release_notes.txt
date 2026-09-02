@@ -1,1 +1,1 @@
-First release: hexagonal minesweeper on a 3D sphere. Nine looks (Light, Dark, and seven mirrored materials), undo, autosave, five board sizes. Fully offline — no account, no ads.
+Drag follows your finger on both axes by default (Invert stays in Settings for the camera-style feel). Ion Storm, Gilded Ribbon, and Heat Lightning clear to seamless cobalt, gold, and copper interiors; Stratosphere's cliff walls are now white to match its porcelain wells. New icon.
