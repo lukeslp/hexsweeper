@@ -264,6 +264,12 @@ Done (updated 2026-08-11, through the App Store Connect API):
       hexsweeper `d9a75aa`). Android test 20 (versionName 1.0.1-test) ships the
       same payload and is live at dr.eamer.dev/downloads/apps/hexsweeper/.
       Screenshots unchanged.
+- [x] Build 65 (1.0.1) uploaded 2026-09-01 and attached to 1.0.1 in place of
+      64: same payload, new icon — a tight surface crop of the Gilded Ribbon
+      board (`scripts/generate-icon.py --source` plus a full-bleed 1024 for the
+      iOS slots). Android versionCode 21 (not published; test 20 stays on the
+      download page). App Previews rendered with `scripts/store-preview.mjs`
+      (24 s, 886x1920 and 1200x1600, H.264 30 fps) from the sealed payload.
 - [x] **1.0 submitted for App Store review on 2026-08-19** with build 63
       attached. ASC reports `WAITING_FOR_REVIEW`, release type
       `AFTER_APPROVAL`. What is live on dr.eamer.dev and what is in the
