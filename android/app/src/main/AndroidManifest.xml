@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The sphere is drag- and tap-driven with no D-pad model. Without this,
+         the implied faketouch default lets leanback devices install it: a
+         signed build installed cleanly on a Fire TV (AFTTI43, Fire OS 7).
+
+         Lint's UnnecessaryRequiredFeature warns that this narrows device
+         reach. That is the intent — narrowing it away from televisions is
+         the whole point, so the check is suppressed deliberately. -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="true"
+        tools:ignore="UnnecessaryRequiredFeature" />
 
     <application
         android:allowBackup="true"

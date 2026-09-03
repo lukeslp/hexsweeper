@@ -91,10 +91,37 @@ Record model + Fire OS version, then verify:
 Capture 3–5 listing screenshots at an Amazon-accepted size from this exact
 signed build.
 
-### Current device evidence
+### Current device evidence — 2026-09-03
 
-None. No Fire tablet has been attached yet. Do not submit until this section
-records a real model, Fire OS version, and pass/fail per step above.
+- **KFRASWI** (`raspite`), Fire OS 8.0 / Android 11 (API 30), 800×1280 native,
+  213 dpi, arm64-v8a. Real multitouch (`touchscreen.multitouch.jazzhand`).
+- Signed `1.0.1 (26)` installed over USB ADB and launched; `MainActivity` took
+  and held focus. No FATAL, no ANR, no AndroidRuntime errors in logcat.
+- Tutorial card renders and dismisses via **Play**.
+- Tap cleared a region with correct flood-fill and 1/2/3 neighbour counts;
+  the timer started on that first clear; drag spun the sphere; Undo enabled
+  itself after the first move.
+- The **?** sheet opens and all four tabs (Play · Themes · Board · Settings)
+  are reachable. All nine themes are listed; switching to Aurora applied
+  immediately and survived Done.
+- **Rotation passes.** Forced to portrait (`accelerometer_rotation 0`,
+  `user_rotation 0`) the window resized 1280×800 → 800×1280, the board state
+  and the running timer both survived, and the bottom bar and **?** stayed
+  reachable. Note: an earlier portrait attempt appeared to fail only because
+  `accelerometer_rotation` had been re-enabled and the sensor was holding
+  landscape — the app itself never locks orientation (`mOrientation=-1`).
+- Listing screenshots captured from this exact signed build at native
+  1280×800 and 800×1280, both Amazon-accepted sizes.
+
+Open: a long-run soak (30+ min), sleep/wake, and a frame-rate measurement on
+the largest board size. Amazon wants 25 fps minimum, 55–60 preferred.
+
+### Note on portrait layout
+
+In portrait the sphere occupies roughly the middle half of the screen with
+large empty bands above and below. The app window still fills the display, so
+Amazon's 80%-of-screen criterion is met, but the composition is loose. Worth a
+look before leaning on portrait screenshots in the listing.
 
 ## Listing pack state
 
@@ -106,13 +133,26 @@ records a real model, Fire OS version, and pass/fail per step above.
 | App icon | `images/icon-512.png` | ready, 512×512 |
 | Promotional image | `images/feature-1024x500.png` | ready, 1024×500 |
 | Copy | `en-US/*.txt` | ready, all within limits |
-| Screenshots | — | **pending device capture** |
+| Screenshots | `screenshots/*.png` | ready — 4 native Fire tablet captures |
 
 `en-US/feature_bullets.txt` currently lists **six** bullets; Amazon asks for
 three to five. Drop one before submitting.
 
 The frames in `app-store/screenshots/en-US/` are iPhone and iPad sizes and match
-no Amazon-accepted dimension. They cannot be reused.
+no Amazon-accepted dimension; they are not reused. The four in
+`app-store/amazon/screenshots/` were captured from the signed 1.0.1 (26) build
+on the KFRASWI tablet:
+
+| File | Size | Shows |
+|---|---|---|
+| `01_sphere-light-1280x800.png` | 1280×800 | fresh sphere, Light theme |
+| `02_cleared-light-1280x800.png` | 1280×800 | flood-fill clear with neighbour counts |
+| `03_aurora-1280x800.png` | 1280×800 | Aurora theme, mid-game |
+| `04_portrait-800x1280.png` | 800×1280 | portrait reflow |
+
+Amazon takes landscape or portrait, but mixing both in one listing reads
+inconsistently. The three landscape frames already meet the 3-shot minimum;
+treat the portrait one as optional.
 
 ## Console sequence (human only)
 
