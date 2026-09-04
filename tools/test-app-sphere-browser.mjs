@@ -339,6 +339,10 @@ try {
   // renderer repaint so both paths stay covered by the native-payload gate.
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "light")); window.HEXSWEEPER_SPHERE_GAME.setSize("xlarge"); void 0;');
   await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().cells.length === 2252', "XL sphere did not build");
+  const xlAmbientBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
+  await delay(180);
+  const xlAmbientAfter = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
+  assert.ok(Math.abs(xlAmbientAfter - xlAmbientBefore) > 0.001, "XL ambient spin did not advance");
   const xlRotBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
   await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x - 80, y: centre.y, button: "left", clickCount: 1 });
   for (let i = 1; i <= 8; i++) {

@@ -5521,7 +5521,8 @@
       const fastInteraction =
         IS_ANDROID_DEVICE &&
         state.cells.length >= 642 &&
-        (state.dragging ||
+        ((state.ambientSpin && !state.reduceMotion) ||
+          state.dragging ||
           Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
           Math.abs(state.targetRotX - state.rotX) > 0.0008);
       const projected = getProjected(fastInteraction);
