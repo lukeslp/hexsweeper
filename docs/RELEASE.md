@@ -339,14 +339,14 @@ Assets staged under `app-store/amazon/`:
   "Hexsweeper" is expected to be available on Amazon; the "3D" suffix was
   an Apple name-collision workaround only.
 
-Submission checklist:
+Amazon accepted the signed and verified `1.0.4 (29)` release for review at
+08:54 AM PDT on 2026-09-04. The console reports **UNDER REVIEW** and estimates
+approval before 09:00 AM PDT on 2026-09-09. The submitted targeting is 12 Fire
+tablet models, all Amazon Appstore countries and regions, free pricing, and no
+Fire TV or Automotive devices.
 
-- Upload the signed and verified
-  `android/dist/release/Hexsweeper-1.0.4-29-release.apk`. Do not submit the
-  debug-signed direct-download APK. Build and certificate details are in
-  `android/AMAZON-RELEASE.md`.
-- Complete the IARC content-rating questionnaire (no known blockers).
-- Data collection: none (same answers as the iOS privacy manifest).
-- The physical Fire-tablet functional, direct/ambient XL performance, soak,
-  and final foreground stress gates pass; evidence is in
-  `android/AMAZON-RELEASE.md`.
+The submission includes the completed content rating, no-data-collection
+answers, reviewer instructions, export-compliance certification, English copy,
+three consistent landscape screenshots, both icons, and the promotional image.
+The physical Fire-tablet functional, direct/ambient XL performance, soak, and
+final foreground stress evidence remains in `android/AMAZON-RELEASE.md`.

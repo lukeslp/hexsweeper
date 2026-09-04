@@ -103,7 +103,9 @@ release identity managed by the Android release toolkit; its staged artifact
 and device evidence are documented in
 [`android/AMAZON-RELEASE.md`](android/AMAZON-RELEASE.md). Signed `1.0.4 (29)`
 uses the Fire-tuned path for both direct and ambient XL rotation. See
-[`docs/RELEASE.md`](docs/RELEASE.md).
+[`docs/RELEASE.md`](docs/RELEASE.md). Amazon accepted that release for review
+at 08:54 AM PDT on September 4, 2026; the console estimates approval before
+09:00 AM PDT on September 9.
 
 ## Not in this build
 

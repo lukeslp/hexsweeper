@@ -21,9 +21,26 @@ Google Play Services is **not** linked. The `com.google.gms.google-services`
 plugin only applies when `app/google-services.json` exists, and it does not, so
 the APK carries no Play dependency — which is what makes it safe on Fire OS.
 
-Track state: **ready for Amazon submission**. Package signing, device
-targeting, copy, icons, screenshots, functional checks, direct XL rotation,
-ambient XL rotation, and the final stress/soak gates pass on KFRASWI.
+Track state: **submitted to Amazon; under review**. Amazon accepted the
+submission at 08:54 AM PDT on 2026-09-04 and estimates approval before
+09:00 AM PDT on 2026-09-09. Package signing, device targeting, copy, icons,
+screenshots, functional checks, direct XL rotation, ambient XL rotation, and
+the final stress/soak gates pass on KFRASWI.
+
+## Amazon console
+
+| | |
+|---|---|
+| App ID | `amzn1.devportal.mobileapp.4903bf85d6ce408d88c447445269c591` |
+| Release ID | `amzn1.devportal.apprelease.38019068174844b79d7da61fc00e1268` |
+| SKU | `hexsweeper-fire` |
+| Category | Games > Brain & Puzzle |
+| Refinements | Indie, Casual |
+| Language | English |
+| Devices | 12 Fire tablet models; no Fire TV or Automotive targets |
+| Availability / price | All Amazon Appstore countries and regions / Free |
+| State | Under Review — submitted 08:54 AM PDT on 2026-09-04 |
+| Estimated approval | Before 09:00 AM PDT on 2026-09-09 |
 
 ## The signing key changed — read this before shipping
 
@@ -199,15 +216,12 @@ inconsistently. Use `01`, `03`, and `05` for the strongest consistent landscape
 set. The old cleared-Light frame (`02`) is accurate but visually busy at the
 sphere rim; treat it and the portrait frame as optional.
 
-## Console sequence (human only)
+## Amazon submission receipt
 
-1. Amazon Developer Console → create app **Hexsweeper**
-2. Upload `Hexsweeper-1.0.4-29-release.apk`; confirm the **Fire tablet** device
-   family and review the auto-generated supported-device list
-3. Paste the copy from `app-store/amazon/en-US/`
-4. Upload icons, feature graphic, and screenshots
-5. Paste `reviewer_instructions.txt`, then complete content rating, audience,
-   and the privacy URL
-6. Submit only after the device gate above is filled in
-
-This repo never logs into Amazon for you.
+Amazon accepted the complete submission at 08:54 AM PDT on 2026-09-04. The
+console reports **UNDER REVIEW** with estimated approval before 09:00 AM PDT
+on 2026-09-09. The submitted release contains the verified
+`Hexsweeper-1.0.4-29-release.apk`, the English listing, three landscape Fire
+tablet screenshots (`01`, `03`, and `05`), both icons, the promotional image,
+the completed content rating and privacy answers, reviewer instructions, and
+the accepted export-compliance certification.
