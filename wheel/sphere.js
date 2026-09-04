@@ -575,10 +575,10 @@
   const SIZE_STORAGE_KEY = "hexwheel-size-v2";
   const NEST_STORAGE_KEY = "hexwheel-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexwheel-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexwheel-invert-v4";
-  // v4 starts every device at the finger-following default on both axes; the
-  // earlier keys are dropped, not migrated (see sphere/sphere.js).
-  const INVERT_LEGACY_KEYS = ["hexwheel-invert-v3", "hexwheel-invert-v2", "hexwheel-invert-v1"];
+  const INVERT_STORAGE_KEY = "hexwheel-invert-v5";
+  // v5 mirrors horizontal drag by default so Wheel and Sphere keep the same
+  // object-turning feel; earlier keys are dropped (see sphere/sphere.js).
+  const INVERT_LEGACY_KEYS = ["hexwheel-invert-v4", "hexwheel-invert-v3", "hexwheel-invert-v2", "hexwheel-invert-v1"];
   const WELCOME_KEY = "hexwheel-tutorial-v1";
   const RUN_STORAGE_KEY = "hexwheel-run-v3";
   const RUN_STORAGE_KEY_LEGACY = "hexwheel-run-v2";
@@ -703,9 +703,9 @@
           const data = JSON.parse(raw);
           return { x: !!data.x, y: !!data.y };
         }
-        return { x: false, y: false };
+        return { x: true, y: false };
       } catch (_) {
-        return { x: false, y: false };
+        return { x: true, y: false };
       }
     }
 

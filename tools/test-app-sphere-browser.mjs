@@ -148,7 +148,11 @@ try {
 
   // Root is Sphere; nothing stands between the launch screen and the board.
   await waitExpression('location.pathname.endsWith("/index.html") && document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere did not load");
-  await evaluate("localStorage.clear(); sessionStorage.clear();");
+  await evaluate(`
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem("hexsweeper-sphere-invert-v4", JSON.stringify({ x: false, y: false }));
+  `);
   await send("Emulation.setTouchEmulationEnabled", { enabled: true });
   await send("Page.reload", { ignoreCache: true });
   await waitExpression('document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere did not reload");
@@ -159,6 +163,16 @@ try {
   await evaluate('document.getElementById("tutorial-play-btn").click()');
   await waitExpression('document.getElementById("tutorial-overlay").hidden', "tutorial did not dismiss");
   assert.equal(await evaluate('localStorage.getItem("hexsweeper-sphere-welcome-v1")'), "1", "tutorial did not mark the welcome key");
+  assert.deepEqual(
+    await evaluate('window.HEXSWEEPER_SPHERE_GAME.getInvertDrag()'),
+    { x: true, y: false },
+    "v4 drag preference did not reset to the mirrored-X v5 default",
+  );
+  assert.equal(
+    await evaluate('localStorage.getItem("hexsweeper-sphere-invert-v4")'),
+    null,
+    "legacy v4 drag preference was not removed",
+  );
 
   const cold = await evaluate(`(() => ({
     dialog: !!document.querySelector("dialog[open]"),

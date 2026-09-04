@@ -2827,13 +2827,13 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v4";
-  // v4 starts every device at the finger-following default on both axes.
-  // The earlier keys were set while the X default flipped back and forth, so
-  // a stored flag no longer says what the player wanted; they are dropped,
-  // not migrated. Invert stays available in Settings for anyone who prefers
-  // the camera-style feel.
+  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v5";
+  // v5 makes horizontal drag turn the sphere like an object: drag right and
+  // the face moves left. The earlier keys were set while the X default flipped
+  // back and forth, so a stored flag no longer says what the player wanted;
+  // they are dropped, not migrated. Invert stays available in Settings.
   const INVERT_LEGACY_KEYS = [
+    "hexsweeper-sphere-invert-v4",
     "hexsweeper-sphere-invert-v3",
     "hexsweeper-sphere-invert-v2",
     "hexsweeper-sphere-invert-v1",
@@ -3135,9 +3135,9 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
           const data = JSON.parse(raw);
           return { x: !!data.x, y: !!data.y };
         }
-        return { x: false, y: false };
+        return { x: true, y: false };
       } catch (_) {
-        return { x: false, y: false };
+        return { x: true, y: false };
       }
     }
 
