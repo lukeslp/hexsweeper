@@ -16,6 +16,18 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Current status (2026-09-04)
+
+- [x] Reworked dense Android drag frames after the physical Fire-tablet XL
+  gate exposed an 11–13 fps path: front-hemisphere projection now skips
+  retained lift/pick geometry, Light/Dark faces paint in compound style
+  batches, and full-detail rendering returns when motion settles.
+- [x] The native-payload browser contract now runs with a Fire-like Android
+  user agent and explicitly drags the full 2,252-face XL sphere before checking
+  the settled frame.
+- [ ] Re-vendor, sign, and measure the updated payload on KFRASWI; Amazon's
+  25 fps physical-device floor remains the release gate.
+
 ## Current status (2026-08-18)
 
 - [x] **Rolled back the interiors pass** (`7938944`): Mercury's liquid-metal wells and the other six mirror cores are the build-50 reference again; hollow shells and lat/lon interiors are gone. Themes still own count/relief/seams (mirror materials depth + no seams; Light/Dark depth + seams).

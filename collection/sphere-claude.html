@@ -4106,6 +4106,38 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       };
     }
 
+    /**
+     * Dense-board interaction projection. Drag frames never use radial tiers,
+     * labels, picking, or the retained 3D boundary, so avoid allocating and
+     * re-projecting data that those frames immediately discard.
+     */
+    function projectTileFast(tile, rotY, rotX, knownCenterR) {
+      const centerR = knownCenterR || rotatePoint(tile.centerPoint, rotY, rotX);
+      const len = Math.hypot(centerR.x, centerR.y, centerR.z) || 1;
+      const normal = {
+        x: centerR.x / len,
+        y: centerR.y / len,
+        z: centerR.z / len,
+      };
+      const center = projectRotated(centerR);
+      const boundary = new Array(tile.boundary.length);
+      let zSum = center.z;
+      for (let i = 0; i < tile.boundary.length; i++) {
+        const point = projectRotated(rotatePoint(tile.boundary[i], rotY, rotX));
+        boundary[i] = point;
+        zSum += point.z;
+      }
+      return {
+        center,
+        boundary,
+        z: zSum / (boundary.length + 1),
+        normalZ: normal.z,
+        normal,
+        index: tile.index,
+        area: 0,
+      };
+    }
+
     /** Re-project an already rotated face at a radial height. */
     function liftProjected(proj, lift) {
       if (!proj || !proj.rotatedCenter || !proj.rotatedBoundary) return proj;
@@ -4148,8 +4180,9 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     }
 
     /** Project the visible hemisphere once per frame for pick + draw. */
-    function getProjected() {
-      const key = rotKey();
+    function getProjected(fast) {
+      const fastMode = !!fast;
+      const key = `${rotKey()}|${fastMode ? "fast" : "full"}`;
       if (state.projectedCache && state.rotCacheKey === key) {
         return state.projectedCache;
       }
@@ -4159,9 +4192,11 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
         // The averaged polygon depth closely follows its centre. This margin
         // is deliberately wider than the -0.05 paint boundary, so no limb
         // face can disappear while avoiding boundary work for the far half.
-        if (centerR.z <= -0.12) continue;
-        const projected = projectTile(tile, state.rotY, state.rotX, 0, centerR);
-        if (projected.z > -0.05) front.push(projected);
+        if (centerR.z <= (fastMode ? -0.01 : -0.12)) continue;
+        const projected = fastMode
+          ? projectTileFast(tile, state.rotY, state.rotX, centerR)
+          : projectTile(tile, state.rotY, state.rotX, 0, centerR);
+        if (projected.z > (fastMode ? 0 : -0.05)) front.push(projected);
       }
       front.sort((a, b) => a.z - b.z);
       state.projectedCache = front;
@@ -5923,6 +5958,16 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       return true;
     }
 
+    /** Append a projected face to the current canvas path without painting it. */
+    function appendHexPath(proj) {
+      const pts = proj.boundary;
+      if (!pts || pts.length < 3) return false;
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      return true;
+    }
+
     function drawHex(proj, fill, stroke, lineWidth) {
       if (!drawHexPath(proj)) return;
       ctx.fillStyle = fill;
@@ -5931,6 +5976,45 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       ctx.strokeStyle = stroke;
       ctx.lineWidth = lineWidth != null ? lineWidth : 1.4;
       ctx.stroke();
+    }
+
+    /**
+     * Light/Dark dense-board drag frames have only a handful of flat styles.
+     * Paint one compound path per style instead of issuing a fill and stroke
+     * for every visible face. The complete renderer returns as soon as motion
+     * settles, so counts, tiers, and effects remain unchanged at rest.
+     */
+    function drawFastMono(projected, now, styleId) {
+      const batches = new Map();
+      for (const proj of projected) {
+        const idx = proj.index;
+        const cell = state.cells[idx];
+        const tile = state.tiles[idx];
+        let colors = tileColors(idx, proj, cell, tile, now);
+        colors = drawColorsForStyle(colors, styleId, cell);
+        if (typeof colors.fill !== "string" || typeof colors.stroke !== "string") {
+          return false;
+        }
+        const width = colors.lineWidth != null ? colors.lineWidth : 1.4;
+        const key = `${colors.fill}\u0000${colors.stroke}\u0000${width}`;
+        let batch = batches.get(key);
+        if (!batch) {
+          batch = { fill: colors.fill, stroke: colors.stroke, width, faces: [] };
+          batches.set(key, batch);
+        }
+        batch.faces.push(proj);
+      }
+      for (const batch of batches.values()) {
+        ctx.beginPath();
+        for (const proj of batch.faces) appendHexPath(proj);
+        ctx.fillStyle = batch.fill;
+        ctx.fill();
+        if (batch.width <= 0) continue;
+        ctx.strokeStyle = batch.stroke;
+        ctx.lineWidth = batch.width;
+        ctx.stroke();
+      }
+      return true;
     }
 
     function sampleGlobePointRgb(point) {
@@ -7443,7 +7527,6 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       }
       normalizeIdleRotation();
 
-      const projected = getProjected();
       const now = performance.now();
       const highlightIdx =
         !state.isGameOver &&
@@ -7457,18 +7540,21 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
         (state.dragging ||
           Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
           Math.abs(state.targetRotX - state.rotX) > 0.0008);
+      const projected = getProjected(fastInteraction);
 
       // Per-tile permanent heights (hover is a temporary fifth offset).
-      const heights = new Float32Array(state.cells.length);
-      for (let i = 0; i < state.cells.length; i++) {
-        const c = state.cells[i];
-        const ready =
-          state.reduceMotion ||
-          now >= c.visualDue ||
-          c.animReveal >= 0.98;
-        // While the reveal anim is pending, keep shell height so flood doesn't pop.
-        if (c.revealed && !ready) heights[i] = TIER_COVERED;
-        else heights[i] = tileHeight(c, styleId);
+      const heights = fastInteraction ? null : new Float32Array(state.cells.length);
+      if (!fastInteraction) {
+        for (let i = 0; i < state.cells.length; i++) {
+          const c = state.cells[i];
+          const ready =
+            state.reduceMotion ||
+            now >= c.visualDue ||
+            c.animReveal >= 0.98;
+          // While the reveal anim is pending, keep shell height so flood doesn't pop.
+          if (c.revealed && !ready) heights[i] = TIER_COVERED;
+          else heights[i] = tileHeight(c, styleId);
+        }
       }
 
       function drawTile(proj) {
@@ -7564,28 +7650,39 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       const effectId = interiorEffect();
       const effectHoles = [];
       const effectMarks = [];
-      for (const proj of projected) {
-        const idx = proj.index;
-        const cell = state.cells[idx];
-        // Hover/press on activatable covered faces draw in the raised pass.
-        // Reflection themes have no raised pass (it tore the mirror), so the
-        // pressed face must stay in this pass or it vanishes for the whole
-        // hold — the long-press flag then only showed on release.
-        const hoverRaise =
-          highlightIdx >= 0 &&
-          idx === highlightIdx &&
-          !(state.theme && state.theme.reflectionSurface) &&
-          tileCanActivate(cell);
-        if (proj.z > 0.02 && hoverRaise) {
-          continue;
+      const batchedFastMono =
+        fastInteraction &&
+        !state.theme.reflectionSurface &&
+        !state.theme.globeMap &&
+        state.theme.pureCovered &&
+        state.theme.pureRevealed &&
+        drawFastMono(projected, now, styleId);
+      if (!batchedFastMono) {
+        for (const proj of projected) {
+          const idx = proj.index;
+          const cell = state.cells[idx];
+          // Hover/press on activatable covered faces draw in the raised pass.
+          // Reflection themes have no raised pass (it tore the mirror), so the
+          // pressed face must stay in this pass or it vanishes for the whole
+          // hold — the long-press flag then only showed on release.
+          const hoverRaise =
+            highlightIdx >= 0 &&
+            idx === highlightIdx &&
+            !(state.theme && state.theme.reflectionSurface) &&
+            tileCanActivate(cell);
+          if (proj.z > 0.02 && hoverRaise) {
+            continue;
+          }
+          if (!fastInteraction && proj.z > 0.02 && heights[idx] > 1e-6) {
+            proudFlags.push(proj);
+            continue;
+          }
+          drawTile(proj);
         }
-        if (!fastInteraction && proj.z > 0.02 && heights[idx] > 1e-6) {
-          proudFlags.push(proj);
-          continue;
-        }
-        drawTile(proj);
       }
-      for (const proj of proudFlags) drawTile(proj);
+      if (!batchedFastMono) {
+        for (const proj of proudFlags) drawTile(proj);
+      }
       if (effectHoles.length) {
         drawInteriorEffect(now, effectHoles);
         for (const m of effectMarks) paintCountMark(m[0], m[1], m[2], m[3], m[4]);

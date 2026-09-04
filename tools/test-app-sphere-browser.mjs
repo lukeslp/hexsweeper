@@ -95,6 +95,7 @@ try {
     "--no-first-run",
     "--no-default-browser-check",
     "--remote-debugging-port=0",
+    "--user-agent=Mozilla/5.0 (Linux; Android 11; KFRASWI) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0 Mobile Safari/537.36",
     `--user-data-dir=${profile}`,
     `http://127.0.0.1:${port}/index.html`,
   ], { stdio: "ignore" });
@@ -333,6 +334,26 @@ try {
   await evaluate('document.getElementById("qc-reset").click()');
   await delay(250);
 
+  // The signed Fire build takes the Android dense-board renderer during
+  // interaction. Exercise the full XL geometry, then let the complete resting
+  // renderer repaint so both paths stay covered by the native-payload gate.
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "light")); window.HEXSWEEPER_SPHERE_GAME.setSize("xlarge"); void 0;');
+  await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().cells.length === 2252', "XL sphere did not build");
+  const xlRotBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x - 80, y: centre.y, button: "left", clickCount: 1 });
+  for (let i = 1; i <= 8; i++) {
+    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: centre.x - 80 + i * 20, y: centre.y, button: "left" });
+    await delay(18);
+  }
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x + 80, y: centre.y, button: "left", clickCount: 1 });
+  await delay(450);
+  const xlAfter = await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return { rotY: s.rotY, drawError: !!s.drawErrorReported, frameAge: performance.now() - s.lastFrameAt }; })()');
+  assert.ok(Math.abs(xlAfter.rotY - xlRotBefore) > 0.3, "XL drag did not rotate");
+  assert.equal(xlAfter.drawError, false, "XL dense-board renderer threw");
+  assert.ok(xlAfter.frameAge < 1500, `XL frame loop stalled (${Math.round(xlAfter.frameAge)}ms since last frame)`);
+  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setSize("medium"); void 0;');
+  await delay(250);
+
   // Textured materials: the sealed data URI must actually load into the renderer.
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "ion-storm")); void 0;');
   const storm = await waitExpression(`(() => {
@@ -440,7 +461,7 @@ try {
   // Rotation: the canvas bitmap must always match its element, and a stale
   // backing store (iOS drops/mis-times the orientation resize) must heal
   // itself within a frame — build 59 stayed squashed in portrait forever.
-  const matches = '(() => { const c = document.getElementById("gameCanvas"); const dpr = Math.min(devicePixelRatio || 1, 2); return c.width === Math.round(c.clientWidth * dpr) && c.height === Math.round(c.clientHeight * dpr); })()';
+  const matches = '(() => { const c = document.getElementById("gameCanvas"); const cap = /Android/i.test(navigator.userAgent) ? 1.1 : 2; const dpr = Math.min(devicePixelRatio || 1, cap); return c.width === Math.round(c.clientWidth * dpr) && c.height === Math.round(c.clientHeight * dpr); })()';
   const sized = async (label) => {
     // The guarantee is "heals within a frame or two", not "synchronously".
     await waitFor(async () => evaluate(matches), `${label}: canvas bitmap never matched its element`);
