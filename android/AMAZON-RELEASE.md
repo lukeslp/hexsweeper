@@ -8,7 +8,7 @@ and has no D-pad model.
 | | |
 |---|---|
 | Application ID | `app.hexodus.ios` |
-| Version | `1.0.1 (26)` |
+| Version | `1.0.2 (27)` |
 | minSdk / targetSdk | 24 / 36 |
 | Permissions | `app.hexodus.ios.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` only (Capacitor-generated, self-scoped) |
 | Native code | none — universal APK, pure WebView |
@@ -26,7 +26,8 @@ the APK carries no Play dependency — which is what makes it safe on Fire OS.
 Builds 16 through 20, published on dr.eamer.dev, were signed with the generic
 **Android debug key** (`CN=Android Debug`). Amazon rejects debug-signed APKs.
 
-Build 26 is the first signed with a real release identity:
+Build 26 is the first signed with a real release identity, and build 27 keeps
+that identity:
 
 ```
 CN=Hexsweeper Android Release, OU=Android, O=Luke Steuber, C=US
@@ -47,7 +48,7 @@ Consequences:
 
 ```
 android/dist/release/
-  Hexsweeper-1.0.1-26-release.apk
+  Hexsweeper-1.0.2-27-release.apk
   SHA256SUMS.txt
   PROVENANCE.txt
 ```
@@ -60,7 +61,7 @@ scripts/android-release with-signing --profile hexsweeper -- /bin/sh -c \
   'cd /Users/luke/workspace/hexsweeper-app/android && \
    export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
    export ANDROID_HOME="$HOME/Library/Android/sdk" && \
-   ./gradlew :app:assembleRelease'
+   ./gradlew :app:clean :app:lintRelease :app:assembleRelease'
 ```
 
 Without those environment variables Gradle silently produces an **unsigned**
@@ -95,8 +96,14 @@ signed build.
 
 - **KFRASWI** (`raspite`), Fire OS 8.0 / Android 11 (API 30), 800×1280 native,
   213 dpi, arm64-v8a. Real multitouch (`touchscreen.multitouch.jazzhand`).
-- Signed `1.0.1 (26)` installed over USB ADB and launched; `MainActivity` took
-  and held focus. No FATAL, no ANR, no AndroidRuntime errors in logcat.
+- Signed `1.0.2 (27)` installed over USB ADB and launched; `MainActivity` took
+  and held focus. Package flags confirm it is not debuggable. No FATAL, no ANR,
+  and no AndroidRuntime errors appeared in logcat.
+- True immersive full-screen passes in portrait and landscape: neither the
+  status bar nor the navigation bar consumes app space, and the controls remain
+  inside the display bounds.
+- Horizontal drag follows the finger by default after the versioned preference
+  migration. The Invert X control still lets a player choose the old direction.
 - Tutorial card renders and dismisses via **Play**.
 - Tap cleared a region with correct flood-fill and 1/2/3 neighbour counts;
   the timer started on that first clear; drag spun the sphere; Undo enabled
@@ -110,11 +117,19 @@ signed build.
   reachable. Note: an earlier portrait attempt appeared to fail only because
   `accelerometer_rotation` had been re-enabled and the sensor was holding
   landscape — the app itself never locks orientation (`mOrientation=-1`).
-- Listing screenshots captured from this exact signed build at native
+- **Sleep/wake passes.** The revealed board and running timer remained intact
+  through screen-off, wake, and unlock; animation resumed without an error.
+- A representative 1,002-face board with Heat Lightning and automatic effects
+  sustained about 29 animation callbacks per second during repeated drags;
+  reduced effects sustained about 32. Android frame statistics recorded zero
+  missed-vsync and zero frame-deadline events. Before the Fire-specific renderer
+  work, the same interaction was roughly 9 fps.
+- Listing screenshots were recaptured from this exact signed build at native
   1280×800 and 800×1280, both Amazon-accepted sizes.
 
-Open: a long-run soak (30+ min), sleep/wake, and a frame-rate measurement on
-the largest board size. Amazon wants 25 fps minimum, 55–60 preferred.
+Open: a long-run soak (30+ min) and a frame-rate measurement on
+the largest 2,252-face board. The representative medium-board result clears
+Amazon's 25 fps floor, but the largest-board check remains a release gate.
 
 ### Note on portrait layout
 
@@ -135,19 +150,19 @@ look before leaning on portrait screenshots in the listing.
 | Copy | `en-US/*.txt` | ready, all within limits |
 | Screenshots | `screenshots/*.png` | ready — 4 native Fire tablet captures |
 
-`en-US/feature_bullets.txt` currently lists **six** bullets; Amazon asks for
-three to five. Drop one before submitting.
+`en-US/feature_bullets.txt` contains **five** bullets, within Amazon's three-to-
+five limit.
 
 The frames in `app-store/screenshots/en-US/` are iPhone and iPad sizes and match
 no Amazon-accepted dimension; they are not reused. The four in
-`app-store/amazon/screenshots/` were captured from the signed 1.0.1 (26) build
+`app-store/amazon/screenshots/` were captured from the signed 1.0.2 (27) build
 on the KFRASWI tablet:
 
 | File | Size | Shows |
 |---|---|---|
 | `01_sphere-light-1280x800.png` | 1280×800 | fresh sphere, Light theme |
 | `02_cleared-light-1280x800.png` | 1280×800 | flood-fill clear with neighbour counts |
-| `03_aurora-1280x800.png` | 1280×800 | Aurora theme, mid-game |
+| `03_heat-lightning-1280x800.png` | 1280×800 | Heat Lightning theme, mid-game |
 | `04_portrait-800x1280.png` | 800×1280 | portrait reflow |
 
 Amazon takes landscape or portrait, but mixing both in one listing reads
@@ -157,7 +172,7 @@ treat the portrait one as optional.
 ## Console sequence (human only)
 
 1. Amazon Developer Console → create app **Hexsweeper**
-2. Upload `Hexsweeper-1.0.1-26-release.apk`; confirm the **Fire tablet** device
+2. Upload `Hexsweeper-1.0.2-27-release.apk`; confirm the **Fire tablet** device
    family and review the auto-generated supported-device list
 3. Paste the copy from `app-store/amazon/en-US/`
 4. Upload icons, feature graphic, and screenshots

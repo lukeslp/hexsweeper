@@ -98,8 +98,10 @@ gitignored. The shell requests no sensitive permissions and deliberately omits
 `android.permission.INTERNET`; outbound credits open in the system browser.
 
 The Android AAB is intentionally unsigned until a Play signing key is created
-and stored outside this repository. Google Play listing creation, signing,
-upload, pricing, and publication remain manual release steps. See
+and stored outside this repository. The Amazon Fire-tablet APK uses a separate
+release identity managed by the Android release toolkit; its staged artifact
+and device gate are documented in [`android/AMAZON-RELEASE.md`](android/AMAZON-RELEASE.md).
+Store login, upload, pricing, and publication remain manual release steps. See
 [`docs/RELEASE.md`](docs/RELEASE.md).
 
 ## Not in this build

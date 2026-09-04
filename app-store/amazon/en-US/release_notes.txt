@@ -1,1 +1,1 @@
-First release: hexagonal minesweeper on a 3D sphere. Nine looks (Light, Dark, and seven mirrored materials), undo, autosave, five board sizes. Fully offline — no account, no ads.
+First release: hexagonal minesweeper on a full-screen 3D sphere. Nine looks, undo, autosave, five board sizes, and smooth rotation tuned for Fire tablets. Fully offline — no account, no ads.

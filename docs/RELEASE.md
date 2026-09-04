@@ -59,16 +59,19 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-Current Android identity is `versionCode 19`, `versionName 1.0-test`, targeting
-API 36 with minimum API 24. The direct test APK is debug-signed with the same
-certificate as builds 1–15 so testers can upgrade in place. Build 19 (2026-08-19,
+Current Android identity is `versionCode 27`, `versionName 1.0.2`, targeting
+API 36 with minimum API 24. Build 27 is the signed Amazon Fire-tablet candidate;
+its exact artifact, certificate, checksums, listing pack, and physical-device
+gate live in `android/AMAZON-RELEASE.md`. The older direct test APK is debug-
+signed with the same certificate as builds 1–15 so those testers can upgrade in
+place. Build 19 (2026-08-19,
 payload `4c04cab`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
 (APK served from `/home/coolhand/html/downloads/android/hexsweeper/` on Drummer;
 17 and 16 stay as fallbacks). There is no 18: `versionCode` 18 was bumped for
 build 62 but no APK was cut before 19 superseded it. The curated download page
 and `catalog.json` are patched in place, never regenerated — see
 `downloads/CURATED_DO_NOT_REGENERATE.md` on Drummer; each publish leaves an
-`index.html.bak-before-…` beside the page. The release AAB remains
+`index.html.bak-before-…` beside the page. The Play release AAB remains
 deliberately unsigned. Create and
 retain the Play signing key outside this repository, then use Android Studio's
 **Build → Generate Signed App Bundle** for the first store upload. Do not commit
@@ -338,11 +341,11 @@ Assets staged under `app-store/amazon/`:
 
 Submission checklist (all manual, in the Amazon developer console):
 
-- Build the store APK with `cd android && ./gradlew assembleRelease` —
-  Amazon re-signs uploads, so the unsigned release APK is correct; do not
-  submit the debug-signed direct-download APK. Bump `versionName` from
-  `1.0-test` to `1.0` first.
+- Upload the signed and verified
+  `android/dist/release/Hexsweeper-1.0.2-27-release.apk`. Do not submit the
+  debug-signed direct-download APK. Build and certificate details are in
+  `android/AMAZON-RELEASE.md`.
 - Complete the IARC content-rating questionnaire (no known blockers).
 - Data collection: none (same answers as the iOS privacy manifest).
-- Sideload-verify on a Fire tablet or emulator per `docs/DEVICE_VERIFY.md`
+- Finish the remaining physical-device items in `android/AMAZON-RELEASE.md`
   before publishing.

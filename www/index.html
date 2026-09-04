@@ -2050,6 +2050,8 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
     hard: { subdivisions: 12, minePct: 0.17 },
     xlarge: { subdivisions: 15, minePct: 0.17 },
   };
+  const IS_ANDROID_DEVICE = /Android/i.test(navigator.userAgent || "");
+  const CANVAS_DPR_CAP = IS_ANDROID_DEVICE ? 1.1 : 2;
 
   const REVEAL_STEP_MS = 28;
   const REVEAL_CAP_MS = 880;
@@ -2826,13 +2828,13 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v4";
-  // v4 starts every device at the finger-following default on both axes.
-  // The earlier keys were set while the X default flipped back and forth, so
-  // a stored flag no longer says what the player wanted; they are dropped,
-  // not migrated. Invert stays available in Settings for anyone who prefers
-  // the camera-style feel.
+  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v5";
+  // v5 makes horizontal drag turn the sphere like an object: drag right and
+  // the face moves left. The earlier keys were set while the X default flipped
+  // back and forth, so a stored flag no longer says what the player wanted;
+  // they are dropped, not migrated. Invert stays available in Settings.
   const INVERT_LEGACY_KEYS = [
+    "hexsweeper-sphere-invert-v4",
     "hexsweeper-sphere-invert-v3",
     "hexsweeper-sphere-invert-v2",
     "hexsweeper-sphere-invert-v1",
@@ -3134,9 +3136,9 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
           const data = JSON.parse(raw);
           return { x: !!data.x, y: !!data.y };
         }
-        return { x: false, y: false };
+        return { x: true, y: false };
       } catch (_) {
-        return { x: false, y: false };
+        return { x: true, y: false };
       }
     }
 
@@ -3915,7 +3917,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
      * that no longer matches its element (see syncCanvasSize).
      */
     function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, CANVAS_DPR_CAP);
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
       canvas.width = Math.round(w * dpr);
@@ -3943,7 +3945,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
       if (!w || !h) return false;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, CANVAS_DPR_CAP);
       // Compare the bitmap against what this element needs, not against what
       // we last recorded: iOS can leave a correctly-sized element wearing a
       // stale backing store, and then nothing changes size again.
@@ -4012,16 +4014,33 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       }
     }
 
+    let rotationCache = null;
+
+    function rotationTerms(rotY, rotX) {
+      if (
+        !rotationCache ||
+        rotationCache.rotY !== rotY ||
+        rotationCache.rotX !== rotX
+      ) {
+        rotationCache = {
+          rotY,
+          rotX,
+          cy: Math.cos(rotY),
+          sy: Math.sin(rotY),
+          cx: Math.cos(rotX),
+          sx: Math.sin(rotX),
+        };
+      }
+      return rotationCache;
+    }
+
     function rotatePoint(p, rotY, rotX) {
       let x = p.x;
       let y = p.y;
       let z = p.z;
-      const cy = Math.cos(rotY);
-      const sy = Math.sin(rotY);
+      const { cy, sy, cx, sx } = rotationTerms(rotY, rotX);
       const x1 = x * cy + z * sy;
       const z1 = -x * sy + z * cy;
-      const cx = Math.cos(rotX);
-      const sx = Math.sin(rotX);
       const y2 = y * cx - z1 * sx;
       const z2 = y * sx + z1 * cx;
       return { x: x1, y: y2, z: z2 };
@@ -4048,19 +4067,25 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       return { x: n.x / len, y: n.y / len, z: n.z / len };
     }
 
-    function projectTile(tile, rotY, rotX, lift) {
+    function projectTile(tile, rotY, rotX, lift, knownCenterR) {
       const liftAmt = lift || 0;
-      const n = faceNormal(tile, rotY, rotX);
-      const liftVec = (p) => {
-        const r = rotatePoint(p, rotY, rotX);
-        return {
-          x: r.x + n.x * liftAmt,
-          y: r.y + n.y * liftAmt,
-          z: r.z + n.z * liftAmt,
-        };
+      const baseCenterR = knownCenterR || rotatePoint(tile.centerPoint, rotY, rotX);
+      const len = Math.hypot(baseCenterR.x, baseCenterR.y, baseCenterR.z) || 1;
+      const n = {
+        x: baseCenterR.x / len,
+        y: baseCenterR.y / len,
+        z: baseCenterR.z / len,
       };
-      const centerR = liftVec(tile.centerPoint);
-      const boundaryR = tile.boundary.map(liftVec);
+      const baseBoundaryR = tile.boundary.map((p) =>
+        rotatePoint(p, rotY, rotX)
+      );
+      const liftVec = (r) => ({
+        x: r.x + n.x * liftAmt,
+        y: r.y + n.y * liftAmt,
+        z: r.z + n.z * liftAmt,
+      });
+      const centerR = liftVec(baseCenterR);
+      const boundaryR = baseBoundaryR.map(liftVec);
       const center = projectRotated(centerR);
       const boundary = boundaryR.map(projectRotated);
       const avgZ =
@@ -4073,10 +4098,37 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         normal: n,
         index: tile.index,
         area: hexScreenArea(boundary),
-        baseBoundary:
-          liftAmt !== 0
-            ? tile.boundary.map((b) => projectPoint(b, rotY, rotX))
-            : null,
+        baseBoundary: liftAmt !== 0 ? baseBoundaryR.map(projectRotated) : null,
+        rotatedCenter: baseCenterR,
+        rotatedBoundary: baseBoundaryR,
+      };
+    }
+
+    /** Re-project an already rotated face at a radial height. */
+    function liftProjected(proj, lift) {
+      if (!proj || !proj.rotatedCenter || !proj.rotatedBoundary) return proj;
+      const n = proj.normal;
+      const liftVec = (r) => ({
+        x: r.x + n.x * lift,
+        y: r.y + n.y * lift,
+        z: r.z + n.z * lift,
+      });
+      const center = projectRotated(liftVec(proj.rotatedCenter));
+      const boundary = proj.rotatedBoundary.map((p) => projectRotated(liftVec(p)));
+      const avgZ =
+        boundary.reduce((sum, p) => sum + p.z, center.z) /
+        (boundary.length + 1);
+      return {
+        center,
+        boundary,
+        z: avgZ,
+        normalZ: n.z,
+        normal: n,
+        index: proj.index,
+        area: hexScreenArea(boundary),
+        baseBoundary: proj.boundary,
+        rotatedCenter: proj.rotatedCenter,
+        rotatedBoundary: proj.rotatedBoundary,
       };
     }
 
@@ -4093,14 +4145,22 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}`;
     }
 
-    /** Project all tiles once per frame; cull back hemisphere for pick + draw. */
+    /** Project the visible hemisphere once per frame for pick + draw. */
     function getProjected() {
       const key = rotKey();
       if (state.projectedCache && state.rotCacheKey === key) {
         return state.projectedCache;
       }
-      const all = state.tiles.map((t) => projectTile(t, state.rotY, state.rotX));
-      const front = all.filter((p) => p.z > -0.05);
+      const front = [];
+      for (const tile of state.tiles) {
+        const centerR = rotatePoint(tile.centerPoint, state.rotY, state.rotX);
+        // The averaged polygon depth closely follows its centre. This margin
+        // is deliberately wider than the -0.05 paint boundary, so no limb
+        // face can disappear while avoiding boundary work for the far half.
+        if (centerR.z <= -0.12) continue;
+        const projected = projectTile(tile, state.rotY, state.rotX, 0, centerR);
+        if (projected.z > -0.05) front.push(projected);
+      }
       front.sort((a, b) => a.z - b.z);
       state.projectedCache = front;
       state.rotCacheKey = key;
@@ -5621,6 +5681,11 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
           reflectionCanvas.width > 0 &&
           reflectionCanvas.height > 0
         ) {
+          // Android does not retain the WebGL drawing buffer between frames;
+          // paint once in this task so the share-card copy sees fresh pixels.
+          if (reflection && typeof reflection.prepareCapture === "function") {
+            reflection.prepareCapture();
+          }
           const rx = reflectionCanvas.width / Math.max(1, canvas.width);
           const ry = reflectionCanvas.height / Math.max(1, canvas.height);
           octx.drawImage(
@@ -6771,6 +6836,8 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       const tile = state.tiles[tileIdx];
       const edgeN = tile.edgeNeighbors || [];
       const n = Math.min(baseBoundary.length, faceBoundary.length);
+      const cx = faceBoundary.reduce((s, p) => s + p.x, 0) / faceBoundary.length;
+      const cy = faceBoundary.reduce((s, p) => s + p.y, 0) / faceBoundary.length;
       for (let i = 0; i < n; i++) {
         const ni = edgeN[i];
         if (ni >= 0 && typeof skipNeighbor === "function" && skipNeighbor(ni)) {
@@ -6789,10 +6856,6 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
             faceBoundary[i].y +
             faceBoundary[j].y) *
           0.25;
-        const cx =
-          faceBoundary.reduce((s, p) => s + p.x, 0) / faceBoundary.length;
-        const cy =
-          faceBoundary.reduce((s, p) => s + p.y, 0) / faceBoundary.length;
         const vx = mx - cx;
         const vy = my - cy;
         const len = Math.hypot(vx, vy) || 1;
@@ -6915,6 +6978,8 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
     function drawExtrusionSkirt(baseBoundary, raisedBoundary) {
       if (!baseBoundary || !raisedBoundary) return;
       const n = Math.min(baseBoundary.length, raisedBoundary.length);
+      const cx = raisedBoundary.reduce((s, p) => s + p.x, 0) / raisedBoundary.length;
+      const cy = raisedBoundary.reduce((s, p) => s + p.y, 0) / raisedBoundary.length;
       for (let i = 0; i < n; i++) {
         const j = (i + 1) % n;
         const mx =
@@ -6929,10 +6994,6 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
             raisedBoundary[i].y +
             raisedBoundary[j].y) *
           0.25;
-        const cx =
-          raisedBoundary.reduce((s, p) => s + p.x, 0) / raisedBoundary.length;
-        const cy =
-          raisedBoundary.reduce((s, p) => s + p.y, 0) / raisedBoundary.length;
         const vx = mx - cx;
         const vy = my - cy;
         const len = Math.hypot(vx, vy) || 1;
@@ -7388,6 +7449,12 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       const darkMono =
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
+      const fastInteraction =
+        IS_ANDROID_DEVICE &&
+        state.cells.length >= 642 &&
+        (state.dragging ||
+          Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
+          Math.abs(state.targetRotX - state.rotX) > 0.0008);
 
       // Per-tile permanent heights (hover is a temporary fifth offset).
       const heights = new Float32Array(state.cells.length);
@@ -7412,16 +7479,12 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         if (coreProfile) {
           colors = { ...colors, stroke: colors.fill, lineWidth: 0 };
         }
-        const h = heights[idx];
+        const h = fastInteraction ? 0 : heights[idx];
         let drawProj = proj;
         let markLift = 0;
         if (Math.abs(h) > 1e-6 && proj.z > 0.02) {
-          const lifted = projectTile(tile, state.rotY, state.rotX, h);
-          const baseBoundary =
-            lifted.baseBoundary ||
-            tile.boundary.map((b) =>
-              projectPoint(b, state.rotY, state.rotX)
-            );
+          const lifted = liftProjected(proj, h);
+          const baseBoundary = lifted.baseBoundary || proj.boundary;
           if (h > 1e-6) {
             // Proud flag pin: wall on every edge, it sits above the whole shell.
             drawExtrusionSkirt(baseBoundary, lifted.boundary);
@@ -7478,15 +7541,17 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         } else {
           drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
         }
-        drawRevealedCore(drawProj, cell, now, coreProfile);
-        drawWellCenterGlow(drawProj, cell, now);
+        if (!fastInteraction) {
+          drawRevealedCore(drawProj, cell, now, coreProfile);
+          drawWellCenterGlow(drawProj, cell, now);
+        }
         // Only faces that squarely face the viewer are windows; near the rim
         // the recessed polygons go edge-on and the effect bled past the shell.
-        if (effectId && cell.revealed && !cell.isMine && !cell.flagged && drawProj.z > 0.22) {
+        if (!fastInteraction && effectId && cell.revealed && !cell.isMine && !cell.flagged && drawProj.z > 0.22) {
           // A window onto the interior effect: the digit repaints above it.
           effectHoles.push(drawProj);
           effectMarks.push([tile, drawProj, cell, colors, markLift]);
-        } else {
+        } else if (!fastInteraction) {
           paintCountMark(tile, drawProj, cell, colors, markLift);
         }
       }
@@ -7512,7 +7577,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         if (proj.z > 0.02 && hoverRaise) {
           continue;
         }
-        if (proj.z > 0.02 && heights[idx] > 1e-6) {
+        if (!fastInteraction && proj.z > 0.02 && heights[idx] > 1e-6) {
           proudFlags.push(proj);
           continue;
         }
@@ -7530,6 +7595,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       // surface on every touch (the ring highlight below still marks it).
       if (
         highlightIdx >= 0 &&
+        !fastInteraction &&
         !(state.theme && state.theme.reflectionSurface) &&
         tileCanActivate(state.cells[highlightIdx])
       ) {
@@ -7547,10 +7613,8 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
           const lift =
             tileHeight(cell, styleId) +
             (state.pressed === idx ? PRESS_LIFT : HOVER_LIFT);
-          const raised = projectTile(tile, state.rotY, state.rotX, lift);
-          const baseBoundary =
-            raised.baseBoundary ||
-            tile.boundary.map((b) => projectPoint(b, state.rotY, state.rotX));
+          const raised = liftProjected(base, lift);
+          const baseBoundary = raised.baseBoundary || base.boundary;
           drawExtrusionSkirt(baseBoundary, raised.boundary);
           let fill = colors.fill;
           if (!cell.revealed && !cell.flagged) {
@@ -9127,6 +9191,109 @@ void main() {
 }
 `;
 
+  // Fire OS WebView runs the full atmospheric shader poorly even on current
+  // tablets. This path keeps the selected plate, sphere rotation, lighting,
+  // and material palette while dropping the multi-octave weather simulation.
+  // The crisp Canvas 2D topology remains layered above it.
+  const ANDROID_FRAGMENT_SOURCE = `#version 300 es
+precision mediump float;
+out vec4 outColor;
+
+uniform float uTime;
+uniform float uAppearance;
+uniform float uMaterial;
+uniform vec2 uResolution;
+uniform vec2 uCenter;
+uniform vec2 uShellRotation;
+uniform float uRadius;
+uniform sampler2D uEnvironmentMap;
+uniform float uTextureReady;
+uniform vec4 uTextureParams;
+uniform vec4 uTextureTransform;
+uniform vec4 uTextureMotion;
+uniform vec4 uTextureDisplay;
+
+mat2 rotate2(float angle) {
+  float c = cos(angle);
+  float s = sin(angle);
+  return mat2(c, -s, s, c);
+}
+
+vec3 materialAccent() {
+  if (uMaterial < 0.5) return vec3(1.0, 0.72, 0.42);
+  if (uMaterial < 2.5) return vec3(0.72, 0.84, 0.86);
+  if (uMaterial < 3.5) return vec3(0.22, 0.82, 0.79);
+  if (uMaterial < 4.5) return vec3(0.92, 0.88, 0.76);
+  if (uMaterial < 5.5) return vec3(0.67, 0.79, 0.59);
+  if (uMaterial < 9.5) return vec3(0.86, 0.70, 0.42);
+  if (uMaterial < 10.5) return vec3(0.22, 0.78, 0.95);
+  if (uMaterial < 11.5) return vec3(0.70, 0.52, 0.92);
+  if (uMaterial < 13.5) return vec3(1.0, 0.58, 0.24);
+  if (uMaterial < 14.5) return vec3(0.42, 0.69, 1.0);
+  if (uMaterial < 15.5) return vec3(1.0, 0.61, 0.28);
+  if (uMaterial < 16.5) return vec3(1.0, 0.55, 0.35);
+  if (uMaterial < 17.5) return vec3(0.58, 0.82, 1.0);
+  if (uMaterial < 18.5) return vec3(0.18, 0.94, 0.86);
+  return vec3(1.0, 0.64, 0.20);
+}
+
+vec3 plate(vec2 uv) {
+  if (uTextureReady < 0.5) {
+    return mix(vec3(0.025, 0.03, 0.035), materialAccent() * 0.68, uv.y * 0.72);
+  }
+  float drift = uTime * uTextureParams.x;
+  uv.x = fract(uv.x + drift);
+  uv.y += sin(uv.x * 6.2831853 + uTime * uTextureMotion.z) *
+    uTextureMotion.y * 0.16;
+  vec3 color = texture(uEnvironmentMap, clamp(uv, 0.001, 0.999)).rgb;
+  color *= uTextureParams.y;
+  float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color = mix(vec3(luma), color, uTextureParams.z);
+  return color;
+}
+
+vec2 sphereUv(vec3 direction) {
+  direction.yz = rotate2(uShellRotation.y) * direction.yz;
+  direction.xz = rotate2(-uShellRotation.x) * direction.xz;
+  float longitude = atan(direction.z, direction.x) / 6.28318531 + 0.5;
+  float latitude = asin(clamp(direction.y, -1.0, 1.0)) / 3.14159265 + 0.5;
+  if (uTextureDisplay.x > 0.5) {
+    longitude = 1.0 - abs(longitude * 2.0 - 1.0);
+  }
+  vec2 centered = vec2(longitude, latitude) - 0.5;
+  return centered * uTextureTransform.xy + 0.5 + uTextureTransform.zw;
+}
+
+void main() {
+  vec2 screenUv = gl_FragCoord.xy / uResolution;
+  vec2 centered = screenUv - 0.5;
+  vec3 accent = materialAccent();
+  vec3 field = mix(vec3(0.006, 0.008, 0.012), accent * 0.15, uAppearance * 0.42);
+  vec3 backdrop = plate(vec2(screenUv.x, 1.0 - screenUv.y));
+  float backdropWeight = 0.18 + uTextureParams.w * 0.24;
+  vec3 color = mix(field, backdrop, backdropWeight);
+  color *= mix(0.62, 1.0, 1.0 - smoothstep(0.08, 0.72, length(centered)));
+
+  vec2 orb = (gl_FragCoord.xy - uCenter) / max(1.0, uRadius);
+  float radius2 = dot(orb, orb);
+  if (radius2 < 1.04) {
+    float z = sqrt(max(0.0, 1.0 - min(radius2, 1.0)));
+    vec3 normal = normalize(vec3(orb, z));
+    vec3 surface = plate(sphereUv(normal));
+    float limb = 0.54 + z * 0.46;
+    float crown = pow(max(dot(normal, normalize(vec3(-0.28, 0.70, 0.66))), 0.0), 10.0);
+    float fresnel = pow(1.0 - z, 2.0);
+    surface = surface * limb + accent * crown * 0.24;
+    surface += mix(vec3(0.36, 0.52, 0.60), accent, 0.34) * fresnel * 0.34;
+    float mask = 1.0 - smoothstep(0.986, 1.018, sqrt(radius2));
+    color = mix(color, surface, mask);
+  }
+
+  color = color / (1.0 + color * 0.42);
+  outColor = vec4(pow(max(color, 0.0), vec3(0.94)), 1.0);
+}
+`;
+
   function compile(gl, type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
@@ -9139,9 +9306,13 @@ void main() {
     return shader;
   }
 
-  function programFor(gl) {
+  function programFor(gl, fragmentSource) {
     const vertex = compile(gl, gl.VERTEX_SHADER, VERTEX_SOURCE);
-    const fragment = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT_SOURCE);
+    const fragment = compile(
+      gl,
+      gl.FRAGMENT_SHADER,
+      fragmentSource || FRAGMENT_SOURCE
+    );
     const program = gl.createProgram();
     gl.attachShader(program, vertex);
     gl.attachShader(program, fragment);
@@ -9189,6 +9360,7 @@ void main() {
       this.failed = false;
       this.reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
       this.mobile = matchMedia("(max-width: 700px), (pointer: coarse)").matches;
+      this.android = /Android/i.test(navigator.userAgent || "");
       document.body.dataset.reflectionMaterial = this.getMaterial().id;
       this.canvas.setAttribute("aria-hidden", "true");
       this.canvas.tabIndex = -1;
@@ -9203,14 +9375,17 @@ void main() {
           antialias: false,
           depth: false,
           stencil: false,
-          // The game can export a share card at any point; retaining the last
-          // composed frame lets Canvas 2D capture the material reliably.
-          preserveDrawingBuffer: true,
+          // Web and Apple builds retain the composed frame for share cards.
+          // Android repaints synchronously in prepareCapture() instead.
+          preserveDrawingBuffer: !this.android,
           powerPreference: "high-performance",
         });
         if (!gl) throw new Error("WebGL2 is unavailable");
         this.gl = gl;
-        this.program = programFor(gl);
+        this.program = programFor(
+          gl,
+          this.android ? ANDROID_FRAGMENT_SOURCE : FRAGMENT_SOURCE
+        );
         // Bind before the sampler uniform below; render() rebinds each frame.
         gl.useProgram(this.program);
         this.buffer = gl.createBuffer();
@@ -9565,11 +9740,11 @@ void main() {
       this.cssW = cssWidth;
       this.cssH = cssHeight;
       const dpr = Math.min(devicePixelRatio || 1, 1.5);
-      const quality = this.mobile ? 0.58 : 0.74;
-      const edgeCap = this.mobile ? 820 : 1280;
+      const quality = this.android ? 0.38 : this.mobile ? 0.58 : 0.74;
+      const edgeCap = this.android ? 600 : this.mobile ? 820 : 1280;
       let scale = dpr * quality;
       scale = Math.min(scale, edgeCap / Math.max(cssWidth, cssHeight));
-      scale = Math.max(0.5, scale);
+      scale = Math.max(this.android ? 0.38 : 0.5, scale);
       const width = Math.max(2, Math.round(cssWidth * scale));
       const height = Math.max(2, Math.round(cssHeight * scale));
       if (this.canvas.width !== width || this.canvas.height !== height) {
@@ -9622,7 +9797,7 @@ void main() {
         this.resize();
       }
       const menuOpen = document.body.classList.contains("hex-bloom-open");
-      const frameMs = menuOpen ? 120 : this.mobile ? 33 : 22;
+      const frameMs = menuOpen ? 120 : this.android ? 40 : this.mobile ? 33 : 22;
       if (time - this.lastPaintAt >= frameMs) {
         this.render(time, false);
         this.lastPaintAt = time;
@@ -9755,6 +9930,11 @@ void main() {
       this.canvas.style.opacity = menuOpen ? "0.64" : "1";
       this.canvas.style.filter = menuOpen ? "blur(3px) saturate(.72)" : "none";
       if (force) gl.flush();
+    }
+
+    prepareCapture() {
+      this.render(performance.now(), true);
+      if (this.gl) this.gl.finish();
     }
   }
 
