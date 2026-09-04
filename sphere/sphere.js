@@ -45,7 +45,6 @@
   const REVEAL_FLASH_MS = 240;
   /** Chord: a second tap on the same open face inside this window. */
   const CHORD_TAP_MS = 300;
-  const IDLE_FRAME_MS = 200;
   /** Blast phases (ms) match flat Soft UI: charge 0–300 · shock from 260 · scatter 300+ */
   const BLAST_CHARGE_MS = 300;
   const BLAST_SCATTER_MS = 300;
@@ -1951,11 +1950,19 @@
     /** Orientation changes settle over a frame or two on iOS; measure again. */
     function resizeSoon() {
       resize();
+      scheduleFrame();
       requestAnimationFrame(() => {
         resize();
-        requestAnimationFrame(resize);
+        scheduleFrame();
+        requestAnimationFrame(() => {
+          resize();
+          scheduleFrame();
+        });
       });
-      setTimeout(resize, 250);
+      setTimeout(() => {
+        resize();
+        scheduleFrame();
+      }, 250);
     }
 
     function setZoomFactor(factor) {
@@ -5727,7 +5734,7 @@
     function frameNeedsPaint(now) {
       if (state.ambientSpin && !state.reduceMotion) return true;
       if (focusTween) return true;
-      if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
+      if (state.dragging) return true;
       if (revealAnimBusy(now)) return true;
       if (END_FX.active) return true;
       if (state.camShake > 0.2) return true;
@@ -5783,8 +5790,10 @@
       } else {
         lastMenuPose = null;
       }
+      // A static sphere is already present in the canvas. Park until an input,
+      // resize, or state mutation schedules another frame instead of repainting
+      // thousands of unchanged XL faces on an idle timer.
       if (frameNeedsPaint(now)) scheduleFrame();
-      else scheduleFrame(IDLE_FRAME_MS);
     }
 
     function canvasPoint(e) {
@@ -5854,6 +5863,7 @@
           }
         }, 480);
       }
+      scheduleFrame();
     }
 
     function onPointerMove(e) {
@@ -5895,7 +5905,7 @@
           state.rotY = state.targetRotY;
           state.rotX = state.targetRotX;
           invalidateProjection();
-          if (state.menuRotateOnly) scheduleFrame(); // the loop re-projects on-sphere chrome
+          scheduleFrame();
         }
       }
       // Once a gesture is a drag there is no tile to hover or activate. The
@@ -5908,6 +5918,7 @@
         return;
       }
       state.hovered = state.menuRotateOnly ? -1 : pickTile(p.x, p.y);
+      scheduleFrame();
     }
 
     function onPointerUp(e) {
@@ -5920,6 +5931,7 @@
         state.dragStart = null;
         state.pressed = -1;
         touchMoved = false;
+        scheduleFrame();
         return;
       }
       const p = canvasPoint(e.changedTouches ? e.changedTouches[0] : e);
@@ -5931,6 +5943,7 @@
         state.pressed = -1;
         touchMoved = false;
         schedulePersist();
+        scheduleFrame();
         if (backgroundTap) {
           canvas.dispatchEvent(
             new CustomEvent("hexsweeper:menu-background-tap", { bubbles: true })
@@ -5967,6 +5980,7 @@
       state.pressed = -1;
       touchMoved = false;
       schedulePersist();
+      scheduleFrame();
     }
 
     canvas.addEventListener("mousedown", onPointerDown);

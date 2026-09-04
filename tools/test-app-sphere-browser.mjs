@@ -355,6 +355,13 @@ try {
   assert.ok(Math.abs(xlAfter.rotY - xlRotBefore) > 0.3, "XL drag did not rotate");
   assert.equal(xlAfter.drawError, false, "XL dense-board renderer threw");
   assert.ok(xlAfter.frameAge < 1500, `XL frame loop stalled (${Math.round(xlAfter.frameAge)}ms since last frame)`);
+  const xlParkedAt = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().lastFrameAt');
+  await delay(260);
+  assert.equal(
+    await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().lastFrameAt'),
+    xlParkedAt,
+    "static XL sphere kept repainting after its detailed resting frame",
+  );
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setSize("medium"); void 0;');
   await delay(250);
 

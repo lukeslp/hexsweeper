@@ -24,9 +24,10 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
   batches, hit-testing stops after touch becomes a drag, and full-detail
   rendering returns when motion settles.
 - [x] The 30-minute candidate soak exposed the same full-detail cost during
-  automatic XL idle spin (53 ms median across 10,077 frames). Ambient motion
-  now shares the compact projection and batching path; touching the sphere
-  stops the spin and restores the detailed resting frame.
+  automatic XL idle spin and needless static redraws (53 ms median across
+  10,077 frames). Ambient motion now shares the compact projection and
+  batching path; once motion stops, the detailed resting frame paints once
+  and the loop parks until input, resize, or animation makes it dirty.
 - [x] The native-payload browser contract now runs with a Fire-like Android
   user agent and explicitly drags the full 2,252-face XL sphere before checking
   the settled frame.
