@@ -8,7 +8,7 @@ and has no D-pad model.
 | | |
 |---|---|
 | Application ID | `app.hexodus.ios` |
-| Version | `1.0.3 (28)` |
+| Version | `1.0.4 (29)` |
 | minSdk / targetSdk | 24 / 36 |
 | Permissions | `app.hexodus.ios.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` only (Capacitor-generated, self-scoped) |
 | Native code | none — universal APK, pure WebView |
@@ -21,17 +21,16 @@ Google Play Services is **not** linked. The `com.google.gms.google-services`
 plugin only applies when `app/google-services.json` exists, and it does not, so
 the APK carries no Play dependency — which is what makes it safe on Fire OS.
 
-Track state: **release candidate ready; final soak in progress**. Package
-signing, device targeting, copy, icons, screenshots, and the physical
-Fire-tablet XL performance gate pass. Submit after the 30-minute signed-build
-soak completes without a crash or ANR.
+Track state: **ready for Amazon submission**. Package signing, device
+targeting, copy, icons, screenshots, functional checks, direct XL rotation,
+ambient XL rotation, and the final stress/soak gates pass on KFRASWI.
 
 ## The signing key changed — read this before shipping
 
 Builds 16 through 20, published on dr.eamer.dev, were signed with the generic
 **Android debug key** (`CN=Android Debug`). Amazon rejects debug-signed APKs.
 
-Build 26 is the first signed with a real release identity; builds 27 and 28
+Build 26 is the first signed with a real release identity; builds 27 through 29
 keep that identity:
 
 ```
@@ -53,13 +52,13 @@ Consequences:
 
 ```
 android/dist/release/
-  Hexsweeper-1.0.3-28-release.apk
+  Hexsweeper-1.0.4-29-release.apk
   SHA256SUMS.txt
   PROVENANCE.txt
 ```
 
 APK SHA-256:
-`4442fbf0b1a4fba17704ac3845e8b2d521893289ab5036f1059f04a9bb54c3f7`.
+`297299ddda7630c15e0049711015c327b4624c0299f93d5ae515bc76310ae8d3`.
 
 ## Build signed release
 
@@ -104,7 +103,7 @@ signed build.
 
 - **KFRASWI** (`raspite`), Fire OS 8.0 / Android 11 (API 30), 800×1280 native,
   213 dpi, arm64-v8a. Real multitouch (`touchscreen.multitouch.jazzhand`).
-- Signed `1.0.3 (28)` installed over USB ADB and launched; `MainActivity` took
+- Signed `1.0.4 (29)` installed over USB ADB and launched; `MainActivity` took
   and held focus. Package flags confirm it is not debuggable. No FATAL, no ANR,
   and no AndroidRuntime errors appeared in logcat.
 - True immersive full-screen passes in portrait and landscape: neither the
@@ -136,19 +135,28 @@ signed build.
   1280×800 and 800×1280. Candidate 28 changes only the transient drag path;
   its settled Light frame was checked on-device against those captures.
 
-- **Largest-board gate passes in `1.0.3 (28)`.** Repeated drags on the XL
-  2,252-face Light board produced 142 measured portrait frames at a 10 ms
-  median and 305 landscape frames at a 7 ms median. Landscape's 90th
-  percentile was 40 ms; neither run missed vsync, crashed, or raised an ANR.
-  The same signed candidate's representative 1,002-face board produced 255
-  frames at an 8 ms median and 24 ms 90th percentile.
+- **Largest-board gate passes in `1.0.4 (29)`.** Automatic motion on the XL
+  2,252-face Light board produced 574 frames in 12 seconds at a 6 ms median,
+  9 ms 90th percentile, and no missed vsync. Direct XL rotation then produced
+  208 frames at a 7 ms median and 11 ms 90th percentile.
+- A five-minute foreground-guarded XL stress pass issued 55 repeated drags and
+  produced 2,271 frames at a 13 ms median, 18 ms 90th percentile, and 20 ms
+  95th percentile, with no missed vsync, crash, ANR, or process restart.
+- Candidate 28 supplied a separate 31-minute process/lifecycle soak (an
+  8-minute foreground interval, background/resume, then 22 continuously
+  foregrounded minutes) with no crash, ANR, restart, or missed vsync. It also
+  exposed the idle-rendering issue that candidate 29 fixes.
+- The APK pulled back from `/data/app` after the final stress pass hashes to
+  `297299ddda7630c15e0049711015c327b4624c0299f93d5ae515bc76310ae8d3`,
+  exactly matching the staged candidate.
 - The failed `1.0.2 (27)` baseline was 89 ms median portrait and 77 ms median
   landscape on XL. The fix removes the full retained hit-test projection from
   touch-move events after a gesture becomes a drag; the compact batched drag
   renderer is now the only projection painted during direct rotation.
-
-Open: the 30+ minute signed-build XL soak started after the orientation and
-representative-board passes. Record its result before submission.
+- Candidate 28's soak also showed that the stopped sphere kept repainting an
+  unchanged full-detail canvas. Candidate 29 gives ambient motion the compact
+  renderer and parks the static frame loop until input, resize, or animation;
+  two screen captures two seconds apart were byte-identical after motion ended.
 
 ### Note on portrait layout
 
@@ -168,7 +176,7 @@ look before leaning on portrait screenshots in the listing.
 | Promotional image | `images/feature-1024x500.png` | ready, 1024×500 |
 | Copy | `en-US/*.txt` | ready, all within limits |
 | Reviewer instructions | `en-US/reviewer_instructions.txt` | ready |
-| Screenshots | `screenshots/*.png` | ready — 4 native Fire tablet captures |
+| Screenshots | `screenshots/*.png` | ready — 5 native Fire tablet captures |
 
 `en-US/feature_bullets.txt` contains **five** bullets, within Amazon's three-to-
 five limit.
@@ -184,15 +192,17 @@ on the KFRASWI tablet:
 | `02_cleared-light-1280x800.png` | 1280×800 | flood-fill clear with neighbour counts |
 | `03_heat-lightning-1280x800.png` | 1280×800 | Heat Lightning theme, mid-game |
 | `04_portrait-800x1280.png` | 800×1280 | portrait reflow |
+| `05_stratosphere-1280x800.png` | 1280×800 | candidate 29, XL Stratosphere theme |
 
 Amazon takes landscape or portrait, but mixing both in one listing reads
-inconsistently. The three landscape frames already meet the 3-shot minimum;
-treat the portrait one as optional.
+inconsistently. Use `01`, `03`, and `05` for the strongest consistent landscape
+set. The old cleared-Light frame (`02`) is accurate but visually busy at the
+sphere rim; treat it and the portrait frame as optional.
 
 ## Console sequence (human only)
 
 1. Amazon Developer Console → create app **Hexsweeper**
-2. Upload `Hexsweeper-1.0.3-28-release.apk`; confirm the **Fire tablet** device
+2. Upload `Hexsweeper-1.0.4-29-release.apk`; confirm the **Fire tablet** device
    family and review the auto-generated supported-device list
 3. Paste the copy from `app-store/amazon/en-US/`
 4. Upload icons, feature graphic, and screenshots

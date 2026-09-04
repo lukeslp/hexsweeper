@@ -2059,7 +2059,6 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
   const REVEAL_FLASH_MS = 240;
   /** Chord: a second tap on the same open face inside this window. */
   const CHORD_TAP_MS = 300;
-  const IDLE_FRAME_MS = 200;
   /** Blast phases (ms) match flat Soft UI: charge 0–300 · shock from 260 · scatter 300+ */
   const BLAST_CHARGE_MS = 300;
   const BLAST_SCATTER_MS = 300;
@@ -3965,11 +3964,19 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
     /** Orientation changes settle over a frame or two on iOS; measure again. */
     function resizeSoon() {
       resize();
+      scheduleFrame();
       requestAnimationFrame(() => {
         resize();
-        requestAnimationFrame(resize);
+        scheduleFrame();
+        requestAnimationFrame(() => {
+          resize();
+          scheduleFrame();
+        });
       });
-      setTimeout(resize, 250);
+      setTimeout(() => {
+        resize();
+        scheduleFrame();
+      }, 250);
     }
 
     function setZoomFactor(factor) {
@@ -7535,7 +7542,8 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       const fastInteraction =
         IS_ANDROID_DEVICE &&
         state.cells.length >= 642 &&
-        (state.dragging ||
+        ((state.ambientSpin && !state.reduceMotion) ||
+          state.dragging ||
           Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
           Math.abs(state.targetRotX - state.rotX) > 0.0008);
       const projected = getProjected(fastInteraction);
@@ -7740,7 +7748,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
     function frameNeedsPaint(now) {
       if (state.ambientSpin && !state.reduceMotion) return true;
       if (focusTween) return true;
-      if (state.dragging || state.pressed >= 0 || state.hovered >= 0) return true;
+      if (state.dragging) return true;
       if (revealAnimBusy(now)) return true;
       if (END_FX.active) return true;
       if (state.camShake > 0.2) return true;
@@ -7796,8 +7804,10 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       } else {
         lastMenuPose = null;
       }
+      // A static sphere is already present in the canvas. Park until an input,
+      // resize, or state mutation schedules another frame instead of repainting
+      // thousands of unchanged XL faces on an idle timer.
       if (frameNeedsPaint(now)) scheduleFrame();
-      else scheduleFrame(IDLE_FRAME_MS);
     }
 
     function canvasPoint(e) {
@@ -7867,6 +7877,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
           }
         }, 480);
       }
+      scheduleFrame();
     }
 
     function onPointerMove(e) {
@@ -7908,7 +7919,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
           state.rotY = state.targetRotY;
           state.rotX = state.targetRotX;
           invalidateProjection();
-          if (state.menuRotateOnly) scheduleFrame(); // the loop re-projects on-sphere chrome
+          scheduleFrame();
         }
       }
       // Once a gesture is a drag there is no tile to hover or activate. The
@@ -7921,6 +7932,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         return;
       }
       state.hovered = state.menuRotateOnly ? -1 : pickTile(p.x, p.y);
+      scheduleFrame();
     }
 
     function onPointerUp(e) {
@@ -7933,6 +7945,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         state.dragStart = null;
         state.pressed = -1;
         touchMoved = false;
+        scheduleFrame();
         return;
       }
       const p = canvasPoint(e.changedTouches ? e.changedTouches[0] : e);
@@ -7944,6 +7957,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         state.pressed = -1;
         touchMoved = false;
         schedulePersist();
+        scheduleFrame();
         if (backgroundTap) {
           canvas.dispatchEvent(
             new CustomEvent("hexsweeper:menu-background-tap", { bubbles: true })
@@ -7980,6 +7994,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       state.pressed = -1;
       touchMoved = false;
       schedulePersist();
+      scheduleFrame();
     }
 
     canvas.addEventListener("mousedown", onPointerDown);

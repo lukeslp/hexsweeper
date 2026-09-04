@@ -342,10 +342,11 @@ Assets staged under `app-store/amazon/`:
 Submission checklist:
 
 - Upload the signed and verified
-  `android/dist/release/Hexsweeper-1.0.3-28-release.apk`. Do not submit the
+  `android/dist/release/Hexsweeper-1.0.4-29-release.apk`. Do not submit the
   debug-signed direct-download APK. Build and certificate details are in
   `android/AMAZON-RELEASE.md`.
 - Complete the IARC content-rating questionnaire (no known blockers).
 - Data collection: none (same answers as the iOS privacy manifest).
-- The physical Fire-tablet functional and performance gates pass; record the
-  final 30-minute soak in `android/AMAZON-RELEASE.md` before publishing.
+- The physical Fire-tablet functional, direct/ambient XL performance, soak,
+  and final foreground stress gates pass; evidence is in
+  `android/AMAZON-RELEASE.md`.

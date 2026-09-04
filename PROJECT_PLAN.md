@@ -54,9 +54,11 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 - [x] Launcher auto-digs a safe opening into clearly labeled Infinite,
       Classic, and Sphere choices with Endless, Fixed, and 3D qualifiers
 - [x] Android native build added (`versionCode 1`, unsigned, never uploaded)
-- [x] Optimized the signed Amazon Fire-tablet build's 2,252-face XL board;
-      `1.0.3 (28)` measures 10 ms median portrait and 7 ms median landscape on
-      KFRASWI, clearing the 25 fps gate that blocked `1.0.2 (27)`
+- [x] Optimized the signed Amazon Fire-tablet build's 2,252-face XL board:
+      `1.0.3 (28)` cleared direct rotation at 10 ms median portrait / 7 ms
+      landscape, then its long soak exposed a separate 53 ms idle-spin path;
+      `1.0.4 (29)` moves ambient rotation onto the compact renderer, parks
+      static frames, and passes final stress at 13 ms median / 18 ms p90
 - [x] Screenshot pipeline parameterised per device family (2026-08-11);
       `05-picker` generated, closing the set the script always declared
 - [x] iPad screenshots (2064×2752) generated and uploaded 2026-08-18 alongside a
