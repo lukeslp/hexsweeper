@@ -54,6 +54,9 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 - [x] Launcher auto-digs a safe opening into clearly labeled Infinite,
       Classic, and Sphere choices with Endless, Fixed, and 3D qualifiers
 - [x] Android native build added (`versionCode 1`, unsigned, never uploaded)
+- [ ] Optimize the signed Amazon Fire-tablet build's 2,252-face XL board; the
+      2026-09-04 KFRASWI measurement missed Amazon's 25 fps floor, so no Amazon
+      record has been created or submitted
 - [x] Screenshot pipeline parameterised per device family (2026-08-11);
       `05-picker` generated, closing the set the script always declared
 - [x] iPad screenshots (2064×2752) generated and uploaded 2026-08-18 alongside a

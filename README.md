@@ -101,7 +101,8 @@ The Android AAB is intentionally unsigned until a Play signing key is created
 and stored outside this repository. The Amazon Fire-tablet APK uses a separate
 release identity managed by the Android release toolkit; its staged artifact
 and device gate are documented in [`android/AMAZON-RELEASE.md`](android/AMAZON-RELEASE.md).
-Store login, upload, pricing, and publication remain manual release steps. See
+Amazon submission is currently blocked: the 2,252-face XL board failed the
+physical Fire tablet's 25 fps floor on 2026-09-04. See
 [`docs/RELEASE.md`](docs/RELEASE.md).
 
 ## Not in this build

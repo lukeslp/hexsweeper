@@ -21,6 +21,11 @@ Google Play Services is **not** linked. The `com.google.gms.google-services`
 plugin only applies when `app/google-services.json` exists, and it does not, so
 the APK carries no Play dependency — which is what makes it safe on Fire OS.
 
+Track state: **not ready for Amazon submission**. Package signing, device
+targeting, copy, icons, and screenshots are ready, but the physical Fire-tablet
+performance gate fails on the largest board. Do not create or submit an Amazon
+record until that board sustains at least Amazon's 25 fps floor.
+
 ## The signing key changed — read this before shipping
 
 Builds 16 through 20, published on dr.eamer.dev, were signed with the generic
@@ -127,9 +132,17 @@ signed build.
 - Listing screenshots were recaptured from this exact signed build at native
   1280×800 and 800×1280, both Amazon-accepted sizes.
 
-Open: a long-run soak (30+ min) and a frame-rate measurement on
-the largest 2,252-face board. The representative medium-board result clears
-Amazon's 25 fps floor, but the largest-board check remains a release gate.
+- **Largest-board gate failed on 2026-09-04.** The exact signed `1.0.2 (27)` APK
+  was reinstalled on KFRASWI and switched to the XL 2,252-face board. In
+  portrait, 36 repeated drags produced 856 measured frames with an 89 ms median
+  and every frame classified as janky. A separate landscape pass with 12
+  500 ms drags produced 251 frames, 77 ms median, 89.64% janky, and 133 missed
+  vsync events. No FATAL or ANR appeared, but both passes are far below
+  Amazon's 25 fps floor.
+
+Open: optimize the XL board until it clears 25 fps on KFRASWI, then repeat the
+representative and XL measurements and run a 30+ minute soak. The medium-board
+result remains acceptable; the XL result blocks submission.
 
 ### Note on portrait layout
 
