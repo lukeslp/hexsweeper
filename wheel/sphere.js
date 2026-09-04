@@ -39,6 +39,8 @@
     hard: { subdivisions: 10, minePct: 0.17 },
     xlarge: { subdivisions: 12, minePct: 0.17 },
   };
+  const IS_ANDROID_DEVICE = /Android/i.test(navigator.userAgent || "");
+  const CANVAS_DPR_CAP = IS_ANDROID_DEVICE ? 1.1 : 2;
 
   const REVEAL_STEP_MS = 28;
   const REVEAL_CAP_MS = 880;
@@ -1390,7 +1392,7 @@
      * that no longer matches its element (see syncCanvasSize).
      */
     function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, CANVAS_DPR_CAP);
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
       canvas.width = Math.round(w * dpr);
@@ -1413,7 +1415,7 @@
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
       if (!w || !h) return false;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, CANVAS_DPR_CAP);
       // Compare the bitmap against what this element needs, not against what
       // we last recorded: iOS can leave a correctly-sized element wearing a
       // stale backing store, and then nothing changes size again.
@@ -1550,16 +1552,33 @@
       }
     }
 
+    let rotationCache = null;
+
+    function rotationTerms(rotY, rotX) {
+      if (
+        !rotationCache ||
+        rotationCache.rotY !== rotY ||
+        rotationCache.rotX !== rotX
+      ) {
+        rotationCache = {
+          rotY,
+          rotX,
+          cy: Math.cos(rotY),
+          sy: Math.sin(rotY),
+          cx: Math.cos(rotX),
+          sx: Math.sin(rotX),
+        };
+      }
+      return rotationCache;
+    }
+
     function rotatePoint(p, rotY, rotX) {
       let x = p.x;
       let y = p.y;
       let z = p.z;
-      const cy = Math.cos(rotY);
-      const sy = Math.sin(rotY);
+      const { cy, sy, cx, sx } = rotationTerms(rotY, rotX);
       const x1 = x * cy + z * sy;
       const z1 = -x * sy + z * cy;
-      const cx = Math.cos(rotX);
-      const sx = Math.sin(rotX);
       const y2 = y * cx - z1 * sx;
       const z2 = y * sx + z1 * cx;
       return { x: x1, y: y2, z: z2 };
@@ -1586,19 +1605,25 @@
       return { x: n.x / len, y: n.y / len, z: n.z / len };
     }
 
-    function projectTile(tile, rotY, rotX, lift) {
+    function projectTile(tile, rotY, rotX, lift, knownCenterR) {
       const liftAmt = lift || 0;
-      const n = faceNormal(tile, rotY, rotX);
-      const liftVec = (p) => {
-        const r = rotatePoint(p, rotY, rotX);
-        return {
-          x: r.x + n.x * liftAmt,
-          y: r.y + n.y * liftAmt,
-          z: r.z + n.z * liftAmt,
-        };
+      const baseCenterR = knownCenterR || rotatePoint(tile.centerPoint, rotY, rotX);
+      const len = Math.hypot(baseCenterR.x, baseCenterR.y, baseCenterR.z) || 1;
+      const n = {
+        x: baseCenterR.x / len,
+        y: baseCenterR.y / len,
+        z: baseCenterR.z / len,
       };
-      const centerR = liftVec(tile.centerPoint);
-      const boundaryR = tile.boundary.map(liftVec);
+      const baseBoundaryR = tile.boundary.map((p) =>
+        rotatePoint(p, rotY, rotX)
+      );
+      const liftVec = (r) => ({
+        x: r.x + n.x * liftAmt,
+        y: r.y + n.y * liftAmt,
+        z: r.z + n.z * liftAmt,
+      });
+      const centerR = liftVec(baseCenterR);
+      const boundaryR = baseBoundaryR.map(liftVec);
       const center = projectRotated(centerR);
       const boundary = boundaryR.map(projectRotated);
       const avgZ =
@@ -1611,10 +1636,37 @@
         normal: n,
         index: tile.index,
         area: hexScreenArea(boundary),
-        baseBoundary:
-          liftAmt !== 0
-            ? tile.boundary.map((b) => projectPoint(b, rotY, rotX))
-            : null,
+        baseBoundary: liftAmt !== 0 ? baseBoundaryR.map(projectRotated) : null,
+        rotatedCenter: baseCenterR,
+        rotatedBoundary: baseBoundaryR,
+      };
+    }
+
+    /** Re-project an already rotated face at a radial height. */
+    function liftProjected(proj, lift) {
+      if (!proj || !proj.rotatedCenter || !proj.rotatedBoundary) return proj;
+      const n = proj.normal;
+      const liftVec = (r) => ({
+        x: r.x + n.x * lift,
+        y: r.y + n.y * lift,
+        z: r.z + n.z * lift,
+      });
+      const center = projectRotated(liftVec(proj.rotatedCenter));
+      const boundary = proj.rotatedBoundary.map((p) => projectRotated(liftVec(p)));
+      const avgZ =
+        boundary.reduce((sum, p) => sum + p.z, center.z) /
+        (boundary.length + 1);
+      return {
+        center,
+        boundary,
+        z: avgZ,
+        normalZ: n.z,
+        normal: n,
+        index: proj.index,
+        area: hexScreenArea(boundary),
+        baseBoundary: proj.boundary,
+        rotatedCenter: proj.rotatedCenter,
+        rotatedBoundary: proj.rotatedBoundary,
       };
     }
 
@@ -1631,14 +1683,19 @@
       return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}|${state.centerX.toFixed(2)}|${state.centerY.toFixed(2)}`;
     }
 
-    /** Project all tiles once per frame; cull back hemisphere for pick + draw. */
+    /** Project the visible hemisphere once per frame for pick + draw. */
     function getProjected() {
       const key = rotKey();
       if (state.projectedCache && state.rotCacheKey === key) {
         return state.projectedCache;
       }
-      const all = state.tiles.map((t) => projectTile(t, state.rotY, state.rotX));
-      const front = all.filter((p) => p.z > -0.05);
+      const front = [];
+      for (const tile of state.tiles) {
+        const centerR = rotatePoint(tile.centerPoint, state.rotY, state.rotX);
+        if (centerR.z <= -0.12) continue;
+        const projected = projectTile(tile, state.rotY, state.rotX, 0, centerR);
+        if (projected.z > -0.05) front.push(projected);
+      }
       front.sort((a, b) => a.z - b.z);
       state.projectedCache = front;
       state.rotCacheKey = key;
@@ -3485,6 +3542,8 @@
       const tile = state.tiles[tileIdx];
       const edgeN = tile.edgeNeighbors || [];
       const n = Math.min(baseBoundary.length, faceBoundary.length);
+      const cx = faceBoundary.reduce((s, p) => s + p.x, 0) / faceBoundary.length;
+      const cy = faceBoundary.reduce((s, p) => s + p.y, 0) / faceBoundary.length;
       for (let i = 0; i < n; i++) {
         const ni = edgeN[i];
         if (ni >= 0 && typeof skipNeighbor === "function" && skipNeighbor(ni)) {
@@ -3503,10 +3562,6 @@
             faceBoundary[i].y +
             faceBoundary[j].y) *
           0.25;
-        const cx =
-          faceBoundary.reduce((s, p) => s + p.x, 0) / faceBoundary.length;
-        const cy =
-          faceBoundary.reduce((s, p) => s + p.y, 0) / faceBoundary.length;
         const vx = mx - cx;
         const vy = my - cy;
         const len = Math.hypot(vx, vy) || 1;
@@ -3735,6 +3790,8 @@
     function drawExtrusionSkirt(baseBoundary, raisedBoundary) {
       if (!baseBoundary || !raisedBoundary) return;
       const n = Math.min(baseBoundary.length, raisedBoundary.length);
+      const cx = raisedBoundary.reduce((s, p) => s + p.x, 0) / raisedBoundary.length;
+      const cy = raisedBoundary.reduce((s, p) => s + p.y, 0) / raisedBoundary.length;
       for (let i = 0; i < n; i++) {
         const j = (i + 1) % n;
         const mx =
@@ -3749,10 +3806,6 @@
             raisedBoundary[i].y +
             raisedBoundary[j].y) *
           0.25;
-        const cx =
-          raisedBoundary.reduce((s, p) => s + p.x, 0) / raisedBoundary.length;
-        const cy =
-          raisedBoundary.reduce((s, p) => s + p.y, 0) / raisedBoundary.length;
         const vx = mx - cx;
         const vy = my - cy;
         const len = Math.hypot(vx, vy) || 1;
@@ -4794,6 +4847,12 @@
       const darkMono =
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
+      const fastInteraction =
+        IS_ANDROID_DEVICE &&
+        state.cells.length >= 642 &&
+        (state.dragging ||
+          Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
+          Math.abs(state.targetRotX - state.rotX) > 0.0008);
 
       // Per-tile permanent heights (hover is a temporary fifth offset).
       const heights = new Float32Array(state.cells.length);
@@ -4814,16 +4873,12 @@
         const tile = state.tiles[idx];
         let colors = tileColors(idx, proj, cell, tile, now);
         colors = drawColorsForStyle(colors, styleId, cell);
-        const h = heights[idx];
+        const h = fastInteraction ? 0 : heights[idx];
         let drawProj = proj;
         let markLift = 0;
         if (Math.abs(h) > 1e-6 && proj.z > 0.02) {
-          const lifted = projectTile(tile, state.rotY, state.rotX, h);
-          const baseBoundary =
-            lifted.baseBoundary ||
-            tile.boundary.map((b) =>
-              projectPoint(b, state.rotY, state.rotX)
-            );
+          const lifted = liftProjected(proj, h);
+          const baseBoundary = lifted.baseBoundary || proj.boundary;
           if (h > 1e-6) {
             // Proud flag pin: wall on every edge, it sits above the whole shell.
             drawExtrusionSkirt(baseBoundary, lifted.boundary);
@@ -4898,8 +4953,10 @@
         } else {
           drawHex(drawProj, colors.fill, colors.stroke, colors.lineWidth);
         }
-        drawWellCenterGlow(drawProj, cell, now);
-        paintCountMark(tile, drawProj, cell, colors, markLift);
+        if (!fastInteraction) {
+          drawWellCenterGlow(drawProj, cell, now);
+          paintCountMark(tile, drawProj, cell, colors, markLift);
+        }
       }
 
       // Flags stand above the shell, so they paint after their neighbors
@@ -4916,7 +4973,7 @@
         if (proj.z > 0.02 && hoverRaise) {
           continue;
         }
-        if (proj.z > 0.02 && heights[idx] > 1e-6) {
+        if (!fastInteraction && proj.z > 0.02 && heights[idx] > 1e-6) {
           proudFlags.push(proj);
           continue;
         }
@@ -4927,6 +4984,7 @@
       // Raised pass: hover/press on covered or flagged, lifted over its tier.
       if (
         highlightIdx >= 0 &&
+        !fastInteraction &&
         tileCanActivate(state.cells[highlightIdx])
       ) {
         const idx = highlightIdx;
@@ -4946,10 +5004,8 @@
             ? (state.pressed === idx ? PRESS_LIFT * 0.5 : 0)
             : (state.pressed === idx ? PRESS_LIFT : HOVER_LIFT);
           const lift = baseH + addLift;
-          const raised = projectTile(tile, state.rotY, state.rotX, lift);
-          const baseBoundary =
-            raised.baseBoundary ||
-            tile.boundary.map((b) => projectPoint(b, state.rotY, state.rotX));
+          const raised = liftProjected(base, lift);
+          const baseBoundary = raised.baseBoundary || base.boundary;
           drawExtrusionSkirt(baseBoundary, raised.boundary);
           let fill = colors.fill;
           if (!cell.revealed && !cell.flagged) {

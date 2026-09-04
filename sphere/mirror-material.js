@@ -964,6 +964,109 @@ void main() {
 }
 `;
 
+  // Fire OS WebView runs the full atmospheric shader poorly even on current
+  // tablets. This path keeps the selected plate, sphere rotation, lighting,
+  // and material palette while dropping the multi-octave weather simulation.
+  // The crisp Canvas 2D topology remains layered above it.
+  const ANDROID_FRAGMENT_SOURCE = `#version 300 es
+precision mediump float;
+out vec4 outColor;
+
+uniform float uTime;
+uniform float uAppearance;
+uniform float uMaterial;
+uniform vec2 uResolution;
+uniform vec2 uCenter;
+uniform vec2 uShellRotation;
+uniform float uRadius;
+uniform sampler2D uEnvironmentMap;
+uniform float uTextureReady;
+uniform vec4 uTextureParams;
+uniform vec4 uTextureTransform;
+uniform vec4 uTextureMotion;
+uniform vec4 uTextureDisplay;
+
+mat2 rotate2(float angle) {
+  float c = cos(angle);
+  float s = sin(angle);
+  return mat2(c, -s, s, c);
+}
+
+vec3 materialAccent() {
+  if (uMaterial < 0.5) return vec3(1.0, 0.72, 0.42);
+  if (uMaterial < 2.5) return vec3(0.72, 0.84, 0.86);
+  if (uMaterial < 3.5) return vec3(0.22, 0.82, 0.79);
+  if (uMaterial < 4.5) return vec3(0.92, 0.88, 0.76);
+  if (uMaterial < 5.5) return vec3(0.67, 0.79, 0.59);
+  if (uMaterial < 9.5) return vec3(0.86, 0.70, 0.42);
+  if (uMaterial < 10.5) return vec3(0.22, 0.78, 0.95);
+  if (uMaterial < 11.5) return vec3(0.70, 0.52, 0.92);
+  if (uMaterial < 13.5) return vec3(1.0, 0.58, 0.24);
+  if (uMaterial < 14.5) return vec3(0.42, 0.69, 1.0);
+  if (uMaterial < 15.5) return vec3(1.0, 0.61, 0.28);
+  if (uMaterial < 16.5) return vec3(1.0, 0.55, 0.35);
+  if (uMaterial < 17.5) return vec3(0.58, 0.82, 1.0);
+  if (uMaterial < 18.5) return vec3(0.18, 0.94, 0.86);
+  return vec3(1.0, 0.64, 0.20);
+}
+
+vec3 plate(vec2 uv) {
+  if (uTextureReady < 0.5) {
+    return mix(vec3(0.025, 0.03, 0.035), materialAccent() * 0.68, uv.y * 0.72);
+  }
+  float drift = uTime * uTextureParams.x;
+  uv.x = fract(uv.x + drift);
+  uv.y += sin(uv.x * 6.2831853 + uTime * uTextureMotion.z) *
+    uTextureMotion.y * 0.16;
+  vec3 color = texture(uEnvironmentMap, clamp(uv, 0.001, 0.999)).rgb;
+  color *= uTextureParams.y;
+  float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color = mix(vec3(luma), color, uTextureParams.z);
+  return color;
+}
+
+vec2 sphereUv(vec3 direction) {
+  direction.yz = rotate2(uShellRotation.y) * direction.yz;
+  direction.xz = rotate2(-uShellRotation.x) * direction.xz;
+  float longitude = atan(direction.z, direction.x) / 6.28318531 + 0.5;
+  float latitude = asin(clamp(direction.y, -1.0, 1.0)) / 3.14159265 + 0.5;
+  if (uTextureDisplay.x > 0.5) {
+    longitude = 1.0 - abs(longitude * 2.0 - 1.0);
+  }
+  vec2 centered = vec2(longitude, latitude) - 0.5;
+  return centered * uTextureTransform.xy + 0.5 + uTextureTransform.zw;
+}
+
+void main() {
+  vec2 screenUv = gl_FragCoord.xy / uResolution;
+  vec2 centered = screenUv - 0.5;
+  vec3 accent = materialAccent();
+  vec3 field = mix(vec3(0.006, 0.008, 0.012), accent * 0.15, uAppearance * 0.42);
+  vec3 backdrop = plate(vec2(screenUv.x, 1.0 - screenUv.y));
+  float backdropWeight = 0.18 + uTextureParams.w * 0.24;
+  vec3 color = mix(field, backdrop, backdropWeight);
+  color *= mix(0.62, 1.0, 1.0 - smoothstep(0.08, 0.72, length(centered)));
+
+  vec2 orb = (gl_FragCoord.xy - uCenter) / max(1.0, uRadius);
+  float radius2 = dot(orb, orb);
+  if (radius2 < 1.04) {
+    float z = sqrt(max(0.0, 1.0 - min(radius2, 1.0)));
+    vec3 normal = normalize(vec3(orb, z));
+    vec3 surface = plate(sphereUv(normal));
+    float limb = 0.54 + z * 0.46;
+    float crown = pow(max(dot(normal, normalize(vec3(-0.28, 0.70, 0.66))), 0.0), 10.0);
+    float fresnel = pow(1.0 - z, 2.0);
+    surface = surface * limb + accent * crown * 0.24;
+    surface += mix(vec3(0.36, 0.52, 0.60), accent, 0.34) * fresnel * 0.34;
+    float mask = 1.0 - smoothstep(0.986, 1.018, sqrt(radius2));
+    color = mix(color, surface, mask);
+  }
+
+  color = color / (1.0 + color * 0.42);
+  outColor = vec4(pow(max(color, 0.0), vec3(0.94)), 1.0);
+}
+`;
+
   function compile(gl, type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
@@ -976,9 +1079,13 @@ void main() {
     return shader;
   }
 
-  function programFor(gl) {
+  function programFor(gl, fragmentSource) {
     const vertex = compile(gl, gl.VERTEX_SHADER, VERTEX_SOURCE);
-    const fragment = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT_SOURCE);
+    const fragment = compile(
+      gl,
+      gl.FRAGMENT_SHADER,
+      fragmentSource || FRAGMENT_SOURCE
+    );
     const program = gl.createProgram();
     gl.attachShader(program, vertex);
     gl.attachShader(program, fragment);
@@ -1026,6 +1133,7 @@ void main() {
       this.failed = false;
       this.reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
       this.mobile = matchMedia("(max-width: 700px), (pointer: coarse)").matches;
+      this.android = /Android/i.test(navigator.userAgent || "");
       document.body.dataset.reflectionMaterial = this.getMaterial().id;
       this.canvas.setAttribute("aria-hidden", "true");
       this.canvas.tabIndex = -1;
@@ -1040,14 +1148,17 @@ void main() {
           antialias: false,
           depth: false,
           stencil: false,
-          // The game can export a share card at any point; retaining the last
-          // composed frame lets Canvas 2D capture the material reliably.
-          preserveDrawingBuffer: true,
+          // Web and Apple builds retain the composed frame for share cards.
+          // Android repaints synchronously in prepareCapture() instead.
+          preserveDrawingBuffer: !this.android,
           powerPreference: "high-performance",
         });
         if (!gl) throw new Error("WebGL2 is unavailable");
         this.gl = gl;
-        this.program = programFor(gl);
+        this.program = programFor(
+          gl,
+          this.android ? ANDROID_FRAGMENT_SOURCE : FRAGMENT_SOURCE
+        );
         // Bind before the sampler uniform below; render() rebinds each frame.
         gl.useProgram(this.program);
         this.buffer = gl.createBuffer();
@@ -1402,11 +1513,11 @@ void main() {
       this.cssW = cssWidth;
       this.cssH = cssHeight;
       const dpr = Math.min(devicePixelRatio || 1, 1.5);
-      const quality = this.mobile ? 0.58 : 0.74;
-      const edgeCap = this.mobile ? 820 : 1280;
+      const quality = this.android ? 0.38 : this.mobile ? 0.58 : 0.74;
+      const edgeCap = this.android ? 600 : this.mobile ? 820 : 1280;
       let scale = dpr * quality;
       scale = Math.min(scale, edgeCap / Math.max(cssWidth, cssHeight));
-      scale = Math.max(0.5, scale);
+      scale = Math.max(this.android ? 0.38 : 0.5, scale);
       const width = Math.max(2, Math.round(cssWidth * scale));
       const height = Math.max(2, Math.round(cssHeight * scale));
       if (this.canvas.width !== width || this.canvas.height !== height) {
@@ -1459,7 +1570,7 @@ void main() {
         this.resize();
       }
       const menuOpen = document.body.classList.contains("hex-bloom-open");
-      const frameMs = menuOpen ? 120 : this.mobile ? 33 : 22;
+      const frameMs = menuOpen ? 120 : this.android ? 40 : this.mobile ? 33 : 22;
       if (time - this.lastPaintAt >= frameMs) {
         this.render(time, false);
         this.lastPaintAt = time;
@@ -1592,6 +1703,11 @@ void main() {
       this.canvas.style.opacity = menuOpen ? "0.64" : "1";
       this.canvas.style.filter = menuOpen ? "blur(3px) saturate(.72)" : "none";
       if (force) gl.flush();
+    }
+
+    prepareCapture() {
+      this.render(performance.now(), true);
+      if (this.gl) this.gl.finish();
     }
   }
 
