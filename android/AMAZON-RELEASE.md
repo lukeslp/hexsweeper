@@ -8,7 +8,7 @@ and has no D-pad model.
 | | |
 |---|---|
 | Application ID | `app.hexodus.ios` |
-| Version | `1.0.2 (27)` |
+| Version | `1.0.3 (28)` |
 | minSdk / targetSdk | 24 / 36 |
 | Permissions | `app.hexodus.ios.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` only (Capacitor-generated, self-scoped) |
 | Native code | none — universal APK, pure WebView |
@@ -21,18 +21,18 @@ Google Play Services is **not** linked. The `com.google.gms.google-services`
 plugin only applies when `app/google-services.json` exists, and it does not, so
 the APK carries no Play dependency — which is what makes it safe on Fire OS.
 
-Track state: **not ready for Amazon submission**. Package signing, device
-targeting, copy, icons, and screenshots are ready, but the physical Fire-tablet
-performance gate fails on the largest board. Do not create or submit an Amazon
-record until that board sustains at least Amazon's 25 fps floor.
+Track state: **release candidate ready; final soak in progress**. Package
+signing, device targeting, copy, icons, screenshots, and the physical
+Fire-tablet XL performance gate pass. Submit after the 30-minute signed-build
+soak completes without a crash or ANR.
 
 ## The signing key changed — read this before shipping
 
 Builds 16 through 20, published on dr.eamer.dev, were signed with the generic
 **Android debug key** (`CN=Android Debug`). Amazon rejects debug-signed APKs.
 
-Build 26 is the first signed with a real release identity, and build 27 keeps
-that identity:
+Build 26 is the first signed with a real release identity; builds 27 and 28
+keep that identity:
 
 ```
 CN=Hexsweeper Android Release, OU=Android, O=Luke Steuber, C=US
@@ -53,10 +53,13 @@ Consequences:
 
 ```
 android/dist/release/
-  Hexsweeper-1.0.2-27-release.apk
+  Hexsweeper-1.0.3-28-release.apk
   SHA256SUMS.txt
   PROVENANCE.txt
 ```
+
+APK SHA-256:
+`4442fbf0b1a4fba17704ac3845e8b2d521893289ab5036f1059f04a9bb54c3f7`.
 
 ## Build signed release
 
@@ -97,11 +100,11 @@ Record model + Fire OS version, then verify:
 Capture 3–5 listing screenshots at an Amazon-accepted size from this exact
 signed build.
 
-### Current device evidence — 2026-09-03
+### Current device evidence — 2026-09-04
 
 - **KFRASWI** (`raspite`), Fire OS 8.0 / Android 11 (API 30), 800×1280 native,
   213 dpi, arm64-v8a. Real multitouch (`touchscreen.multitouch.jazzhand`).
-- Signed `1.0.2 (27)` installed over USB ADB and launched; `MainActivity` took
+- Signed `1.0.3 (28)` installed over USB ADB and launched; `MainActivity` took
   and held focus. Package flags confirm it is not debuggable. No FATAL, no ANR,
   and no AndroidRuntime errors appeared in logcat.
 - True immersive full-screen passes in portrait and landscape: neither the
@@ -129,20 +132,23 @@ signed build.
   reduced effects sustained about 32. Android frame statistics recorded zero
   missed-vsync and zero frame-deadline events. Before the Fire-specific renderer
   work, the same interaction was roughly 9 fps.
-- Listing screenshots were recaptured from this exact signed build at native
-  1280×800 and 800×1280, both Amazon-accepted sizes.
+- The listing screenshots remain the native signed-`1.0.2 (27)` captures at
+  1280×800 and 800×1280. Candidate 28 changes only the transient drag path;
+  its settled Light frame was checked on-device against those captures.
 
-- **Largest-board gate failed on 2026-09-04.** The exact signed `1.0.2 (27)` APK
-  was reinstalled on KFRASWI and switched to the XL 2,252-face board. In
-  portrait, 36 repeated drags produced 856 measured frames with an 89 ms median
-  and every frame classified as janky. A separate landscape pass with 12
-  500 ms drags produced 251 frames, 77 ms median, 89.64% janky, and 133 missed
-  vsync events. No FATAL or ANR appeared, but both passes are far below
-  Amazon's 25 fps floor.
+- **Largest-board gate passes in `1.0.3 (28)`.** Repeated drags on the XL
+  2,252-face Light board produced 142 measured portrait frames at a 10 ms
+  median and 305 landscape frames at a 7 ms median. Landscape's 90th
+  percentile was 40 ms; neither run missed vsync, crashed, or raised an ANR.
+  The same signed candidate's representative 1,002-face board produced 255
+  frames at an 8 ms median and 24 ms 90th percentile.
+- The failed `1.0.2 (27)` baseline was 89 ms median portrait and 77 ms median
+  landscape on XL. The fix removes the full retained hit-test projection from
+  touch-move events after a gesture becomes a drag; the compact batched drag
+  renderer is now the only projection painted during direct rotation.
 
-Open: optimize the XL board until it clears 25 fps on KFRASWI, then repeat the
-representative and XL measurements and run a 30+ minute soak. The medium-board
-result remains acceptable; the XL result blocks submission.
+Open: the 30+ minute signed-build XL soak started after the orientation and
+representative-board passes. Record its result before submission.
 
 ### Note on portrait layout
 
@@ -161,6 +167,7 @@ look before leaning on portrait screenshots in the listing.
 | App icon | `images/icon-512.png` | ready, 512×512 |
 | Promotional image | `images/feature-1024x500.png` | ready, 1024×500 |
 | Copy | `en-US/*.txt` | ready, all within limits |
+| Reviewer instructions | `en-US/reviewer_instructions.txt` | ready |
 | Screenshots | `screenshots/*.png` | ready — 4 native Fire tablet captures |
 
 `en-US/feature_bullets.txt` contains **five** bullets, within Amazon's three-to-
@@ -185,11 +192,12 @@ treat the portrait one as optional.
 ## Console sequence (human only)
 
 1. Amazon Developer Console → create app **Hexsweeper**
-2. Upload `Hexsweeper-1.0.2-27-release.apk`; confirm the **Fire tablet** device
+2. Upload `Hexsweeper-1.0.3-28-release.apk`; confirm the **Fire tablet** device
    family and review the auto-generated supported-device list
 3. Paste the copy from `app-store/amazon/en-US/`
 4. Upload icons, feature graphic, and screenshots
-5. Content rating, audience, privacy URL
+5. Paste `reviewer_instructions.txt`, then complete content rating, audience,
+   and the privacy URL
 6. Submit only after the device gate above is filled in
 
 This repo never logs into Amazon for you.

@@ -339,13 +339,13 @@ Assets staged under `app-store/amazon/`:
   "Hexsweeper" is expected to be available on Amazon; the "3D" suffix was
   an Apple name-collision workaround only.
 
-Submission checklist (all manual, in the Amazon developer console):
+Submission checklist:
 
 - Upload the signed and verified
-  `android/dist/release/Hexsweeper-1.0.2-27-release.apk`. Do not submit the
+  `android/dist/release/Hexsweeper-1.0.3-28-release.apk`. Do not submit the
   debug-signed direct-download APK. Build and certificate details are in
   `android/AMAZON-RELEASE.md`.
 - Complete the IARC content-rating questionnaire (no known blockers).
 - Data collection: none (same answers as the iOS privacy manifest).
-- Finish the remaining physical-device items in `android/AMAZON-RELEASE.md`
-  before publishing.
+- The physical Fire-tablet functional and performance gates pass; record the
+  final 30-minute soak in `android/AMAZON-RELEASE.md` before publishing.
