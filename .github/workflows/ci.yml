@@ -48,6 +48,9 @@ jobs:
       - name: Dodecahedron panel campaign smoke
         run: node polyhedron/test-campaign.js
 
+      - name: Build sealed app payload
+        run: python3 tools/export-collection.py --app
+
       - name: Web launcher route contract
         run: node tools/test-web-launcher.mjs
 
