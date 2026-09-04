@@ -34,7 +34,12 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - [x] Re-vendored in native commit `79b6c0e`, signed as `1.0.3 (28)`, and
   measured on KFRASWI: XL is 10 ms median portrait and 7 ms median landscape;
   the representative 1,002-face board is 8 ms median. The 25 fps physical
-  device gate passes; the final 30-minute XL soak is running before submission.
+  device gate passes; its 31-minute process/lifecycle soak had no crash or ANR
+  and exposed the ambient/static rendering follow-up below.
+- [x] Final native `1.0.4 (29)` includes the ambient/static-loop follow-up.
+  XL automatic motion is 6 ms median / 9 ms p90; a five-minute, 55-drag stress
+  pass is 13 ms median / 18 ms p90 with no missed vsync, crash, or ANR. The
+  installed APK bytes match the staged release hash.
 
 ## Current status (2026-08-18)
 
