@@ -26,8 +26,10 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - [x] The native-payload browser contract now runs with a Fire-like Android
   user agent and explicitly drags the full 2,252-face XL sphere before checking
   the settled frame.
-- [ ] Re-vendor, sign, and measure the updated payload on KFRASWI; Amazon's
-  25 fps physical-device floor remains the release gate.
+- [x] Re-vendored in native commit `79b6c0e`, signed as `1.0.3 (28)`, and
+  measured on KFRASWI: XL is 10 ms median portrait and 7 ms median landscape;
+  the representative 1,002-face board is 8 ms median. The 25 fps physical
+  device gate passes; the final 30-minute XL soak is running before submission.
 
 ## Current status (2026-08-18)
 
