@@ -7912,6 +7912,15 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
           if (state.menuRotateOnly) scheduleFrame(); // the loop re-projects on-sphere chrome
         }
       }
+      // Once a gesture is a drag there is no tile to hover or activate. The
+      // old unconditional pick rebuilt the complete retained projection on
+      // every Android touchmove, immediately before the frame loop built the
+      // compact drag projection again. On XL that synchronous hit test was
+      // the dominant Fire WebView cost and made the batched painter irrelevant.
+      if (state.dragging && touchMoved) {
+        state.hovered = -1;
+        return;
+      }
       state.hovered = state.menuRotateOnly ? -1 : pickTile(p.x, p.y);
     }
 

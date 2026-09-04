@@ -21,7 +21,8 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - [x] Reworked dense Android drag frames after the physical Fire-tablet XL
   gate exposed an 11–13 fps path: front-hemisphere projection now skips
   retained lift/pick geometry, Light/Dark faces paint in compound style
-  batches, and full-detail rendering returns when motion settles.
+  batches, hit-testing stops after touch becomes a drag, and full-detail
+  rendering returns when motion settles.
 - [x] The native-payload browser contract now runs with a Fire-like Android
   user agent and explicitly drags the full 2,252-face XL sphere before checking
   the settled frame.
