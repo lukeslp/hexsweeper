@@ -2,10 +2,8 @@
 
 ## Workspace
 
-Canonical (live): `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/`  
-(`~/dr.eamer.dev` → `~/www/dr.eamer.dev`)
-
-Beast mirror: `/Users/luke/workspace/hexsweeper` · remote `lukeslp/hexsweeper`
+Canonical (live): the checkout on the production host is the served web root.  
+Development mirror: the build machine's checkout · remote `lukeslp/hexsweeper`
 
 Saved edits on Drummer are live on the public site. Prefer: edit → verify locally or via public URL → commit → push → `git pull` on Drummer so disk matches git.
 

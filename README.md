@@ -21,9 +21,14 @@ to play; run the exporter after changing their source files.
 python3 -m http.server 8080
 ```
 
-## Production notes
+## Deployment
 
-The live static deploy is `/home/coolhand/www/dr.eamer.dev/games/hexsweeper/` on Drummer. This repository is its own nested Git worktree there; the Beast mirror lives at `/Users/luke/workspace/hexsweeper`. IBM Plex is self-hosted under `fonts/` under the SIL Open Font License 1.1. No Google Fonts CDN is used.
+This repository root is the deployed web root: the live site serves these
+files directly, so a commit on the default branch is a release. The generated
+routes (`index.html`, `launcher.html`, `infinite.html`, `bounded.html`, and the
+`collection/` one-pagers) are committed; run the exporter after changing their
+sources and CI checks that they match. IBM Plex is self-hosted under `fonts/`
+under the SIL Open Font License 1.1. No font CDN is used.
 
 ## Boards (production)
 
@@ -410,6 +415,7 @@ Open `lab.html` or `choices.html` locally or by URL path. Experimental skins rem
 
 ## Related
 
-- Games index: `/games/` (icon: `/games/icons/hexsweeper.svg`)
-- Three-mode cut plan: `~/craft/reports/by-date/2026-07-26/discuss-hexsweeper-three-modes.md`
-- Screenshots (home): `~/hexsweeper-{light,dark,fire,plague,escape,white,mobile-*}.png`
+- Games index: https://dr.eamer.dev/games/
+- Native apps (iOS, Android, Fire TV) are built from this repository's `--app`
+  export in a separate repository; the web root and the sealed app page are the
+  same Sphere.
