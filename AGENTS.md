@@ -58,8 +58,10 @@ bundle, drops the cross-game links, sends credits to the system browser, and
 hides the native launch screen after first paint.
 
 `HEXSWEEPER_SPHERE_APP` also drops the **Earth / Moon** globe themes (the THEMES
-filter in `sphere.js`): they are the only themes that fetch over the network, and
-their daymap provenance/attribution is unresolved. The web build keeps all nine.
+filter in `sphere.js`): these themes fetch textures over the network. Texture
+provenance and attribution are recorded in [the texture source notes](sphere/assets/textures/README.md);
+Earth gloss is project artwork and the older daymaps carry Solar System Scope
+attribution through Orrery. The web build keeps all nine.
 
 After any sphere change, re-run `--app` and re-vendor into hexsweeper-app's
 `www/`; that repo's smoke gate regenerates this payload and fails on drift.
