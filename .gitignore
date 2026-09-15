@@ -1,0 +1,41 @@
+.DS_Store
+*.log
+.vscode/
+.idea/
+*.png
+*.jpg
+.env
+.env.*
+
+# Keep collection / OG social cards tracked
+!assets/
+!assets/social/
+!assets/social/*.png
+
+# Native app launcher mark; exported into the offline Capacitor picker.
+!tools/assets/
+!tools/assets/hexsweeper-logo.png
+
+# Sphere help history tile + globe daymaps
+!sphere/assets/
+!sphere/assets/**
+!sphere/assets/**/*.png
+!sphere/assets/**/*.jpg
+
+# UX sandbox (hex-bloom experiments) — same media needs as live sphere
+!sphere-ux/assets/
+!sphere-ux/assets/**
+!sphere-ux/assets/**/*.png
+!sphere-ux/assets/**/*.jpg
+
+# Flux route-specific screenshot card
+!flux-sphere/assets/
+!flux-sphere/assets/og.png
+
+# Staging frames for tools/shoot-og-cards.sh
+og-frames/
+
+# Native-app payload from `export-collection.py --app`. Regenerated on demand
+# and vendored into hexsweeper-app; never committed here, so it never reaches
+# the live site (this repo root IS the deployed web root on Drummer).
+build/

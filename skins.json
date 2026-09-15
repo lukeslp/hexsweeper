@@ -1,0 +1,111 @@
+{
+  "title": "Hexsweeper Lab",
+  "note": "Dormant prior art: experimental skins over core.js. The five-theme flat game lives at play.html (Light / Dark / Fire / Plague / Escape; Water demoted to ?mode=water + collection) — not this catalog.",
+  "production": {
+    "file": "play.html",
+    "modes": ["light", "dark", "fire", "plague", "escape"],
+    "url": "https://dr.eamer.dev/games/hexsweeper/play.html"
+  },
+  "skins": [
+    {
+      "id": "classic",
+      "file": "classic.html",
+      "name": "Classic Neumorph",
+      "ogTitle": "Soft Honeycomb Hexagonal Minesweeper",
+      "ogDescription": "A minimalist take on old school Minesweeper, with raised neumorphic cells and hex geometry that keeps surprising you.",
+      "tag": "baseline",
+      "blurb": "Original soft raised honeycomb — the control sample.",
+      "techniques": ["neumorphism", "hover scale", "reveal press"]
+    },
+    {
+      "id": "particle-bloom",
+      "file": "skins/particle-bloom.html",
+      "name": "Particle Bloom",
+      "ogTitle": "Particle Bloom Hexagonal Minesweeper",
+      "ogDescription": "Classic Minesweeper with an ambient dust field that bursts into seed particles whenever you reveal a cell.",
+      "tag": "particles",
+      "blurb": "Ambient dust field; cells burst seed particles on reveal.",
+      "techniques": ["particle field", "emit on reveal", "additive bloom"]
+    },
+    {
+      "id": "glass-lens",
+      "file": "skins/glass-lens.html",
+      "name": "Glass Magnifier",
+      "ogTitle": "Glass Lens Hexagonal Minesweeper",
+      "ogDescription": "Old school Minesweeper seen through frostpane glass and a cursor-following magnifier over the hex grid.",
+      "tag": "lensing",
+      "blurb": "Frostpane tokens + cursor-following glass lens with radial distortion.",
+      "techniques": ["backdrop blur", "magnifier lens", "frosted glass materials"]
+    },
+    {
+      "id": "parallax-depth",
+      "file": "skins/parallax-depth.html",
+      "name": "Parallax Rings",
+      "ogTitle": "Parallax Ring Hexagonal Minesweeper",
+      "ogDescription": "Classic Minesweeper with ring depth and pointer parallax that tilts the honeycomb as you hunt mines.",
+      "tag": "depth",
+      "blurb": "Lab copy of ring-depth + pointer parallax. Production Fire mode lives in play.html.",
+      "techniques": ["ring depth", "pointer parallax", "theme cycle", "sorted draw order"]
+    },
+    {
+      "id": "brass-plaque",
+      "file": "skins/brass-plaque.html",
+      "name": "Brass Plaque",
+      "ogTitle": "Brass Plaque Hexagonal Minesweeper",
+      "ogDescription": "A warm ceramic-metal desk take on Minesweeper, with brass finish tokens and hexagonal surprises under each cover.",
+      "tag": "materials",
+      "blurb": "Finish tokens from materials/brass — warm ceramic-metal desk.",
+      "techniques": ["material tokens", "metal gradient cells", "desk atmosphere"]
+    },
+    {
+      "id": "frostpane",
+      "file": "skins/frostpane.html",
+      "name": "Frostpane Night",
+      "ogTitle": "Frostpane Hexagonal Minesweeper",
+      "ogDescription": "Old school Minesweeper behind dark frosted glass, with cyan-violet glow and translucent hex faces.",
+      "tag": "materials",
+      "blurb": "Dark frosted glass: cyan–violet glow, translucent faces, rim light.",
+      "techniques": ["frosted-glass pack", "luminous mist", "glass fill"]
+    },
+    {
+      "id": "paper-relief",
+      "file": "skins/paper-relief.html",
+      "name": "Paper Relief",
+      "ogTitle": "Paper Relief Hexagonal Minesweeper",
+      "ogDescription": "Classic Minesweeper embossed on cream paper stock, with soft shadows and tactile hex geometry.",
+      "tag": "materials",
+      "blurb": "Paper-systems cream stock with multi-shadow emboss depth.",
+      "techniques": ["paper tokens", "soft multi-shadow", "score ink"]
+    },
+    {
+      "id": "comet-void",
+      "file": "skins/comet-void.html",
+      "name": "Comet Void",
+      "ogTitle": "Comet Void Hexagonal Minesweeper",
+      "ogDescription": "Minesweeper in void black with ember sparks and meteor streaks threading through the hex grid.",
+      "tag": "particles",
+      "blurb": "Shader-comet palette: void black, ember sparks, meteor streaks.",
+      "techniques": ["meteor sky motif", "spark particles", "trail streaks"]
+    },
+    {
+      "id": "mycelium",
+      "file": "skins/mycelium.html",
+      "name": "Mycelium Web",
+      "ogTitle": "Mycelium Web Hexagonal Minesweeper",
+      "ogDescription": "Classic Minesweeper where hyphal links grow between revealed cells and nutrient particles flow through the hexes.",
+      "tag": "organic",
+      "blurb": "Hyphal links grow between revealed cells; nutrient particles flow.",
+      "techniques": ["seeded growth", "network edges", "nutrient flow"]
+    },
+    {
+      "id": "caustic-lens",
+      "file": "skins/caustic-lens.html",
+      "name": "Caustic Lens",
+      "ogTitle": "Caustic Lens Hexagonal Minesweeper",
+      "ogDescription": "Old school Minesweeper with under-board light caustics and a hover refraction bulge over each hex.",
+      "tag": "lensing",
+      "blurb": "Under-board light caustics + hover refraction bulge.",
+      "techniques": ["caustic field", "refraction warp", "specular ridge"]
+    }
+  ]
+}

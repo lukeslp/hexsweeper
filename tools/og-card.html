@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<!--
+  File Purpose: Render 1200x630 OG cards for Hexsweeper themes, lab skins, and sphere.
+  Primary Functions/Classes: CARDS table; live game iframe backdrop + title/desc plate.
+  Inputs: ?card=<home|light|dark|fire|plague|escape|sphere|skin-<id>>.
+  Outputs: an on-screen 1200x630 stage to screenshot into assets/social/<card>-og.png.
+  Note: Authoring tool, not a public page. Uses the game's own IBM Plex faces so the
+        cards match the site rather than whatever a compositor has installed.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hexsweeper OG cards</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;background:#22262c}
+  /* Exact OG frame: screenshot this box, nothing around it. */
+  #stage{
+    position:relative;width:1200px;height:630px;overflow:hidden;
+    background:var(--card-bg,#0e1218);
+  }
+  #board{position:absolute;inset:0;width:1200px;height:630px;border:0}
+  /* Scrim keeps the type legible over whatever the board happens to deal. */
+  #scrim{
+    position:absolute;inset:0;
+    background:linear-gradient(
+      to top,
+      var(--scrim-strong) 0%,
+      var(--scrim-mid) 34%,
+      transparent 62%
+    );
+  }
+  #plate{
+    position:absolute;left:64px;right:64px;bottom:56px;
+    font-family:"IBM Plex Sans",system-ui,sans-serif;
+  }
+  .rule{width:56px;height:3px;background:var(--accent);margin-bottom:22px}
+  h1{
+    margin:0;color:var(--ink);
+    font:700 68px/1.02 "IBM Plex Sans",system-ui,sans-serif;
+    letter-spacing:-.028em;
+  }
+  p{
+    margin:14px 0 0;max-width:800px;color:var(--ink-sub);
+    font:400 26px/1.34 "IBM Plex Sans",system-ui,sans-serif;
+  }
+  .url{
+    margin:26px 0 0;color:var(--ink-faint);
+    font:500 18px/1 "IBM Plex Mono",ui-monospace,monospace;
+    letter-spacing:.02em;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <iframe id="board" title="Board" scrolling="no"></iframe>
+  <div id="scrim"></div>
+  <div id="plate">
+    <div class="rule"></div>
+    <h1 id="t"></h1>
+    <p id="d"></p>
+    <p class="url" id="u">dr.eamer.dev/games/hexsweeper</p>
+  </div>
+</div>
+<script>
+(function () {
+  // Ink and scrim per theme: porcelain needs dark type, the rest need light.
+  const CARDS = {
+    home: {
+      src: "../?mode=fire&deal=1",
+      title: "Hexsweeper",
+      desc: "Hexagonal minesweeper: six neighbors instead of eight.",
+      accent: "#ff6400", bg: "#100a06", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper",
+    },
+    light: {
+      src: "../?mode=light&deal=1",
+      title: "Neumorphic Hexagonal Minesweeper",
+      desc: "A minimalist take on old school Minesweeper, with soft porcelain and night iron plates that keep growing as you dig.",
+      accent: "#1d4ed8", bg: "#d4dce8", dark: false,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    dark: {
+      src: "../?mode=dark&deal=1",
+      title: "Neumorphic Hexagonal Minesweeper",
+      desc: "A minimalist take on old school Minesweeper, with soft porcelain and night iron plates that keep growing as you dig.",
+      accent: "#60a5fa", bg: "#10151d", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper",
+    },
+    fire: {
+      src: "../?mode=fire&deal=1",
+      title: "Magma Hexagonal Minesweeper",
+      desc: "Classic Minesweeper in a molten honeycomb pit where burns rise upward and drag tilts the shaft instead of panning it.",
+      accent: "#ff6400", bg: "#1c120c", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    plague: {
+      src: "../?mode=plague&deal=1",
+      title: "Mycelium Hexagonal Minesweeper",
+      desc: "Old school Minesweeper on a culture dish, with verdigris faces and a hyphal mat creeping between the hexes.",
+      accent: "#7ec8a8", bg: "#141e1c", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    water: {
+      src: "../?mode=water&deal=1",
+      title: "Tidal Hexagonal Minesweeper",
+      desc: "Old school Minesweeper on a hex raft floating half under the tide, with the submerged rows rippling below a live waterline.",
+      accent: "#7fe0e8", bg: "#04202f", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "sphere-water": {
+      src: "../wheel/?theme=water&deal=1&welcome=0",
+      title: "Hexsweeper 3D — Water",
+      desc: "The hex-tile take on classic Minesweeper, on a globe half sunk in open sea. Drag the waterline; the sphere keeps turning through it.",
+      accent: "#7fe0e8", bg: "#04202f", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/wheel",
+      hide: ".hud-cluster,.hud-stats,.sphere-banner,.help-overlay,.count-style-toast,#history-lightbox",
+    },
+    escape: {
+      src: "../?mode=escape&deal=1",
+      title: "Rift Chase Hexagonal Minesweeper",
+      desc: "Dig toward an offscreen exit on slate while a glacial rift seeps after your clears, with six neighbors instead of eight.",
+      accent: "#7fd8c4", bg: "#0e1218", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    sphere: {
+      src: "../sphere/?deal=1&welcome=0",
+      title: "Hexsweeper 3D",
+      desc: "The hex-tile take on classic Minesweeper — on a sphere. Themes, controls, and sharing.",
+      accent: "#111111", bg: "#ffffff", dark: false,
+      url: "dr.eamer.dev/games/hexsweeper/sphere",
+      hide: ".hud-cluster,.hud-stats,.sphere-banner,.help-overlay,.count-style-toast,#history-lightbox",
+    },
+    "skin-classic": {
+      src: "../collection/skin-classic.html",
+      title: "Soft Honeycomb Hexagonal Minesweeper",
+      desc: "A minimalist take on old school Minesweeper, with raised neumorphic cells and hex geometry that keeps surprising you.",
+      accent: "#718096", bg: "#e0e5ec", dark: false,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-particle-bloom": {
+      src: "../collection/skin-particle-bloom.html",
+      title: "Particle Bloom Hexagonal Minesweeper",
+      desc: "Classic Minesweeper with an ambient dust field that bursts into seed particles whenever you reveal a cell.",
+      accent: "#ff6400", bg: "#080a0f", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-glass-lens": {
+      src: "../collection/skin-glass-lens.html",
+      title: "Glass Lens Hexagonal Minesweeper",
+      desc: "Old school Minesweeper seen through frostpane glass and a cursor-following magnifier over the hex grid.",
+      accent: "#7eb8ff", bg: "#0a1420", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-parallax-depth": {
+      src: "../collection/skin-parallax-depth.html",
+      title: "Parallax Ring Hexagonal Minesweeper",
+      desc: "Classic Minesweeper with ring depth and pointer parallax that tilts the honeycomb as you hunt mines.",
+      accent: "#ff6400", bg: "#1c120c", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-brass-plaque": {
+      src: "../collection/skin-brass-plaque.html",
+      title: "Brass Plaque Hexagonal Minesweeper",
+      desc: "A warm ceramic-metal desk take on Minesweeper, with brass finish tokens and hexagonal surprises under each cover.",
+      accent: "#c9a86c", bg: "#141820", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-frostpane": {
+      src: "../collection/skin-frostpane.html",
+      title: "Frostpane Hexagonal Minesweeper",
+      desc: "Old school Minesweeper behind dark frosted glass, with cyan-violet glow and translucent hex faces.",
+      accent: "#7eb8ff", bg: "#0a1420", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-paper-relief": {
+      src: "../collection/skin-paper-relief.html",
+      title: "Paper Relief Hexagonal Minesweeper",
+      desc: "Classic Minesweeper embossed on cream paper stock, with soft shadows and tactile hex geometry.",
+      accent: "#4a5568", bg: "#f4efe6", dark: false,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-comet-void": {
+      src: "../collection/skin-comet-void.html",
+      title: "Comet Void Hexagonal Minesweeper",
+      desc: "Minesweeper in void black with ember sparks and meteor streaks threading through the hex grid.",
+      accent: "#ffd24a", bg: "#080a0f", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-mycelium": {
+      src: "../collection/skin-mycelium.html",
+      title: "Mycelium Web Hexagonal Minesweeper",
+      desc: "Classic Minesweeper where hyphal links grow between revealed cells and nutrient particles flow through the hexes.",
+      accent: "#7ec8a8", bg: "#141e1c", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+    "skin-caustic-lens": {
+      src: "../collection/skin-caustic-lens.html",
+      title: "Caustic Lens Hexagonal Minesweeper",
+      desc: "Old school Minesweeper with under-board light caustics and a hover refraction bulge over each hex.",
+      accent: "#34d399", bg: "#0a1420", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper/collection",
+    },
+  };
+
+  const params = new URL(location.href).searchParams;
+  const key = params.get("card") || "home";
+  const card = CARDS[key] || CARDS.home;
+  const root = document.documentElement.style;
+
+  const scale = parseFloat(params.get("scale") || "1");
+  if (Number.isFinite(scale) && scale > 0 && scale !== 1) {
+    document.getElementById("stage").style.zoom = String(scale);
+  }
+
+  root.setProperty("--card-bg", card.bg);
+  root.setProperty("--accent", card.accent);
+  if (card.dark) {
+    root.setProperty("--ink", "#f4f7fb");
+    root.setProperty("--ink-sub", "rgba(244,247,251,.82)");
+    root.setProperty("--ink-faint", "rgba(244,247,251,.5)");
+    root.setProperty("--scrim-strong", "rgba(4,7,12,.94)");
+    root.setProperty("--scrim-mid", "rgba(4,7,12,.62)");
+  } else {
+    root.setProperty("--ink", "#141922");
+    root.setProperty("--ink-sub", "rgba(20,25,34,.76)");
+    root.setProperty("--ink-faint", "rgba(20,25,34,.5)");
+    root.setProperty("--scrim-strong", "rgba(233,238,246,.95)");
+    root.setProperty("--scrim-mid", "rgba(233,238,246,.66)");
+  }
+
+  document.getElementById("t").textContent = card.title;
+  document.getElementById("d").textContent = card.desc;
+  document.getElementById("u").textContent = card.url || "dr.eamer.dev/games/hexsweeper";
+
+  try {
+    localStorage.setItem("hexsweeper-welcome-v1", "1");
+    localStorage.setItem("hexsweeper-sphere-welcome-v1", "1");
+    localStorage.removeItem("hexsweeper-endless-plate-v1");
+    localStorage.removeItem("hexsweeper-endless-escape-v1");
+  } catch (_) {}
+
+  const board = document.getElementById("board");
+  const hideSel = card.hide || ".hud-actions,#modal-overlay,#theme-toast";
+  board.addEventListener("load", () => {
+    try {
+      const doc = board.contentDocument;
+      const hide = doc.createElement("style");
+      hide.textContent = hideSel + "{display:none!important}";
+      doc.head.appendChild(hide);
+    } catch (_) {}
+  });
+  board.src = card.src;
+})();
+</script>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

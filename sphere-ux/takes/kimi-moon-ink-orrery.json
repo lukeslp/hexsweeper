@@ -1,0 +1,27 @@
+{
+  "id": "kimi-moon-ink-orrery",
+  "title": "Hexsweeper 3D \u2014 Moon Ink Orrery",
+  "tagline": "Hex minesweeper on a Goldberg sphere, restyled as an ink-brushed lunar orrery where height becomes moonlight.",
+  "aesthetic": "A cool paper-moon observatory: deep indigo field, pale shell tiles like unbroken rice paper, cleared wells as brushed ink pools. The sphere floats with a soft offset shadow and turns slowly on its own, more planetarium instrument than puzzle grid.",
+  "palette": {
+    "field": "#0c0f1d",
+    "shell": "#e8e4d8",
+    "well": "#1a2033",
+    "numberedWell": "#232c47",
+    "edge": "#3d4666",
+    "flag": "#c9372c",
+    "text": "#9fd8e8",
+    "chrome": "dark",
+    "accent": "#7dd3c0"
+  },
+  "visualTweaks": {
+    "floatShadow": true,
+    "countStyleDefault": "rings",
+    "defaultZoom": 0.85,
+    "ambientSpin": true,
+    "boardSizeDefault": "medium"
+  },
+  "mechanicTwist": "Ink-depth tinting: cleared numbered wells darken and their ring-strokes thicken with count value (1 = faint single brush ring, 6 = dense saturated ring), so the danger gradient reads as calligraphy weight, not color noise. Flags glow a soft vermillion halo, and a gentle auto-spin pauses while the pointer is over the board.",
+  "helpLede": "Left-tap digs a paper face; right-tap plants a vermillion flag. The first dig is always safe \u2014 read the brush rings to count the six neighbors.",
+  "hudNote": "The moon turns while you think. Flags left: N."
+}

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<!--
+  File Purpose: Curated Hexsweeper choices hub — production, experiments, lab skins.
+  Primary Functions/Classes: Static catalog; links to index, sphere, choices/lab/*.
+  Inputs: skins.json metadata. Outputs: Navigation only; not in production mode switcher.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hexsweeper Choices</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  :root {
+    --bg: #080a0f;
+    --ink: #e8ecf4;
+    --muted: rgba(232, 236, 244, 0.62);
+    --line: rgba(232, 236, 244, 0.12);
+    --fill: rgba(255, 255, 255, 0.04);
+    --accent: #7eb8ff;
+    --warn: #fbbf24;
+    --play: #34d399;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    background-image:
+      radial-gradient(ellipse 80% 45% at 15% -5%, rgba(126, 184, 255, 0.1), transparent 55%),
+      radial-gradient(ellipse 60% 40% at 95% 90%, rgba(52, 211, 153, 0.06), transparent 50%);
+  }
+  header, section, footer {
+    max-width: 980px;
+    margin: 0 auto;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+  header { padding-top: 2.5rem; padding-bottom: 1.5rem; }
+  .kicker {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 700; margin: 0.35rem 0 0.6rem; }
+  .lede { color: var(--muted); max-width: 58ch; line-height: 1.55; font-size: 1.05rem; }
+  section { padding-bottom: 2.5rem; }
+  h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: center;
+    padding: 22px 24px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(126, 184, 255, 0.08), var(--fill));
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .hero-card:hover, .hero-card:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    transform: translateY(-2px);
+    outline: none;
+  }
+  .hero-card h3 { font-size: 1.35rem; margin-bottom: 6px; }
+  .hero-card p { color: var(--muted); line-height: 1.45; max-width: 48ch; }
+  .pill {
+    display: inline-block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+  .pill.prod { background: rgba(52, 211, 153, 0.15); color: var(--play); }
+  .pill.exp { background: rgba(251, 191, 36, 0.15); color: var(--warn); }
+  .cta {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    padding: 12px 18px;
+    border-radius: 999px;
+    background: rgba(52, 211, 153, 0.18);
+    color: var(--play);
+    white-space: nowrap;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--fill);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .card:hover, .card:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+    transform: translateY(-2px);
+    outline: none;
+  }
+  .card-head { display: flex; gap: 12px; align-items: flex-start; }
+  .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    color: var(--accent);
+    opacity: 0.75;
+    min-width: 1.5rem;
+  }
+  .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+  .card p { font-size: 0.92rem; color: var(--muted); line-height: 1.45; flex: 1; }
+  .tech {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px;
+    color: color-mix(in srgb, var(--accent) 65%, var(--muted));
+    line-height: 1.4;
+  }
+  .card-links {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .card-links a {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .card-links a:hover { text-decoration: underline; }
+  footer {
+    padding-bottom: 3rem;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: "IBM Plex Mono", monospace;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">Games · Hexsweeper</div>
+  <h1>Choices</h1>
+  <p class="lede">Production play opens through Infinite, Classic, and Sphere. Experiments and lab skins live here — curated, not mixed into the main launcher.</p>
+</header>
+
+<section aria-labelledby="play-heading">
+  <h2 id="play-heading">Play</h2>
+  <a class="hero-card" href="index.html">
+    <div>
+      <span class="pill prod">Production</span>
+      <h3>Hexsweeper</h3>
+      <p>Infinite · Classic · Sphere — endless plate, fixed board, or closed 3D globe.</p>
+    </div>
+    <span class="cta">Play →</span>
+  </a>
+</section>
+
+<section aria-labelledby="exp-heading">
+  <h2 id="exp-heading">Sphere worlds &amp; experiments</h2>
+  <a class="hero-card" href="sphere/" style="background: linear-gradient(135deg, rgba(251,191,36,0.08), var(--fill));">
+    <div>
+      <span class="pill prod">Production world</span>
+      <h3>Hex Sphere</h3>
+      <p>Hexsweeper on a closed Goldberg sphere — the hex-tile take on classic Minesweeper. Drag to rotate; dig, flag, flood over six-neighbor faces. Canvas 2D, no Three.js. CodePen one-pager on the collection desk.</p>
+    </div>
+    <span class="cta" style="background: rgba(251,191,36,0.18); color: var(--warn);">Try sphere →</span>
+  </a>
+  <a class="hero-card" href="flux-sphere/" style="margin-top: 12px; background: linear-gradient(135deg, rgba(6,182,212,0.12), var(--fill));">
+    <div>
+      <span class="pill exp">Experimental</span>
+      <h3>Flux Sphere</h3>
+      <p>Trace a distant pair, then choose when to commit both endpoints. Either can hide a mine; a flag grounds one side and holds its echo.</p>
+    </div>
+    <span class="cta">Follow the echo →</span>
+  </a>
+  <a class="hero-card" href="glitch-sphere/" style="margin-top: 12px; background: linear-gradient(135deg, rgba(251,191,36,0.12), var(--fill));">
+    <div>
+      <span class="pill exp">Experimental</span>
+      <h3>Glitch Sphere</h3>
+      <p>Trap a moving Glitch on the shared Hex Sphere. Revealed and flagged faces close its routes; win before it reaches a mine. Play with keyboard or touch, restore after reload, or remove motion.</p>
+    </div>
+    <span class="cta" style="background: rgba(251,191,36,0.18); color: var(--warn);">Trap the Glitch →</span>
+  </a>
+  <a class="hero-card" href="monkey-grid/" style="margin-top: 12px;">
+    <div>
+      <span class="pill exp">Experimental</span>
+      <h3>Catch the Monkey: Garden</h3>
+      <p>Close one hex per turn while a seeded shortest-path monkey races toward the garden rim. Cut every route before it escapes.</p>
+    </div>
+    <span class="cta">Close the garden →</span>
+  </a>
+  <a class="hero-card" href="monkey-sphere/" style="margin-top: 12px;">
+    <div>
+      <span class="pill exp">Experimental</span>
+      <h3>Catch the Monkey: Orbit</h3>
+      <p>Seal three coral portals on a closed sphere while the monkey advances along its shortest surviving route.</p>
+    </div>
+    <span class="cta">Seal the portals →</span>
+  </a>
+  <a class="hero-card" href="sphere-reflection/" style="margin-top: 12px;">
+    <div>
+      <span class="pill exp">Experimental</span>
+      <h3>Obsidian Mirror</h3>
+      <p>Hexsweeper Sphere over a pointer-inert reflective field with sixteen curated material environments, distinct motion profiles, and a flat fallback.</p>
+    </div>
+    <span class="cta">Enter the mirror →</span>
+  </a>
+  <a class="hero-card" href="wheel/" style="margin-top: 12px; background: linear-gradient(135deg, rgba(77,199,232,0.12), var(--fill));">
+    <div>
+      <span class="pill exp" style="background: rgba(77,199,232,0.16); color: #72d9f0;">Playable variant</span>
+      <h3>Water Wheel</h3>
+      <p>Strike a mine and the sphere becomes the escape mechanism: rotate the armed face beneath the waterline before its fuse expires. Flags wash off underwater; quenched mines stay inert.</p>
+    </div>
+    <span class="cta" style="background: rgba(77,199,232,0.16); color: #72d9f0;">Douse a mine →</span>
+  </a>
+  <a class="hero-card" href="polyhedron/" style="margin-top: 12px;">
+    <div>
+      <span class="pill exp">Experimental</span>
+      <h3>Dodecahedron Campaign</h3>
+      <p>Clear twelve connected pentagonal panels through a 1–5–5–1 campaign across a low-poly solid.</p>
+    </div>
+    <span class="cta">Begin the campaign →</span>
+  </a>
+</section>
+
+<section aria-labelledby="lab-heading">
+  <h2 id="lab-heading">Lab skins</h2>
+  <p style="color: var(--muted); margin-bottom: 14px; max-width: 52ch; line-height: 1.5;">Ten visual studies over <code style="font-family: IBM Plex Mono, monospace; font-size: 0.9em;">core.js</code>. Play each skin below (Reset/Menu only). Re-evaluate and copy HTML from the <a href="collection/" style="color: var(--accent);">collection desk</a> — Open + Copy HTML live there, not on the playable page.</p>
+  <div class="grid">
+    <a class="card" href="choices/lab/classic.html">
+      <div class="card-head"><div class="num">01</div><div><div class="tag">baseline</div><h3>Classic Neumorph</h3></div></div>
+      <p>Original soft raised honeycomb — the control sample for every other skin.</p>
+      <div class="tech">neumorphism · hover scale · reveal press</div>
+    </a>
+    <a class="card" href="choices/lab/particle-bloom.html">
+      <div class="card-head"><div class="num">02</div><div><div class="tag">particles</div><h3>Particle Bloom</h3></div></div>
+      <p>Ambient dust field; cells burst seed particles on reveal.</p>
+      <div class="tech">particle field · emit on reveal · additive bloom</div>
+    </a>
+    <a class="card" href="choices/lab/glass-lens.html">
+      <div class="card-head"><div class="num">03</div><div><div class="tag">lensing</div><h3>Glass Magnifier</h3></div></div>
+      <p>Frostpane tokens + cursor-following glass lens with radial distortion.</p>
+      <div class="tech">backdrop blur · magnifier lens · frosted glass</div>
+    </a>
+    <a class="card" href="choices/lab/parallax-depth.html">
+      <div class="card-head"><div class="num">04</div><div><div class="tag">depth</div><h3>Parallax Rings</h3></div></div>
+      <p>Ring-depth lab copy — production Fire mode evolved from this study.</p>
+      <div class="tech">ring depth · pointer parallax · sorted draw</div>
+    </a>
+    <a class="card" href="choices/lab/brass-plaque.html">
+      <div class="card-head"><div class="num">05</div><div><div class="tag">materials</div><h3>Brass Plaque</h3></div></div>
+      <p>Warm ceramic-metal desk from the materials/brass finish tokens.</p>
+      <div class="tech">material tokens · metal gradient · desk atmosphere</div>
+    </a>
+    <a class="card" href="choices/lab/frostpane.html">
+      <div class="card-head"><div class="num">06</div><div><div class="tag">materials</div><h3>Frostpane Night</h3></div></div>
+      <p>Dark frosted glass: cyan–violet glow, translucent faces, rim light.</p>
+      <div class="tech">frosted-glass · luminous mist · glass fill</div>
+    </a>
+    <a class="card" href="choices/lab/paper-relief.html">
+      <div class="card-head"><div class="num">07</div><div><div class="tag">materials</div><h3>Paper Relief</h3></div></div>
+      <p>Paper-systems cream stock with multi-shadow emboss depth.</p>
+      <div class="tech">paper tokens · soft multi-shadow · score ink</div>
+    </a>
+    <a class="card" href="choices/lab/comet-void.html">
+      <div class="card-head"><div class="num">08</div><div><div class="tag">particles</div><h3>Comet Void</h3></div></div>
+      <p>Shader-comet palette: void black, ember sparks, meteor streaks.</p>
+      <div class="tech">meteor sky · spark particles · trail streaks</div>
+    </a>
+    <a class="card" href="choices/lab/mycelium.html">
+      <div class="card-head"><div class="num">09</div><div><div class="tag">organic</div><h3>Mycelium Web</h3></div></div>
+      <p>Hyphal links grow between revealed cells; nutrient particles flow.</p>
+      <div class="tech">seeded growth · network edges · nutrient flow</div>
+    </a>
+    <a class="card" href="choices/lab/caustic-lens.html">
+      <div class="card-head"><div class="num">10</div><div><div class="tag">lensing</div><h3>Caustic Lens</h3></div></div>
+      <p>Under-board light caustics + hover refraction bulge.</p>
+      <div class="tech">caustic field · refraction warp · specular ridge</div>
+    </a>
+  </div>
+  <p style="margin-top: 16px; font-size: 12px; color: var(--muted); font-family: IBM Plex Mono, monospace;">
+    Collection desk: <a href="collection/" style="color: var(--accent);">collection/</a> · raw catalog: <a href="lab.html" style="color: var(--accent);">lab.html</a> · engine: <a href="https://github.com/lukeslp/hexsweeper" style="color: var(--accent);">lukeslp/hexsweeper</a>
+  </p>
+</section>
+
+<footer>
+  Games: <a href="index.html">index.html</a> · Flat modes: <a href="play.html">play.html</a> · Sphere: <a href="sphere/">sphere/</a> · Water Wheel: <a href="wheel/">wheel/</a> · Flux: <a href="flux-sphere/">flux-sphere/</a> · Glitch: <a href="glitch-sphere/">glitch-sphere/</a> · Collection pens: <a href="collection/">collection/</a>
+</footer>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

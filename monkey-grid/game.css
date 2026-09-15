@@ -1,0 +1,34 @@
+/**
+ * File Purpose: Garden palette and jungle ground for Catch the Monkey.
+ * Author: Luke Steuber <luke@lukesteuber.com>
+ */
+:root {
+  --ink: #f6f0df;
+  --muted: rgba(246, 240, 223, .7);
+  --glass: rgba(11, 25, 15, .72);
+  --glass-strong: rgba(11, 25, 15, .94);
+  --line: rgba(246, 240, 223, .2);
+  --focus: #f5cc66;
+  --accent: #e6b447;
+}
+
+body {
+  background-color: #0d1b11;
+  background-image:
+    linear-gradient(rgba(6, 17, 9, .18), rgba(6, 17, 9, .38)),
+    url("assets/jungle-floor.webp");
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 49%, rgba(234, 224, 184, .11), transparent 48%);
+}
+
+#game-canvas { cursor: crosshair; }
+
+@media (forced-colors: active) {
+  body { background-image: none; }
+  body::after { display: none; }
+}

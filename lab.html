@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!--
+  File Purpose: Catalog UI for dormant Hexsweeper visual skins (prior art).
+  Primary Functions/Classes: Renders cards from skins.json; not linked from production.
+  Inputs: skins.json. Outputs: Links into classic.html and skins/*.html.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hexsweeper Lab — skins</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10; --ink: #e6e0d4; --muted: rgba(230,224,212,0.64);
+    --line: rgba(230,224,212,0.14); --fill: rgba(255,255,255,0.04);
+    --accent: #d2c4a8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: "Source Sans 3", system-ui, sans-serif;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 20% 0%, rgba(210,196,168,0.08), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 90% 80%, rgba(100,140,220,0.06), transparent 55%);
+  }
+  header {
+    max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 1rem;
+  }
+  .kicker {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+  }
+  h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 700; margin: 0.4rem 0; }
+  .lede { color: var(--muted); max-width: 52ch; line-height: 1.55; }
+  .hint {
+    margin-top: 0.75rem; font-family: "IBM Plex Mono", monospace;
+    font-size: 12px; color: var(--muted);
+  }
+  .grid {
+    max-width: 960px; margin: 0 auto; padding: 1rem 1.25rem 3rem;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
+  }
+  .card {
+    display: flex; gap: 14px; padding: 16px 16px 18px;
+    border: 1px solid var(--line); border-radius: 16px;
+    background: var(--fill); text-decoration: none; color: inherit;
+    transition: border-color 0.15s, transform 0.15s, background 0.15s;
+  }
+  .card:hover, .card:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+    background: rgba(255,255,255,0.07);
+    transform: translateY(-2px);
+    outline: none;
+  }
+  .num {
+    font-family: "IBM Plex Mono", monospace; font-size: 13px;
+    color: var(--accent); opacity: 0.8; min-width: 1.6rem; padding-top: 2px;
+  }
+  .tag {
+    font-family: "IBM Plex Mono", monospace; font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 4px;
+  }
+  h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+  .card p { font-size: 0.92rem; color: var(--muted); line-height: 1.45; }
+  .tech {
+    margin-top: 10px; font-family: "IBM Plex Mono", monospace;
+    font-size: 10px; color: color-mix(in srgb, var(--accent) 70%, var(--muted));
+    line-height: 1.4;
+  }
+  footer {
+    max-width: 960px; margin: 0 auto; padding: 0 1.25rem 2.5rem;
+    font-size: 12px; color: var(--muted); font-family: "IBM Plex Mono", monospace;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">Games · Hexsweeper Lab</div>
+  <h1>Ten honeycomb skins</h1>
+  <p class="lede">Ten visual skins over the same honeycomb minesweeper. Techniques drawn from clocks/bases materials + motifs labs.</p>
+  <p class="hint"><a href="play.html" style="color:var(--accent)">Play Parallax Rings →</a> · click a card for a skin · ← → between skins · gear for difficulty</p>
+</header>
+<div class="grid">
+
+    <a class="card" href="classic.html" data-i="0">
+      <div class="num">01</div>
+      <div class="body">
+        <div class="tag">baseline</div>
+        <h2>Classic Neumorph</h2>
+        <p>Original soft raised honeycomb — the control sample.</p>
+        <div class="tech">neumorphism · hover scale · reveal press</div>
+      </div>
+    </a>
+    <a class="card" href="skins/particle-bloom.html" data-i="1">
+      <div class="num">02</div>
+      <div class="body">
+        <div class="tag">particles</div>
+        <h2>Particle Bloom</h2>
+        <p>Ambient dust field; cells burst seed particles on reveal.</p>
+        <div class="tech">particle field · emit on reveal · additive bloom</div>
+      </div>
+    </a>
+    <a class="card" href="skins/glass-lens.html" data-i="2">
+      <div class="num">03</div>
+      <div class="body">
+        <div class="tag">lensing</div>
+        <h2>Glass Magnifier</h2>
+        <p>Frostpane tokens + cursor-following glass lens with radial distortion.</p>
+        <div class="tech">backdrop blur · magnifier lens · frosted glass materials</div>
+      </div>
+    </a>
+    <a class="card" href="play.html" data-i="3">
+      <div class="num">04</div>
+      <div class="body">
+        <div class="tag">depth · main</div>
+        <h2>Parallax Rings</h2>
+        <p>Main playable — hex rings on Z layers, five material/color themes, help &amp; settings.</p>
+        <div class="tech">ring depth · pointer parallax · theme cycle</div>
+      </div>
+    </a>
+    <a class="card" href="skins/brass-plaque.html" data-i="4">
+      <div class="num">05</div>
+      <div class="body">
+        <div class="tag">materials</div>
+        <h2>Brass Plaque</h2>
+        <p>Finish tokens from materials/brass — warm ceramic-metal desk.</p>
+        <div class="tech">material tokens · metal gradient cells · desk atmosphere</div>
+      </div>
+    </a>
+    <a class="card" href="skins/frostpane.html" data-i="5">
+      <div class="num">06</div>
+      <div class="body">
+        <div class="tag">materials</div>
+        <h2>Frostpane Night</h2>
+        <p>Dark frosted glass: cyan–violet glow, translucent faces, rim light.</p>
+        <div class="tech">frosted-glass pack · luminous mist · glass fill</div>
+      </div>
+    </a>
+    <a class="card" href="skins/paper-relief.html" data-i="6">
+      <div class="num">07</div>
+      <div class="body">
+        <div class="tag">materials</div>
+        <h2>Paper Relief</h2>
+        <p>Paper-systems cream stock with multi-shadow emboss depth.</p>
+        <div class="tech">paper tokens · soft multi-shadow · score ink</div>
+      </div>
+    </a>
+    <a class="card" href="skins/comet-void.html" data-i="7">
+      <div class="num">08</div>
+      <div class="body">
+        <div class="tag">particles</div>
+        <h2>Comet Void</h2>
+        <p>Shader-comet palette: void black, ember sparks, meteor streaks.</p>
+        <div class="tech">meteor sky motif · spark particles · trail streaks</div>
+      </div>
+    </a>
+    <a class="card" href="skins/mycelium.html" data-i="8">
+      <div class="num">09</div>
+      <div class="body">
+        <div class="tag">organic</div>
+        <h2>Mycelium Web</h2>
+        <p>Hyphal links grow between revealed cells; nutrient particles flow.</p>
+        <div class="tech">seeded growth · network edges · nutrient flow</div>
+      </div>
+    </a>
+    <a class="card" href="skins/caustic-lens.html" data-i="9">
+      <div class="num">10</div>
+      <div class="body">
+        <div class="tag">lensing</div>
+        <h2>Caustic Lens</h2>
+        <p>Under-board light caustics + hover refraction bulge.</p>
+        <div class="tech">caustic field · refraction warp · specular ridge</div>
+      </div>
+    </a>
+</div>
+<footer>
+  Sources: <a href="/clocks/bases/materials.html">Materials</a>,
+  <a href="/clocks/bases/motifs.html">Motifs</a> ·
+  Engine: core.js · Play classic catalog entry also at
+  <a href="classic.html">classic.html</a>
+</footer>
+<script>
+// optional: open first with Enter on focus? just keyboard 1-0 jump
+document.addEventListener("keydown", (e) => {
+  if (e.key >= "1" && e.key <= "9") {
+    const a = document.querySelector(`.card[data-i="${parseInt(e.key,10)-1}"]`);
+    if (a) location.href = a.href;
+  }
+  if (e.key === "0") {
+    const a = document.querySelector('.card[data-i="9"]');
+    if (a) location.href = a.href;
+  }
+});
+</script>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

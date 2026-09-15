@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Paper Relief — Hexsweeper Lab</title>
+<link rel="stylesheet" href="../skin-chrome.css">
+<style>
+
+:root {
+  --bg-color: #efe1c0;
+  --text-main: #2b2114;
+  --text-sub: rgba(43,33,20,0.45);
+  --nav-bg: #f6ecd4;
+  --nav-ink: #2b2114;
+}
+body {
+  font-family: "Source Serif 4", Georgia, serif;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 40%, #f6ecd4 0%, #efe1c0 55%, #e8d7b0 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100vh; margin: 0; overflow: hidden; user-select: none; touch-action: none;
+  color: var(--text-main);
+}
+#fx::before {
+  content:""; position:absolute; inset:0; opacity:0.5;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+.modal-content, .skin-nav, .stat-item { font-family: system-ui, sans-serif; }
+
+</style>
+</head>
+<body>
+<div class="fx-layer" id="fx" aria-hidden="true"></div>
+<nav class="skin-nav" aria-label="Skin navigation">
+  <a href="../lab.html">Lab</a>
+  <a href="frostpane.html" title="Previous skin (←)">←</a>
+  <a href="comet-void.html" title="Next skin (→)">→</a>
+  <span class="meta"><span class="tag">materials</span> · Paper Relief</span>
+</nav>
+
+<div class="canvas-container">
+  <canvas id="gameCanvas"></canvas>
+</div>
+
+<div class="hud-actions" role="toolbar" aria-label="Game controls">
+  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  </button>
+  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu" title="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="5" y1="7" x2="19" y2="7"></line>
+      <line x1="5" y1="12" x2="15" y2="12"></line>
+      <line x1="5" y1="17" x2="19" y2="17"></line>
+    </svg>
+  </button>
+</div>
+
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+  <div class="modal-content">
+    <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <h2 id="menu-title" class="menu-title">Menu</h2>
+    <div class="modal-row" id="run-row">
+      <div class="modal-section-label">Run</div>
+      <div class="menu-stats" aria-label="Score">
+        <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
+        <div id="stats-time" class="stat-item visible" data-label="cleared" title="Safe cells cleared">000</div>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="icon-label" title="Board size">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="9" height="9"></rect><rect x="13" y="2" width="9" height="9"></rect><rect x="2" y="13" width="9" height="9"></rect></svg>
+      </div>
+      <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
+        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small · 10 mines">S</button>
+        <button type="button" class="diff-option active" data-val="medium" aria-pressed="true" title="Medium · 35 mines">M</button>
+        <button type="button" class="diff-option" data-val="hard" aria-pressed="false" title="Large · 80 mines">L</button>
+      </div>
+    </div>
+    <div class="instructions-text">Tap to reveal · flag: right-click, Ctrl-click, or long-hold<br>Menu holds scores · Reset on the board · ← → skins</div>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">Luke Steuber</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">Data Poems</a>
+    </nav>
+  </div>
+</div>
+
+<script src="../core.js"></script>
+<script>
+// keyboard prev/next
+(function(){
+  const prev="frostpane.html", next="comet-void.html";
+  window.addEventListener("keydown", (e) => {
+    if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+    if (e.key === "ArrowLeft") location.href = prev;
+    if (e.key === "ArrowRight") location.href = next;
+  });
+})();
+
+// materials/paper-systems · Sight-read cream
+Hexsweeper.boot({
+  theme: {
+    bg: "#efe1c0",
+    shadowLight: "#fffcee",
+    shadowDark: "#9c835e",
+    covered: "#f6ecd4",
+    revealed: "#e8d7b0",
+    flag: "#c23b22",
+    pressedDark: "#9c835e",
+    pressedLight: "#fff6de",
+    text: {1:"#1d4e89",2:"#2f6b4f",3:"#c23b22",4:"#5c3d8a",5:"#8a5a12",6:"#7a3d5c",mine:"#2b2114"}
+  },
+  hooks: {
+    drawCell(ctx, cell, size, api) {
+      const T = api.state.theme;
+      const scale = 0.92 + cell.animHover * 0.05;
+      const path = cell.hexPath(size, scale);
+      // multi-shadow emboss stack
+      if (!cell.revealed) {
+        ctx.save();
+        for (const [dx,dy,a] of [[4,5,0.12],[2,3,0.18],[1,1,0.1]]) {
+          ctx.translate(dx, dy);
+          ctx.globalAlpha = a;
+          ctx.fillStyle = "#6b5638";
+          ctx.fill(path);
+          ctx.translate(-dx, -dy);
+        }
+        ctx.restore();
+      }
+      ctx.fillStyle = cell.revealed ? T.revealed : T.covered;
+      ctx.fill(path);
+      // fiber edge
+      ctx.strokeStyle = cell.revealed ? "rgba(156,131,94,0.45)" : "rgba(255,252,238,0.9)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke(path);
+      if (!cell.revealed) {
+        ctx.strokeStyle = "rgba(156,131,94,0.35)";
+        ctx.beginPath();
+        const ds = size*scale;
+        for (let i=0;i<=2;i++){
+          const ang=Math.PI/180*(30+60*i);
+          const vx=cell.x+ds*Math.cos(ang), vy=cell.y+ds*Math.sin(ang);
+          if(i===0) ctx.moveTo(vx,vy); else ctx.lineTo(vx,vy);
+        }
+        ctx.stroke();
+      }
+      if (cell.animReveal > 0.1) {
+        ctx.globalAlpha = cell.animReveal;
+        if (cell.isMine) {
+          ctx.fillStyle = T.text.mine;
+          ctx.beginPath(); ctx.arc(cell.x, cell.y, size*0.35, 0, Math.PI*2); ctx.fill();
+        } else if (cell.neighborMines > 0) {
+          ctx.fillStyle = T.text[cell.neighborMines];
+          ctx.font = `700 ${size}px Georgia, serif`;
+          ctx.textAlign="center"; ctx.textBaseline="middle";
+          ctx.fillText(cell.neighborMines, cell.x, cell.y+size*0.05);
+        }
+        ctx.globalAlpha = 1;
+      }
+      if (cell.flagged && !cell.revealed) {
+        ctx.fillStyle = T.flag;
+        ctx.font = `bold ${size}px serif`;
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText("!", cell.x, cell.y+size*0.1);
+      }
+    }
+  }
+});
+
+</script>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

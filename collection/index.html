@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<!--
+  File Purpose: Hexsweeper Collection desk — Open + Copy HTML for theme and lab one-pagers.
+  Primary Functions/Classes: Tile grid; data-copy clipboard fetch (Choice One-Pagers pattern).
+  Inputs: theme-*.html, skin-*.html siblings. Outputs: browsable index + clipboard full HTML.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Standalone Hexsweeper theme and lab one-pagers with copy-ready HTML by Luke Steuber.">
+<meta name="author" content="Luke Steuber">
+<meta name="theme-color" content="#e8eaee">
+<link rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/collection/">
+<title>Hexsweeper Collection</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  color-scheme:light;
+  --bg:#e8eaee;
+  --bg-wash:radial-gradient(ellipse 70% 45% at 50% -8%,#f4f6f9,transparent 42rem),linear-gradient(180deg,#e8eaee,#dce2ea);
+  --panel:rgba(255,255,255,.62);
+  --ink:#1a1d23;
+  --muted:#6b7280;
+  --line:rgba(26,29,35,.14);
+  --accent:#1d4ed8;
+  --status:#047857;
+  --display:"IBM Plex Sans","Source Sans 3",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --touch:44px;
+}
+body{margin:0;min-height:100vh;background:var(--bg-wash),var(--bg);color:var(--ink);font-family:var(--display)}
+main{width:min(1100px,100%);margin:auto;padding:max(1rem,env(safe-area-inset-top)) clamp(1rem,4vw,2rem) max(3rem,env(safe-area-inset-bottom))}
+.back{display:inline-flex;align-items:center;min-height:var(--touch);color:var(--muted);font:600 .78rem var(--mono);text-decoration:none}
+.back:hover,.back:focus-visible{color:var(--accent)}
+header{margin:2.4rem 0 1.6rem}
+h1{margin:0;font:800 clamp(2.4rem,8vw,4.6rem)/.9 var(--display);letter-spacing:-.04em}
+.lede{max-width:40rem;margin:.85rem 0 0;color:var(--muted);line-height:1.55}
+.section{margin-top:2.2rem}
+.section h2{margin:0 0 .85rem;font:700 .72rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+#status{min-height:1.4rem;margin:.75rem 0 0;color:var(--status);font:600 .75rem var(--mono)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,14rem),1fr));gap:.7rem;margin-top:.4rem}
+.study{display:flex;min-height:12.5rem;flex-direction:column;border:1px solid var(--line);background:var(--panel)}
+.study-copy{display:grid;gap:.4rem;flex:1;padding:1rem;text-decoration:none;color:inherit}
+.study-copy:hover{background:rgba(255,255,255,.55)}
+.study-copy:focus-visible,.actions a:focus-visible,.actions button:focus-visible,.back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.swatch{display:block;height:2.4rem;border:1px solid var(--line);background:
+  linear-gradient(90deg,var(--swatch-bg) 0 25%,var(--swatch-a) 25% 50%,var(--swatch-b) 50% 75%,var(--swatch-c) 75% 100%)}
+.study-kicker{color:var(--muted);font:700 .66rem var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.study-title{font:750 1.45rem/1 var(--display)}
+.study p{margin:0;color:var(--muted);font-size:.78rem;line-height:1.4}
+.actions{display:flex;gap:.4rem;padding:0 1rem 1rem}
+.actions a,.actions button{min-height:var(--touch);flex:1;border:1px solid var(--line);background:#fff;color:var(--ink);padding:.55rem;text-align:center;text-decoration:none;font:700 .66rem var(--mono);cursor:pointer}
+.actions a:hover,.actions button:hover{border-color:var(--accent)}
+footer{margin-top:2.8rem;color:var(--muted);font-size:.74rem;text-align:center}
+footer a{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../">&lsaquo; Play Hexsweeper</a>
+  <header>
+    <h1>Hexsweeper Collection</h1>
+    <p class="lede">Copy-ready HTML for CodePen or local paste. Production themes, lab skins, and the Hexsweeper 3D sphere each get a self-contained one-pager — use <strong>Open</strong> to play, <strong>Copy HTML</strong> here on the desk (not on the playable page). Light and Dark share one infinite file with an in-file toggle. The live multi-theme game stays on the Play link.</p>
+    <p id="status" role="status" aria-live="polite"></p>
+  </header>
+  <!-- generated-hexsweeper-collection:begin -->
+  <section class="section" aria-labelledby="production-heading">
+    <h2 id="production-heading">Production themes</h2>
+    <div class="grid">
+      <article class="study" data-filter="light dark infinite soft ui neumorph honeycomb plate night toggle porcelain chalk graphite iron steel watermark" style="--swatch-bg:#d4dce8;--swatch-a:#10151d;--swatch-b:#1d4ed8;--swatch-c:#60a5fa">
+        <a class="study-copy" href="theme-plate.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Infinite · toggle</span>
+          <span class="study-title">Light / Dark</span>
+          <p>Two materials on one infinite run — porcelain chalk desk with graphite wells, or night-iron plate with brushed grain.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-plate.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-plate.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="fire finite magma pit boil bowl hell mine tilt parallax camera lock" style="--swatch-bg:#1c120c;--swatch-a:#ff6400;--swatch-b:#ffd24a;--swatch-c:#ff3c14">
+        <a class="study-copy" href="theme-fire.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Finite</span>
+          <span class="study-title">Fire</span>
+          <p>Magma shaft / hell-mine — dense honeycomb, rising burns, molten digs; drag tilts the pit instead of panning it.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-fire.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-fire.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="plague finite specimen verdigris mycelium" style="--swatch-bg:#141e1c;--swatch-a:#7ec8a8;--swatch-b:#d4a08c;--swatch-c:#8fd4b0">
+        <a class="study-copy" href="theme-plague.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Finite</span>
+          <span class="study-title">Plague</span>
+          <p>Specimen slide; irregular verdigris faces and hyphal mat.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-plague.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-plague.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="water finite tide sea ocean raft reflection refraction caustics waterline submerged wet stone horizon" style="--swatch-bg:#04202f;--swatch-a:#12617d;--swatch-b:#7fe0e8;--swatch-c:#ffb454">
+        <a class="study-copy" href="theme-water.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Finite</span>
+          <span class="study-title">Water</span>
+          <p>A raft of wet stone floating on open sea — the waterline cuts across the board, and the rows below it ripple and reflect.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-water.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-water.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="escape infinite rift chase slate crawl finish exit" style="--swatch-bg:#0e1218;--swatch-a:#263a50;--swatch-b:#7fd8c4;--swatch-c:#9dc4dd">
+        <a class="study-copy" href="theme-escape.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Infinite</span>
+          <span class="study-title">Escape</span>
+          <p>Minesweeper on slate — dig toward an offscreen exit while a glacial rift seeps toward your digs.</p>
+        </a>
+        <div class="actions">
+          <a href="theme-escape.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="theme-escape.html">Copy HTML</button>
+        </div>
+      </article>
+    </div>
+  </section>
+  <section class="section" aria-labelledby="lab-heading">
+    <h2 id="lab-heading">Lab skins</h2>
+    <div class="grid">
+      <article class="study" data-filter="classic baseline classic neumorph lab skin neumorphism hover scale reveal press" style="--swatch-bg:#e0e5ec;--swatch-a:#4a5568;--swatch-b:#a0aec0;--swatch-c:#718096">
+        <a class="study-copy" href="skin-classic.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · baseline</span>
+          <span class="study-title">Classic Neumorph</span>
+          <p>Original soft raised honeycomb — the control sample.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-classic.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-classic.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="particle-bloom particles particle bloom lab skin particle field emit on reveal additive bloom" style="--swatch-bg:#080a0f;--swatch-a:#ff6400;--swatch-b:#ffd24a;--swatch-c:#7eb8ff">
+        <a class="study-copy" href="skin-particle-bloom.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · particles</span>
+          <span class="study-title">Particle Bloom</span>
+          <p>Ambient dust field; cells burst seed particles on reveal.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-particle-bloom.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-particle-bloom.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="glass-lens lensing glass magnifier lab skin backdrop blur magnifier lens frosted glass materials" style="--swatch-bg:#0a1420;--swatch-a:#7eb8ff;--swatch-b:#a78bfa;--swatch-c:#34d399">
+        <a class="study-copy" href="skin-glass-lens.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · lensing</span>
+          <span class="study-title">Glass Magnifier</span>
+          <p>Frostpane tokens + cursor-following glass lens with radial distortion.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-glass-lens.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-glass-lens.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="parallax-depth depth parallax rings lab skin ring depth pointer parallax theme cycle sorted draw order" style="--swatch-bg:#1c120c;--swatch-a:#ff6400;--swatch-b:#3d2818;--swatch-c:#ffd24a">
+        <a class="study-copy" href="skin-parallax-depth.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · depth</span>
+          <span class="study-title">Parallax Rings</span>
+          <p>Lab copy of ring-depth + pointer parallax. Production Fire mode lives in play.html.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-parallax-depth.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-parallax-depth.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="brass-plaque materials brass plaque lab skin material tokens metal gradient cells desk atmosphere" style="--swatch-bg:#141820;--swatch-a:#c9a86c;--swatch-b:#7eb8ff;--swatch-c:#e8dcc8">
+        <a class="study-copy" href="skin-brass-plaque.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · materials</span>
+          <span class="study-title">Brass Plaque</span>
+          <p>Finish tokens from materials/brass — warm ceramic-metal desk.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-brass-plaque.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-brass-plaque.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="frostpane materials frostpane night lab skin frosted-glass pack luminous mist glass fill" style="--swatch-bg:#141820;--swatch-a:#c9a86c;--swatch-b:#7eb8ff;--swatch-c:#e8dcc8">
+        <a class="study-copy" href="skin-frostpane.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · materials</span>
+          <span class="study-title">Frostpane Night</span>
+          <p>Dark frosted glass: cyan–violet glow, translucent faces, rim light.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-frostpane.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-frostpane.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="paper-relief materials paper relief lab skin paper tokens soft multi-shadow score ink" style="--swatch-bg:#141820;--swatch-a:#c9a86c;--swatch-b:#7eb8ff;--swatch-c:#e8dcc8">
+        <a class="study-copy" href="skin-paper-relief.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · materials</span>
+          <span class="study-title">Paper Relief</span>
+          <p>Paper-systems cream stock with multi-shadow emboss depth.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-paper-relief.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-paper-relief.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="comet-void particles comet void lab skin meteor sky motif spark particles trail streaks" style="--swatch-bg:#080a0f;--swatch-a:#ff6400;--swatch-b:#ffd24a;--swatch-c:#7eb8ff">
+        <a class="study-copy" href="skin-comet-void.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · particles</span>
+          <span class="study-title">Comet Void</span>
+          <p>Shader-comet palette: void black, ember sparks, meteor streaks.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-comet-void.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-comet-void.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="mycelium organic mycelium web lab skin seeded growth network edges nutrient flow" style="--swatch-bg:#141e1c;--swatch-a:#7ec8a8;--swatch-b:#d4a08c;--swatch-c:#5a8f78">
+        <a class="study-copy" href="skin-mycelium.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · organic</span>
+          <span class="study-title">Mycelium Web</span>
+          <p>Hyphal links grow between revealed cells; nutrient particles flow.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-mycelium.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-mycelium.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="caustic-lens lensing caustic lens lab skin caustic field refraction warp specular ridge" style="--swatch-bg:#0a1420;--swatch-a:#7eb8ff;--swatch-b:#a78bfa;--swatch-c:#34d399">
+        <a class="study-copy" href="skin-caustic-lens.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Lab · lensing</span>
+          <span class="study-title">Caustic Lens</span>
+          <p>Under-board light caustics + hover refraction bulge.</p>
+        </a>
+        <div class="actions">
+          <a href="skin-caustic-lens.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="skin-caustic-lens.html">Copy HTML</button>
+        </div>
+      </article>
+    </div>
+  </section>
+  <section class="section" aria-labelledby="experiments-heading">
+    <h2 id="experiments-heading">Experiments</h2>
+    <div class="grid">
+      <article class="study" data-filter="sphere experiment goldberg geodesic rotate 3d closed hexsweeper codepen" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#888888;--swatch-c:#ff0000">
+        <a class="study-copy" href="sphere.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Experiment · live</span>
+          <span class="study-title">Hexsweeper 3D</span>
+          <p>Hexsweeper on a closed Goldberg sphere — six neighbors, dig/flag, rotate, themes. Riding on classic Minesweeper.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere/" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere water wheel douse quench mine fuse rotate liquid gameplay variant experiment" style="--swatch-bg:#06263a;--swatch-a:#1c7896;--swatch-b:#8fe9f2;--swatch-c:#ff5a4f">
+        <a class="study-copy" href="water-wheel.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Game variant · live</span>
+          <span class="study-title">Hexsweeper 3D · Water Wheel</span>
+          <p>The sphere is the rescue mechanism, and the rescue is an explosion: drown an armed mine and it detonates underwater, chording every satisfied number it touched. Ordinary flags just wash away.</p>
+        </a>
+        <div class="actions">
+          <a href="water-wheel.html" target="_blank" rel="noopener">Open</a>
+          <a href="../wheel/" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="water-wheel.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror stormglass webgl shader material hexsweeper experiment" style="--swatch-bg:#071017;--swatch-a:#d9965b;--swatch-b:#8ab6c9;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Experiment · reflective material</span>
+          <span class="study-title">Obsidian Mirror · Stormglass</span>
+          <p>One continuous stormglass reflection lives beneath the playable hex shell: mirror means covered, matte means cleared, scarlet means flagged.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=stormglass" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror smoked mercury liquid metal shader material hexsweeper experiment" style="--swatch-bg:#050708;--swatch-a:#b8c7ca;--swatch-b:#738084;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-mercury.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · liquid metal</span>
+          <span class="study-title">Obsidian Mirror · Smoked Mercury</span>
+          <p>Nickel bands flow after the shell settles, with liquid highlights inheriting just enough rotational lag to feel dense and physical.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-mercury.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=mercury" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-mercury.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror aurora vault cyan violet ribbon shader material hexsweeper experiment" style="--swatch-bg:#02070d;--swatch-a:#2e7f83;--swatch-b:#88d2d0;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-aurora.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · atmospheric</span>
+          <span class="study-title">Obsidian Mirror · Aurora Vault</span>
+          <p>Layered cyan-violet curtains fold, shimmer, and settle with the sphere while preserving every playable count.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-aurora.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=aurora" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-aurora.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror checker atrium architectural room shader material hexsweeper experiment" style="--swatch-bg:#111416;--swatch-a:#d8d4c9;--swatch-b:#777a77;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-atrium.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · architectural</span>
+          <span class="study-title">Obsidian Mirror · Checker Atrium</span>
+          <p>A static coarse checker room bends over the sphere, making curvature and reflection direction immediately readable.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-atrium.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=atrium" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-atrium.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror verdant canopy forest moss mist photographic texture material hexsweeper experiment" style="--swatch-bg:#07100b;--swatch-a:#34563a;--swatch-b:#9ab18d;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-canopy.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · photographic</span>
+          <span class="study-title">Obsidian Mirror · Verdant Canopy</span>
+          <p>Moss, mist, and filtered canopy light move at different depths, turning one continuous old-growth reflection into a quiet parallax field.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-canopy.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=canopy" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-canopy.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror portoro black marble stone champagne ivory vein texture material hexsweeper experiment" style="--swatch-bg:#050403;--swatch-a:#604c2c;--swatch-b:#d4b26f;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-portoro.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · stone</span>
+          <span class="study-title">Obsidian Mirror · Portoro Marble</span>
+          <p>Broad champagne and ivory veins travel through polished black stone, kept coarse enough not to impersonate seams.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-portoro.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=portoro" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-portoro.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror deco lacquer brass fan step classy decorative texture material hexsweeper experiment" style="--swatch-bg:#030303;--swatch-a:#5b492d;--swatch-b:#c4a26b;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-deco.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · decorative</span>
+          <span class="study-title">Obsidian Mirror · Deco Lacquer</span>
+          <p>Sparse fan and step geometry in aged brass moves over piano-black lacquer like a formal night interior.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-deco.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=deco" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-deco.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror stained glass oculus cathedral spiral jewel color photographic texture material hexsweeper experiment" style="--swatch-bg:#030608;--swatch-a:#18aee1;--swatch-b:#ffb32c;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-oculus.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · stained glass</span>
+          <span class="study-title">Obsidian Mirror · Stained Oculus</span>
+          <p>A concentric stained-glass oculus wraps the shell in jewel-color fragments while its black ribs keep the board legible.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-oculus.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=oculus" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-oculus.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror galaxy milky way stars cosmic deep sky photographic texture material hexsweeper experiment" style="--swatch-bg:#050714;--swatch-a:#65506e;--swatch-b:#d7a5a2;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-galaxy.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · deep sky</span>
+          <span class="study-title">Obsidian Mirror · Galactic Dust</span>
+          <p>A dusty galactic band and dense star field travel slowly across the mirror, with cleared faces dropping into near-black space.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-galaxy.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=galaxy" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-galaxy.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror gilded ribbon bronze violet champagne abstract photographic texture material hexsweeper experiment" style="--swatch-bg:#020103;--swatch-a:#4d3449;--swatch-b:#dfa35f;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-gilded-ribbon.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · abstract</span>
+          <span class="study-title">Obsidian Mirror · Gilded Ribbon</span>
+          <p>Nested bronze, champagne, and violet ribbons flex across their long axis, then settle a fraction behind the sphere.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-gilded-ribbon.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=gilded-ribbon" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-gilded-ribbon.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror ion storm lightning clouds blue violet animated weather photographic texture material hexsweeper experiment" style="--swatch-bg:#06142d;--swatch-a:#175fa2;--swatch-b:#c893dc;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-ion-storm.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · animated weather</span>
+          <span class="study-title">Obsidian Mirror · Ion Storm</span>
+          <p>Blue thunderheads and violet charge drift across the mirror with a restrained luminance pulse.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-ion-storm.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=ion-storm" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-ion-storm.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror amber tempest lightning water island animated weather photographic texture material hexsweeper experiment" style="--swatch-bg:#071018;--swatch-a:#70472d;--swatch-b:#f1a14e;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-amber-tempest.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · animated weather</span>
+          <span class="study-title">Obsidian Mirror · Amber Tempest</span>
+          <p>Warm lightning, low clouds, and dark water slide slowly around the sphere like a storm trapped in glass.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-amber-tempest.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=amber-tempest" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-amber-tempest.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror heat lightning amber magenta clouds animated weather photographic texture material hexsweeper experiment" style="--swatch-bg:#0d1017;--swatch-a:#7a3f53;--swatch-b:#ffb05b;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-heat-lightning.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · animated weather</span>
+          <span class="study-title">Obsidian Mirror · Heat Lightning</span>
+          <p>A vertical lightning column becomes a hot amber seam through deep plum clouds, breathing without distracting from play.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-heat-lightning.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=heat-lightning" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-heat-lightning.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror stratosphere cloud deck blue sky bright animated cloudscape photographic texture material hexsweeper experiment" style="--swatch-bg:#e7f2fa;--swatch-a:#74b5df;--swatch-b:#ffffff;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-stratosphere.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · cloudscape</span>
+          <span class="study-title">Obsidian Mirror · Stratosphere</span>
+          <p>A high blue sky and bright cloud sea move almost imperceptibly, giving the sphere an airy porcelain character.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-stratosphere.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=stratosphere" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-stratosphere.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror chromatic ink marble rainbow swirl fluid advection animated photographic texture material hexsweeper experiment" style="--swatch-bg:#132ccb;--swatch-a:#00d9d2;--swatch-b:#f3ef16;--swatch-c:#ff16a8">
+        <a class="study-copy" href="sphere-reflection-chromatic-ink.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · fluid advection</span>
+          <span class="study-title">Obsidian Mirror · Chromatic Ink</span>
+          <p>Saturated marbling rotates, folds, and advects around the sphere instead of merely sliding beneath it.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-chromatic-ink.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=chromatic-ink" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-chromatic-ink.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere reflection mirror amber oil cells bubbles fluid refraction animated photographic texture material hexsweeper experiment" style="--swatch-bg:#1c0b02;--swatch-a:#95500e;--swatch-b:#f5bd4e;--swatch-c:#e5222a">
+        <a class="study-copy" href="sphere-reflection-amber-cells.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Material study · fluid refraction</span>
+          <span class="study-title">Obsidian Mirror · Amber Cells</span>
+          <p>Macro oil cells wobble and refract at a glacial pace, turning the shell into warm liquid amber.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-reflection-amber-cells.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-reflection/?material=amber-cells" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-reflection-amber-cells.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux bloom dock menu chrome experiment goldberg hex-bloom lab" style="--swatch-bg:#f3f1ea;--swatch-a:#16150f;--swatch-b:#e2341d;--swatch-c:#5ec8ff">
+        <a class="study-copy" href="sphere-ux.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Experiment · UX lab</span>
+          <span class="study-title">Hexsweeper 3D · Bloom UX</span>
+          <p>Sandbox chrome for the sphere — Restart · Menu · Help dock, hex bloom (Dig/Size/Look/Invert/Flush/Seams), Classic Bg/Shell/Dug axes plus Earth/Moon/Glow packs.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-ux.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-ux/" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-ux.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="dodecahedron polyhedron panels campaign pentagon tiled voronoi connected progression experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#d9d9d5;--swatch-c:#ffd000">
+        <a class="study-copy" href="polyhedron.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Experiment · playable campaign</span>
+          <span class="study-title">Hexsweeper · Dodecahedron</span>
+          <p>A true dodecahedron becomes a 12-stage campaign: clear one tiled pentagonal panel to unlock its five neighbors.</p>
+        </a>
+        <div class="actions">
+          <a href="polyhedron.html" target="_blank" rel="noopener">Open</a>
+          <a href="../polyhedron/" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="polyhedron.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux face takeover projected board faces spatial menu experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#d8d8d8;--swatch-c:#ffd400">
+        <a class="study-copy" href="sphere-face-takeover.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Experiment · spatial chrome</span>
+          <span class="study-title">Sphere UX · Face Takeover</span>
+          <p>The menu inhabits an actual seven-face patch of the current sphere: true projection, shared seams, direct controls.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-face-takeover.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-ux/?dock=faces" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-face-takeover.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux equator ribbon archive retired spatial menu experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#888888;--swatch-c:#18a64a">
+        <a class="study-copy" href="sphere-equator-ribbon.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Archive · spatial chrome</span>
+          <span class="study-title">Sphere UX · Equator Ribbon V1</span>
+          <p>Frozen first pass. The orbit made controls compete with gameplay faces, so this direction is preserved but retired.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-equator-ribbon.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="sphere-equator-ribbon.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux interior inside chamber concave play mode experiment" style="--swatch-bg:#0b0d12;--swatch-a:#ffffff;--swatch-b:#8d97a6;--swatch-c:#1d2430">
+        <a class="study-copy" href="sphere-interior.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Optical illusion · inside-out play</span>
+          <span class="study-title">Sphere UX · Interior play</span>
+          <p>The illusion stops being chrome and becomes the game. The concave wall is the board — stand inside the sphere and clear what surrounds you.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-interior.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-ux/?play=inside" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-interior.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux inside interior depth occlusion canvas menu experiment" style="--swatch-bg:#0c1016;--swatch-a:#ecf4ff;--swatch-b:#48bed7;--swatch-c:#8a97a8">
+        <a class="study-copy" href="sphere-inside.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Optical illusion · menu inside the shell</span>
+          <span class="study-title">Sphere UX · Inside</span>
+          <p>Not drawn on top of the sphere — drawn inside it. Seven seats sorted among the board's own faces, so the shell swallows them as it turns. No z-index can do this.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-inside.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-ux/?dock=inside" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-inside.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux eggshell split crack hinge open spatial menu experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#777777;--swatch-c:#ffd400">
+        <a class="study-copy" href="sphere-eggshell.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Experiment · live shell V3</span>
+          <span class="study-title">Sphere UX · Eggshell</span>
+          <p>Whole live 3D faces separate along one frozen interlocking seam, opening a clean aperture around the seven controls.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-eggshell.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-ux/?dock=eggshell" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-eggshell.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux inside out chamber concave inverse projection spatial menu experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#aaaaaa;--swatch-c:#18a64a">
+        <a class="study-copy" href="sphere-chamber.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Experiment · inverse sphere V3</span>
+          <span class="study-title">Sphere UX · Inside Chamber</span>
+          <p>The globe reverses through a long, single-eased turn into a bounded tiled bowl around a calm control aperture.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-chamber.html" target="_blank" rel="noopener">Open</a>
+          <a href="../sphere-ux/?dock=chamber" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="sphere-chamber.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux polar capstan spindle north pole archive rejected spatial menu experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#bdbdbd;--swatch-c:#ffd400">
+        <a class="study-copy" href="sphere-polar-capstan.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Archive · rejected polar mechanism</span>
+          <span class="study-title">Sphere UX · Polar Capstan</span>
+          <p>Rejected for this menu: the faceted spindle obscured the sphere and weakened the controls' reading order. Preserved as reviewed.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-polar-capstan.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="sphere-polar-capstan.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux polar cap petals crown north pole geodesic captured prior art spatial menu experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#d6d6d6;--swatch-c:#18a64a">
+        <a class="study-copy" href="sphere-polar-crown.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Captured · transferable petals</span>
+          <span class="study-title">Sphere UX · Polar Cap Petals</span>
+          <p>Not a fit for this menu, but the six geodesic vanes are preserved as promising menu and motion prior art for other contexts.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-polar-crown.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="sphere-polar-crown.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux polar axis drill aperture rings telescope archive rejected spatial menu experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#a7a7a7;--swatch-c:#ffd400">
+        <a class="study-copy" href="sphere-polar-drill.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Archive · rejected polar mechanism</span>
+          <span class="study-title">Sphere UX · Polar Axis Drill</span>
+          <p>Rejected for this menu: the telescoping annuli made the controls read as decoration around a bore. Preserved as reviewed.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-polar-drill.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="sphere-polar-drill.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere ux polar hex lid hinge panel north pole archive rejected spatial menu experiment" style="--swatch-bg:#ffffff;--swatch-a:#111111;--swatch-b:#c8c8c8;--swatch-c:#18a64a">
+        <a class="study-copy" href="sphere-polar-lid.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Archive · rejected polar mechanism</span>
+          <span class="study-title">Sphere UX · Polar Hex Lid</span>
+          <p>Rejected for this menu: the hinged panel became a detached object instead of part of the sphere. Preserved as reviewed.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-polar-lid.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="sphere-polar-lid.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere take moon ink orrery lunar calligraphy codepen" style="--swatch-bg:#0c0f1d;--swatch-a:#e8e4d8;--swatch-b:#7dd3c0;--swatch-c:#c9372c">
+        <a class="study-copy" href="sphere-kimi.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Take · visual study</span>
+          <span class="study-title">Moon Ink Orrery</span>
+          <p>Paper-moon shells over indigo void, vermillion flags, and brush-weight rings that thicken with danger.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-kimi.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="sphere-kimi.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere take amber codex scholarly parchment codepen" style="--swatch-bg:#1c1f2b;--swatch-a:#4a3f2f;--swatch-b:#d4a240;--swatch-c:#e8dcc8">
+        <a class="study-copy" href="sphere-claude.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Take · visual study</span>
+          <span class="study-title">Amber Codex</span>
+          <p>Lacquered amber shells, parchment wells, sealing-wax flags, and an amber survey pulse.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-claude.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="sphere-claude.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="sphere take constellation void starlit cosmic codepen" style="--swatch-bg:#0b1020;--swatch-a:#2e3a52;--swatch-b:#8bb8ff;--swatch-c:#ff8a6b">
+        <a class="study-copy" href="sphere-muse.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Take · visual study</span>
+          <span class="study-title">Starlit Void</span>
+          <p>Brushed-slate shell in deep void, coral lighthouse flags, starlight rings, and count-tint wells.</p>
+        </a>
+        <div class="actions">
+          <a href="sphere-muse.html" target="_blank" rel="noopener">Open</a>
+          <button type="button" data-copy="sphere-muse.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="catch monkey garden flat hex route blocking trap chase puzzle game experiment" style="--swatch-bg:#f4f0e6;--swatch-a:#fffdf7;--swatch-b:#141613;--swatch-c:#d59a24">
+        <a class="study-copy" href="catch-monkey-garden.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Game study · route blocking</span>
+          <span class="study-title">Catch the Monkey · Garden</span>
+          <p>A quick, legible flat-board chase: every wall changes the monkey's shortest path toward the perimeter.</p>
+        </a>
+        <div class="actions">
+          <a href="catch-monkey-garden.html" target="_blank" rel="noopener">Open</a>
+          <a href="../monkey-grid/" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="catch-monkey-garden.html">Copy HTML</button>
+        </div>
+      </article>
+      <article class="study" data-filter="catch monkey orbit sphere spherical hex route blocking trap chase portal puzzle game experiment" style="--swatch-bg:#101311;--swatch-a:#f5f1e6;--swatch-b:#e4ab36;--swatch-c:#e45143">
+        <a class="study-copy" href="catch-monkey-orbit.html">
+          <span class="swatch" aria-hidden="true"></span>
+          <span class="study-kicker">Game study · spherical pursuit</span>
+          <span class="study-title">Catch the Monkey · Orbit</span>
+          <p>A closed-surface chase with no edge: three explicit portals turn rotation and topology into the puzzle.</p>
+        </a>
+        <div class="actions">
+          <a href="catch-monkey-orbit.html" target="_blank" rel="noopener">Open</a>
+          <a href="../monkey-sphere/" target="_blank" rel="noopener">Live</a>
+          <button type="button" data-copy="catch-monkey-orbit.html">Copy HTML</button>
+        </div>
+      </article>
+    </div>
+  </section>
+  <!-- generated-hexsweeper-collection:end -->
+  <footer>By <a href="https://lukesteuber.com">Luke Steuber</a> · <a href="../LICENSE">MIT</a> · IBM Plex under <a href="../fonts/OFL.txt">OFL</a> · <a href="../choices.html">Choices hub</a></footer>
+</main>
+<script>
+(function () {
+  const status = document.querySelector("#status");
+  const copyText = async (value) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(value);
+    }
+    const field = document.createElement("textarea");
+    field.value = value;
+    document.body.append(field);
+    field.select();
+    document.execCommand("copy");
+    field.remove();
+  };
+  document.addEventListener("click", async (event) => {
+    const btn = event.target.closest("[data-copy]");
+    if (!btn) return;
+    const old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Copying…";
+    try {
+      const response = await fetch(btn.dataset.copy, { cache: "no-store" });
+      if (!response.ok) throw new Error("fetch failed");
+      await copyText(await response.text());
+      btn.textContent = "Copied";
+      if (status) status.textContent = "Copied " + btn.dataset.copy + ".";
+    } catch (error) {
+      btn.textContent = "Copy failed";
+      if (status) status.textContent = "Open the page and copy its source directly.";
+    }
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = old;
+    }, 1600);
+  });
+})();
+</script>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+/**
+ * File Purpose: Orbit palette and nocturnal jungle canopy for Catch the Monkey.
+ * Author: Luke Steuber <luke@lukesteuber.com>
+ */
+:root {
+  --ink: #eef4ec;
+  --muted: rgba(238, 244, 236, .68);
+  --glass: rgba(4, 14, 15, .7);
+  --glass-strong: rgba(4, 14, 15, .94);
+  --line: rgba(238, 244, 236, .19);
+  --focus: #f4c75d;
+  --accent: #e4ab36;
+}
+
+body {
+  background-color: #071014;
+  background-image:
+    linear-gradient(rgba(2, 8, 10, .14), rgba(2, 8, 10, .34)),
+    url("assets/jungle-night.webp");
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 48%, rgba(123, 170, 173, .1), transparent 50%);
+}
+
+#game-canvas { cursor: grab; }
+#game-canvas:active { cursor: grabbing; }
+
+@media (forced-colors: active) {
+  body { background-image: none; }
+  body::after { display: none; }
+}

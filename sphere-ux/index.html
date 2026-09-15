@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<!--
+  File Purpose: Experimental Hexsweeper on a closed hex sphere (Canvas projection).
+  Primary Functions/Classes: SphereSweeper.boot; hexasphere geometry; dig/flag/flood.
+  Inputs: hexasphere.js, sphere.js, skin-chrome.css. Outputs: standalone sphere game.
+  Chrome (sphere-ux): horizon seed blooms to Undo · Close · Flag.
+  Idle: one black half-hidden settings seed.
+  Open: seed rises; Undo · Close · Flag form the keel; five settings fan up.
+  See CHROME_HISTORY.md. Legacy IDs kept for sphere.js.
+  Notes: Starts zoomed out. Author: Luke Steuber <luke@lukesteuber.com>
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hexsweeper 3D</title>
+<meta name="description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Hexsweeper 3D">
+<meta property="og:description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
+<meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/sphere/">
+<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hexsweeper 3D">
+<meta name="twitter:description" content="Hexsweeper on a sphere — the hex-tile take on classic Minesweeper. Themes, controls, and sharing.">
+<meta name="twitter:image" content="https://dr.eamer.dev/games/hexsweeper/assets/social/sphere-og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="../skin-chrome.css">
+<link rel="stylesheet" href="dev-chrome.css?v=20260820a">
+<link rel="stylesheet" href="hex-bloom.css?v=20260820a">
+<style>
+/* Sphere chrome follows field (bg): light page for Light/Ink/Float/Card, dark for Shell/Dark */
+:root,
+body[data-sphere-chrome="light"],
+body[data-sphere-theme="light"],
+body[data-sphere-theme="ink"],
+body[data-sphere-theme="float"],
+body[data-sphere-theme="card"] {
+  --bg-color: #ffffff;
+  --text-main: #000000;
+  --text-sub: #666666;
+  --nav-bg: #f0f0f0;
+  --nav-ink: #000000;
+}
+body[data-sphere-chrome="dark"],
+body[data-sphere-theme="dark"],
+body[data-sphere-theme="shell"],
+body[data-sphere-theme="earth"],
+body[data-sphere-theme="moon"] {
+  --bg-color: #000000;
+  --text-main: #ffffff;
+  --text-sub: #888888;
+  --nav-bg: #111111;
+  --nav-ink: #ffffff;
+}
+body[data-sphere-theme="earth"],
+body[data-sphere-theme="moon"] {
+  --bg-color: #05070c;
+  --nav-bg: #0c1018;
+}
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+body.help-open { overflow: hidden; }
+/* Long-press must not select UI chrome or canvas (iOS callout / blue highlight) */
+.canvas-container,
+#gameCanvas,
+.hud-cluster,
+.hud-stats,
+.sphere-banner,
+.help-overlay,
+.settings-hub {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.canvas-container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  z-index: 0;
+}
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  outline: none;
+  -webkit-user-drag: none;
+}
+#gameCanvas:active { cursor: grabbing; }
+
+/*
+ * Settings flyout above the BR icon row — never covers the gear itself.
+ */
+.settings-stack {
+  --cz-ink: #000000;
+  --cz-halo: #ffffff;
+  position: absolute;
+  /* Fully above the 44px icon row (+ gap); grow upward only. */
+  bottom: calc(44px + 14px);
+  right: 0;
+  left: auto;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  padding: 0 2px 0 10px;
+  max-height: min(78dvh, calc(100dvh - 120px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: none;
+  color: var(--cz-ink);
+  text-align: right;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-shadow:
+    0 0 10px var(--cz-halo),
+    0 0 4px var(--cz-halo),
+    0 1px 0 var(--cz-halo),
+    0 -1px 0 var(--cz-halo),
+    1px 0 0 var(--cz-halo),
+    -1px 0 0 var(--cz-halo);
+}
+body[data-sphere-chrome="dark"] .settings-stack {
+  --cz-ink: #ffffff;
+  --cz-halo: #000000;
+}
+.settings-stack[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+/* Closed: remove from layout and hit-testing (no ghost plate over the gear). */
+.settings-stack[hidden],
+.settings-stack:not([data-open="true"]) {
+  display: none !important;
+  pointer-events: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-stack { transition: none; }
+}
+
+.sphere-banner {
+  position: fixed;
+  left: 50%;
+  bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
+  transform: translateX(-50%) translateY(12px);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--nav-bg) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 20%, transparent);
+  color: var(--text-main);
+  font-size: 14px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.sphere-banner.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+.sphere-banner .banner-msg {
+  line-height: 1.35;
+}
+.sphere-banner .banner-meta {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+.sphere-banner .banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.sphere-banner .banner-btn {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--text-main) 22%, transparent);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  color: var(--text-main);
+  border-radius: 999px;
+  /* Icon-only, at the same 44/20 scale as .hud-btn so the banner and the
+     corner cluster read as one control language. 44px also clears the
+     minimum touch target. */
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sphere-banner .banner-btn svg { width: 20px; height: 20px; stroke-width: 2; }
+.sphere-banner #banner-undo-btn { color: #18a64a; }
+.sphere-banner #banner-again-btn { color: #ffd400; }
+/* The label still exists for screen readers and carries share progress —
+   sphere.js updates this span, never the button, so the icon survives. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Share progress, shown without touching the button's children. */
+.sphere-banner .banner-btn[data-state="busy"] { opacity: 0.6; cursor: wait; }
+.sphere-banner .banner-btn[data-state="error"] {
+  border-color: #e02424;
+  color: #e02424;
+  background: transparent;
+}
+.sphere-banner .banner-btn.primary {
+  background: var(--text-main);
+  color: var(--bg-color);
+  border-color: transparent;
+}
+.sphere-banner .banner-btn:focus-visible {
+  outline: none;
+}
+.sphere-banner .banner-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+/* Kill focus rings on all sphere chrome (overrides skin-chrome). */
+.hud-btn:focus,
+.hud-btn:focus-visible,
+.hud-help-fixed:focus,
+.hud-help-fixed:focus-visible,
+#customize-btn:focus,
+#customize-btn:focus-visible,
+.cz-row:focus,
+.cz-row:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+
+/* Belt-and-braces: legacy size/theme/nest stubs must not paint over the gear. */
+.hud-cluster > .legacy-hud,
+.legacy-hud,
+.legacy-hud * {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: fixed !important;
+  left: -10000px !important;
+  top: -10000px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+}
+
+/* Bare chrome icons on canvas — no trays, no focus rings. */
+.hud-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-main);
+  opacity: 0.9;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  filter:
+    drop-shadow(0 0 4px var(--bg-color))
+    drop-shadow(0 0 1px var(--bg-color));
+}
+.hud-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+.hud-btn:hover,
+.hud-btn:focus,
+.hud-btn:focus-visible,
+.hud-btn:active {
+  opacity: 1;
+  background: transparent;
+  outline: none;
+  box-shadow: none;
+}
+.hud-btn:active { transform: scale(0.94); }
+.hud-btn[aria-expanded="true"] { opacity: 1; }
+
+/* Help — upper right */
+/* ?dock=inside opener. Deliberately plain: the menu it opens is the study,
+   and a second styled dock would compete with it. */
+.inner-menu-opener {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 40;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: 600 15px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.inner-menu-opener:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.hud-help-fixed {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  z-index: 50;
+}
+
+/* Settings + Reset — bottom right; flyout sits above the icon row */
+.hud-cluster {
+  position: fixed;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: flex-end;
+  pointer-events: none;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+/*
+ * Kill skin-chrome's frosted pill on .hud-actions (it was painting a translucent
+ * rounded tray over the gear and looking like an overlap).
+ */
+.hud-cluster .hud-actions,
+.hud-cluster .hud-actions.hud-actions {
+  position: static !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: auto !important;
+  pointer-events: auto;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0 !important;
+  align-items: center;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+#flag-toggle.active { color: #ff0000; }
+/* Board size: XS/S/M/L/XL letter (scaled) — readable at a glance when static */
+#size-btn .size-mark {
+  display: block;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+#size-btn .size-mark[data-size="XS"] { font-size: 11px; }
+#size-btn .size-mark[data-size="S"] { font-size: 14px; }
+#size-btn .size-mark[data-size="M"] { font-size: 17px; }
+#size-btn .size-mark[data-size="L"] { font-size: 20px; }
+#size-btn .size-mark[data-size="XL"] { font-size: 12px; }
+/* Count-style btn — morphing icon per mode */
+#nest-btn .count-mark {
+  display: block;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  user-select: none;
+}
+#nest-btn.active { opacity: 1; }
+/* Count-style toast — above BR chrome */
+.count-style-toast {
+  position: fixed;
+  bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 64px));
+  left: 50%;
+  z-index: 28;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--nav-bg) 55%, transparent);
+  backdrop-filter: blur(14px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  opacity: 0;
+  transform: translate(-50%, -6px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.count-style-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+/* Help — pure black/white ink + edges only. No dimming scrim; sphere stays visible.
+   Square corners throughout. Light: white paper / black ink. Dark: inverted. */
+.help-overlay {
+  --help-paper: #ffffff;
+  --help-ink: #000000;
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.help-overlay.open { opacity: 1; pointer-events: auto; }
+.help-panel {
+  width: min(36rem, 100%);
+  max-width: 100%;
+  max-height: min(92dvh, 100%);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--help-paper);
+  color: var(--help-ink);
+  border: 1px solid var(--help-ink);
+  border-radius: 0;
+  padding: 1rem 1.1rem 0.85rem;
+  position: relative;
+  text-align: left;
+  box-shadow: none;
+}
+body[data-sphere-chrome="dark"] .help-overlay {
+  --help-paper: #000000;
+  --help-ink: #ffffff;
+}
+.help-close {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--help-ink);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.help-close:hover,
+.help-close:focus-visible {
+  color: var(--help-ink);
+  border-color: var(--help-ink);
+  outline: none;
+}
+.help-panel h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 1.5rem 0.35rem 0;
+  letter-spacing: -0.02em;
+  color: var(--help-ink);
+}
+.help-lede {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--help-ink);
+}
+.help-controls {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  border-top: 1px solid var(--help-ink);
+  border-bottom: 1px solid var(--help-ink);
+}
+.help-controls li {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.38rem 0;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--help-ink);
+}
+.help-controls li + li {
+  border-top: 1px solid var(--help-ink);
+}
+.help-controls .act {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--help-ink);
+}
+.help-body {
+  margin: 0 0 0.65rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--help-ink);
+}
+.help-body p { margin: 0 0 0.4rem; }
+.help-body p:last-child { margin-bottom: 0; }
+.help-keys {
+  margin: 0 0 0.75rem;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--help-ink);
+}
+.help-keys kbd {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.92em;
+  border: 1px solid var(--help-ink);
+  border-radius: 0;
+  padding: 0.05em 0.28em;
+  color: var(--help-ink);
+  background: transparent;
+}
+.help-more {
+  margin: 0 0 0.65rem;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--help-ink);
+}
+.help-more a {
+  color: var(--help-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+/* Classic Minesweeper thumb — documentary photo stays as-is; chrome is mono */
+.help-history-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.65rem;
+}
+.help-history {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 33px;
+  padding: 0;
+  border: 1px solid var(--help-ink);
+  border-radius: 0;
+  overflow: hidden;
+  cursor: zoom-in;
+  background: #000000;
+  line-height: 0;
+}
+.help-history:focus-visible {
+  outline: 2px solid var(--help-ink);
+  outline-offset: 2px;
+}
+.help-history img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+.help-history-cap {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--help-ink);
+}
+.help-history-cap a {
+  color: var(--help-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.lightbox.open { opacity: 1; pointer-events: auto; }
+.lightbox img {
+  max-width: min(920px, 100%);
+  max-height: min(88vh, 100%);
+  border: 1px solid #ffffff;
+  border-radius: 0;
+  background: #000000;
+}
+.lightbox-close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid #ffffff;
+  border-radius: 0;
+  background: #000000;
+  color: #ffffff;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+.lightbox-close:hover,
+.lightbox-close:focus-visible {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  outline: none;
+}
+.help-done {
+  appearance: none;
+  width: 100%;
+  border: 1px solid var(--help-ink);
+  border-radius: 0;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--help-ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.help-done:hover,
+.help-done:focus-visible {
+  background: var(--help-ink);
+  color: var(--help-paper);
+  outline: none;
+}
+.menu-links {
+  margin-top: 0.55rem;
+  text-align: center;
+  font-size: 0.64rem;
+}
+.menu-links a {
+  color: var(--help-ink);
+  text-decoration: none;
+}
+.menu-links a:hover { text-decoration: underline; }
+.menu-links-sep { color: var(--help-ink); margin: 0 0.3rem; }
+@media (prefers-reduced-motion: reduce) {
+  .sphere-banner,
+  .help-overlay,
+  .lightbox,
+  .count-style-toast { transition: none; }
+}
+/* Water · level — only present while the water theme is live. The globe's
+   waterline is the whole point of the theme, so it gets a real control. */
+.water-level {
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left, 0px));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  width: 3px;
+  height: min(46vh, 340px);
+  margin: 0;
+  padding: 0;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(200, 245, 255, 0.28);
+  border: 0;
+  border-radius: 4px;
+  outline: none;
+  cursor: ns-resize;
+}
+body:not([data-sphere-theme="water"]) .water-level { display: none; }
+.water-level::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #eafbff;
+  border: 2px solid rgba(10, 40, 56, 0.55);
+  box-shadow: 0 2px 10px rgba(0, 18, 28, 0.5);
+}
+.water-level::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #eafbff;
+  border: 2px solid rgba(10, 40, 56, 0.55);
+  box-shadow: 0 2px 10px rgba(0, 18, 28, 0.5);
+}
+.water-level::-moz-range-track { background: rgba(200, 245, 255, 0.28); border: 0; }
+.water-level:focus-visible { outline: 2px solid #7fe0e8; outline-offset: 4px; }
+@media (max-width: 560px) { .water-level { height: min(34vh, 220px); } }
+/* Surface curiosities in the ? modal — quiet by design; these are asides,
+   not a feature block. Swatch colour rides on --sw per button. */
+.help-packs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 0.6rem;
+}
+.help-packs-cap {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-right: 2px;
+}
+.help-pack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  color: inherit;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--help-ink) 22%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.help-pack::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sw, currentColor);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--help-ink) 28%, transparent);
+}
+.help-pack:hover { opacity: 1; }
+.help-pack[aria-pressed="true"] {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--help-ink) 55%, transparent);
+}
+.help-pack:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* Double-tap on any chrome control must never become Safari smart-zoom.
+   Declared on the elements: iOS skips body-level touch-action for this. */
+button, a, input[type="range"] { touch-action: manipulation; }
+/* Controls row in the ? modal — set-once plumbing (invert drag, effects). */
+.help-pack.is-text::before { display: none; }
+</style>
+</head>
+<body data-sphere-theme="light" data-sphere-chrome="light">
+<div class="canvas-container">
+  <canvas id="gameCanvas" aria-label="Hex sphere minesweeper board"></canvas>
+</div>
+<input type="range" class="water-level" id="water-level" min="0" max="100" step="0.5"
+       value="50" aria-label="Water level">
+
+<div id="sphere-banner" class="sphere-banner" role="status" hidden>
+  <div class="banner-msg" id="banner-msg"></div>
+  <div class="banner-meta" id="banner-meta" hidden></div>
+  <div class="banner-actions" id="banner-actions" hidden>
+    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image" title="Share image">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 15V3"></path>
+        <path d="M8 7l4-4 4 4"></path>
+        <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path>
+      </svg>
+      <span class="sr-only">Share image</span>
+    </button>
+    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 4v5h5"></path>
+        <path d="M4.8 8.2A8.3 8.3 0 1 1 4 16"></path>
+      </svg>
+      <span class="sr-only">Undo last move</span>
+    </button>
+    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"></path>
+        <path d="M20 3.5V8h-4.5"></path>
+        <path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L4 16"></path>
+        <path d="M4 20.5V16h4.5"></path>
+      </svg>
+      <span class="sr-only">Play again</span>
+    </button>
+  </div>
+</div>
+
+<!-- Live stats for sphere.js (engine + SR); visible copies paint inside settings. -->
+<div class="sr-only" aria-live="polite">
+  <span id="stats-mines">00</span> left
+  <span id="stats-time">000s</span>
+</div>
+
+<!-- Help — upper right -->
+<button type="button" id="help-btn" class="hud-btn hud-help-fixed" aria-label="Help" title="Help (?)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10"></circle>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+  </svg>
+</button>
+
+<!-- Settings gear + flyout — bottom right -->
+<div class="hud-cluster dev-cluster" role="toolbar" aria-label="Game settings">
+  <div class="settings-stack" id="settings-stack" data-open="false" hidden>
+    <div class="customize-panel" id="customize-panel" data-open="false" role="dialog" aria-label="Customize board"></div>
+  </div>
+  <div class="hud-actions" aria-label="Board controls">
+    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+    </button>
+    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board" title="Customize board (C)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="4" y1="21" x2="4" y2="14"></line>
+        <line x1="4" y1="10" x2="4" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12" y2="3"></line>
+        <line x1="20" y1="21" x2="20" y2="16"></line>
+        <line x1="20" y1="12" x2="20" y2="3"></line>
+        <line x1="1" y1="14" x2="7" y2="14"></line>
+        <line x1="9" y1="8" x2="15" y2="8"></line>
+        <line x1="17" y1="16" x2="23" y2="16"></line>
+      </svg>
+    </button>
+  </div>
+  <!-- Shipped controls, kept in the DOM so sphere.js wiring and label sync are untouched. -->
+  <div class="legacy-hud" aria-hidden="true">
+    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Board size S, Small, 362 faces. Activate to cycle XS, S, M, L, XL." title="Board size"></button>
+    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light" title="Theme"></button>
+    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle." title="Count style"></button>
+    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false" title="Flag mode"></button>
+  </div>
+</div>
+
+<div id="count-style-toast" class="count-style-toast" role="status" aria-live="polite"></div>
+
+<div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+  <div class="help-panel" id="help-panel" tabindex="-1">
+    <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
+    <h2 id="help-title">Hexsweeper 3D</h2>
+    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
+    <ul class="help-controls" aria-label="Controls">
+      <li><span class="act">Tap</span><span>Dig a face</span></li>
+      <li><span class="act">Hold / ⌃-click</span><span>Flag a face</span></li>
+      <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
+      <li><span class="act">Drag</span><span>Spin the sphere</span></li>
+      <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
+    </ul>
+    <div class="help-body">
+      <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
+      <p>The bottom seed opens Undo, Flag, Reset, board size, theme, warning style and inversion. Surface packs are just below. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
+    </div>
+    <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
+    <div class="help-history-row">
+      <button type="button" class="help-history" id="help-history-btn" aria-label="Open Hexsweeper Classic board screenshot">
+        <img src="assets/classic-board.png" alt="Hexsweeper Classic board with revealed numbers and a flag" width="44" height="33" loading="lazy">
+      </button>
+      <p class="help-history-cap">
+        Hexsweeper Classic, by Luke Steuber — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
+      </p>
+    </div>
+    <div class="help-packs" id="help-packs" role="group" aria-label="Surface">
+      <span class="help-packs-cap">Surface</span>
+      <button type="button" class="help-pack" data-pack="classic" style="--sw:linear-gradient(90deg,#fff 50%,#111 50%)" aria-pressed="true">Classic</button>
+      <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
+      <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
+    </div>
+    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
+      <span class="help-packs-cap">Controls</span>
+      <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
+      <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
+    </div>
+    <p class="help-more">Also <a href="../">flat Hexsweeper</a> · <a href="../?mode=fire">Fire</a> · <a href="../?mode=plague">Plague</a></p>
+    <button type="button" class="help-done" id="help-done-btn">Done</button>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" rel="noopener noreferrer">datapoems.io</a>
+    </nav>
+  </div>
+</div>
+
+<div id="history-lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Hexsweeper Classic board" hidden>
+  <button type="button" class="lightbox-close" id="lightbox-close-btn" aria-label="Close">×</button>
+  <img src="assets/classic-board.png" alt="Hexsweeper Classic board, an original screenshot by Luke Steuber">
+</div>
+
+<script src="hexasphere.js?v=20260820a"></script>
+<script src="sphere.js?v=20260822c"></script>
+<script src="hex-bloom.js?v=20260820a"></script>
+<script src="inner-menu.js?v=20260822c"></script>
+<script src="interior-chrome.js?v=20260822c"></script>
+<script>
+(function () {
+  const game = SphereSweeper.boot({ canvasId: "gameCanvas" });
+  // ?dock=inside is the one dock that is not DOM, so it replaces hex-bloom
+  // outright rather than being a mode inside it. Every other dock still
+  // routes through initHexBloom untouched.
+  // Same resolution order hex-bloom uses: the frozen collection study sets the
+  // global and has no query string, the live page uses ?dock=.
+  const q = new URLSearchParams(location.search);
+  const dock = String(
+    window.HEXSWEEPER_SPHERE_DOCK_MODE || q.get("dock") || ""
+  );
+  // ?play=inside — stand inside the sphere and play the wall. No dock and no
+  // spatial menu: the concave view IS the board, and the ordinary HUD (?,
+  // Reset, Customize) is the chrome, the same shape of simple modal the
+  // shipping sphere uses.
+  const play = String(window.HEXSWEEPER_SPHERE_PLAY || q.get("play") || "");
+  if (play === "inside" && typeof game.setInteriorPlay === "function") {
+    game.setInteriorPlay(true);
+    document.body.setAttribute("data-interior-play", "true");
+    if (typeof initInteriorChrome === "function") initInteriorChrome(game);
+  } else if (dock === "inside" && typeof initInnerMenu === "function") {
+    const menu = initInnerMenu(game);
+    const btn = document.createElement("button");
+    btn.id = "inner-menu-open";
+    btn.type = "button";
+    btn.className = "inner-menu-opener";
+    btn.textContent = "Menu";
+    btn.setAttribute("aria-haspopup", "true");
+    btn.setAttribute("aria-expanded", "false");
+    btn.addEventListener("click", () => {
+      menu.toggle();
+      btn.setAttribute("aria-expanded", menu.isOpen() ? "true" : "false");
+    });
+    document.body.appendChild(btn);
+    // ?open=1 blooms on arrival. The frozen collection study wants the menu
+    // already up, and it gives headless capture something to photograph.
+    // The frozen study arrives with the menu already up; live visitors tap.
+    if (q.get("open") === "1" || window.HEXSWEEPER_SPHERE_DOCK_MODE) {
+      menu.show(true);
+      btn.setAttribute("aria-expanded", "true");
+    }
+    // ?spin=<px> turns the sphere on arrival, so a still can show the menu
+    // half-swallowed by the shell. Study/capture aid, not player-facing.
+    const spin = Number(q.get("spin"));
+    if (spin && game.orbitBy) game.orbitBy(spin, 0);
+  } else {
+    const bloom = initHexBloom(game);
+    // Same ?open=1 capture aid the inside dock uses, so the spatial docks
+    // (chamber, eggshell, faces) can be photographed in their open state.
+    if (bloom && q.get("open") === "1") {
+      requestAnimationFrame(() => (bloom.open || bloom.toggle)());
+    }
+  }
+})();
+(function () {
+  const lb = document.getElementById("history-lightbox");
+  const openBtn = document.getElementById("help-history-btn");
+  const closeBtn = document.getElementById("lightbox-close-btn");
+  if (!lb || !openBtn) return;
+  function openLb() {
+    lb.hidden = false;
+    requestAnimationFrame(() => lb.classList.add("open"));
+    closeBtn && closeBtn.focus();
+  }
+  function closeLb() {
+    lb.classList.remove("open");
+    setTimeout(() => { lb.hidden = true; }, 180);
+    openBtn.focus();
+  }
+  openBtn.addEventListener("click", openLb);
+  closeBtn && closeBtn.addEventListener("click", closeLb);
+  lb.addEventListener("click", (e) => { if (e.target === lb) closeLb(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && lb.classList.contains("open")) {
+      e.stopPropagation();
+      closeLb();
+    }
+  });
+})();
+</script>
+<!-- GoatCounter Analytics -->
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

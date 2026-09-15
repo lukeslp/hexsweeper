@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Frostpane Night — Hexsweeper Lab</title>
+<link rel="stylesheet" href="../skin-chrome.css">
+<style>
+
+:root {
+  --bg-color: #0b0e1a;
+  --text-main: #d7f7ff;
+  --text-sub: rgba(255,255,255,0.55);
+  --nav-bg: rgba(17,26,50,0.9);
+  --nav-ink: #d7f7ff;
+}
+body {
+  font-family: system-ui, sans-serif;
+  background:
+    radial-gradient(ellipse 55% 40% at 30% 20%, rgba(94,231,223,0.14), transparent 70%),
+    radial-gradient(ellipse 50% 45% at 75% 75%, rgba(180,144,245,0.18), transparent 70%),
+    #050711;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100vh; margin: 0; overflow: hidden; user-select: none; touch-action: none;
+  color: var(--text-main);
+}
+#fx {
+  background:
+    radial-gradient(ellipse 90% 70% at 48% 42%, #111a32 0%, #0b0e1a 52%, #050711 100%);
+  opacity: 0.9;
+}
+
+</style>
+</head>
+<body>
+<div class="fx-layer" id="fx" aria-hidden="true"></div>
+<nav class="skin-nav" aria-label="Skin navigation">
+  <a href="../lab.html">Lab</a>
+  <a href="brass-plaque.html" title="Previous skin (←)">←</a>
+  <a href="paper-relief.html" title="Next skin (→)">→</a>
+  <span class="meta"><span class="tag">materials</span> · Frostpane Night</span>
+</nav>
+
+<div class="canvas-container">
+  <canvas id="gameCanvas"></canvas>
+</div>
+
+<div class="hud-actions" role="toolbar" aria-label="Game controls">
+  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  </button>
+  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu" title="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="5" y1="7" x2="19" y2="7"></line>
+      <line x1="5" y1="12" x2="15" y2="12"></line>
+      <line x1="5" y1="17" x2="19" y2="17"></line>
+    </svg>
+  </button>
+</div>
+
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+  <div class="modal-content">
+    <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <h2 id="menu-title" class="menu-title">Menu</h2>
+    <div class="modal-row" id="run-row">
+      <div class="modal-section-label">Run</div>
+      <div class="menu-stats" aria-label="Score">
+        <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
+        <div id="stats-time" class="stat-item visible" data-label="cleared" title="Safe cells cleared">000</div>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="icon-label" title="Board size">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="9" height="9"></rect><rect x="13" y="2" width="9" height="9"></rect><rect x="2" y="13" width="9" height="9"></rect></svg>
+      </div>
+      <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
+        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small · 10 mines">S</button>
+        <button type="button" class="diff-option active" data-val="medium" aria-pressed="true" title="Medium · 35 mines">M</button>
+        <button type="button" class="diff-option" data-val="hard" aria-pressed="false" title="Large · 80 mines">L</button>
+      </div>
+    </div>
+    <div class="instructions-text">Tap to reveal · flag: right-click, Ctrl-click, or long-hold<br>Menu holds scores · Reset on the board · ← → skins</div>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">Luke Steuber</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">Data Poems</a>
+    </nav>
+  </div>
+</div>
+
+<script src="../core.js"></script>
+<script>
+// keyboard prev/next
+(function(){
+  const prev="brass-plaque.html", next="paper-relief.html";
+  window.addEventListener("keydown", (e) => {
+    if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+    if (e.key === "ArrowLeft") location.href = prev;
+    if (e.key === "ArrowRight") location.href = next;
+  });
+})();
+
+// materials/frosted-glass · Frostpane Night
+Hexsweeper.boot({
+  theme: {
+    bg: "#0b0e1a",
+    shadowLight: "rgba(255,255,255,0.5)",
+    shadowDark: "rgba(11,14,26,0.72)",
+    covered: "rgba(255,255,255,0.12)",
+    revealed: "rgba(92,217,255,0.06)",
+    flag: "#b490f5",
+    pressedDark: "rgba(0,0,0,0.4)",
+    pressedLight: "rgba(255,255,255,0.4)",
+    text: {1:"#5cd9ff",2:"#67e8f9",3:"#f0abfc",4:"#a78bfa",5:"#fde68a",6:"#fda4af",mine:"#fff"}
+  },
+  hooks: {
+    beforeFrame(ctx, api) {
+      const s = api.state;
+      const g = ctx.createRadialGradient(s.centerX, s.centerY*0.7, 10, s.centerX, s.centerY, s.canvas.width*0.6);
+      g.addColorStop(0, "rgba(94,231,223,0.08)");
+      g.addColorStop(0.5, "rgba(180,144,245,0.06)");
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,s.canvas.width,s.canvas.height);
+    },
+    decorateCell(ctx, cell, size) {
+      const scale = 0.92 + cell.animHover*0.05;
+      const p = cell.hexPath(size, scale);
+      ctx.save();
+      // frosted face
+      if (!cell.revealed) {
+        const g = ctx.createRadialGradient(cell.x - size*0.2, cell.y - size*0.25, 1, cell.x, cell.y, size);
+        g.addColorStop(0, "rgba(255,255,255,0.28)");
+        g.addColorStop(0.55, "rgba(255,255,255,0.06)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = g;
+        ctx.fill(p);
+      } else {
+        ctx.strokeStyle = "rgba(92,217,255,0.35)";
+        ctx.lineWidth = 1.2;
+        ctx.stroke(p);
+      }
+      // rim light
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke(p);
+      ctx.restore();
+    }
+  }
+});
+
+</script>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Caustic Lens — Hexsweeper Lab</title>
+<link rel="stylesheet" href="../skin-chrome.css">
+<style>
+
+:root {
+  --bg-color: #071820;
+  --text-main: #d8f6ff;
+  --text-sub: rgba(160,220,240,0.55);
+  --nav-bg: #0c2430;
+  --nav-ink: #d8f6ff;
+}
+body {
+  font-family: system-ui, sans-serif;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, #0c3040 0%, #071820 55%, #030a10 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100vh; margin: 0; overflow: hidden; user-select: none; touch-action: none;
+  color: var(--text-main);
+}
+
+</style>
+</head>
+<body>
+<div class="fx-layer" id="fx" aria-hidden="true"></div>
+<nav class="skin-nav" aria-label="Skin navigation">
+  <a href="../lab.html">Lab</a>
+  <a href="mycelium.html" title="Previous skin (←)">←</a>
+  <a href="../classic.html" title="Next skin (→)">→</a>
+  <span class="meta"><span class="tag">lensing</span> · Caustic Lens</span>
+</nav>
+
+<div class="canvas-container">
+  <canvas id="gameCanvas"></canvas>
+</div>
+
+<div class="hud-actions" role="toolbar" aria-label="Game controls">
+  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  </button>
+  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu" title="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="5" y1="7" x2="19" y2="7"></line>
+      <line x1="5" y1="12" x2="15" y2="12"></line>
+      <line x1="5" y1="17" x2="19" y2="17"></line>
+    </svg>
+  </button>
+</div>
+
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+  <div class="modal-content">
+    <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <h2 id="menu-title" class="menu-title">Menu</h2>
+    <div class="modal-row" id="run-row">
+      <div class="modal-section-label">Run</div>
+      <div class="menu-stats" aria-label="Score">
+        <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
+        <div id="stats-time" class="stat-item visible" data-label="cleared" title="Safe cells cleared">000</div>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="icon-label" title="Board size">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="9" height="9"></rect><rect x="13" y="2" width="9" height="9"></rect><rect x="2" y="13" width="9" height="9"></rect></svg>
+      </div>
+      <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
+        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small · 10 mines">S</button>
+        <button type="button" class="diff-option active" data-val="medium" aria-pressed="true" title="Medium · 35 mines">M</button>
+        <button type="button" class="diff-option" data-val="hard" aria-pressed="false" title="Large · 80 mines">L</button>
+      </div>
+    </div>
+    <div class="instructions-text">Tap to reveal · flag: right-click, Ctrl-click, or long-hold<br>Menu holds scores · Reset on the board · ← → skins</div>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">Luke Steuber</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">Data Poems</a>
+    </nav>
+  </div>
+</div>
+
+<script src="../core.js"></script>
+<script>
+// keyboard prev/next
+(function(){
+  const prev="mycelium.html", next="../classic.html";
+  window.addEventListener("keydown", (e) => {
+    if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+    if (e.key === "ArrowLeft") location.href = prev;
+    if (e.key === "ArrowRight") location.href = next;
+  });
+})();
+
+// underwater caustics + hover refraction bulge
+function caustic(ctx, w, h, t, cx, cy) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 6; i++) {
+    const phase = t * (0.4 + i * 0.07) + i * 1.7;
+    const g = ctx.createRadialGradient(
+      cx + Math.sin(phase)*w*0.15, cy + Math.cos(phase*0.8)*h*0.12, 10,
+      cx, cy, w*0.45
+    );
+    g.addColorStop(0, `rgba(120,220,255,${0.04 + (i%2)*0.02})`);
+    g.addColorStop(0.4, `rgba(40,160,200,${0.03})`);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    // wavy band
+    for (let x = 0; x <= w; x += 12) {
+      const y = cy + Math.sin(x*0.02 + phase + i)*18 + Math.cos(x*0.01 - phase)*10 + (i-2.5)*22;
+      if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath();
+    ctx.globalAlpha = 0.35;
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+Hexsweeper.boot({
+  theme: {
+    bg:"#071820", shadowLight:"rgba(160,230,255,0.4)", shadowDark:"rgba(0,20,30,0.7)",
+    covered:"#0e3040", revealed:"#0a202c", flag:"#7ee0ff",
+    pressedDark:"rgba(0,20,30,0.6)", pressedLight:"rgba(160,230,255,0.35)",
+    text:{1:"#7dd3fc",2:"#5eead4",3:"#f9a8d4",4:"#a5b4fc",5:"#fde68a",6:"#67e8f9",mine:"#e0f7ff"}
+  },
+  hooks: {
+    beforeFrame(ctx, api) {
+      const s = api.state;
+      caustic(ctx, s.canvas.width, s.canvas.height, s.now*0.001, s.centerX, s.centerY);
+    },
+    drawCell(ctx, cell, size, api) {
+      const s = api.state;
+      const T = s.theme;
+      // refraction bulge on hover: shift vertices toward pointer slightly
+      let bx = 0, by = 0, bulge = 0;
+      if (s.pointer.active) {
+        const dx = cell.x - s.pointer.x, dy = cell.y - s.pointer.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const R = size * 4.5;
+        if (dist < R) {
+          bulge = (1 - dist/R) * 0.12;
+          bx = (dx/dist) * bulge * size * 2;
+          by = (dy/dist) * bulge * size * 2;
+        }
+      }
+      const scale = 0.92 + cell.animHover * 0.05 + bulge;
+      const ox = cell.x, oy = cell.y;
+      cell.x += bx; cell.y += by;
+      const path = cell.hexPath(size, scale);
+
+      // caustic highlight on cell face
+      const t = s.now * 0.001;
+      const shimmer = 0.5 + 0.5*Math.sin(cell.q*1.3 + cell.r*1.7 + t*2);
+      ctx.fillStyle = cell.revealed
+        ? `rgba(20,50,65,${0.85})`
+        : `rgba(${14+shimmer*20|0},${48+shimmer*30|0},${64+shimmer*40|0},0.95)`;
+      ctx.fill(path);
+
+      // specular ridge
+      ctx.save();
+      ctx.strokeStyle = `rgba(180,240,255,${0.15 + shimmer*0.25 + cell.animHover*0.2})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke(path);
+      const g = ctx.createLinearGradient(cell.x-size, cell.y-size, cell.x+size, cell.y+size);
+      g.addColorStop(0, `rgba(200,250,255,${0.15+bulge})`);
+      g.addColorStop(0.5, "rgba(200,250,255,0)");
+      g.addColorStop(1, "rgba(0,40,60,0.2)");
+      ctx.fillStyle = g;
+      ctx.fill(path);
+      ctx.restore();
+
+      if (cell.animReveal > 0.1) {
+        ctx.globalAlpha = cell.animReveal;
+        if (cell.isMine) {
+          ctx.fillStyle = T.text.mine;
+          ctx.beginPath(); ctx.arc(cell.x, cell.y, size*0.35, 0, Math.PI*2); ctx.fill();
+        } else if (cell.neighborMines > 0) {
+          ctx.fillStyle = T.text[cell.neighborMines];
+          ctx.font = `700 ${size}px system-ui,sans-serif`;
+          ctx.textAlign="center"; ctx.textBaseline="middle";
+          ctx.fillText(cell.neighborMines, cell.x, cell.y+size*0.05);
+        }
+        ctx.globalAlpha = 1;
+      }
+      if (cell.flagged && !cell.revealed) {
+        ctx.fillStyle = T.flag;
+        ctx.font = `bold ${size}px sans-serif`;
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText("!", cell.x, cell.y+size*0.1);
+      }
+      cell.x = ox; cell.y = oy;
+    }
+  }
+});
+
+</script>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!-- Catch the Monkey: Garden, by Luke Steuber. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Close one path per turn and catch the monkey before it reaches the garden rim.">
+<meta name="theme-color" content="#0d1b11">
+<title>Catch the Monkey: Garden</title>
+<link rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/monkey-grid/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Catch the Monkey: Garden">
+<meta property="og:description" content="Close one path per turn and catch the monkey before it reaches the garden rim.">
+<meta property="og:url" content="https://dr.eamer.dev/games/hexsweeper/monkey-grid/">
+<meta property="og:image" content="https://dr.eamer.dev/games/hexsweeper/monkey-grid/assets/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" as="image" href="assets/jungle-floor.webp" type="image/webp">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="../monkey-shell.css">
+<link rel="stylesheet" href="game.css">
+</head>
+<body>
+<main class="game" aria-labelledby="game-title">
+  <h1 class="sr-only" id="game-title">Catch the Monkey: Garden</h1>
+  <div class="board-wrap">
+    <canvas id="game-canvas" tabindex="0" aria-label="Catch the Monkey garden board" aria-describedby="board-instructions"></canvas>
+    <p class="sr-only" id="board-instructions">Use the Arrow keys to move the selected hex. Press Enter or Space to close it. U undoes a turn, R starts a new garden, and question mark opens the rules.</p>
+    <div id="result" class="result" role="status" aria-live="polite" hidden>
+      <strong id="result-title"></strong>
+      <span id="result-copy"></span>
+    </div>
+  </div>
+
+  <div class="game-hud">
+    <p class="status-capsule" role="status" aria-live="polite" aria-atomic="true">
+      <span class="game-name">Garden</span>
+      <span><strong id="turn-count">0</strong> turns</span>
+      <span class="status-separator" aria-hidden="true"></span>
+      <span><strong id="exit-count">0</strong> exits</span>
+    </p>
+    <nav class="control-rail" aria-label="Game controls">
+      <a id="back-link" href="../choices.html" aria-label="Back to Hexsweeper worlds">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>Back</title><path d="M15.5 5.5 9 12l6.5 6.5"></path><path d="M9.5 12H20"></path></svg>
+      </a>
+      <button type="button" id="undo-button" aria-label="Undo last turn" title="Undo (U)" disabled>
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>Undo</title><path d="M8 8H4V4"></path><path d="M4.6 8.4a8 8 0 1 1-.2 7.1"></path></svg>
+      </button>
+      <button type="button" id="new-button" aria-label="Start a new garden" title="New garden (R)">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>New garden</title><path d="m12 3 7.5 4.4v9.2L12 21l-7.5-4.4V7.4z"></path><path d="M8.5 9.2h.01M15.5 9.2h.01M12 14.8h.01"></path></svg>
+      </button>
+      <button type="button" id="help-button" aria-label="How to play" title="Rules (?)" aria-haspopup="dialog">
+        <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>How to play</title><circle cx="12" cy="12" r="8.5"></circle><path d="M12 10.8v5.1M12 8.1h.01"></path></svg>
+      </button>
+    </nav>
+  </div>
+</main>
+
+<div id="help-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+  <section class="help-card">
+    <button type="button" class="close-button" id="help-close" aria-label="Close rules">
+      <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true"><title>Close</title><path d="m7 7 10 10M17 7 7 17"></path></svg>
+    </button>
+    <h2 id="help-title">Close the garden</h2>
+    <p>Cut off every route before the monkey reaches the rim.</p>
+    <ol class="rules">
+      <li><span><strong>Close one pale hex.</strong> Each wall costs one turn.</span></li>
+      <li><span><strong>The monkey moves next.</strong> The gold pip marks a likely shortest step.</span></li>
+      <li><span><strong>Seal every exit.</strong> Black tiles are walls; rim notches are escape edges.</span></li>
+    </ol>
+    <button type="button" class="done" id="help-done">Play</button>
+  </section>
+</div>
+
+<div class="sr-only" id="live-status" aria-live="polite" aria-atomic="true"></div>
+<script src="game.js"></script>
+<script data-goatcounter="https://stats.dr.eamer.dev/count"
+        async src="https://stats.dr.eamer.dev/count.js"></script>
+</body>
+</html>

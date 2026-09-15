@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sphere neighbor + flood closure smoke
+        run: node sphere/test-neighbors.js
+
+      - name: Sphere optional variant contract
+        run: node sphere/test-variant-contract.js
+
+      - name: Glitch Sphere state and route contracts
+        run: |
+          node glitch-sphere/test-glitch-hazard.js
+          node glitch-sphere/test-integration.js
+
+      - name: Flux Sphere pair and route contracts
+        run: |
+          node flux-sphere/test-flux-pairs.js
+          node flux-sphere/test-integration.js
+
+      - name: Catch the Monkey UI and input contract
+        run: node --test tools/test-monkey-ui.mjs
+
+      - name: Water Wheel effect profile contract
+        run: node wheel/test-effects.js
+
+      - name: Water Wheel menu profile contract
+        run: node wheel/test-menu-variants.js
+
+      - name: Dodecahedron panel campaign smoke
+        run: node polyhedron/test-campaign.js
+
+      - name: Build sealed app payload
+        run: python3 tools/export-collection.py --app
+
+      - name: Web launcher route contract
+        run: node tools/test-web-launcher.mjs
+
+      - name: Collection export drift guard
+        run: python3 tools/export-collection.py --check
+
+      - name: Choices lab redirect drift guard
+        run: python3 tools/export-choices-lab.py --check
