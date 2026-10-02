@@ -107,6 +107,10 @@ uses the Fire-tuned path for both direct and ambient XL rotation. See
 at 08:54 AM PDT on September 4, 2026; the console estimates approval before
 09:00 AM PDT on September 9.
 
+The direct download moved to signed `1.0.5 (30)` on October 2, 2026. It carries
+web payload `7ece656`, so dragging the sphere follows the finger on both axes,
+as on iPhone. Amazon still has `1.0.4 (29)`.
+
 ## Not in this build
 
 **Earth and Moon globe themes are excluded.** They are the only themes that
