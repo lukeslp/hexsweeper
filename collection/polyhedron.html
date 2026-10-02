@@ -4484,7 +4484,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
           clearTimeout(this.longPressTimer);
           const invert = this.options.getInvert ? this.options.getInvert() : { x: false, y: false };
           const yaw = quatAxis({ x: 0, y: 1, z: 0 }, dx * 0.008 * (invert.x ? -1 : 1));
-          const pitch = quatAxis({ x: 1, y: 0, z: 0 }, -dy * 0.008 * (invert.y ? -1 : 1));
+          // Drag down and the face under the pointer moves down (screen y grows downward).
+          const pitch = quatAxis({ x: 1, y: 0, z: 0 }, dy * 0.008 * (invert.y ? -1 : 1));
           this.orientation = quatMultiply(pitch, quatMultiply(yaw, this.orientation));
           this.targetOrientation = this.orientation;
         }

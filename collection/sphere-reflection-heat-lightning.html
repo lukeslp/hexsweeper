@@ -6984,7 +6984,9 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "heat-lightning";
           clearTimeout(longPressTimer);
           state.pressed = -1;
           // Free tumble — keep continuous angles (do not wrap mid-drag).
-          const sx = state.invertDragX ? -1 : 1;
+          // Upside down (tumbled past a pole), turning about the sphere's own axis runs the
+          // other way on screen, so flip it to keep the face under the pointer following it.
+          const sx = (state.invertDragX ? -1 : 1) * (Math.cos(state.dragStart.rotX) < 0 ? -1 : 1);
           const sy = state.invertDragY ? -1 : 1;
           state.targetRotY = state.dragStart.rotY + dx * 0.0105 * sx;
           state.targetRotX = state.dragStart.rotX + dy * 0.0105 * sy;

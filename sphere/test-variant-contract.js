@@ -551,6 +551,7 @@ test("falls back from a newer rejected save to an older valid copy", () => {
   assert.ok(localStorage.value("hexsweeper-glitch-sphere-run-v1"));
   assert.ok(sessionStorage.value("hexsweeper-glitch-sphere-run-v1"));
   assert.deepStrictEqual(localStorage.removals, [
+    "hexsweeper-sphere-invert-v5",
     "hexsweeper-sphere-invert-v4",
     "hexsweeper-sphere-invert-v3",
     "hexsweeper-sphere-invert-v2",

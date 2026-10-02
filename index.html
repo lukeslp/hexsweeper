@@ -2796,12 +2796,13 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel/";
   const SIZE_STORAGE_KEY = "hexsweeper-sphere-size-v2";
   const NEST_STORAGE_KEY = "hexsweeper-sphere-nest-v1";
   const COUNT_STYLE_STORAGE_KEY = "hexsweeper-sphere-countstyle-v1";
-  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v5";
-  // v5 makes horizontal drag turn the sphere like an object: drag right and
-  // the face moves left. The earlier keys were set while the X default flipped
-  // back and forth, so a stored flag no longer says what the player wanted;
-  // they are dropped, not migrated. Invert stays available in Settings.
+  const INVERT_STORAGE_KEY = "hexsweeper-sphere-invert-v6";
+  // v6: both axes follow the pointer by default (drag right, the face under it
+  // moves right), measured in the browser. v5 shipped Invert X on by default,
+  // which moved the face left; stored flags from that era no longer say what
+  // the player wanted, so they are dropped, not migrated. Invert stays in Settings.
   const INVERT_LEGACY_KEYS = [
+    "hexsweeper-sphere-invert-v5",
     "hexsweeper-sphere-invert-v4",
     "hexsweeper-sphere-invert-v3",
     "hexsweeper-sphere-invert-v2",
@@ -3104,9 +3105,9 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel/";
           const data = JSON.parse(raw);
           return { x: !!data.x, y: !!data.y };
         }
-        return { x: true, y: false };
+        return { x: false, y: false };
       } catch (_) {
-        return { x: true, y: false };
+        return { x: false, y: false };
       }
     }
 
@@ -7878,7 +7879,9 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel/";
           // Both axes follow the finger: drag right and the face under it
           // travels right, drag down and it travels down. Invert X / Invert Y
           // each mirror their own axis for a camera-style feel.
-          const sx = state.invertDragX ? -1 : 1;
+          // Upside down (tumbled past a pole), turning about the sphere's own axis runs the
+          // other way on screen, so flip it to keep the face under the pointer following it.
+          const sx = (state.invertDragX ? -1 : 1) * (Math.cos(state.dragStart.rotX) < 0 ? -1 : 1);
           const sy = state.invertDragY ? -1 : 1;
           // Near 1:1 tracking: the face under the finger follows the finger
           // (a fixed rad/px overshot 2× on phones and 4× on desktops).
