@@ -5,9 +5,9 @@
 #   cp -R build/app/. <this-repo>/www/
 # then refresh this file. scripts/smoke.sh verifies these checksums.
 
-source_repo   https://github.com/lukeslp/hexsweeper
-source_commit 417100f1e51f5dd84733f6165966c813c7b3b3cc
+source_repo   https://github.com/lukeslp/hexsweeper-private-history
+source_commit 7ece6560882dea6356e5e30251357ca75536a5e1
 
 b42114581fded77b4aa8e003634ee68682a7013f3ce7d43f2ac119b4fc0360fa  assets/classic-minesweeper.png
-f940d5c5607458088c90301f9ec7301140d9f794137951b8958afc95aafe4429  index.html
-6f119c50a635b6079cd3caabc4db545d8a7dac0c34421ea7802826e74d9ecb27  wheel.html
+8ed0fcd715d77d1dbbd2ad8146305db085d96b3849830e93ae75295dc1dd01b5  index.html
+67f353b1dd9dc6594e080deee78d5a9762135f699abd6c56bd1a2faeb508f164  wheel.html
