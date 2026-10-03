@@ -261,20 +261,26 @@ their aliases). `?theme=` and `?deal=` otherwise belong to Sphere now.
 [`flux-sphere/`](flux-sphere/) — https://dr.eamer.dev/games/hexsweeper/flux-sphere/
 
 Flux Sphere turns the archived “Dig one, reveal both” study into a complete
-variant on the canonical Sphere engine. After the first safe opening, every
-remaining covered face—including mines—receives a deterministic distant
-partner. Activate once to trace the A/B endpoints without opening them, then
-activate either endpoint again to commit both inside one undo step. A flag
-grounds its endpoint and holds the echo, so deductions across both
-neighborhoods decide whether to take the double reveal or isolate a mine.
+variant on the canonical Sphere engine. After the first dig, every covered face
+gets a twin about 55 degrees away, and twins share a fate: both safe or both
+mines. Dig a face and its twin opens too (the echo), so an echo can never set
+off a mine; only a face you dig yourself can. The Twin tool (button, or `E` on
+the keyboard) marks a face A and its twin B without digging, so a stuck spot can
+be solved from the other end. A flag on a twin holds its echo, and the twin of
+every flag gets a dashed red mark.
 
-The route keeps its isolated `hexsweeper-flux-sphere-run-v1` storage key and
-migrates the pair payload to version 2 without abandoning live runs. Reload
-restore, exactly-once completion events, keyboard-centered dig and flag
+Version 3 rules (2026-10-03) replaced the August trace-then-commit flow. That
+version linked any two covered faces at opposite sides of the globe, so about
+one safe dig in six echoed onto a mine out of sight and ended the run. Saved
+version 1 and 2 runs are rebuilt under the new rules when they load.
+
+The route keeps its isolated `hexsweeper-flux-sphere-run-v1` storage key. Reload
+restore, exactly-once completion events, keyboard-centered dig, flag and twin
 controls, live text feedback, non-color linked glyphs, and a static
 reduced-motion treatment. Run `node flux-sphere/test-flux-pairs.js` and
-`node flux-sphere/test-integration.js` for deterministic pair, lifecycle,
-semantics, persistence, keyboard, and completion coverage.
+`node flux-sphere/test-integration.js` for pair, lifecycle, semantics,
+persistence, keyboard, and completion coverage, and
+`node flux-sphere/test-browser.mjs` for the in-browser pass.
 
 ## Glitch Sphere (experimental)
 

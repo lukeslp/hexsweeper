@@ -306,6 +306,9 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
       !state.cells[index].flagged && !state.cells[partner].flagged &&
       !state.cells[index].isMine && !state.cells[partner].isMine
     );
+    const mixedFates = mapping.filter((partner, index) =>
+      partner >= 0 && !!state.cells[index].isMine !== !!state.cells[partner].isMine
+    ).length;
     return {
       first: state.isFirstClick,
       over: state.isGameOver,
@@ -314,13 +317,17 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
       cellCount: state.cells.length,
       saved,
       mapping,
+      mixedFates,
       pair,
+      twinButtonShown: !document.getElementById("twin-btn").hidden,
     };
   })()`);
   assert.equal(active.first, false);
   assert.equal(active.over, false, `opening ended the run: ${JSON.stringify(active)}`);
   assert.ok(active.mapping.some((partner) => partner >= 0));
+  assert.equal(active.mixedFates, 0, "a safe face is linked to a mine, so an echo could detonate it");
   assert.ok(active.pair, "no covered Flux pair remained after the opening");
+  assert.equal(active.twinButtonShown, true, "the Twin button appears once twins link");
 
   const beforeRotation = await evaluate(cdp, sessionId, `({
     value: fluxSphereRoute.game.getState().targetRotY,
@@ -350,11 +357,9 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
   const echoed = await evaluate(cdp, sessionId, `(() => {
     const game = fluxSphereRoute.game;
     const pair = ${JSON.stringify(active.pair)};
-    const traced = game.digAt(pair[0]);
     const result = game.digAt(pair[0]);
     const state = game.getState();
     return {
-      traced,
       result,
       from: state.cells[pair[0]].revealed,
       partner: state.cells[pair[1]].revealed,
@@ -365,11 +370,10 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
       afterUndo: [state.cells[pair[0]].revealed, state.cells[pair[1]].revealed],
     };
   })()`);
-  assert.equal(echoed.traced, false);
-  assert.equal(echoed.result, true);
+  assert.equal(echoed.result, true, "one tap digs");
   assert.equal(echoed.from, true);
-  assert.equal(echoed.partner, true);
-  assert.match(echoed.status, /echo opened|already resolved/i);
+  assert.equal(echoed.partner, true, "the twin opened with it");
+  assert.match(echoed.status, /twin opened|already open/i);
   assert.equal(echoed.undo, true);
   assert.deepEqual(echoed.afterUndo, [false, false]);
 
@@ -389,7 +393,18 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
   })()`);
   assert.equal(flagged, true);
 
-  await evaluate(cdp, sessionId, `fluxSphereRoute.game.digAt(${active.pair[0]})`);
+  const traced = await evaluate(cdp, sessionId, `(() => {
+    const armed = fluxSphereRoute.adapter.armTrace(true);
+    const dug = fluxSphereRoute.game.digAt(${active.pair[0]});
+    return {
+      armed,
+      dug,
+      revealed: fluxSphereRoute.game.getState().cells[${active.pair[0]}].revealed,
+      trace: fluxSphereRoute.adapter.exportState().trace,
+      stillArmed: fluxSphereRoute.adapter.isTraceArmed(),
+    };
+  })()`);
+  assert.deepEqual(traced, { armed: true, dug: false, revealed: false, trace: active.pair, stillArmed: false });
   await capture(cdp, sessionId, viewport.name);
 
   const restoredRunId = await evaluate(cdp, sessionId, "fluxSphereRoute.game.exportRunState().runId");
@@ -429,7 +444,6 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     winSave.savedAt = Date.now();
     if (!game.applyRunState(winSave)) throw new Error("win fixture rejected");
     game.digAt(winPair[0]);
-    game.digAt(winPair[0]);
     const win = { over: game.getState().isGameOver, won: game.getState().won };
 
     const lossId = "browser-${viewport.name}-loss";
@@ -444,13 +458,12 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     const mine = game.getState().cells.findIndex((cell) => cell.isMine);
     const partner = mapping[mine];
     game.digAt(mine);
-    game.digAt(mine);
     const loss = {
       over: game.getState().isGameOver,
       won: game.getState().won,
-      partnerResolved: partner < 0 || game.getState().cells[partner].revealed,
+      partnerIsMine: partner < 0 || game.getState().cells[partner].isMine,
       undo: game.undo(),
-      afterUndo: partner < 0 || (!game.getState().cells[mine].revealed && !game.getState().cells[partner].revealed),
+      afterUndo: !game.getState().cells[mine].revealed,
     };
     const counts = Object.fromEntries([winId, lossId].map((runId) => [
       runId,
@@ -460,7 +473,7 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     return { win, loss, counts, payloads };
   })()`);
   assert.deepEqual(terminal.win, { over: true, won: true });
-  assert.deepEqual(terminal.loss, { over: true, won: false, partnerResolved: true, undo: true, afterUndo: true });
+  assert.deepEqual(terminal.loss, { over: true, won: false, partnerIsMine: true, undo: true, afterUndo: true });
   assert.deepEqual(terminal.counts, {
     [`browser-${viewport.name}-win`]: 1,
     [`browser-${viewport.name}-loss`]: 1,
@@ -471,7 +484,7 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
     assert.equal(payload.variant, "flux-sphere");
   }
   assertNoFailures(failures, viewport.name);
-  note(`  ${viewport.name}: keyboard, echo, undo, restore, win/loss, completion — OK`);
+  note(`  ${viewport.name}: keyboard, matched twins, echo, Twin tool, undo, restore, win/loss, completion — OK`);
 }
 
 async function runBrowser(baseUrl, executable) {

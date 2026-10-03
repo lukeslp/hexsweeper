@@ -48,14 +48,19 @@ function cell(overrides) {
   return Object.assign({ revealed: false, flagged: false, isMine: false }, overrides);
 }
 
-function tile(x, y, z) {
+function tile(x, y, z, neighborIndices) {
   return {
     centerPoint: { x, y, z },
-    neighborIndices: [],
+    neighborIndices: neighborIndices || [],
   };
 }
 
-function makeContext(overrides) {
+/**
+ * Face 0 is open; 1 and 2 are safe twins; 3 is a lone mine. With
+ * `secondMine`, face 4 is another mine, so 3 and 4 become mine twins.
+ */
+function makeContext(overrides, options) {
+  options = options || {};
   const cells = [
     cell({ revealed: true }),
     cell(),
@@ -63,17 +68,32 @@ function makeContext(overrides) {
     cell({ isMine: true }),
   ];
   const tiles = [
-    tile(0, 1, 0),
-    tile(1, 0, 0),
+    tile(0, 1, 0, [1]),
+    tile(1, 0, 0, [0]),
     tile(-1, 0, 0),
     tile(0, -1, 0),
   ];
-  const calls = { resolveLinkedFaces: [], persisted: 0, draws: 0 };
+  if (options.secondMine) {
+    cells.push(cell({ isMine: true }));
+    tiles.push(tile(0, 0, 1));
+  }
+  const calls = { revealSafeFaces: [], resolveLinkedFaces: [], persisted: 0, draws: 0 };
   const context = Object.assign({
     cells,
     tiles,
     state: { cells, tiles, isGameOver: false, won: false, reduceMotion: false },
     now: 100,
+    revealSafeFaces(indices) {
+      calls.revealSafeFaces.push(indices.slice());
+      const opened = [];
+      for (const index of indices) {
+        const target = cells[index];
+        if (!target || target.revealed || target.flagged || target.isMine) continue;
+        target.revealed = true;
+        opened.push(index);
+      }
+      return opened;
+    },
     resolveLinkedFaces(indices) {
       calls.resolveLinkedFaces.push(indices.slice());
       const opened = [];
@@ -198,29 +218,35 @@ test("exposes a named keyboard board, instructions, and polite atomic status", (
   assert.match(css, /#gameCanvas:focus-visible[\s\S]*outline/i);
 });
 
-test("documents trace-then-commit pairs, linked glyphs, grounded flags, and reduced motion", () => {
-  assert.match(html, /(trace|select)[^<.]*(pair|link)|pair[^<.]*(trace|select)/i);
-  assert.match(html, /(again|second)[^<.]*(open|commit|dig)|commit[^<.]*both/i);
-  assert.match(html, /either endpoint[^<.]*mine|mine[^<.]*either endpoint/i);
-  assert.match(html, /flagged[^<.]*(held|hold)|held[^<.]*flag/i);
+test("documents matched twins, one-tap echoes, the Twin tool, flag marks, and reduced motion", () => {
+  assert.match(html, /both safe or both mines/i);
+  assert.match(html, /Dig a face[^<.]*twin opens/i);
+  assert.match(html, /echo never sets off a mine/i);
+  assert.match(html, /twin without digging/i);
+  assert.match(html, /flag on a twin holds its echo/i);
+  assert.match(html, /twin gets a dashed red mark/i);
   assert.match(html, /(linked glyph|chain glyph|↔)/i);
+  assert.match(html, /<kbd>E<\/kbd>\s*twin/i);
+  const twin = tagWithId(html, "button", "twin-btn");
+  assert.match(twin, /aria-pressed=["']false["']/i);
+  assert.match(twin, /aria-label=["'][^"']*twin[^"']*["']/i);
+  assert.match(css, /\.flux-twin-btn:focus-visible[\s\S]*outline/i);
+  assert.match(css, /\.flux-twin-btn[\s\S]*min-height:\s*48px/i);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i);
   assert.match(css, /animation[^;]*none|transition[^;]*none/i);
   assert.match(adapterSource, /reduceMotion/);
 });
 
-test("traces a distant pair before committing one atomic linked reveal", () => {
+test("one tap digs a face and echoes onto its safe twin", () => {
   assert.ok(FluxSphere && typeof FluxSphere.createAdapter === "function");
   const status = { textContent: "" };
   const adapter = FluxSphere.createAdapter({ statusElement: status, schedule: (callback) => callback() });
   const { context, cells, calls } = makeContext();
   const activated = adapter.variant.firstResolvedDig(context);
   assert.deepStrictEqual(activated, { status: "active", pairCount: 1, unpairedCount: 1 });
-  assert.match(status.textContent, /linked 1 distant pair/i);
+  assert.match(status.textContent, /linked 1 twin pair\./i);
 
-  const trace = adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, context));
-  assert.deepStrictEqual(trace, { allowed: false, status: "traced", from: 1, partner: 2 });
-  assert.match(status.textContent, /trace|linked/i);
+  // No trace step: the first tap is admitted and digs.
   assert.strictEqual(adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, context)), true);
   cells[1].revealed = true;
   const result = adapter.variant.reveal(Object.assign({
@@ -228,28 +254,64 @@ test("traces a distant pair before committing one atomic linked reveal", () => {
     source: "direct",
     revealed: [1],
   }, context));
-  assert.deepStrictEqual(calls.resolveLinkedFaces, [[2]]);
+  assert.deepStrictEqual(calls.revealSafeFaces, [[2]]);
+  assert.deepStrictEqual(calls.resolveLinkedFaces, [], "the echo never takes the mine-capable path");
   assert.deepStrictEqual(result, { status: "echoed", from: 1, partner: 2, opened: [2] });
   assert.strictEqual(cells[2].revealed, true);
-  assert.match(status.textContent, /echo opened a linked face/i);
+  assert.match(status.textContent, /its twin opened/i);
 });
 
-test("a linked mine detonates while a flagged endpoint grounds the echo", () => {
+test("regression: a safe dig never echoes onto a mine, even from an old saved run", () => {
   const status = { textContent: "" };
   const adapter = FluxSphere.createAdapter({ statusElement: status });
-  const first = makeContext();
-  first.cells[1].revealed = true;
-  adapter.variant.firstResolvedDig(first.context);
-  adapter.variant.admitReveal(Object.assign({ index: 2, source: "direct" }, first.context));
-  adapter.variant.admitReveal(Object.assign({ index: 2, source: "direct" }, first.context));
-  first.cells[2].revealed = true;
-  assert.deepStrictEqual(adapter.variant.reveal(Object.assign({
-    index: 2,
-    source: "direct",
-    revealed: [2],
-  }, first.context)), { status: "detonated", from: 2, partner: 3, opened: [3], detonated: 3 });
-  assert.deepStrictEqual(first.calls.resolveLinkedFaces, [[3]]);
+  const run = makeContext(null, { secondMine: true });
+  // A version-2 save linked safe face 1 to mine 3 and safe 2 to mine 4.
+  const saved = { pairs: { v: 2, active: true, pairFor: [-1, 3, 4, 1, 2] }, trace: [1, 3] };
+  assert.strictEqual(adapter.variant.importState(Object.assign({ saved }, run.context)), true);
+  assert.match(status.textContent, /new rules/i);
+  assert.deepStrictEqual(adapter.variant.exportState(), {
+    pairs: { v: 3, active: true, pairFor: [-1, 2, 1, 4, 3] },
+    trace: null,
+  });
+  run.cells[1].revealed = true;
+  const result = adapter.variant.reveal(Object.assign({ index: 1, source: "direct", revealed: [1] }, run.context));
+  assert.deepStrictEqual(result, { status: "echoed", from: 1, partner: 2, opened: [2] });
+  assert.strictEqual(run.cells[3].revealed, false);
+  assert.strictEqual(run.cells[4].revealed, false);
+  assert.deepStrictEqual(run.calls.resolveLinkedFaces, []);
+});
 
+test("a mine you dig yourself ends the run without opening anything else", () => {
+  const status = { textContent: "" };
+  const adapter = FluxSphere.createAdapter({ statusElement: status });
+  const first = makeContext(null, { secondMine: true });
+  adapter.variant.firstResolvedDig(first.context);
+  first.cells[3].revealed = true;
+  assert.deepStrictEqual(adapter.variant.reveal(Object.assign({
+    index: 3,
+    source: "direct",
+    revealed: [3],
+  }, first.context)), { status: "detonated", from: 3, partner: 4, opened: [], detonated: 3 });
+  assert.deepStrictEqual(first.calls.revealSafeFaces, []);
+  assert.deepStrictEqual(first.calls.resolveLinkedFaces, []);
+  assert.strictEqual(first.cells[4].revealed, false);
+  assert.match(status.textContent, /twin was a mine too/i);
+});
+
+test("a chord echoes the twins of the faces it opens", () => {
+  const adapter = FluxSphere.createAdapter();
+  const run = makeContext();
+  adapter.variant.firstResolvedDig(run.context);
+  run.cells[1].revealed = true;
+  const result = adapter.variant.reveal(Object.assign({ index: 0, source: "chord", revealed: [1] }, run.context));
+  assert.strictEqual(result.status, "echoed");
+  assert.deepStrictEqual(run.calls.revealSafeFaces, [[2]]);
+  assert.strictEqual(run.cells[2].revealed, true);
+});
+
+test("a flagged twin holds the echo", () => {
+  const status = { textContent: "" };
+  const adapter = FluxSphere.createAdapter({ statusElement: status });
   const held = makeContext();
   adapter.variant.reset(held.context);
   adapter.variant.firstResolvedDig(held.context);
@@ -260,8 +322,78 @@ test("a linked mine detonates while a flagged endpoint grounds the echo", () => 
     source: "direct",
     revealed: [1],
   }, held.context)), { status: "held", from: 1, partner: 2 });
+  assert.deepStrictEqual(held.calls.revealSafeFaces, []);
   assert.deepStrictEqual(held.calls.resolveLinkedFaces, []);
   assert.match(status.textContent, /flagged[^.]*held|held[^.]*flagged/i);
+});
+
+test("the Twin tool traces one face instead of digging, then returns to digging", () => {
+  const status = { textContent: "" };
+  const adapter = FluxSphere.createAdapter({ statusElement: status });
+  const run = makeContext();
+  const seen = [];
+  adapter.onChange((ui) => seen.push(ui));
+  assert.strictEqual(adapter.armTrace(true), false, "nothing to trace before the first dig");
+  assert.match(status.textContent, /after your first dig/i);
+
+  adapter.variant.firstResolvedDig(run.context);
+  assert.strictEqual(adapter.armTrace(true), true);
+  assert.strictEqual(seen[seen.length - 1].armed, true);
+  const traced = adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, run.context));
+  assert.deepStrictEqual(traced, { allowed: false, status: "traced", from: 1, partner: 2 });
+  assert.strictEqual(adapter.isTraceArmed(), false, "one trace per arming");
+  assert.match(status.textContent, /both safe or both mines/i);
+  assert.deepStrictEqual(adapter.variant.exportState().trace, [1, 2]);
+  assert.strictEqual(adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, run.context)), true);
+
+  // A long press while armed traces too, instead of flagging.
+  adapter.armTrace(true);
+  const viaFlag = adapter.variant.admitFlag(Object.assign({ index: 2, flagged: true }, run.context));
+  assert.deepStrictEqual(viaFlag, { allowed: false, status: "traced", from: 2, partner: 1 });
+
+  // Tracing a face whose twin is open says the face is safe.
+  run.cells[2].revealed = true;
+  adapter.armTrace(true);
+  adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, run.context));
+  assert.match(status.textContent, /already open, so A is safe/i);
+
+  assert.strictEqual(adapter.clearTrace(), true);
+  assert.strictEqual(adapter.variant.exportState().trace, null);
+
+  adapter.variant.terminal(Object.assign({ outcome: "loss" }, run.context));
+  assert.strictEqual(seen[seen.length - 1].over, true);
+  assert.strictEqual(adapter.armTrace(true), false, "no tracing after the run ends");
+});
+
+test("marks the twin of every flag with a dashed ring, but not after the run ends", () => {
+  const adapter = FluxSphere.createAdapter({ now: () => 100 });
+  const run = makeContext(null, { secondMine: true });
+  adapter.variant.firstResolvedDig(run.context);
+  run.cells[3].flagged = true;
+  const dashes = [];
+  const painted = [];
+  const drawing = {
+    save() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, stroke() {},
+    arc() {}, fill() {}, fillText() {}, restore() {},
+    setLineDash(value) { dashes.push(value.slice()); },
+    set strokeStyle(_) {}, set lineWidth(_) {}, set fillStyle(_) {}, set font(_) {},
+    set textAlign(_) {}, set textBaseline(_) {},
+  };
+  const frame = (state) => Object.assign({}, run.context, {
+    now: 100,
+    state: Object.assign({}, run.context.state, state || {}),
+    context2d: drawing,
+    projectFace(index) {
+      painted.push(index);
+      return { z: 1, area: 225, center: { x: 10, y: 10 }, boundary: [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 10, y: 20 }] };
+    },
+  });
+  adapter.variant.draw(frame());
+  assert.deepStrictEqual(painted, [4], "only the flag's twin is marked");
+  assert.ok(dashes.some((value) => value.length === 2), "the mark is dashed");
+  painted.length = 0;
+  adapter.variant.draw(frame({ isGameOver: true }));
+  assert.deepStrictEqual(painted, []);
 });
 
 test("re-announces identical held echoes as separate live-region updates", () => {
@@ -325,10 +457,11 @@ test("round-trips pair state and regenerates pairs for first-dig undo", () => {
   const adapter = FluxSphere.createAdapter();
   const first = makeContext();
   adapter.variant.firstResolvedDig(first.context);
+  adapter.armTrace(true);
   adapter.variant.admitReveal(Object.assign({ index: 1, source: "direct" }, first.context));
   const saved = adapter.variant.exportState();
   assert.deepStrictEqual(saved, {
-    pairs: { v: 2, active: true, pairFor: [-1, 2, 1, -1] },
+    pairs: { v: 3, active: true, pairFor: [-1, 2, 1, -1] },
     trace: [1, 2],
   });
 
@@ -370,8 +503,10 @@ test("wires centered keyboard dig and flag actions", () => {
   keydown({ key: "ArrowRight", shiftKey: false, repeat: false, preventDefault() {} });
   keydown({ key: "Enter", shiftKey: false, repeat: false, preventDefault() {} });
   keydown({ key: " ", code: "Space", shiftKey: true, repeat: false, preventDefault() {} });
+  keydown({ key: "e", shiftKey: false, repeat: false, preventDefault() {} });
+  keydown({ key: "Escape", shiftKey: false, repeat: false, preventDefault() {} });
   assert.ok(harness.state.targetRotY > before);
-  assert.deepStrictEqual(harness.calls.digs, [5]);
+  assert.deepStrictEqual(harness.calls.digs, [5], "E traces; it never digs");
   assert.deepStrictEqual(harness.calls.flags, [5]);
 });
 

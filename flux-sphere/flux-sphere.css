@@ -60,6 +60,11 @@ body.help-open {
   cursor: grabbing;
 }
 
+/* Twin tool armed: the next tap shows a twin instead of digging. */
+body.flux-tracing #gameCanvas {
+  cursor: crosshair;
+}
+
 #gameCanvas:focus-visible {
   outline: 3px solid #0067c5;
   outline-offset: -5px;
@@ -99,6 +104,68 @@ body.help-open {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: opacity 0.18s ease;
+}
+
+/* The open menu puts its mines/time hub in the same top-center seat. */
+body.hex-bloom-open .flux-status {
+  opacity: 0;
+}
+
+/* Twin tool: bottom center, between the menu and help corners. */
+.flux-twin-btn {
+  appearance: none;
+  position: fixed;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 47;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 6.25rem;
+  min-height: 48px;
+  padding: 0 1.1rem 0 0.85rem;
+  transform: translateX(-50%);
+  border: 1.5px solid color-mix(in srgb, var(--text-main) 28%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--nav-bg) 90%, transparent);
+  color: var(--text-main);
+  font: 650 0.86rem/1 "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.flux-twin-btn[hidden] {
+  display: none;
+}
+
+.flux-twin-btn svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.flux-twin-btn:hover {
+  border-color: color-mix(in srgb, var(--text-main) 55%, transparent);
+}
+
+.flux-twin-btn[aria-pressed="true"] {
+  border-color: var(--text-main);
+  background: var(--text-main);
+  color: var(--bg-color);
+}
+
+.flux-twin-btn:focus-visible {
+  outline: 3px solid #0067c5;
+  outline-offset: 3px;
+}
+
+body.hex-bloom-open .flux-twin-btn,
+body.help-open .flux-twin-btn {
+  visibility: hidden;
 }
 
 .sphere-banner {
@@ -376,6 +443,40 @@ body.help-open {
   cursor: pointer;
 }
 
+/* Settings row in the help sheet: two even pills that read as switches. */
+.help-packs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0 0 0.85rem;
+}
+
+.help-packs-cap {
+  grid-column: 1 / -1;
+  color: var(--text-sub);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.help-pack {
+  appearance: none;
+  min-height: 44px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-main);
+  font: 600 0.78rem/1.2 "IBM Plex Sans", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.help-pack:hover {
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+
 .menu-links {
   margin-top: 0.65rem;
   text-align: center;
@@ -401,6 +502,7 @@ body.help-open {
 
 @media (prefers-reduced-motion: reduce) {
   .flux-status,
+  .flux-twin-btn,
   .sphere-banner,
   .count-style-toast,
   .help-overlay {
@@ -412,6 +514,7 @@ body.help-open {
 @media (forced-colors: active) {
   #gameCanvas:focus-visible,
   .banner-btn:focus-visible,
+  .flux-twin-btn:focus-visible,
   .help-close:focus-visible,
   .help-done:focus-visible,
   .help-pack:focus-visible {
@@ -420,9 +523,15 @@ body.help-open {
 
   .flux-status,
   .sphere-banner,
-  .help-panel {
+  .help-panel,
+  .flux-twin-btn {
     border: 1px solid CanvasText;
     background: Canvas;
     color: CanvasText;
+  }
+
+  .flux-twin-btn[aria-pressed="true"] {
+    background: Highlight;
+    color: HighlightText;
   }
 }
