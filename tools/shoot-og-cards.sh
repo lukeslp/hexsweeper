@@ -3,7 +3,10 @@
 # Inputs: live site at $BASE (default dr.eamer.dev). Outputs: one PNG per card.
 # Note: renders at 2x then downscales, so the type stays crisp. Uses
 #       --virtual-time-budget so the board's dig + reveal wave settle before capture.
-# Cards: production themes, lab skins (skin-*), and sphere — see tools/og-card.html CARDS.
+# Cards: production themes, lab skins (skin-*), sphere, and flux-sphere — see tools/og-card.html CARDS.
+# Usage: bash tools/shoot-og-cards.sh [card ...]   (no names: every card)
+#        BASE=http://127.0.0.1:<port> bash tools/shoot-og-cards.sh flux-sphere   (shoot a local checkout)
+# flux-sphere writes flux-sphere/assets/og.png (its page's og:image); the rest write assets/social/.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,6 +31,15 @@ for key in keys:
     print(key.strip('"'))
 PY
 )
+if [ "$#" -gt 0 ]; then
+  for want in "$@"; do
+    if ! printf '%s\n' "${CARDS[@]}" | grep -qx -- "$want"; then
+      echo "Unknown card: $want" >&2
+      exit 1
+    fi
+  done
+  CARDS=("$@")
+fi
 
 for card in "${CARDS[@]}"; do
   raw="$WORK/$card@2x.png"
@@ -42,7 +54,10 @@ for card in "${CARDS[@]}"; do
     exit 1
   fi
 
-  python3 - "$raw" "$OUT/$card-og.png" <<'PY'
+  dest="$OUT/$card-og.png"
+  if [ "$card" = "flux-sphere" ]; then dest="$ROOT/flux-sphere/assets/og.png"; fi
+
+  python3 - "$raw" "$dest" <<'PY'
 import sys
 from PIL import Image
 

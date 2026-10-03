@@ -196,6 +196,52 @@ test("regression: on real sphere boards an echo can never land on a mine", () =>
   }
 });
 
+test("never picks a face that shares an edge, even at the ideal angle", () => {
+  const flux = createFluxPairs();
+  // Face 1 sits at exactly 55 degrees but touches face 0; face 2 is 70 degrees away.
+  const tiles = [at(0), at(55), at(70), at(180)];
+  tiles[0].neighborIndices = [1];
+  tiles[1].neighborIndices = [0];
+  const result = flux.activate(board([cell(), cell(), cell(), cell()], tiles));
+  assert.deepStrictEqual(result, { status: "active", pairCount: 2, unpairedCount: 0 });
+  assert.strictEqual(flux.partnerFor(0), 2);
+  assert.strictEqual(flux.partnerFor(1), 3);
+});
+
+test("leaves two touching faces without a twin when nothing else matches", () => {
+  const flux = createFluxPairs();
+  const tiles = [at(0), at(55), at(180)];
+  tiles[0].neighborIndices = [1];
+  tiles[1].neighborIndices = [0];
+  const result = flux.activate(board([cell(), cell(), cell({ isMine: true })], tiles));
+  assert.deepStrictEqual(result, { status: "active", pairCount: 0, unpairedCount: 3 });
+  assert.strictEqual(flux.partnerFor(0), -1);
+  assert.strictEqual(flux.partnerFor(1), -1);
+});
+
+test("regression: twins never touch on extra-small boards", () => {
+  // The greedy pass used to leave its last few faces with whatever was left,
+  // so about one link in 3,000 on an XS board (162 faces) joined two faces
+  // that share an edge. These 1,500 deals held 31 such links on that engine.
+  let links = 0;
+  for (let seed = 1; seed <= 1500; seed++) {
+    const game = dealSphere(4, seed * 104729 + 4);
+    const flux = createFluxPairs();
+    const result = flux.activate(game);
+    assert.ok(result.unpairedCount <= 2, `seed ${seed}: ${result.unpairedCount} faces left without a twin`);
+    game.cells.forEach((_, index) => {
+      const partner = flux.partnerFor(index);
+      if (partner <= index) return;
+      links++;
+      assert.ok(
+        !game.tiles[index].neighborIndices.includes(partner),
+        `XS seed ${seed}: twins ${index} and ${partner} share an edge (${angleBetween(game.tiles, index, partner).toFixed(1)} degrees)`
+      );
+    });
+  }
+  assert.ok(links > 75000, `checked ${links} links`);
+});
+
 test("exports and restores a version-3 mapping", () => {
   const game = board(
     [cell(), cell(), cell()],

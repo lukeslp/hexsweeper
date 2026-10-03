@@ -262,8 +262,8 @@ their aliases). `?theme=` and `?deal=` otherwise belong to Sphere now.
 
 Flux Sphere turns the archived “Dig one, reveal both” study into a complete
 variant on the canonical Sphere engine. After the first dig, every covered face
-gets a twin about 55 degrees away, and twins share a fate: both safe or both
-mines. Dig a face and its twin opens too (the echo), so an echo can never set
+gets a twin about 55 degrees away (never a face it touches), and twins share a
+fate: both safe or both mines. Dig a face and its twin opens too (the echo), so an echo can never set
 off a mine; only a face you dig yourself can. The Twin tool (button, or `E` on
 the keyboard) marks a face A and its twin B without digging, so a stuck spot can
 be solved from the other end. A flag on a twin holds its echo, and the twin of
@@ -272,7 +272,12 @@ every flag gets a dashed red mark.
 Version 3 rules (2026-10-03) replaced the August trace-then-commit flow. That
 version linked any two covered faces at opposite sides of the globe, so about
 one safe dig in six echoed onto a mine out of sight and ended the run. Saved
-version 1 and 2 runs are rebuilt under the new rules when they load.
+version 1 and 2 runs are rebuilt under the new rules when they load. A later
+pass the same day stopped XS boards from pairing two touching faces (about one
+link in 3,000) and made a still, reduced-motion echo arc clear itself when it
+expires. The share card, `flux-sphere/assets/og.png`, is the `flux-sphere`
+card in `tools/og-card.html`; reshoot it with
+`bash tools/shoot-og-cards.sh flux-sphere`.
 
 The route keeps its isolated `hexsweeper-flux-sphere-run-v1` storage key. Reload
 restore, exactly-once completion events, keyboard-centered dig, flag and twin

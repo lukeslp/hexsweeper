@@ -453,6 +453,53 @@ test("draws echo endpoints with distinct cyan and amber outlines", () => {
   assert.deepStrictEqual(glyphs, ["↔", "↔"]);
 });
 
+test("reduced motion: a still echo arc is cleared by one booked repaint", () => {
+  let clock = 100;
+  const booked = [];
+  const adapter = FluxSphere.createAdapter({
+    now: () => clock,
+    scheduleAfter: (callback, ms) => booked.push({ callback, ms }),
+  });
+  const run = makeContext();
+  run.context.state.reduceMotion = true;
+  adapter.variant.firstResolvedDig(run.context);
+  run.cells[1].revealed = true;
+  adapter.variant.reveal(Object.assign({ index: 1, source: "direct", revealed: [1] }, run.context));
+
+  const glyphs = [];
+  const drawing = {
+    save() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, stroke() {},
+    arc() {}, fill() {}, fillText(value) { glyphs.push(value); }, restore() {},
+    set strokeStyle(_) {}, set lineWidth(_) {}, set fillStyle(_) {}, set font(_) {},
+    set textAlign(_) {}, set textBaseline(_) {},
+  };
+  const frame = (at) => Object.assign({}, run.context, {
+    now: at,
+    context2d: drawing,
+    projectFace() {
+      return { z: 1, area: 225, center: { x: 10, y: 10 }, boundary: [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 10, y: 20 }] };
+    },
+  });
+
+  const drawsBefore = run.calls.draws;
+  adapter.variant.draw(frame(120));
+  assert.deepStrictEqual(glyphs, ["↔", "↔"], "the still arc is painted");
+  assert.strictEqual(run.calls.draws, drawsBefore, "no frame-by-frame redraw under reduced motion");
+  assert.strictEqual(booked.length, 1, "one clearing repaint is booked");
+  assert.ok(booked[0].ms > 1980 - 1 && booked[0].ms < 2100, `booked at ${booked[0].ms} ms`);
+
+  adapter.variant.draw(frame(500));
+  assert.strictEqual(booked.length, 1, "a second still frame does not book another repaint");
+
+  clock = 120 + booked[0].ms;
+  booked[0].callback();
+  assert.strictEqual(run.calls.draws, drawsBefore + 1, "the booked repaint asks the engine for a frame");
+  glyphs.length = 0;
+  adapter.variant.draw(frame(clock));
+  assert.deepStrictEqual(glyphs, [], "that frame no longer shows the arc");
+  assert.strictEqual(booked.length, 1, "nothing left to clear, so nothing more is booked");
+});
+
 test("round-trips pair state and regenerates pairs for first-dig undo", () => {
   const adapter = FluxSphere.createAdapter();
   const first = makeContext();

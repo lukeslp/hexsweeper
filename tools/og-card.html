@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <!--
-  File Purpose: Render 1200x630 OG cards for Hexsweeper themes, lab skins, and sphere.
-  Primary Functions/Classes: CARDS table; live game iframe backdrop + title/desc plate.
-  Inputs: ?card=<home|light|dark|fire|plague|escape|sphere|skin-<id>>.
-  Outputs: an on-screen 1200x630 stage to screenshot into assets/social/<card>-og.png.
+  File Purpose: Render 1200x630 OG cards for Hexsweeper themes, lab skins, sphere, and Flux Sphere.
+  Primary Functions/Classes: CARDS table; live game iframe backdrop + title/desc plate;
+        optional per-card `layout: "side"` (board right, plate left) and `stage(win)`
+        hook that sets up a scene in the board once it loads.
+  Inputs: ?card=<home|light|dark|fire|plague|escape|sphere|flux-sphere|skin-<id>>.
+  Outputs: an on-screen 1200x630 stage to screenshot into assets/social/<card>-og.png
+        (flux-sphere goes to flux-sphere/assets/og.png; see tools/shoot-og-cards.sh).
   Note: Authoring tool, not a public page. Uses the game's own IBM Plex faces so the
         cards match the site rather than whatever a compositor has installed.
 -->
@@ -51,6 +54,19 @@
     font:500 18px/1 "IBM Plex Mono",ui-monospace,monospace;
     letter-spacing:.02em;
   }
+  /* Side layout: board on the right, plate centered on the left, so controls
+     the card should show (Flux's bottom-center Twin button) stay clear of it. */
+  #stage.side #board{left:400px;width:800px}
+  #stage.side #scrim{
+    background:linear-gradient(
+      to right,
+      var(--scrim-strong) 0%,
+      var(--scrim-mid) 36%,
+      transparent 52%
+    );
+  }
+  #stage.side #plate{right:auto;width:520px;top:50%;bottom:auto;transform:translateY(-50%)}
+  #stage.side p{max-width:470px}
 </style>
 </head>
 <body>
@@ -133,6 +149,17 @@
       url: "dr.eamer.dev/games/hexsweeper/sphere",
       hide: ".hud-cluster,.hud-stats,.sphere-banner,.help-overlay,.count-style-toast,#history-lightbox",
     },
+    "flux-sphere": {
+      src: "../flux-sphere/?deal=1&welcome=0",
+      title: "Flux Sphere",
+      desc: "Every face has a twin. Dig one and its twin opens too: both safe or both mines.",
+      accent: "linear-gradient(90deg,#00a6b2,#d97706)", bg: "#ffffff", dark: false,
+      url: "dr.eamer.dev/games/hexsweeper/flux-sphere",
+      layout: "side",
+      // Keep the Twin button; hide the rest of the chrome and the status pill.
+      hide: ".hud-cluster,.hud-stats,.sphere-banner,.help-overlay,.count-style-toast,#history-lightbox,.flux-status,.hex-bloom-corner,.hex-bloom-hub,.hex-bloom-tooltip",
+      stage: stageFluxEcho,
+    },
     "skin-classic": {
       src: "../collection/skin-classic.html",
       title: "Soft Honeycomb Hexagonal Minesweeper",
@@ -205,10 +232,137 @@
     },
   };
 
+  /**
+   * Flux Sphere: an echo arc between two twins, with the Twin button showing.
+   * ?deal=1 suspends the board's autosave (so shooting a card never touches a
+   * player's run) but opens a plain dig without twins, so the stage digs again
+   * on seeded deals until one reads well: a modest opening, and a twin on its
+   * edge whose echo opens a separate island. The card is the same every time.
+   */
+  function stageFluxEcho(win) {
+    const route = new win.Function(
+      "return typeof fluxSphereRoute === 'undefined' ? null : fluxSphereRoute"
+    )();
+    if (!route || !route.game) return;
+    const game = route.game;
+    const st = game.getState();
+    const center = game.pickTile(st.centerX, st.centerY);
+    if (center < 0) return;
+
+    const unit = (i) => {
+      const p = st.tiles[i].centerPoint;
+      const l = Math.hypot(p.x, p.y, p.z) || 1;
+      return { x: p.x / l, y: p.y / l, z: p.z / l };
+    };
+    const centroid = (indices) => {
+      const sum = { x: 0, y: 0, z: 0 };
+      for (const i of indices) {
+        const u = unit(i);
+        sum.x += u.x;
+        sum.y += u.y;
+        sum.z += u.z;
+      }
+      const l = Math.hypot(sum.x, sum.y, sum.z) || 1;
+      return { x: sum.x / l, y: sum.y / l, z: sum.z / l };
+    };
+    const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+
+    function deal(seed) {
+      win.Math.random = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+      for (const cell of st.cells) {
+        cell.isMine = false;
+        cell.revealed = false;
+        cell.flagged = false;
+        cell.neighborMines = 0;
+        cell.animReveal = 0;
+      }
+      st.isFirstClick = true;
+      st.isGameOver = false;
+      st.won = false;
+      st.detonatorIdx = -1;
+      game.digAt(center);
+    }
+
+    /** Faces an echo onto `start` opens: the twin, plus its flood if it is a 0. */
+    function island(start) {
+      const seen = new Set([start]);
+      const queue = st.cells[start].neighborMines > 0 ? [] : [start];
+      while (queue.length) {
+        const i = queue.shift();
+        if (st.cells[i].neighborMines > 0) continue;
+        for (const n of st.tiles[i].neighborIndices) {
+          const c = st.cells[n];
+          if (seen.has(n) || c.revealed || c.isMine) continue;
+          seen.add(n);
+          queue.push(n);
+        }
+      }
+      return seen;
+    }
+
+    function choose() {
+      const opening = [];
+      st.cells.forEach((c, i) => { if (c.revealed) opening.push(i); });
+      if (opening.length < 20 || opening.length > 70) return null;
+      // Faces within two steps of the opening: an island must clear them, so
+      // a band of covered faces separates it from the opening.
+      const near = new Set(opening);
+      for (let step = 0; step < 2; step++) {
+        for (const i of Array.from(near)) {
+          for (const n of st.tiles[i].neighborIndices) near.add(n);
+        }
+      }
+      const twins = route.adapter.exportState().pairs.pairFor;
+      const openSet = new Set(opening);
+      let best = null;
+      st.cells.forEach((cell, from) => {
+        const twin = twins[from];
+        if (twin < 0 || cell.revealed || cell.isMine) return;
+        if (!st.tiles[from].neighborIndices.some((n) => openSet.has(n))) return;
+        const faces = island(twin);
+        if (faces.size < 6 || faces.size > 24) return;
+        for (const i of faces) if (near.has(i)) return;
+        // Aim halfway between the opening and the island, and keep both ends
+        // of the arc well inside the disk.
+        const a = centroid(opening);
+        const b = centroid(faces);
+        const mid = Math.hypot(a.x + b.x, a.y + b.y, a.z + b.z) || 1;
+        const view = { x: (a.x + b.x) / mid, y: (a.y + b.y) / mid, z: (a.z + b.z) / mid };
+        if (dot(unit(from), view) < 0.75 || dot(unit(twin), view) < 0.75) return;
+        const score = Math.abs(faces.size - 12);
+        if (!best || score < best.score) best = { from, twin, view, score };
+      });
+      return best;
+    }
+
+    let pick = null;
+    for (let attempt = 1; attempt <= 60 && !pick; attempt++) {
+      deal(20261003 + attempt);
+      pick = choose();
+    }
+    if (!pick) return;
+
+    // Turn the globe so the opening and the twin's island both face the camera.
+    st.ambientSpin = false;
+    st.rotY = st.targetRotY = Math.atan2(-pick.view.x, pick.view.z);
+    st.rotX = st.targetRotX = Math.atan2(pick.view.y, Math.hypot(pick.view.x, pick.view.z));
+
+    // Reduced motion paints the arc still (no travelling pulse) for its full
+    // two seconds; re-dig before it expires so the arc is always on screen,
+    // whenever the frame is captured.
+    st.reduceMotion = true;
+    game.digAt(pick.from);
+    win.setInterval(() => {
+      if (game.undo()) game.digAt(pick.from);
+    }, 1500);
+  }
+
   const params = new URL(location.href).searchParams;
   const key = params.get("card") || "home";
   const card = CARDS[key] || CARDS.home;
   const root = document.documentElement.style;
+
+  if (card.layout === "side") document.getElementById("stage").classList.add("side");
 
   const scale = parseFloat(params.get("scale") || "1");
   if (Number.isFinite(scale) && scale > 0 && scale !== 1) {
@@ -251,6 +405,13 @@
       hide.textContent = hideSel + "{display:none!important}";
       doc.head.appendChild(hide);
     } catch (_) {}
+    if (typeof card.stage === "function") {
+      try {
+        card.stage(board.contentWindow);
+      } catch (err) {
+        console.error("[og-card] stage failed", err);
+      }
+    }
   });
   board.src = card.src;
 })();

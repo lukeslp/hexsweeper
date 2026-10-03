@@ -377,6 +377,25 @@ async function runViewport(cdp, sessionId, baseUrl, failures, viewport) {
   assert.equal(echoed.undo, true);
   assert.deepEqual(echoed.afterUndo, [false, false]);
 
+  if (viewport.reduce) {
+    // The still arc must clear itself when it expires (2 s), even though the
+    // engine parks its frame loop once nothing on the sphere moves.
+    const dugAt = await evaluate(cdp, sessionId, `(() => {
+      fluxSphereRoute.game.digAt(${active.pair[0]});
+      return performance.now();
+    })()`);
+    await new Promise((done) => setTimeout(done, 2700));
+    const cleared = await evaluate(cdp, sessionId, `(() => ({
+      lastFrameAt: fluxSphereRoute.game.getState().lastFrameAt,
+      undo: fluxSphereRoute.game.undo(),
+    }))()`);
+    assert.ok(
+      cleared.lastFrameAt > dugAt + 2000,
+      `no repaint after the still echo expired: dug at ${Math.round(dugAt)}, last frame ${Math.round(cleared.lastFrameAt)}`
+    );
+    assert.equal(cleared.undo, true);
+  }
+
   const flagIndex = active.pair[0];
   await evaluate(cdp, sessionId, `(() => {
     const game = fluxSphereRoute.game;

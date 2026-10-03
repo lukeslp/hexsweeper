@@ -1,9 +1,10 @@
 /**
  * File Purpose: Deterministic twin links for Flux Sphere.
  * Primary Functions: activate, partnerFor, exportState, restore, reset.
- * Inputs: Sphere cells and tile center points.
+ * Inputs: Sphere cells, tile center points, and tile edge neighbors.
  * Output: symmetric twin links in which both faces share a fate (safe with
- * safe, mine with mine), each pair about TWIN_ANGLE_DEG apart on the globe.
+ * safe, mine with mine), each pair about TWIN_ANGLE_DEG apart on the globe
+ * and never two faces that share an edge.
  *
  * Why twins share a fate: the version-2 rules linked any two covered faces,
  * so a safe dig could echo onto a mine on the far side of the globe and end
@@ -13,7 +14,10 @@
  *
  * Why ~55 degrees: the old most-distant pairing put every twin behind the
  * globe, so echoes were never seen. At 55 degrees a twin is several faces
- * away on every board size yet usually on the same visible hemisphere.
+ * away on every board size yet usually on the same visible hemisphere. On an
+ * XS board (162 faces) the last faces to pair used to settle for whatever was
+ * left, about one link in 3,000 joined two touching faces; the squared cost,
+ * the touch penalty and the swap pass rule that out (2026-10-03).
  *
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
@@ -31,7 +35,14 @@
   const TWIN_ANGLE = (TWIN_ANGLE_DEG * Math.PI) / 180;
   /** Pairs further than this from the target angle get a repair pass. */
   const REPAIR_TOLERANCE = (8 * Math.PI) / 180;
-  const REPAIR_ROUNDS = 6;
+  const REPAIR_COST = REPAIR_TOLERANCE * REPAIR_TOLERANCE;
+  const REPAIR_ROUNDS = 12;
+  /**
+   * Added to the cost of two faces that share an edge. It is larger than any
+   * angle cost (the worst, a twin on the far pole, is under 5), so a touching
+   * pair is only ever a last resort, and the final pass unlinks it instead.
+   */
+  const TOUCH_PENALTY = 100;
 
   let active = false;
   let pairFor = [];
@@ -50,26 +61,53 @@
     return Math.acos(Math.max(-1, Math.min(1, dot)));
   }
 
-  /** Distance from the ideal twin angle; lower is better. */
-  function linkCost(units, a, b) {
-    return Math.abs(angleBetween(units[a], units[b]) - TWIN_ANGLE);
+  /** Edge neighbors per face, when the board supplies them. */
+  function neighborSets(tiles) {
+    return tiles.map((tile) => (
+      tile && Array.isArray(tile.neighborIndices) ? new Set(tile.neighborIndices) : null
+    ));
+  }
+
+  function touching(geometry, a, b) {
+    const around = geometry.neighbors[a];
+    return !!around && around.has(b);
+  }
+
+  /**
+   * Squared distance from the ideal twin angle, plus a heavy penalty when the
+   * two faces touch; lower is better. Squaring spreads the error: two pairs a
+   * little off beat one pair far off, which is what left the last few faces
+   * of a small board with a twin right next door.
+   */
+  function missCost(geometry, a, b) {
+    const miss = angleBetween(geometry.units[a], geometry.units[b]) - TWIN_ANGLE;
+    return miss * miss;
+  }
+
+  function linkCost(geometry, a, b) {
+    return missCost(geometry, a, b) + (touching(geometry, a, b) ? TOUCH_PENALTY : 0);
   }
 
   /**
    * Greedy pass in index order: each face takes the remaining face of its own
-   * class whose angle is closest to the target, ties to the lower index.
+   * class with the lowest cost (closest to the target angle, never a neighbor
+   * while another face is left), ties to the lower index.
    */
-  function linkClass(indices, units, mapping) {
+  function linkClass(indices, geometry, mapping) {
     const remaining = indices.slice();
     const links = [];
     while (remaining.length > 1) {
       const index = remaining.shift();
       let bestPosition = 0;
       let bestIndex = remaining[0];
-      let bestCost = linkCost(units, index, bestIndex);
+      let bestCost = linkCost(geometry, index, bestIndex);
       for (let position = 1; position < remaining.length; position++) {
         const candidate = remaining[position];
-        const cost = linkCost(units, index, candidate);
+        let cost = missCost(geometry, index, candidate);
+        // The touch penalty only adds, so skip the lookup for a face that
+        // already loses on angle alone.
+        if (cost > bestCost + 1e-12) continue;
+        if (touching(geometry, index, candidate)) cost += TOUCH_PENALTY;
         if (cost < bestCost - 1e-12 || (
           Math.abs(cost - bestCost) <= 1e-12 && candidate < bestIndex
         )) {
@@ -81,37 +119,46 @@
       remaining.splice(bestPosition, 1);
       links.push([index, bestIndex]);
     }
-    repairLinks(links, units);
+    repairLinks(links, geometry);
+    let unpaired = remaining.length;
     for (const [a, b] of links) {
+      // Twins never touch. If no swap could separate a pair, leave both faces
+      // without a twin rather than echo onto the face next door.
+      if (touching(geometry, a, b)) {
+        unpaired += 2;
+        continue;
+      }
       mapping[a] = b;
       mapping[b] = a;
     }
-    return remaining.length;
+    return unpaired;
   }
 
   /**
    * The greedy pass leaves its last few faces with poor choices (twins that
    * touch, or sit behind the globe). Swap partners between two links of the
-   * same class whenever that brings the pair closer to the target. Swaps stay
-   * inside one class, so a twin never changes fate.
+   * same class whenever that lowers their combined cost. Swaps stay inside one
+   * class, so a twin never changes fate.
    */
-  function repairLinks(links, units) {
+  function repairLinks(links, geometry) {
+    const costs = links.map(([a, b]) => linkCost(geometry, a, b));
     for (let round = 0; round < REPAIR_ROUNDS; round++) {
       let improved = false;
       for (let i = 0; i < links.length; i++) {
+        if (costs[i] <= REPAIR_COST) continue;
         const [a, b] = links[i];
-        const own = linkCost(units, a, b);
-        if (own <= REPAIR_TOLERANCE) continue;
         let best = null;
         for (let j = 0; j < links.length; j++) {
           if (j === i) continue;
           const [c, d] = links[j];
-          const current = own + linkCost(units, c, d);
-          const crossed = linkCost(units, a, c) + linkCost(units, b, d);
-          const swapped = linkCost(units, a, d) + linkCost(units, b, c);
-          const option = crossed <= swapped
-            ? { gain: current - crossed, first: [a, c], second: [b, d] }
-            : { gain: current - swapped, first: [a, d], second: [b, c] };
+          const current = costs[i] + costs[j];
+          const ac = linkCost(geometry, a, c);
+          const bd = linkCost(geometry, b, d);
+          const ad = linkCost(geometry, a, d);
+          const bc = linkCost(geometry, b, c);
+          const option = ac + bd <= ad + bc
+            ? { gain: current - ac - bd, first: [a, c], second: [b, d], costs: [ac, bd] }
+            : { gain: current - ad - bc, first: [a, d], second: [b, c], costs: [ad, bc] };
           if (option.gain > 1e-9 && (!best || option.gain > best.gain + 1e-12)) {
             best = Object.assign({ j }, option);
           }
@@ -119,6 +166,8 @@
         if (best) {
           links[i] = best.first;
           links[best.j] = best.second;
+          costs[i] = best.costs[0];
+          costs[best.j] = best.costs[1];
           improved = true;
         }
       }
@@ -150,13 +199,14 @@
     if (!cells.length || tiles.length !== cells.length) return reset();
 
     const units = tiles.map((tile) => (tile && tile.centerPoint ? unit(tile.centerPoint) : null));
+    const geometry = { units, neighbors: neighborSets(tiles) };
     const eligible = cells
       .map((cell, index) => (isCellEligible(cell) && units[index] ? index : -1))
       .filter((index) => index >= 0);
     const mapping = cells.map(() => -1);
     const safeFaces = eligible.filter((index) => !cells[index].isMine);
     const mineFaces = eligible.filter((index) => cells[index].isMine);
-    const unpaired = linkClass(safeFaces, units, mapping) + linkClass(mineFaces, units, mapping);
+    const unpaired = linkClass(safeFaces, geometry, mapping) + linkClass(mineFaces, geometry, mapping);
 
     pairFor = mapping;
     active = true;

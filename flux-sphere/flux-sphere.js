@@ -30,6 +30,8 @@
   const ECHO_VISIBLE_MS = 2000;
   const ECHO_HOLD_MS = 1200;
   const ECHO_TRAVEL_MS = 450;
+  /** Margin past an echo's expiry before the clearing repaint, so its frame is past it. */
+  const ECHO_CLEAR_SLACK_MS = 40;
   const MAX_ECHOES = 6;
   /** A traced twin closer to the limb than this turns the globe toward it. */
   const FRAME_MIN_Z = 0.3;
@@ -65,6 +67,9 @@
     const schedule = typeof options.schedule === "function"
       ? options.schedule
       : (callback) => setTimeout(callback, 20);
+    const scheduleAfter = typeof options.scheduleAfter === "function"
+      ? options.scheduleAfter
+      : (callback, ms) => setTimeout(callback, ms);
     const listeners = new Set();
     let lastContext = null;
     let lastAnnouncement = "";
@@ -76,6 +81,7 @@
     let pairsActive = false;
     let runOver = false;
     let projector = null;
+    let clearPending = false;
 
     function remember(context) {
       if (context) lastContext = context;
@@ -168,6 +174,22 @@
     function pushEcho(entry) {
       echoes.push(Object.assign({ at: now() }, entry));
       if (echoes.length > MAX_ECHOES) echoes = echoes.slice(-MAX_ECHOES);
+    }
+
+    /**
+     * Reduced motion paints echoes as still frames, and the Sphere engine parks
+     * its frame loop once nothing moves (frameNeedsPaint), so no frame would
+     * come along to remove an arc when it expires. Book one repaint for the
+     * moment the oldest echo is due to go; that frame books the next, if any.
+     */
+    function scheduleEchoClear(frameNow) {
+      if (clearPending || !echoes.length) return;
+      const due = echoes[0].at + ECHO_VISIBLE_MS;
+      clearPending = true;
+      scheduleAfter(() => {
+        clearPending = false;
+        requestUpdate(null, false);
+      }, Math.max(16, due - frameNow + ECHO_CLEAR_SLACK_MS));
     }
 
     // ---- camera ----
@@ -582,8 +604,11 @@
           paintEndpoint(context, tracedPair[1], "B", { stroke: B_COLOR });
         }
 
-        if (echoes.length && !reduce && typeof context.requestDraw === "function") {
-          context.requestDraw();
+        if (echoes.length && typeof context.requestDraw === "function") {
+          // Moving arcs need every frame until they fade; still ones only
+          // need the frame that clears them.
+          if (reduce) scheduleEchoClear(frameNow);
+          else context.requestDraw();
         }
       },
 

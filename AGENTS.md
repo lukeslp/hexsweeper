@@ -47,6 +47,17 @@ Do not hand-edit root `index.html`, `launcher.html`, `infinite.html`, `bounded.h
 under Experiments.
 
 After changing OG card keys in `tools/og-card.html`, regenerate PNGs: `bash tools/shoot-og-cards.sh` (Chromium + Pillow on Drummer).
+Pass card names to shoot only those (`bash tools/shoot-og-cards.sh flux-sphere`) and `BASE=http://127.0.0.1:<port>`
+to shoot a local checkout. The `flux-sphere` card writes `flux-sphere/assets/og.png`; it stages its own scene
+(seeded deal, an echo) with autosave suspended. Snap Chromium cannot write under `/tmp` or hidden dirs, so
+point `WORK=` at a plain directory in `$HOME` when shooting from a worktree outside the repo.
+
+## Frame loop (sphere variants)
+
+`sphere/sphere.js` parks its frame loop when `frameNeedsPaint()` says nothing moves, which is always the case
+under reduced motion once the camera settles. A variant that draws something time-limited must ask for the
+frame that removes it: Flux's still echo arc books one repaint for its expiry (`scheduleEchoClear` in
+`flux-sphere/flux-sphere.js`) instead of calling `requestDraw()` every frame.
 
 ## Native app payload
 

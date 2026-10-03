@@ -16,6 +16,18 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Current status (2026-10-03)
+
+- [x] Flux Sphere version 3: twins share a fate (both safe or both mines), so
+  an echo never opens a mine; one tap digs and echoes; the Twin tool traces
+  A/B without digging; flags mark their twin (`c5efefe`).
+- [x] Flux polish: twins never share an edge (the XS greedy pass used to pair
+  touching faces about once in 3,000 links; squared-angle cost, a touch
+  penalty and a swap pass fix it, with a 1,500-deal regression test); under
+  reduced motion a finished echo arc books one repaint so it clears instead of
+  waiting for the next input; the share card shows the echo arc and Twin
+  button and is reproducible from `tools/og-card.html` (`flux-sphere` card).
+
 ## Current status (2026-09-04)
 
 - [x] Reworked dense Android drag frames after the physical Fire-tablet XL
