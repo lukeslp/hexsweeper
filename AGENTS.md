@@ -10,7 +10,8 @@ Saved edits on Drummer are live on the public site. Prefer: edit → verify loca
 ## Product surface
 
 The public root `index.html` is the Sphere game, sealed from `sphere/` by the
-exporter; the native app ships that page and nothing else. `launcher.html` is
+exporter; the native app ships its offline export plus the hidden Water Wheel
+and history image. `launcher.html` is
 generated from `tools/app-launcher.html` and offers the three structural boards: **Infinite**,
 **Classic**, and **Sphere**. `infinite.html` and `bounded.html` are generated
 product pages; `sphere/` is authored in place (Mercury's WebGL renderer is
@@ -19,6 +20,11 @@ production surface lives at `play.html` with Light / Dark / Fire / Plague /
 Escape. Old root `?mode=` links, and `?theme=` links naming flat-only themes,
 are forwarded there by the root page. Water remains a renderer/deep-link archive.
 Do not re-expose the skin lab from production chrome.
+
+Web Sphere and flat-game entries open the board without automatic instructions,
+including when storage is blocked. Native Sphere retains its first-launch
+tutorial. Both use the same ? settings sheet; the Play tab can reopen the
+tutorial explicitly. Keep this entry distinction when regenerating exports.
 
 ## Docs to keep in sync
 
@@ -66,15 +72,19 @@ deployed) for the **hexsweeper-app** Capacitor shell — `lukeslp/hexsweeper-app
 bundle `app.hexodus.ios`. It reuses `export_sphere` and then seals the page for
 offline use: sets `HEXSWEEPER_SPHERE_APP`, serves the history tile from the
 bundle, drops the cross-game links, sends credits to the system browser, and
-hides the native launch screen after first paint.
+hides the native launch screen after first paint. It retains the native
+first-launch tutorial and seals `wheel.html` as the hidden second sphere.
 
 `HEXSWEEPER_SPHERE_APP` also drops the **Earth / Moon** globe themes (the THEMES
 filter in `sphere.js`): these themes fetch textures over the network. Texture
 provenance and attribution are recorded in [the texture source notes](sphere/assets/textures/README.md);
 Earth gloss is project artwork and the older daymaps carry Solar System Scope
-attribution through Orrery. The web build keeps all nine.
+attribution through Orrery. The engine includes sixteen web themes and
+fourteen offline themes; the production Themes tab exposes nine choices.
 
-After any sphere change, re-run `--app` and re-vendor into hexsweeper-app's
+Export from canonical main, after checking the source branch; an older
+feature checkout may not match shipped behavior. After any sphere payload
+change, re-run `--app` and re-vendor into hexsweeper-app's
 `www/`; that repo's smoke gate regenerates this payload and fails on drift.
 
 ## Choices lab redirects

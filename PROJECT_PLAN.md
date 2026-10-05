@@ -3,8 +3,9 @@
 ## Objective
 
 Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev,
-opening through three structural boards — Infinite, Classic, and Sphere — while
-preserving the five-mode flat game and the skin lab as deeper product surfaces.
+opening directly into Sphere with optional help. Infinite and Classic remain
+on the web Games page, with the five-mode flat game and skin lab as deeper
+product surfaces. Native iOS and Android retain the short first-launch intro.
 
 ## Architecture
 
@@ -16,7 +17,21 @@ preserving the five-mode flat game and the skin lab as deeper product surfaces.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
-## Current status (2026-10-03)
+## Current status (2026-10-05)
+
+- [x] Web Sphere and flat-game entries open the board without automatic
+  instructions (`d65b9a2`, October 4), including when browser storage is blocked.
+  Help remains on demand; Sphere ? → Play can reopen the short tutorial.
+- [x] Native export retains its first-launch tutorial; the regenerated payload
+  and provenance are committed in hexsweeper-app `07adf02`.
+- [x] Entry-policy regressions, exporter/gameplay checks, cross-repo smoke,
+  Capacitor sync, and both repository CI runs passed for that change.
+- [x] Deployed root, sphere entry/script, flat game, and Infinite bytes matched
+  the committed source. Both drag axes retain the v6 finger-following default.
+- [ ] Physical-device acceptance and a new native release carrying this payload
+  remain separate work; no store upload accompanied the web-entry change.
+
+## Prior status (2026-10-03)
 
 - [x] Flux Sphere version 3: twins share a fate (both safe or both mines), so
   an echo never opens a mine; one tap digs and echoes; the Twin tool traces
