@@ -32,8 +32,9 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 - [ ] Physical iOS/Android acceptance for this payload: results remain open
       in `docs/DEVICE_VERIFY.md`; browser checks do not fill those gates.
 - [ ] Build or upload a new native release carrying this payload. Checked-in
-      versions remain iOS `1.0.1 (69)` and Android `1.0.5 (30)`; no new binary
-      was produced or uploaded for the web-entry change.
+      versions remain iOS `1.0.1 (69)` and Android `1.0.5 (30)`; CI builds an
+      Android debug APK, but no release binary or store upload accompanied
+      the web-entry change.
 
 ## Historical milestones (begun 2026-08-10)
 

@@ -29,8 +29,9 @@ Both surfaces can reopen the tutorial through ? → Play.
 Fresh browser entry checks, blocked-storage regressions, exporter checks,
 payload checksums, cross-repo smoke, and Capacitor iOS/Android sync passed.
 Both repository CI runs passed; the web deployment's served bytes matched
-the committed game. No new native binary or store upload accompanied this
-payload update. Complete `docs/DEVICE_VERIFY.md` against the candidate binary
+the committed game. App CI also builds an Android debug APK. No new native
+release or store upload accompanied this payload update.
+Complete `docs/DEVICE_VERIFY.md` against the candidate binary
 before treating those browser/source checks as device acceptance.
 
 ## Archive → TestFlight
