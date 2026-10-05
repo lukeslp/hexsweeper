@@ -274,7 +274,9 @@ The archived decorative theme remains at `collection/theme-water.html` and
 
 ## Acceptance (production)
 
-Bare root is Sphere, restoring its own run silently. `launcher.html` is the
+Bare root is Sphere, restoring its own run silently. Browser entry opens no
+instructions modal; help and settings remain available through ?. Native apps
+retain their short first-launch tutorial. `launcher.html` is the
 three-hex menu (Infinite, Classic, Sphere)
 with Resume in the center when a run is waiting; each mode opens its game with
 last-used settings and returns through Games; newest valid Infinite, Classic, or Sphere saves can resume;

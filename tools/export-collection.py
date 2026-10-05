@@ -1923,7 +1923,8 @@ def export_sphere_web() -> str:
     markup = export_sphere(exp)
     markup = re.sub(r"<title>.*?</title>", "<title>Hexsweeper</title>", markup, count=1, flags=re.S)
     markup = markup.replace('<html lang="en" class="collection-export">', '<html lang="en">', 1)
-    # First-timers get the tutorial: pens pre-set the welcome key, the root does not.
+    # Web entry leaves instructions behind ? without marking the tutorial seen.
+    # The shared boot enables automatic welcome only for the native app.
     markup = markup.replace("  localStorage.setItem('hexsweeper-sphere-welcome-v1', '1');\n", "", 1)
     # Reflection textures live under sphere/; the root page fetches them relatively.
     markup = markup.replace(

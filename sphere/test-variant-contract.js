@@ -18,6 +18,7 @@ function memoryStorage(initial, options) {
   return {
     getItem(key) {
       reads.push(key);
+      if (options.failGet) throw new Error("storage get failed");
       return values.has(key) ? values.get(key) : null;
     },
     setItem(key, value) {
@@ -323,6 +324,55 @@ test("notifies optional help lifecycle callbacks exactly once per open cycle", (
     stopPropagation() {},
   });
   assert.deepStrictEqual(events, ["open", "close"]);
+});
+
+for (const blocked of [false, true]) {
+  test(`web entry remains playable without welcome${blocked ? " when storage is blocked" : " on a first visit"}`, () => {
+    let welcomes = 0;
+    const harness = createHarness({
+      withHelp: true,
+      search: "?fresh=1",
+      localStorage: memoryStorage({}, { failGet: blocked, failSet: blocked }),
+      sessionStorage: memoryStorage({}, { failGet: blocked, failSet: blocked }),
+      boot: { autoWelcome: false, onWelcome: () => { welcomes++; return true; } },
+    });
+    assert.strictEqual(welcomes, 0);
+    assert.strictEqual(harness.elements["help-overlay"].hidden, true);
+    assert.strictEqual(harness.api.flagAt(0), true);
+    harness.elementListeners["help-btn:click"]({ preventDefault() {}, stopPropagation() {} });
+    assert.strictEqual(harness.elements["help-overlay"].hidden, false);
+  });
+}
+
+test("native first visit still requests the tutorial", () => {
+  let welcomes = 0;
+  const harness = createHarness({
+    withHelp: true,
+    search: "?fresh=1",
+    boot: { autoWelcome: true, onWelcome: () => { welcomes++; return true; } },
+  });
+  assert.strictEqual(welcomes, 1);
+  assert.strictEqual(harness.elements["help-overlay"].hidden, true);
+});
+
+test("native entry retains help fallback when storage is blocked", () => {
+  const harness = createHarness({
+    withHelp: true,
+    search: "?fresh=1",
+    localStorage: memoryStorage({}, { failGet: true, failSet: true }),
+    sessionStorage: memoryStorage({}, { failGet: true, failSet: true }),
+    boot: { autoWelcome: true },
+  });
+  assert.strictEqual(harness.elements["help-overlay"].hidden, false);
+});
+
+test("explicit welcome preview can still open the web tutorial", () => {
+  let welcomes = 0;
+  createHarness({
+    search: "?welcome=1",
+    boot: { autoWelcome: false, onWelcome: () => { welcomes++; return true; } },
+  });
+  assert.strictEqual(welcomes, 1);
 });
 
 test("rejects missing or canonical variant persistence options before storage access", () => {

@@ -937,7 +937,7 @@ body.help-open { overflow: hidden; }
 </div>
 
 <script src="hexasphere.js?v=20260810z11"></script>
-<script src="sphere.js?v=20261002drag"></script>
+<script src="sphere.js?v=20261004entry"></script>
 <script src="mirror-material.js?v=20260820a1"></script>
 <script src="quiet-chrome.js?v=20260820a1"></script>
 <script>
@@ -963,7 +963,11 @@ function showTutorial() {
   document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { done(); document.removeEventListener("keydown", esc); } });
   return true;
 }
-const sphereGame = SphereSweeper.boot({ canvasId: "gameCanvas", onWelcome: showTutorial });
+const sphereGame = SphereSweeper.boot({
+  canvasId: "gameCanvas",
+  onWelcome: showTutorial,
+  autoWelcome: !!window.HEXSWEEPER_SPHERE_APP,
+});
 document.getElementById("help-wheel-btn")?.addEventListener("click", () => {
   if (typeof sphereGame.pauseTimer === "function") sphereGame.pauseTimer();
   window.location.href = window.HEXSWEEPER_WHEEL_HREF || "../wheel/";

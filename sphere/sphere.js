@@ -18,7 +18,7 @@
  * Flood: logic immediate, paint staggered by BFS ring (mirrors flat core.js wave).
  * Persist: autosave mid-run (localStorage + sessionStorage `hexsweeper-sphere-run-v2`).
  * Soft/hard browser reload restores; only UX Reset (or size change) clears the run.
- * No window.confirm dialogs — Reset/size are deliberate. Welcome help only once, not over a restored run.
+ * No window.confirm dialogs — Reset/size are deliberate. Welcome follows the surface's entry policy.
  * Flags: pure red fill only (no glyph); stand proud of the shell as pins.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
@@ -6241,10 +6241,10 @@
         openHelp(true);
       };
       if (forceWelcome) welcome();
-      else if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) welcome();
+      else if (opts.autoWelcome !== false && !skipWelcome && !localStorage.getItem(WELCOME_KEY)) welcome();
     } catch (_) {
-      // Storage blocked — only show help on a truly fresh first board.
-      if (!restored && !wantDeal) openHelp(true);
+      // Storage blocked — respect the surface's entry policy too.
+      if (opts.autoWelcome !== false && !restored && !wantDeal) openHelp(true);
     }
 
     // Reflection themes need their renderer from the first frame, not the

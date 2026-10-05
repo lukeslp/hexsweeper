@@ -10242,16 +10242,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   });
   document.getElementById("welcome-play")?.addEventListener("click", closeWelcome);
 
-  try {
-    // ?welcome=0 skips first-visit modal (smoke / agent probes)
-    // Collection one-pagers always skip (HEXSWEEPER_ONEPAGER.skipWelcome).
-    const skipWelcome =
-      (ONEPAGER && ONEPAGER.skipWelcome !== false) ||
-      ONEPAGER_ACTIVE ||
-      /(?:\?|&)welcome=0(?:&|$)/.test(location.search);
-    if (!skipWelcome && !localStorage.getItem(WELCOME_KEY)) openWelcome();
-  } catch (_) {
-    if (!ONEPAGER_ACTIVE) openWelcome();
+  // Browser entry is playable immediately; Help is available from Menu / ?.
+  // Keep the explicit tutorial preview route for checking the welcome content.
+  if (!ONEPAGER_ACTIVE && /(?:\?|&)welcome=1(?:&|$)/.test(location.search)) {
+    openWelcome();
   }
 
   // Test/debug: window.__hexBlast.force() after first click places mines
