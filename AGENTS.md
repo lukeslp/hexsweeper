@@ -7,6 +7,15 @@ effects and the tutorial. `www/wheel.html` is the hidden Water Wheel, reached
 by holding the mine count. Infinite and Classic are web-only. Read `README.md` first; it
 explains why the bundle id says `hexodus` and why the build number starts at 7.
 
+## Entry policy
+
+The native payload keeps its short first-launch tutorial; dismissing it records
+the seen marker, and saved runs restore in place. The web game opens the board
+without an automatic instructions modal, including when storage is blocked.
+Both use the same ? sheet: Play, Themes, Board, Settings, and a Keys tab for
+keyboard users. Keep this distinction in canonical source and its exporter;
+do not implement it by patching `www/`.
+
 ## The one rule
 
 **`www/` is generated. Never edit it by hand.** It is vendored from
@@ -33,7 +42,9 @@ cp -R build/app/. ../hexsweeper-app/www/
 scripts/smoke.sh --with-source ../hexsweeper
 ```
 
-CI runs that same `--with-source` gate against hexsweeper's `main`, so a
+Check the source checkout's branch before exporting; an older feature branch
+can reintroduce behavior that canonical main has already replaced. CI runs
+that same `--with-source` gate against `lukeslp/hexsweeper-private-history`'s `main`, so a
 re-vendor that lands here without the matching hexsweeper commit pushed — or a
 hexsweeper change that never gets re-vendored — fails the build.
 

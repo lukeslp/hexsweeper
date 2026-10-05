@@ -3,10 +3,13 @@
 Native Capacitor shell for **Hexsweeper 3D** — hex minesweeper on a closed
 sphere. The game is the Canvas/vanilla-JS build from
 [lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper) (`sphere/`); this
-repo wraps it for iOS and Android as one sealed offline page.
+repo wraps it for iOS and Android as a sealed offline payload.
 
 The app opens straight into the sphere, which restores its own unfinished run
-without asking. The fixed chrome is a quiet bar: **Undo · New sphere · Flag**
+without asking. On a fresh native launch, a short tutorial introduces Tap,
+Hold, Drag, and the controls; Play dismisses it and records that it was seen.
+Returning players go straight to their board. The fixed chrome is a quiet bar:
+**Undo · New sphere · Flag**
 (red while armed) bottom left, **?** bottom right, and a small mines-left ·
 seconds readout at the top. Everything else — theme (Light · Dark ·
 Stratosphere · Mercury · Ion Storm · Aurora · Galaxy · Gilded Ribbon · Heat
@@ -19,6 +22,12 @@ its Sphere pill brings you back and the run resumes. Infinite and Classic are
 web-only; they are not in this binary.
 
 Web version: <https://dr.eamer.dev/games/hexsweeper/>
+
+The web game opens the board immediately, including on a first visit or when
+browser storage is blocked. Instructions are optional: **? → Play**, then
+**Show the tutorial again** for the short intro. Web and native use the same
+Play · Themes · Board · Settings sheet; a Keys tab appears for keyboard users.
+The native first-launch intro is the intended entry difference.
 
 ## The names do not match, on purpose
 
@@ -54,9 +63,10 @@ App Store Connect app and abandoning this one.
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
 the sealed Sphere game — one self-contained file with fonts, CSS, and all JS
-(engine, WebGL material renderer, quiet chrome) inlined; the only other asset is
-the help sheet's history image under `www/assets/`. There is nothing to
-navigate to and no back affordance to need. One local native plugin,
+(engine, WebGL material renderer, quiet chrome) inlined. `www/wheel.html` is
+the sealed Water Wheel, and the help sheet's history image is under
+`www/assets/`. The Wheel's Sphere pill returns to the saved sphere. One local
+native plugin,
 `HexShare` (in `AppDelegate.swift`, registered by `HexBridgeViewController`),
 presents the finished-board card as a `UIImage` in the iOS share sheet so
 image-capable apps appear; the web build's Web Share path is the fallback.
@@ -75,8 +85,18 @@ cp -R build/app/. ../hexsweeper-app/www/
 ```
 
 Then refresh `WWW_SOURCE.txt` (source commit + `shasum -a 256` of each file
-under `www/`) and re-run the smoke script. CI checks out `hexsweeper` and
-regenerates the payload, so a stale `www/` fails the build.
+under `www/`) and re-run the smoke script. Use a checkout of canonical `main`,
+not an older feature branch. Push the source change before the native payload
+update: CI checks out `lukeslp/hexsweeper-private-history` at `main` and
+regenerates the payload, so a stale `www/` fails the build. The public source
+repository is `lukeslp/hexsweeper`; `WWW_SOURCE.txt` identifies the exact
+canonical commit used for this snapshot.
+
+The current payload pins `d65b9a2` (October 4, 2026): web instructions became
+optional while native first-launch behavior stayed enabled. The payload sync
+is committed as `07adf02`. This repository update did not create or upload a
+new iOS/Android release. See [release notes](docs/RELEASE.md) for the distinction
+between payload checks and published builds.
 
 ## Verify
 
@@ -103,13 +123,13 @@ release identity managed by the Android release toolkit; its staged artifact
 and device evidence are documented in
 [`android/AMAZON-RELEASE.md`](android/AMAZON-RELEASE.md). Signed `1.0.4 (29)`
 uses the Fire-tuned path for both direct and ambient XL rotation. See
-[`docs/RELEASE.md`](docs/RELEASE.md). Amazon accepted that release for review
-at 08:54 AM PDT on September 4, 2026; the console estimates approval before
-09:00 AM PDT on September 9.
+[`docs/RELEASE.md`](docs/RELEASE.md). The recorded September 4 submission
+was accepted for review at 08:54 AM PDT. That historical receipt does not
+establish the current Amazon review state.
 
 The direct download moved to signed `1.0.5 (30)` on October 2, 2026. It carries
 web payload `7ece656`, so dragging the sphere follows the finger on both axes,
-as on iPhone. Amazon still has `1.0.4 (29)`.
+as on iPhone. The recorded Amazon submission uses `1.0.4 (29)`.
 
 ## Not in this build
 
@@ -117,7 +137,9 @@ as on iPhone. Amazon still has `1.0.4 (29)`.
 fetch anything at runtime — `globeUrl()` in `sphere.js` only resolves textures
 relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
 back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
-network. Their daymap provenance is also unrecorded. The fourteen offline themes
+network. Their texture provenance is recorded in the source repository's
+[`sphere/assets/textures/README.md`](https://github.com/lukeslp/hexsweeper/blob/main/sphere/assets/textures/README.md).
+The fourteen offline themes
 (Light, Shell, Dark, Ink, Float, Card, Glow, Mercury, Stratosphere, Ion Storm,
 Aurora, Galaxy, Gilded Ribbon, Heat Lightning) ship; the web build keeps all
 sixteen. Mercury's mirrored body is a WebGL2 shader

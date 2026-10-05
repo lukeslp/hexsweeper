@@ -12,10 +12,26 @@
 | Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. Build 60 is the latest uploaded TestFlight build, attached to 1.0, and the
-checked-in project matches it. (App Store Connect enforces a per-app daily
+this same record. The checked-in iOS project is `1.0.1 (69)` and Android is
+`1.0.5 (30)`. Check the store's latest uploaded build before incrementing or
+uploading; checked-in versions do not establish current remote store state.
+(App Store Connect enforces a per-app daily
 upload cap — error 90382 after ~15 uploads on 2026-08-18; it cleared within
 the hour.)
+
+## Current payload (2026-10-05)
+
+`WWW_SOURCE.txt` pins canonical game commit `d65b9a2`, re-vendored in native
+commit `07adf02` on October 4. Web entry now opens the board immediately;
+the native app retains its first-launch tutorial and the same ? settings sheet.
+Both surfaces can reopen the tutorial through ? → Play.
+
+Fresh browser entry checks, blocked-storage regressions, exporter checks,
+payload checksums, cross-repo smoke, and Capacitor iOS/Android sync passed.
+Both repository CI runs passed; the web deployment's served bytes matched
+the committed game. No new native binary or store upload accompanied this
+payload update. Complete `docs/DEVICE_VERIFY.md` against the candidate binary
+before treating those browser/source checks as device acceptance.
 
 ## Archive → TestFlight
 
@@ -59,16 +75,13 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-Current Android identity is `versionCode 27`, `versionName 1.0.2`, targeting
-API 36 with minimum API 24. Build 27 is the signed Amazon Fire-tablet candidate;
-its exact artifact, certificate, checksums, listing pack, and physical-device
-gate live in `android/AMAZON-RELEASE.md`. The older direct test APK is debug-
-signed with the same certificate as builds 1–15 so those testers can upgrade in
-place. Build 19 (2026-08-19,
-payload `4c04cab`) is published at `https://dr.eamer.dev/downloads/apps/hexsweeper/`
-(APK served from `/home/coolhand/html/downloads/android/hexsweeper/` on Drummer;
-17 and 16 stay as fallbacks). There is no 18: `versionCode` 18 was bumped for
-build 62 but no APK was cut before 19 superseded it. The curated download page
+The checked-in Android identity is `versionCode 30`, `versionName 1.0.5`,
+targeting API 36 with minimum API 24. The October 2 direct-download release
+used payload `7ece656`; the recorded Amazon submission is `1.0.4 (29)`.
+Artifact, certificate, checksum, listing, and physical Fire-tablet evidence
+live in `android/AMAZON-RELEASE.md`. Verify the served APK and store console
+when preparing the next release; the current source payload is newer than
+those recorded binaries. The curated download page
 and `catalog.json` are patched in place, never regenerated — see
 `downloads/CURATED_DO_NOT_REGENERATE.md` on Drummer; each publish leaves an
 `index.html.bak-before-…` beside the page. The Play release AAB remains
@@ -340,7 +353,7 @@ Assets staged under `app-store/amazon/`:
   an Apple name-collision workaround only.
 
 Amazon accepted the signed and verified `1.0.4 (29)` release for review at
-08:54 AM PDT on 2026-09-04. The console reports **UNDER REVIEW** and estimates
+08:54 AM PDT on 2026-09-04. That console receipt reported **UNDER REVIEW** and estimated
 approval before 09:00 AM PDT on 2026-09-09. The submitted targeting is 12 Fire
 tablet models, all Amazon Appstore countries and regions, free pricing, and no
 Fire TV or Automotive devices.

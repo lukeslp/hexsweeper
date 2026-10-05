@@ -12,12 +12,33 @@ Prebuilt payload, not a build. `www/index.html` (the sphere, sealed) arrives
 fully inlined from hexsweeper's `export-collection.py --app`; this repo adds
 only the native shell. Infinite, Classic, and the launcher left the payload
 on 2026-08-17 (sphere-only front door). `www/wheel.html` joined on
-2026-08-18: the Water Wheel sealed the same way, reachable only by holding
-the mine count on the sphere.
+2026-08-18: the Water Wheel sealed the same way, reachable by holding
+the mine count on the sphere or the wave button on the sheet's Board tab.
 That keeps the game single-source in hexsweeper and this repo dependency-light
-(4 runtime packages).
+(the Capacitor shell and splash-screen dependency).
 
-## Status (2026-08-10)
+## Current status (2026-10-05)
+
+- [x] Native payload pins canonical source `d65b9a2`; sync commit `07adf02`.
+- [x] Web entry opens the board immediately. The native first-launch tutorial
+      remains enabled; returning runs restore without an intro or resume prompt.
+- [x] Help/settings use Play · Themes · Board · Settings, plus Keys for
+      keyboard users; the Play tab can reopen the short tutorial explicitly.
+- [x] Fresh web/native browser previews, blocked-storage entry regressions,
+      exporter checks, cross-repo smoke, and Capacitor iOS/Android sync passed
+      for the October 4 change. Both repository CI runs passed.
+- [x] Live root, sphere entry/script, flat game, and Infinite served bytes
+      matched the committed source after deployment.
+- [ ] Physical iOS/Android acceptance for this payload: results remain open
+      in `docs/DEVICE_VERIFY.md`; browser checks do not fill those gates.
+- [ ] Build or upload a new native release carrying this payload. Checked-in
+      versions remain iOS `1.0.1 (69)` and Android `1.0.5 (30)`; no new binary
+      was produced or uploaded for the web-entry change.
+
+## Historical milestones (begun 2026-08-10)
+
+These entries record prior builds and product surfaces. The current status
+and acceptance sections describe the checked-in payload.
 
 - [x] Retired the previous product here: React client, Foundation Models bridge,
       `iris` antagonist, and the React/Radix/Tailwind toolchain all removed
@@ -66,7 +87,7 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
       (`scripts/store-shots.mjs` + `scripts/generate-store-screenshots.py`)
 - [ ] App Privacy nutrition labels — no API endpoint, must be clicked through
       in the ASC web UI. Answer is "Data Not Collected" throughout
-- [ ] Device verification (`docs/DEVICE_VERIFY.md`) — 21 gates, none filled in
+- [ ] Device verification (`docs/DEVICE_VERIFY.md`) — record results per device
 - [ ] Capacitor 8.3.1 → 8.5.0 available (splash-screen 8.0.1 → 8.0.2). Minor
       bump; regenerates native projects, so it wants its own build + smoke run
 
@@ -76,14 +97,15 @@ That keeps the game single-source in hexsweeper and this repo dependency-light
 with SwiftShader WebGL at exact device metrics (6.9" iPhone 440×956@3,
 13" iPad 1032×1376@2), seeds a deterministic mid-game (mines, a connected dug
 patch, a few flags, a fixed rotation) per shot, sets the theme, and captures the
-full frame — the flower shot opens the menu first. `generate-store-screenshots.py`
+full frame — the legacy `03-flower` shot now opens the ? settings sheet.
+`generate-store-screenshots.py`
 runs it per family and lays a Futura Bold caption band over the empty field
 above the sphere. Every pixel is the shipped game; nothing is mocked. The old
 square-render + virtual-time approach and its timeouts are gone. Toasts and
 live regions are hidden by injected CSS so stills stay clean. `--recompose`
 re-captions existing raws without re-rendering.
 
-Shots: 01 Mercury (hero) · 02 Stratosphere · 03 Light with the flower open ·
+Shots: 01 Mercury (hero) · 02 Stratosphere · 03 Light with the settings sheet open ·
 04 Ion Storm · 05 Heat Lightning · 06 Dark. Same set for both families.
 ## Outstanding decisions
 
@@ -105,7 +127,12 @@ Shots: 01 Mercury (hero) · 02 Stratosphere · 03 Light with the flower open ·
 ## Acceptance
 
 The sphere renders and is playable in the native shell with no
-network; the corner Menu opens the flower and its Theme tile reaches Mercury; dig, flag, chord, pan, and camera drag work by touch where applicable;
+network; a fresh launch shows the short tutorial, Play dismisses it, and later
+launches restore an unfinished run in place. The quiet bar and ? settings
+sheet remain available; Play holds the rules and tutorial replay, Themes
+previews materials, Board holds size and best times, and Settings controls
+inversion and effects. Dig, flag, double-tap chord, pinch zoom, and camera drag
+work by touch; both drag axes follow the finger with Invert off;
 safe-area insets are respected on a notched device; launch screen hands off to
 the first painted frame without a blank gap; smoke gates are green; build
 number exceeds the latest uploaded build.
