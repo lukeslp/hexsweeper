@@ -10194,10 +10194,15 @@ const sphereChrome = initQuietChrome(sphereGame);
   let seen = null;
   try { seen = localStorage.getItem(KEY); } catch (_) { return; }
   if (seen) return;
-  const st = typeof sphereGame.getState === "function" ? sphereGame.getState() : null;
-  if (!st || (st.cells || []).some((c) => c.revealed || c.flagged)) return;
-  if (typeof sphereGame.toast === "function") sphereGame.toast("Tap to clear · hold to flag · drag to spin", 5200);
-  try { localStorage.setItem(KEY, "1"); } catch (_) {}
+  // The sphere may still be building when this runs; wait for its state (up to ~3 s).
+  let tries = 0;
+  (function check() {
+    const st = typeof sphereGame.getState === "function" ? sphereGame.getState() : null;
+    if (!st || !st.cells || !st.cells.length) { if (++tries < 180) requestAnimationFrame(check); return; }
+    if (st.cells.some((c) => c.revealed || c.flagged)) return;
+    if (typeof sphereGame.toast === "function") sphereGame.toast("Tap to clear · hold to flag · drag to spin", 5200);
+    try { localStorage.setItem(KEY, "1"); } catch (_) {}
+  })();
 })();
 // Settings sheet (the ? overlay): theme grid, board size, warning style;
 // Invert and Effects state is wired inside sphere.js.

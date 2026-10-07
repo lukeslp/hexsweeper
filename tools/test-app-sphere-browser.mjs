@@ -153,6 +153,8 @@ try {
     localStorage.clear();
     sessionStorage.clear();
     localStorage.setItem("hexsweeper-sphere-invert-v4", JSON.stringify({ x: false, y: false }));
+    // The unloading page saves its run on the way out; stop that so the reload is a true first launch.
+    Storage.prototype.setItem = function () {};
   `);
   await send("Emulation.setTouchEmulationEnabled", { enabled: true });
   await send("Page.reload", { ignoreCache: true });
