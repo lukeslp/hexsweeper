@@ -677,41 +677,46 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   transform: translate(-50%, 0);
 }
 
-/* Help panel — minimalist sheet aligned with sphere/index help */
+/* sheet:begin — the help and settings sheet. tools/export-collection.py copies
+   this block verbatim into infinite.html, so Sphere and Infinite share one sheet. */
+/* Help — pure mono sheet, same language as the empty sphere chrome */
 .help-overlay {
   position: fixed;
   inset: 0;
   z-index: 110;
-  background: color-mix(in srgb, var(--bg-color) 72%, transparent);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--bg-color) 88%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.18s ease;
 }
 .help-overlay.open { opacity: 1; pointer-events: auto; }
+.help-overlay[hidden] { display: none; }
 .help-panel {
   width: min(360px, 100%);
-  max-height: min(82vh, 520px);
-  overflow: auto;
-  background: color-mix(in srgb, var(--nav-bg, var(--bg-color)) 96%, transparent);
+  max-height: calc(100dvh - 2.5rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  background: var(--bg-color);
   color: var(--text-main);
-  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
   border-radius: 16px;
-  padding: 1.1rem 1.15rem 1rem;
+  padding: 1.05rem 1rem 0.85rem;
   position: relative;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.28);
   text-align: left;
+  box-shadow: none;
 }
 .help-close {
   position: absolute;
-  top: 0.55rem;
-  right: 0.55rem;
-  width: 2rem;
-  height: 2rem;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 2.75rem;
+  height: 2.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -719,104 +724,27 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   border-radius: 999px;
   background: transparent;
   color: var(--text-sub);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
 }
 .help-close:hover,
 .help-close:focus-visible {
   color: var(--text-main);
-  background: color-mix(in srgb, var(--text-main) 8%, transparent);
   outline: none;
 }
 .help-panel h2 {
-  font-size: 1.05rem;
-  margin: 0 2rem 0.55rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 1.5rem 0.35rem 0;
   letter-spacing: -0.02em;
 }
 .help-lede {
   margin: 0 0 0.85rem;
-  font-size: 0.84rem;
-  line-height: 1.45;
-  color: var(--text-sub);
-}
-.help-glyphs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0 0 0.85rem;
-}
-.help-glyph {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  min-height: 4.5rem;
-  padding: 0.55rem 0.35rem;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--text-main) 5%, transparent);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: color-mix(in srgb, var(--text-main) 88%, var(--text-sub));
-  text-align: center;
-  line-height: 1.25;
-}
-.help-glyph-icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.help-glyph svg {
-  width: 1.25rem;
-  height: 1.25rem;
-  stroke: var(--text-main);
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.92;
-}
-.help-body {
-  margin: 0 0 0.75rem;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  color: var(--text-sub);
-}
-.help-body p {
-  margin: 0 0 0.55rem;
-}
-.help-body p:last-child { margin-bottom: 0; }
-.help-panel .help-keys {
-  margin: 0 0 0.65rem;
-  font-size: 0.74rem;
-  line-height: 1.45;
-  color: var(--text-sub);
-}
-.help-panel kbd {
-  font-family: ui-monospace, monospace;
-  font-size: 0.8em;
-  border: 1px solid color-mix(in srgb, var(--text-main) 24%, transparent);
-  border-radius: 4px;
-  padding: 0.05em 0.35em;
-  background: color-mix(in srgb, var(--text-main) 6%, transparent);
-}
-.help-more {
-  margin: 0 0 0.85rem;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   line-height: 1.4;
+  color: var(--text-sub);
 }
-.help-more a {
-  color: var(--text-main);
-  text-decoration: underline;
-  text-underline-offset: 0.12em;
-}
-.help-more a:hover { opacity: 0.85; }
-/* Minimal sheet (infinite.html): one line + three gesture rows, as on Sphere. */
 .help-controls {
   list-style: none;
   margin: 0 0 0.85rem;
@@ -838,50 +766,331 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   border-top: 1px solid color-mix(in srgb, var(--text-main) 8%, transparent);
 }
 .help-controls .act {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.68rem;
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-sub);
 }
-@media (hover: none) and (pointer: coarse) {
-  .help-desk-only { display: none; }
+.help-keylist kbd {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.92em;
+  border: 1px solid color-mix(in srgb, var(--text-main) 18%, transparent);
+  border-radius: 3px;
+  padding: 0.05em 0.28em;
+  color: var(--text-main);
 }
-@media (hover: hover) {
-  .help-controls li { grid-template-columns: 6.6rem 1fr; }
+.help-more {
+  margin: 0 0 0.75rem;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--text-sub);
+}
+.help-more a {
+  color: var(--text-main);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
 }
 .help-done {
   appearance: none;
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--text-main) 18%, transparent);
-  border-radius: 10px;
+  min-height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 999px;
   padding: 0.55rem 0.75rem;
-  background: color-mix(in srgb, var(--text-main) 8%, transparent);
-  color: var(--text-main);
+  background: var(--text-main);
+  color: var(--bg-color);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
 }
-.help-done:hover,
-.help-done:focus-visible {
-  background: color-mix(in srgb, var(--text-main) 12%, transparent);
+/* Plain settings rows; the text keeps each cycling control's current state. */
+.help-packs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0 0 0.85rem;
+}
+.help-packs-cap {
+  grid-column: 1 / -1;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+.help-pack {
+  appearance: none;
+  min-height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 999px;
+  padding: 0.45rem 0.6rem;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.help-pack:hover,
+.help-pack:focus-visible {
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
   outline: none;
 }
+/* Theme picker: every look the flower cycles through, one tap each. */
+.help-themes { margin: 0 0 0.85rem; }
+.help-themes .help-packs-cap { display: block; margin-bottom: 0.4rem; }
+.help-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+}
+.help-theme {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.help-theme .help-theme-dot {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: var(--swatch, #888);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 30%, transparent);
+}
+.help-theme[aria-pressed="true"] {
+  border-color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+.help-theme:hover,
+.help-theme:focus-visible {
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  outline: none;
+}
+/* Compact board-size choices with an underline for the active size. */
+.help-title-sub { font-weight: 500; opacity: 0.55; font-size: 0.85em; margin-left: 0.35rem; }
+.help-sizes, .help-warnings { margin: 0 0 0.85rem; }
+.help-sizes .help-packs-cap, .help-warnings .help-packs-cap { display: block; margin-bottom: 0.4rem; }
+.help-packs-cap em { font-style: normal; text-transform: none; letter-spacing: 0; opacity: 0.8; }
+.help-size-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.4rem; }
+.help-warn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.45rem; }
+.help-size, .help-warn {
+  appearance: none;
+  min-height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.3rem 0.4rem;
+}
+.help-size { display: grid; place-items: center; line-height: 1.05; }
+.help-size b { font-size: 0.86rem; }
+.help-size small { font-size: 0.56rem; font-weight: 500; opacity: 0.7; }
+.help-egg-row { margin: -0.3rem 0 0.7rem; display: flex; justify-content: flex-end; opacity: 0.6; }
+/* The quiet door: a sinking hex under two waves, inline with the hint. */
+.help-egg-door {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; margin: 0; padding: 0; vertical-align: middle;
+  border: 1px solid color-mix(in srgb, var(--text-main) 22%, transparent); border-radius: 999px;
+  background: transparent; color: var(--text-main); cursor: pointer;
+}
+.help-egg-door svg { width: 16px; height: 16px; }
+.help-egg-door:hover, .help-egg-door:focus-visible { background: color-mix(in srgb, var(--text-main) 8%, transparent); outline: none; }
+/* Sheet tabs — Play · Themes · Board · Settings. Title, ×, Done and credits stay put. */
+.help-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.2rem 0 0.9rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+}
+.help-tab {
+  appearance: none;
+  flex: 1 1 0;
+  min-height: 44px;
+  padding: 0.4rem 0.2rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-sub);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+.help-tab[aria-selected="true"] { color: var(--text-main); border-bottom-color: var(--text-main); }
+.help-tab:hover, .help-tab:focus-visible { background: color-mix(in srgb, var(--text-main) 6%, transparent); outline: none; }
+.help-tab:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text-main) 45%, transparent); }
+/* One height for every tab: the panels share one grid cell, so the stack is as
+   tall as the tallest. Inactive panels keep their space but are invisible and
+   inert (hidden + inert, visibility removes them from the a11y tree). When the
+   sheet is capped by the viewport, only this stack scrolls; the title, tabs,
+   Done and links stay put. */
+.help-tabstack {
+  display: grid;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.help-tabstack > .help-tabpanel { grid-area: 1 / 1; min-width: 0; }
+.help-tabstack > .help-tabpanel[hidden] { display: block; visibility: hidden; }
+.help-tabpanel .help-themes, .help-tabpanel .help-sizes, .help-tabpanel .help-packs { margin-top: 0.1rem; }
+.help-size .help-size-best { opacity: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+.help-size .help-size-best[hidden] { display: none; }
+.help-size[aria-pressed="true"], .help-warn[aria-pressed="true"] {
+  border-color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+.help-size:hover, .help-size:focus-visible, .help-warn:hover, .help-warn:focus-visible {
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  outline: none;
+}
+/* Touch: no keyboard, no modifier-click. Keep the copy honest per surface. */
+@media (hover: none) and (pointer: coarse) {
+  .help-desk-only,
+  .help-tabstack > .help-tabpanel.help-desk-only[hidden] { display: none; }
+}
+@media (hover: hover) {
+  .help-touch-only { display: none; }
+  /* Room for "Hold / ⌃-click" on one line. */
+  .help-controls li { grid-template-columns: 6.6rem 1fr; }
+}
+.help-done:hover,
+.help-done:focus-visible {
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  outline: none;
+}
+/* Footer links, spelled out in full so a host page's own .menu-links rules
+   (play.html, skin-chrome.css) cannot restyle the sheet's footer. */
 .help-panel .menu-links {
-  margin-top: 0.85rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin-top: 0.65rem;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  font: 600 0.64rem/1.3 "IBM Plex Sans", system-ui, sans-serif;
   text-align: center;
-  font-size: 0.72rem;
 }
 .help-panel .menu-links a {
   color: var(--text-sub);
   text-decoration: none;
+  border-radius: 4px;
 }
 .help-panel .menu-links a:hover { color: var(--text-main); }
-.help-panel .menu-links-sep { opacity: 0.45; margin: 0 0.35rem; }
+.help-panel .menu-links-sep {
+  color: color-mix(in srgb, var(--text-sub) 70%, transparent);
+  opacity: 0.45;
+  margin: 0 0.3rem;
+  user-select: none;
+}
+
+/* Sphere settings: flat swatches and rows, with icons reserved for familiar actions. */
+.help-panel { border-radius: 6px; padding: 20px 16px 14px; }
+.help-panel h2 { margin-bottom: 12px; }
+.help-close { border-radius: 4px; }
+.help-close svg, .help-done svg { width: 18px; height: 18px; flex: none; }
+.help-theme-grid { gap: 6px; }
+.help-theme {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  min-height: 82px;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+.help-theme .help-theme-dot { width: 24px; height: 24px; position: relative; }
+.help-theme[aria-pressed="true"] { border-bottom-color: var(--text-main); }
+.help-theme[aria-pressed="true"] .help-theme-dot::after {
+  content: "✓"; position: absolute; right: -5px; bottom: -3px;
+  width: 15px; height: 15px; display: grid; place-items: center;
+  background: var(--text-main); color: var(--bg-color); border-radius: 50%;
+  font-size: 11px; font-weight: 700;
+}
+.help-size, .help-warn { border: 0; border-bottom: 2px solid transparent; border-radius: 0; min-height: 64px; }
+.help-size[aria-pressed="true"], .help-warn[aria-pressed="true"] { border-bottom-color: var(--text-main); }
+.help-size small { font-size: 0.6rem; }
+.help-packs { grid-template-columns: 1fr; gap: 0; }
+.help-packs .help-packs-cap { margin-bottom: 10px; }
+.help-pack {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  border: 0; border-top: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 0; min-height: 56px; padding: 10px 8px; font-size: 0.88rem;
+}
+.help-pack:last-child { border-bottom: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent); }
+.help-pack::before {
+  content: ""; width: 20px; height: 20px; flex: none; background: currentColor;
+  mask: var(--control-icon) center / contain no-repeat;
+}
+.help-pack[data-ctl="invert"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8h18M3 8l4-4M3 8l4 4M21 16H3m18 0-4-4m4 4-4 4'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="effects"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m10 3 2.5 6.5L19 12l-6.5 2.5L10 21l-2.5-6.5L1 12l6.5-2.5Z M19 2v4m-2-2h4'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="flag"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 21V4M6 4h10l-2 4 2 4H6'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="export"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12m-5-5 5 5 5-5M5 21h14'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="import"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V3M7 8l5-5 5 5M5 21h14'/%3E%3C/svg%3E"); }
+/* A toggle row (aria-pressed) shows its state at the far end; the name stays in aria-label. */
+.help-pack[aria-pressed]::after {
+  content: "Off"; margin-left: auto;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.68rem; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-sub);
+}
+.help-pack[aria-pressed="true"]::after { content: "On"; color: var(--text-main); }
+/* Quiet score line (Infinite's Play tab). */
+.help-score {
+  margin: 0 0 0.6rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.68rem; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+.help-score b { font-weight: 600; color: var(--text-main); }
+.help-done {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 4px; min-height: 44px;
+}
+.help-done:hover, .help-done:focus-visible { background: var(--text-main); color: var(--bg-color); opacity: 0.85; }
+.help-egg-door { width: 44px; height: 44px; border: 0; border-radius: 4px; }
+.help-egg-door svg { width: 20px; height: 20px; }
+.help-panel:focus { outline: none; }
+.help-panel button:focus-visible,
+.help-panel a:focus-visible {
+  outline: 2px solid var(--text-main); outline-offset: 2px;
+}
+@media (max-width: 360px) {
+  .help-overlay { padding: 12px; }
+  .help-panel { padding-inline: 12px; max-height: calc(100dvh - 24px); }
+  .help-theme { font-size: 0.75rem; }
+  .help-tab { font-size: 0.73rem; }
+}
+/* sheet:end */
 
 /* Menu modal inherits skin-chrome; production widens + left-aligns */
 .modal-content {
@@ -1395,11 +1604,11 @@ body[data-mode="escape"] .menu-links {
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
     </svg>
   </button>
-  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <line x1="5" y1="7" x2="19" y2="7"></line>
-      <line x1="5" y1="12" x2="15" y2="12"></line>
-      <line x1="5" y1="17" x2="19" y2="17"></line>
+  <button type="button" id="help-btn" class="hud-btn" aria-label="Help and settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.2"></circle>
+      <path d="M9.3 9.4a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.6-2.7 4.1"></path>
+      <line x1="12" y1="17.6" x2="12.01" y2="17.6"></line>
     </svg>
   </button>
 </div>
@@ -1410,64 +1619,48 @@ body[data-mode="escape"] .menu-links {
   <canvas id="gameCanvas" aria-label="Hexsweeper board"></canvas>
 </div>
 
-<!-- Menu: score, mode, size, aids -->
-<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
-  <div class="modal-content">
-    <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
-    <h2 id="menu-title" class="menu-title">Menu</h2>
-    <div class="menu-stats" aria-label="Score">
-      <div id="stats-mines" class="stat-item visible" data-label="mines">00</div>
-      <div id="stats-time" class="stat-item visible" data-label="cleared">000</div>
-    </div>
-    <div class="mode-switch" role="group" aria-label="Mode">
-      <button type="button" data-mode="light" aria-pressed="true">Light</button>
-      <button type="button" data-mode="dark" aria-pressed="false">Dark</button>
-      <button type="button" data-mode="fire" aria-pressed="false">Fire</button>
-      <button type="button" data-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-mode="escape" aria-pressed="false">Escape</button>
-    </div>
-    <div class="modal-row" id="size-row">
-      <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
-        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" aria-label="Small">S</button>
-        <button type="button" class="diff-option" data-val="medium" aria-pressed="false" aria-label="Medium">M</button>
-        <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" aria-label="Large">L</button>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button type="button" id="flag-btn" aria-pressed="false">Flag</button>
-      <button type="button" id="help-btn">Help</button>
-      <button type="button" id="fx-btn">Effects: Auto</button>
-      <span id="persist-actions" class="persist-inline">
-        <button type="button" id="export-run-btn">Export</button>
-        <button type="button" id="import-run-btn">Import</button>
-      </span>
-    </div>
-    <input type="file" id="import-run-file" accept="application/json,.json" hidden>
-    <nav class="menu-links" aria-label="Elsewhere">
-      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">Luke Steuber</a>
-      <span class="menu-links-sep" aria-hidden="true">·</span>
-      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">Data Poems</a>
-    </nav>
-  </div>
-</div>
-
-<!-- Help -->
+<!-- Help and settings: one sheet, the same component as Sphere's -->
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
   <div class="help-panel" id="help-panel" tabindex="-1">
-    <button type="button" class="help-close" id="help-close" aria-label="Close help">×</button>
-    <h2 id="help-title">Hexsweeper</h2>
+    <button type="button" class="help-close" id="help-close" aria-label="Close help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    <h2 id="help-title">Hexsweeper Infinite <span class="help-title-sub">settings</span></h2>
+    <div class="help-tabs" role="tablist" aria-label="Sheet sections" id="help-tabs">
+      <button type="button" role="tab" class="help-tab" id="help-tab-play" aria-controls="help-panel-play" aria-selected="true" data-tab="play">Play</button>
+      <button type="button" role="tab" class="help-tab" id="help-tab-look" aria-controls="help-panel-look" aria-selected="false" data-tab="look" tabindex="-1">Look</button>
+      <button type="button" role="tab" class="help-tab" id="help-tab-settings" aria-controls="help-panel-settings" aria-selected="false" data-tab="settings" tabindex="-1">Settings</button>
+    </div>
+    <div class="help-tabstack" id="help-tabstack">
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-play" aria-labelledby="help-tab-play" data-tab="play">
     <p class="help-lede">Clear safe cells as far as you can. Numbers count the mines in the six cells around them.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Clear a cell</span></li>
       <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag it</span></li>
       <li><span class="act">Drag</span><span>Pan the board</span></li>
     </ul>
-    <button type="button" class="help-done" id="help-done">Done</button>
+    <p class="help-score"><b id="stats-mines">00</b> mines left · <b id="stats-time">000</b> cleared</p>
+    <p class="help-more">Also <a href="index.html">Sphere</a> · <a href="bounded.html">Classic</a></p>
+    </section>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-look" aria-labelledby="help-tab-look" data-tab="look" hidden>
+    <div class="help-themes" role="group" aria-label="Theme">
+      <span class="help-packs-cap">Theme</span>
+      <div class="help-theme-grid">
+        <button type="button" class="help-theme" data-mode="light" aria-pressed="false" style="--swatch: linear-gradient(145deg, #ffffff 45%, #ffffff 55%)"><span class="help-theme-dot" aria-hidden="true"></span><span>Light</span></button>
+        <button type="button" class="help-theme" data-mode="dark" aria-pressed="false" style="--swatch: linear-gradient(145deg, #000000 45%, #000000 55%)"><span class="help-theme-dot" aria-hidden="true"></span><span>Dark</span></button>
+      </div>
+    </div>
+    </section>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-settings" aria-labelledby="help-tab-settings" data-tab="settings" hidden>
+    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
+      <span class="help-packs-cap">Settings</span>
+      <button type="button" class="help-pack" id="flag-btn" data-ctl="flag" aria-label="Flag mode" aria-pressed="false">Flag mode</button>
+      <button type="button" class="help-pack" id="fx-btn" data-ctl="effects">Effects auto</button>
+      <button type="button" class="help-pack" id="export-run-btn" data-ctl="export">Export run</button>
+      <button type="button" class="help-pack" id="import-run-btn" data-ctl="import">Import run</button>
+    </div>
+    <input type="file" id="import-run-file" accept="application/json,.json" hidden>
+    </section>
+    </div>
+    <button type="button" class="help-done" id="help-done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Done</span></button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>
@@ -4127,7 +4320,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         css: {
           "--bg-color": ground,
           "--text-main": ink,
-          "--text-sub": light ? "#555555" : "#bbbbbb",
+          // Sphere's own sub ink, so the shared help sheet reads the same on both.
+          "--text-sub": light ? "#666666" : "#888888",
           "--nav-bg": ground,
           "--nav-ink": ink,
         },
@@ -8977,7 +9171,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       }
     };
     const paintFx = () => {
-      fxBtn.textContent = "Effects: " + FX_LABEL[readFx()];
+      // The minimal-help sheet words its rows like Sphere's ("Effects auto").
+      fxBtn.textContent = MINIMAL_HELP
+        ? "Effects " + readFx()
+        : "Effects: " + FX_LABEL[readFx()];
       Hexsweeper.applyEffectsAttribute();
     };
     fxBtn.addEventListener("click", () => {
@@ -9091,6 +9288,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
 
   function syncHelpContent() {
+    // infinite.html's sheet is static (Sphere's component); leave its title alone.
+    if (MINIMAL_HELP) return;
     const copy = getHelpCopy(THEMES[themeIndex]?.id || "light");
     const titleEl = document.getElementById("help-title");
     const ledeEl = document.getElementById("help-lede");
@@ -9129,10 +9328,18 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     helpOverlay.hidden = false;
     document.body.classList.add("help-open");
     requestAnimationFrame(() => helpOverlay.classList.add("open"));
+    if (MINIMAL_HELP) {
+      if (releaseSheetTrap) releaseSheetTrap();
+      releaseSheetTrap = trapSheetFocus();
+    }
     (helpPanel || helpOverlay).focus?.();
   }
 
   function closeHelp() {
+    if (releaseSheetTrap) {
+      releaseSheetTrap();
+      releaseSheetTrap = null;
+    }
     helpOverlay.classList.remove("open");
     document.body.classList.remove("help-open");
     setTimeout(() => {
@@ -9150,6 +9357,96 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   });
   helpClose?.addEventListener("click", closeHelp);
   helpDone?.addEventListener("click", closeHelp);
+
+  // —— Minimal-help sheet (infinite.html) ——
+  // The exporter swaps Menu + Help for Sphere's tabbed sheet: Play · Look ·
+  // Settings. The panels share one grid cell, so the sheet keeps one height;
+  // here they get roving-tabindex tabs (arrows, Home, End), the last tab is
+  // remembered, Tab stays inside the open sheet, and R cannot wipe the run
+  // while the sheet is up (the old Menu guarded R the same way).
+  let releaseSheetTrap = null;
+  function trapSheetFocus() {
+    const onKey = (e) => {
+      if (e.key !== "Tab" || !helpPanel) return;
+      const nodes = Array.from(
+        helpPanel.querySelectorAll("button, [href], input, [tabindex]")
+      ).filter(
+        (el) =>
+          el !== helpPanel &&
+          el.tabIndex >= 0 &&
+          !el.disabled &&
+          !el.closest("[inert]") &&
+          el.offsetParent !== null
+      );
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const at = document.activeElement;
+      if (e.shiftKey && (at === first || at === helpPanel)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && at === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    helpOverlay.addEventListener("keydown", onKey);
+    return () => helpOverlay.removeEventListener("keydown", onKey);
+  }
+  if (MINIMAL_HELP) {
+    const TAB_KEY = "hexsweeper-infinite-sheet-tab-v1";
+    const tabs = Array.from(document.querySelectorAll("#help-tabs .help-tab"));
+    const panels = Array.from(document.querySelectorAll(".help-tabpanel"));
+    const showTab = (id, focus) => {
+      if (!tabs.some((t) => t.dataset.tab === id)) id = "play";
+      tabs.forEach((t) => {
+        const on = t.dataset.tab === id;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.tabIndex = on ? 0 : -1;
+        if (on && focus) t.focus();
+      });
+      panels.forEach((p) => {
+        const off = p.dataset.tab !== id;
+        p.hidden = off;
+        p.inert = off;
+      });
+      try {
+        localStorage.setItem(TAB_KEY, id);
+      } catch (_) {}
+      const stack = document.getElementById("help-tabstack");
+      if (stack) stack.scrollTop = 0;
+    };
+    tabs.forEach((t) => {
+      t.addEventListener("click", () => showTab(t.dataset.tab));
+      t.addEventListener("keydown", (e) => {
+        const i = tabs.indexOf(t);
+        const n = tabs.length;
+        const to =
+          e.key === "ArrowRight" ? (i + 1) % n
+          : e.key === "ArrowLeft" ? (i - 1 + n) % n
+          : e.key === "Home" ? 0
+          : e.key === "End" ? n - 1
+          : -1;
+        if (to < 0) return;
+        e.preventDefault();
+        showTab(tabs[to].dataset.tab, true);
+      });
+    });
+    let stored = "play";
+    try {
+      stored = localStorage.getItem(TAB_KEY) || "play";
+    } catch (_) {}
+    showTab(stored);
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if ((e.key === "r" || e.key === "R") && helpOverlay.classList.contains("open")) {
+          e.stopImmediatePropagation();
+        }
+      },
+      true
+    );
+  }
 
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {

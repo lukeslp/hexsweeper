@@ -31,9 +31,12 @@ Help lives behind ? only: the Play tab is one line of what to do plus three
 gesture rows (Tap / Hold / Drag), no paragraphs, and no `title=` tooltips
 anywhere on the page (aria-labels carry the names). Keep it that way.
 
-Infinite (`infinite.html`) follows the same rule. The exporter's
-`minimal_flat_help` swaps play.html's sheet for one line plus Tap / Hold / Drag
-rows, drops the welcome card and strips every `title=`; `"minimalHelp": true`
+Infinite (`infinite.html`) follows the same rule and shares Sphere's sheet. The
+exporter's `minimal_flat_help` replaces play.html's Menu and Help with one
+Sphere-style sheet (Play · Look · Settings), copies Sphere's CSS between the
+`sheet:begin` / `sheet:end` markers in `sphere/index.html` verbatim (restyle the
+sheet there, for both pages), drops the welcome card and strips every `title=`.
+Tab panels share one grid cell, so neither sheet changes height between tabs; `"minimalHelp": true`
 in its one-pager config turns on a quiet first-visit cue (the theme toast,
 marks `hexsweeper-infinite-welcome-v1`) and keeps runtime titles off
 (`Hexsweeper.boot({ tooltips: false })`). play.html, its theme pens and

@@ -4186,7 +4186,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         css: {
           "--bg-color": ground,
           "--text-main": ink,
-          "--text-sub": light ? "#555555" : "#bbbbbb",
+          // Sphere's own sub ink, so the shared help sheet reads the same on both.
+          "--text-sub": light ? "#666666" : "#888888",
           "--nav-bg": ground,
           "--nav-ink": ink,
         },
@@ -9036,7 +9037,10 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       }
     };
     const paintFx = () => {
-      fxBtn.textContent = "Effects: " + FX_LABEL[readFx()];
+      // The minimal-help sheet words its rows like Sphere's ("Effects auto").
+      fxBtn.textContent = MINIMAL_HELP
+        ? "Effects " + readFx()
+        : "Effects: " + FX_LABEL[readFx()];
       Hexsweeper.applyEffectsAttribute();
     };
     fxBtn.addEventListener("click", () => {
@@ -9150,6 +9154,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
 
   function syncHelpContent() {
+    // infinite.html's sheet is static (Sphere's component); leave its title alone.
+    if (MINIMAL_HELP) return;
     const copy = getHelpCopy(THEMES[themeIndex]?.id || "light");
     const titleEl = document.getElementById("help-title");
     const ledeEl = document.getElementById("help-lede");
@@ -9188,10 +9194,18 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     helpOverlay.hidden = false;
     document.body.classList.add("help-open");
     requestAnimationFrame(() => helpOverlay.classList.add("open"));
+    if (MINIMAL_HELP) {
+      if (releaseSheetTrap) releaseSheetTrap();
+      releaseSheetTrap = trapSheetFocus();
+    }
     (helpPanel || helpOverlay).focus?.();
   }
 
   function closeHelp() {
+    if (releaseSheetTrap) {
+      releaseSheetTrap();
+      releaseSheetTrap = null;
+    }
     helpOverlay.classList.remove("open");
     document.body.classList.remove("help-open");
     setTimeout(() => {
@@ -9209,6 +9223,96 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   });
   helpClose?.addEventListener("click", closeHelp);
   helpDone?.addEventListener("click", closeHelp);
+
+  // —— Minimal-help sheet (infinite.html) ——
+  // The exporter swaps Menu + Help for Sphere's tabbed sheet: Play · Look ·
+  // Settings. The panels share one grid cell, so the sheet keeps one height;
+  // here they get roving-tabindex tabs (arrows, Home, End), the last tab is
+  // remembered, Tab stays inside the open sheet, and R cannot wipe the run
+  // while the sheet is up (the old Menu guarded R the same way).
+  let releaseSheetTrap = null;
+  function trapSheetFocus() {
+    const onKey = (e) => {
+      if (e.key !== "Tab" || !helpPanel) return;
+      const nodes = Array.from(
+        helpPanel.querySelectorAll("button, [href], input, [tabindex]")
+      ).filter(
+        (el) =>
+          el !== helpPanel &&
+          el.tabIndex >= 0 &&
+          !el.disabled &&
+          !el.closest("[inert]") &&
+          el.offsetParent !== null
+      );
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const at = document.activeElement;
+      if (e.shiftKey && (at === first || at === helpPanel)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && at === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    helpOverlay.addEventListener("keydown", onKey);
+    return () => helpOverlay.removeEventListener("keydown", onKey);
+  }
+  if (MINIMAL_HELP) {
+    const TAB_KEY = "hexsweeper-infinite-sheet-tab-v1";
+    const tabs = Array.from(document.querySelectorAll("#help-tabs .help-tab"));
+    const panels = Array.from(document.querySelectorAll(".help-tabpanel"));
+    const showTab = (id, focus) => {
+      if (!tabs.some((t) => t.dataset.tab === id)) id = "play";
+      tabs.forEach((t) => {
+        const on = t.dataset.tab === id;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.tabIndex = on ? 0 : -1;
+        if (on && focus) t.focus();
+      });
+      panels.forEach((p) => {
+        const off = p.dataset.tab !== id;
+        p.hidden = off;
+        p.inert = off;
+      });
+      try {
+        localStorage.setItem(TAB_KEY, id);
+      } catch (_) {}
+      const stack = document.getElementById("help-tabstack");
+      if (stack) stack.scrollTop = 0;
+    };
+    tabs.forEach((t) => {
+      t.addEventListener("click", () => showTab(t.dataset.tab));
+      t.addEventListener("keydown", (e) => {
+        const i = tabs.indexOf(t);
+        const n = tabs.length;
+        const to =
+          e.key === "ArrowRight" ? (i + 1) % n
+          : e.key === "ArrowLeft" ? (i - 1 + n) % n
+          : e.key === "Home" ? 0
+          : e.key === "End" ? n - 1
+          : -1;
+        if (to < 0) return;
+        e.preventDefault();
+        showTab(tabs[to].dataset.tab, true);
+      });
+    });
+    let stored = "play";
+    try {
+      stored = localStorage.getItem(TAB_KEY) || "play";
+    } catch (_) {}
+    showTab(stored);
+    window.addEventListener(
+      "keydown",
+      (e) => {
+        if ((e.key === "r" || e.key === "R") && helpOverlay.classList.contains("open")) {
+          e.stopImmediatePropagation();
+        }
+      },
+      true
+    );
+  }
 
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {

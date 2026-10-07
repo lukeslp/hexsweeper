@@ -1142,6 +1142,8 @@ body.help-open { overflow: hidden; }
   opacity: 1;
   transform: translate(-50%, 0);
 }
+/* sheet:begin — the help and settings sheet. tools/export-collection.py copies
+   this block verbatim into infinite.html, so Sphere and Infinite share one sheet. */
 /* Help — pure mono sheet, same language as the empty sphere chrome */
 .help-overlay {
   position: fixed;
@@ -1161,9 +1163,10 @@ body.help-open { overflow: hidden; }
 .help-panel {
   width: min(360px, 100%);
   max-height: calc(100dvh - 2.5rem);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
   background: var(--bg-color);
   color: var(--text-main);
   border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
@@ -1404,8 +1407,21 @@ body.help-open { overflow: hidden; }
 .help-tab[aria-selected="true"] { color: var(--text-main); border-bottom-color: var(--text-main); }
 .help-tab:hover, .help-tab:focus-visible { background: color-mix(in srgb, var(--text-main) 6%, transparent); outline: none; }
 .help-tab:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text-main) 45%, transparent); }
-.help-tabpanel[hidden] { display: none; }
-.help-tabpanel { min-height: 9rem; }
+/* One height for every tab: the panels share one grid cell, so the stack is as
+   tall as the tallest. Inactive panels keep their space but are invisible and
+   inert (hidden + inert, visibility removes them from the a11y tree). When the
+   sheet is capped by the viewport, only this stack scrolls; the title, tabs,
+   Done and links stay put. */
+.help-tabstack {
+  display: grid;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.help-tabstack > .help-tabpanel { grid-area: 1 / 1; min-width: 0; }
+.help-tabstack > .help-tabpanel[hidden] { display: block; visibility: hidden; }
 .help-tabpanel .help-themes, .help-tabpanel .help-sizes, .help-tabpanel .help-packs { margin-top: 0.1rem; }
 .help-size .help-size-best { opacity: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
 .help-size .help-size-best[hidden] { display: none; }
@@ -1419,7 +1435,8 @@ body.help-open { overflow: hidden; }
 }
 /* Touch: no keyboard, no modifier-click. Keep the copy honest per surface. */
 @media (hover: none) and (pointer: coarse) {
-  .help-desk-only { display: none; }
+  .help-desk-only,
+  .help-tabstack > .help-tabpanel.help-desk-only[hidden] { display: none; }
 }
 @media (hover: hover) {
   .help-touch-only { display: none; }
@@ -1431,21 +1448,31 @@ body.help-open { overflow: hidden; }
   background: color-mix(in srgb, var(--text-main) 6%, transparent);
   outline: none;
 }
-.menu-links {
+/* Footer links, spelled out in full so a host page's own .menu-links rules
+   (play.html, skin-chrome.css) cannot restyle the sheet's footer. */
+.help-panel .menu-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
   margin-top: 0.65rem;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  font: 600 0.64rem/1.3 "IBM Plex Sans", system-ui, sans-serif;
   text-align: center;
-  font-size: 0.64rem;
 }
-.menu-links a {
+.help-panel .menu-links a {
   color: var(--text-sub);
   text-decoration: none;
+  border-radius: 4px;
 }
-.menu-links a:hover { color: var(--text-main); }
-.menu-links-sep { opacity: 0.45; margin: 0 0.3rem; }
-@media (prefers-reduced-motion: reduce) {
-  .sphere-banner,
-  .help-overlay,
-  .count-style-toast { transition: none; }
+.help-panel .menu-links a:hover { color: var(--text-main); }
+.help-panel .menu-links-sep {
+  color: color-mix(in srgb, var(--text-sub) 70%, transparent);
+  opacity: 0.45;
+  margin: 0 0.3rem;
+  user-select: none;
 }
 
 /* Sphere settings: flat swatches and rows, with icons reserved for familiar actions. */
@@ -1492,6 +1519,24 @@ body.help-open { overflow: hidden; }
 }
 .help-pack[data-ctl="invert"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8h18M3 8l4-4M3 8l4 4M21 16H3m18 0-4-4m4 4-4 4'/%3E%3C/svg%3E"); }
 .help-pack[data-ctl="effects"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m10 3 2.5 6.5L19 12l-6.5 2.5L10 21l-2.5-6.5L1 12l6.5-2.5Z M19 2v4m-2-2h4'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="flag"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 21V4M6 4h10l-2 4 2 4H6'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="export"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12m-5-5 5 5 5-5M5 21h14'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="import"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V3M7 8l5-5 5 5M5 21h14'/%3E%3C/svg%3E"); }
+/* A toggle row (aria-pressed) shows its state at the far end; the name stays in aria-label. */
+.help-pack[aria-pressed]::after {
+  content: "Off"; margin-left: auto;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.68rem; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-sub);
+}
+.help-pack[aria-pressed="true"]::after { content: "On"; color: var(--text-main); }
+/* Quiet score line (Infinite's Play tab). */
+.help-score {
+  margin: 0 0 0.6rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.68rem; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+.help-score b { font-weight: 600; color: var(--text-main); }
 .help-done {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border-radius: 4px; min-height: 44px;
@@ -1499,9 +1544,9 @@ body.help-open { overflow: hidden; }
 .help-done:hover, .help-done:focus-visible { background: var(--text-main); color: var(--bg-color); opacity: 0.85; }
 .help-egg-door { width: 44px; height: 44px; border: 0; border-radius: 4px; }
 .help-egg-door svg { width: 20px; height: 20px; }
-.sphere-banner { border-radius: 6px; }
-.sphere-banner .banner-btn { border-radius: 4px; }
-.help-panel button:focus-visible {
+.help-panel:focus { outline: none; }
+.help-panel button:focus-visible,
+.help-panel a:focus-visible {
   outline: 2px solid var(--text-main); outline-offset: 2px;
 }
 @media (max-width: 360px) {
@@ -1510,6 +1555,14 @@ body.help-open { overflow: hidden; }
   .help-theme { font-size: 0.75rem; }
   .help-tab { font-size: 0.73rem; }
 }
+/* sheet:end */
+@media (prefers-reduced-motion: reduce) {
+  .sphere-banner,
+  .help-overlay,
+  .count-style-toast { transition: none; }
+}
+.sphere-banner { border-radius: 6px; }
+.sphere-banner .banner-btn { border-radius: 4px; }
 
 </style>
 </head>
@@ -1602,6 +1655,7 @@ body.help-open { overflow: hidden; }
       <button type="button" role="tab" class="help-tab" id="help-tab-settings" aria-controls="help-panel-settings" aria-selected="false" data-tab="settings" tabindex="-1">Settings</button>
       <button type="button" role="tab" class="help-tab help-desk-only" id="help-tab-keys" aria-controls="help-panel-keys" aria-selected="false" data-tab="keys" tabindex="-1">Keys</button>
     </div>
+    <div class="help-tabstack" id="help-tabstack">
     <section class="help-tabpanel" role="tabpanel" id="help-panel-play" aria-labelledby="help-tab-play" data-tab="play">
     <p class="help-lede">Clear every safe face. Numbers count the mines on the six faces around them.</p>
     <ul class="help-controls" aria-label="Controls">
@@ -1634,7 +1688,7 @@ body.help-open { overflow: hidden; }
       <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>
     </section>
-    <section class="help-tabpanel" role="tabpanel" id="help-panel-keys" aria-labelledby="help-tab-keys" data-tab="keys" hidden>
+    <section class="help-tabpanel help-desk-only" role="tabpanel" id="help-panel-keys" aria-labelledby="help-tab-keys" data-tab="keys" hidden>
     <ul class="help-controls help-keylist" aria-label="Keyboard shortcuts">
       <li><span class="act"><kbd>?</kbd></span><span>Open or close this sheet</span></li>
       <li><span class="act"><kbd>Esc</kbd></span><span>Close this sheet</span></li>
@@ -1647,6 +1701,7 @@ body.help-open { overflow: hidden; }
       <li><span class="act"><kbd>L</kbd></span><span>Large board</span></li>
     </ul>
     </section>
+    </div>
     <button type="button" class="help-done" id="help-done-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Done</span></button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
@@ -10305,10 +10360,14 @@ const sphereChrome = initQuietChrome(sphereGame);
       t.tabIndex = on ? 0 : -1;
       if (on && focus) t.focus();
     });
-    panels.forEach((p) => { p.hidden = p.dataset.tab !== id; });
+    panels.forEach((p) => {
+      const off = p.dataset.tab !== id;
+      p.hidden = off;
+      p.inert = off;
+    });
     try { localStorage.setItem(TAB_KEY, id); } catch (_) {}
-    const panel = document.getElementById("help-panel");
-    if (panel) panel.scrollTop = 0;
+    const stack = document.getElementById("help-tabstack");
+    if (stack) stack.scrollTop = 0;
   }
   tabs.forEach((t) => {
     t.addEventListener("click", () => showTab(t.dataset.tab));

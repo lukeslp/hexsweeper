@@ -237,10 +237,14 @@ try {
   assert.equal(await evaluate('Array.from(document.querySelectorAll(".help-tabpanel")).filter(p => !p.hidden).map(p => p.dataset.tab).join(",")'), "themes", "Themes tab did not show only the themes panel");
   assert.equal(await evaluate('document.getElementById("help-theme-grid").getBoundingClientRect().height > 40'), true, "theme grid is not visible on the Themes tab");
   await evaluate('document.getElementById("help-tab-board").click()');
-  assert.equal(await evaluate('document.getElementById("help-size-grid").getBoundingClientRect().height > 30 && document.getElementById("help-theme-grid").getBoundingClientRect().height === 0'), true, "Board tab did not swap themes for sizes");
+  // Inactive panels keep their layout space (one sheet height for every tab) but are hidden, inert and invisible.
+  assert.equal(await evaluate('(() => { const t = document.getElementById("help-theme-grid").closest(".help-tabpanel"); return document.getElementById("help-size-grid").getBoundingClientRect().height > 30 && t.hidden && t.inert && getComputedStyle(t).visibility === "hidden"; })()'), true, "Board tab did not swap themes for sizes");
   assert.ok(await evaluate('(() => { const b = document.getElementById("help-wheel-btn"); const r = b && b.getBoundingClientRect(); return !!r && r.width >= 24 && r.height >= 24; })()'), "Board tab has no Water Wheel door button");
   await evaluate('document.getElementById("help-tab-settings").click()');
   assert.equal(await evaluate('document.querySelector("#help-controls [data-ctl=invert]").getBoundingClientRect().height > 30'), true, "Settings tab does not show Invert");
+  // The sheet never changes size between tabs.
+  const sheetHeights = await evaluate('Array.from(document.querySelectorAll("#help-tabs [role=tab]")).filter(t => t.offsetParent).map(t => { t.click(); return Math.round(document.getElementById("help-panel").getBoundingClientRect().height); })');
+  assert.equal(new Set(sheetHeights).size, 1, `sheet height changes between tabs: ${sheetHeights.join(",")}`);
   await evaluate('document.getElementById("help-tab-themes").click()');
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "theme grid did not apply Galaxy");

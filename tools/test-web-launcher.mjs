@@ -139,6 +139,27 @@ expect(!infinite.includes('id="welcome-overlay"'), "Infinite carries the welcome
 expect(!/\stitle="/.test(infinite), "Infinite has a title= tooltip");
 expect(!infinite.includes('class="help-glyphs"') && !infinite.includes('id="help-body"') && !infinite.includes("wikipedia.org"), "Infinite help grew back its glyph grid, paragraphs or Wikipedia line");
 expect((infinite.match(/<li><span class="act">/g) || []).length === 3, "Infinite help should have exactly three control rows");
+// Infinite has one sheet, Sphere's: no Menu, one Help and settings button,
+// tabs Play · Look · Settings, and Sphere's sheet CSS copied verbatim.
+expect(!infinite.includes('id="modal-overlay"') && !infinite.includes('id="menu-btn"'), "Infinite grew back its separate Menu");
+expect((infinite.match(/id="help-overlay"/g) || []).length === 1, "Infinite should have exactly one sheet");
+expect(infinite.includes('id="help-btn" class="hud-btn" aria-label="Help and settings"'), "Infinite bar lost its Help and settings button");
+expect(
+  ["play", "look", "settings"].every((t) => infinite.includes(`role="tab" class="help-tab" id="help-tab-${t}"`)) &&
+    (infinite.match(/role="tab"/g) || []).length === 3,
+  "Infinite sheet tabs should be Play · Look · Settings",
+);
+expect(infinite.includes('<h2 id="help-title">Hexsweeper Infinite <span class="help-title-sub">settings</span></h2>'), "Infinite sheet title drifted from Sphere's header style");
+expect(infinite.includes('id="help-tabstack"') && sphere.includes('id="help-tabstack"'), "a sheet lost its one-height tab stack");
+for (const id of ["flag-btn", "fx-btn", "export-run-btn", "import-run-btn", "import-run-file", "stats-mines", "stats-time"]) {
+  expect(infinite.includes(`id="${id}"`), `Infinite sheet lost #${id}`);
+}
+expect((infinite.match(/class="help-theme" data-mode="/g) || []).length === 2, "Infinite Look tab should offer exactly Light and Dark");
+{
+  const block = (sphere.match(/\/\* sheet:begin [\s\S]*?\/\* sheet:end \*\/\n/) || [""])[0];
+  expect(block && infinite.includes(block), "Infinite sheet CSS is not Sphere's sheet:begin … sheet:end block");
+}
+expect(play.includes('id="modal-overlay"') && play.includes('id="menu-btn"'), "play.html lost its own Menu");
 expect(play.includes('id="help-body"') && play.includes('id="welcome-overlay"'), "play.html lost its own help sheet or welcome preview");
 
 for (const [label, page] of [

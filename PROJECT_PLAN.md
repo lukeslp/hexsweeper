@@ -22,6 +22,10 @@ product surfaces. Native iOS and Android retain the short first-launch intro.
 - [x] Infinite matches Sphere: no start card, Help is one line plus three
   gesture rows, no `title=` tooltips, one quiet first-visit cue.
 - [ ] Decide whether play.html, its theme pens and Classic get the same cut.
+- [x] One sheet for both (2026-10-07): Infinite's Menu + Help became Sphere's
+  tabbed sheet (Play · Look · Settings) behind one Help and settings button; the
+  exporter copies Sphere's `sheet:begin … sheet:end` CSS verbatim. Every tab
+  shares one grid cell on both pages, so neither sheet changes size between tabs.
 
 ## Infinite social preview (2026-10-07)
 

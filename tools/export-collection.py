@@ -1733,34 +1733,123 @@ def prepare_flat_product(markup: str, label: str) -> str:
     return markup
 
 
-# Infinite's ? sheet, as on Sphere: one line of what to do and three gesture rows.
-MINIMAL_FLAT_HELP = """    <p class="help-lede">Clear safe cells as far as you can. Numbers count the mines in the six cells around them.</p>
+# Infinite's help and settings sheet: Sphere's sheet (same markup, classes and
+# CSS) with three tabs. Play is one line of what to do, three gesture rows and a
+# quiet score line; Look is the Light / Dark tiles; Settings holds Flag mode,
+# Effects and the run export/import as plain rows. The element ids are the ones
+# core.js and play.html already wire (stats-*, flag-btn, fx-btn, *-run-*).
+ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'
+ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>'
+INFINITE_HELP_BUTTON = """  <button type="button" id="help-btn" class="hud-btn" aria-label="Help and settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.2"></circle>
+      <path d="M9.3 9.4a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.6-2.7 4.1"></path>
+      <line x1="12" y1="17.6" x2="12.01" y2="17.6"></line>
+    </svg>
+  </button>
+"""
+INFINITE_SHEET = f"""<!-- Help and settings: one sheet, the same component as Sphere's -->
+<div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+  <div class="help-panel" id="help-panel" tabindex="-1">
+    <button type="button" class="help-close" id="help-close" aria-label="Close help">{ICON_CLOSE}</button>
+    <h2 id="help-title">Hexsweeper Infinite <span class="help-title-sub">settings</span></h2>
+    <div class="help-tabs" role="tablist" aria-label="Sheet sections" id="help-tabs">
+      <button type="button" role="tab" class="help-tab" id="help-tab-play" aria-controls="help-panel-play" aria-selected="true" data-tab="play">Play</button>
+      <button type="button" role="tab" class="help-tab" id="help-tab-look" aria-controls="help-panel-look" aria-selected="false" data-tab="look" tabindex="-1">Look</button>
+      <button type="button" role="tab" class="help-tab" id="help-tab-settings" aria-controls="help-panel-settings" aria-selected="false" data-tab="settings" tabindex="-1">Settings</button>
+    </div>
+    <div class="help-tabstack" id="help-tabstack">
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-play" aria-labelledby="help-tab-play" data-tab="play">
+    <p class="help-lede">Clear safe cells as far as you can. Numbers count the mines in the six cells around them.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Clear a cell</span></li>
       <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag it</span></li>
       <li><span class="act">Drag</span><span>Pan the board</span></li>
     </ul>
+    <p class="help-score"><b id="stats-mines">00</b> mines left · <b id="stats-time">000</b> cleared</p>
+    <p class="help-more">Also <a href="index.html">Sphere</a> · <a href="bounded.html">Classic</a></p>
+    </section>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-look" aria-labelledby="help-tab-look" data-tab="look" hidden>
+    <div class="help-themes" role="group" aria-label="Theme">
+      <span class="help-packs-cap">Theme</span>
+      <div class="help-theme-grid">
+        <button type="button" class="help-theme" data-mode="light" aria-pressed="false" style="--swatch: linear-gradient(145deg, #ffffff 45%, #ffffff 55%)"><span class="help-theme-dot" aria-hidden="true"></span><span>Light</span></button>
+        <button type="button" class="help-theme" data-mode="dark" aria-pressed="false" style="--swatch: linear-gradient(145deg, #000000 45%, #000000 55%)"><span class="help-theme-dot" aria-hidden="true"></span><span>Dark</span></button>
+      </div>
+    </div>
+    </section>
+    <section class="help-tabpanel" role="tabpanel" id="help-panel-settings" aria-labelledby="help-tab-settings" data-tab="settings" hidden>
+    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
+      <span class="help-packs-cap">Settings</span>
+      <button type="button" class="help-pack" id="flag-btn" data-ctl="flag" aria-label="Flag mode" aria-pressed="false">Flag mode</button>
+      <button type="button" class="help-pack" id="fx-btn" data-ctl="effects">Effects auto</button>
+      <button type="button" class="help-pack" id="export-run-btn" data-ctl="export">Export run</button>
+      <button type="button" class="help-pack" id="import-run-btn" data-ctl="import">Import run</button>
+    </div>
+    <input type="file" id="import-run-file" accept="application/json,.json" hidden>
+    </section>
+    </div>
+    <button type="button" class="help-done" id="help-done">{ICON_CHECK}<span>Done</span></button>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" rel="noopener noreferrer">datapoems.io</a>
+    </nav>
+  </div>
+</div>
 """
 
 
-def minimal_flat_help(markup: str, label: str) -> str:
-    """Infinite opens straight onto the board and keeps help to a few lines.
+def sphere_sheet_css() -> str:
+    """The sheet:begin … sheet:end block of sphere/index.html, verbatim."""
+    src = (ROOT / "sphere" / "index.html").read_text(encoding="utf-8")
+    m = re.search(r"/\* sheet:begin .*?/\* sheet:end \*/\n", src, flags=re.S)
+    if not m:
+        raise SystemExit("sphere_sheet_css: sheet:begin/sheet:end markers not found in sphere/index.html")
+    return m.group(0)
 
-    Swaps the shared sheet (glyph grid, rule paragraphs, key line, Wikipedia
-    pointer) for MINIMAL_FLAT_HELP, drops the welcome card (a one-pager never
-    opens it) and strips every title= tooltip; aria-labels carry the names.
-    play.html reads ONEPAGER.minimalHelp for the first-visit cue and to keep
-    runtime titles off.
+
+def minimal_flat_help(markup: str, label: str) -> str:
+    """Infinite opens straight onto the board and shares Sphere's sheet.
+
+    Replaces the Menu and the Help sheet with INFINITE_SHEET, the bar's Menu
+    button with one Help and settings button, and play.html's help CSS with
+    Sphere's sheet block. Drops the welcome card (a one-pager never opens it)
+    and strips every title= tooltip; aria-labels carry the names. play.html
+    reads ONEPAGER.minimalHelp to wire the tabs, the first-visit cue and to
+    keep runtime titles off.
     """
     markup, n = re.subn(
-        r'(<h2 id="help-title">[^<]*</h2>\n).*?(?=    <button type="button" class="help-done" id="help-done">)',
-        lambda m: m.group(1) + MINIMAL_FLAT_HELP,
+        r'<!-- Menu: [^>]*-->\n<div id="modal-overlay".*?\n</div>\n\n<!-- Help -->\n<div id="help-overlay".*?\n</div>\n',
+        lambda m: INFINITE_SHEET,
         markup,
         count=1,
         flags=re.S,
     )
     if n != 1:
-        raise SystemExit(f"minimal_flat_help({label}): help sheet not found")
+        raise SystemExit(f"minimal_flat_help({label}): Menu + Help sheets not found")
+    markup, n = re.subn(
+        r'  <button type="button" id="menu-btn" class="hud-btn"[^>]*>.*?</button>\n',
+        lambda m: INFINITE_HELP_BUTTON,
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    if n != 1:
+        raise SystemExit(f"minimal_flat_help({label}): Menu button not found")
+    markup, n = re.subn(
+        r"/\* Help panel — minimalist sheet aligned with sphere/index help \*/\n.*?"
+        r"\.help-panel \.menu-links-sep \{[^}]*\}\n",
+        lambda m: sphere_sheet_css(),
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    if n != 1:
+        raise SystemExit(f"minimal_flat_help({label}): help CSS block not found")
+    for gone in ('id="modal-overlay"', 'id="menu-btn"', 'class="help-glyphs"', 'id="help-body"'):
+        if gone in markup:
+            raise SystemExit(f"minimal_flat_help({label}): {gone} survived")
     markup, n = re.subn(
         r'<!-- Welcome: [^>]*-->\s*<div id="welcome-overlay".*?\n</div>\n\n',
         "",
