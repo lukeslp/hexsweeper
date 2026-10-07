@@ -1086,8 +1086,8 @@ def onepager_boot(theme: dict) -> str:
     }
     if theme.get("allowModes"):
         payload["allowModes"] = list(theme["allowModes"])
-    if theme.get("darkPalette"):
-        payload["darkPalette"] = theme["darkPalette"]
+    if theme.get("palette"):
+        payload["palette"] = theme["palette"]
     body = json.dumps(payload, indent=2)
     return (
         "<script>\n"
@@ -2292,7 +2292,7 @@ def main() -> int:
     planned[ROOT / "index.html"] = export_sphere_web()
     planned[ROOT / "launcher.html"] = export_web_launcher()
     planned[ROOT / "infinite.html"] = export_flat_web(
-        export_theme({**THEMES[0], "mode": "dark", "darkPalette": "glow"}, source),
+        export_theme({**THEMES[0], "mode": "dark", "palette": "sphere"}, source),
         "infinite", "infinite.html", still_plane=True
     )
     planned[ROOT / "bounded.html"] = export_flat_web(

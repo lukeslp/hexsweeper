@@ -49,9 +49,10 @@ the newest run in the center Resume tile — lives at `launcher.html`, which is
 resolve. Every web game stands alone, with no Games pill; the sphere's Help
 sheet ends "Also Infinite · Classic". `infinite.html` also sets `stillPlane`
 (a minimal index links to it), which keeps the plate flat with no pointer
-parallax. Infinite opens in the navy/cyan palette from Sphere's Glow theme:
-navy covers, dark wells, cyan seams, and colored counts. Light/Dark switches
-appearance on the same saved run; the collection keeps its original palettes.
+parallax. Infinite uses Sphere's black-and-white Light/Dark pair, starting in
+Dark: black covers, white revealed cells, dark numbers, and red flags. Light
+inverts the field and cells. Switching appearance preserves the same saved run;
+the collection keeps its original palettes.
 A mode tap on the launcher starts a fresh run using the
 last used style, board size, or theme. Settings live inside each game.
 

@@ -1480,48 +1480,41 @@ body[data-mode="escape"] .menu-links {
     },
   };
 
-  // Infinite borrows Sphere's Glow palette (sphere/sphere.js, THEME_GLOW).
-  // This export-only choice preserves the original collection's iron material.
-  if (window.HEXSWEEPER_ONEPAGER?.darkPalette === "glow") {
-    Object.assign(PLATE_DARK, {
-      css: {
-        "--bg-color": "#03050a",
-        "--text-main": "#e8f6ff",
-        "--text-sub": "#91aec4",
-        "--nav-bg": "#071018",
-        "--nav-ink": "#e8f6ff",
-      },
-      bodyBg: "#03050a",
-      fx: { bg: "radial-gradient(ellipse at 50% 40%, #071018, #03050a 75%)" },
-      theme: {
-        flag: "#ff2a2a",
-        text: {
-          1: "#b8e8ff", 2: "#7ec8ff", 3: "#5ad4a8",
-          4: "#f0c060", 5: "#f09060", 6: "#f07090", mine: "#ff6644",
+  // Infinite uses the same pure Light/Dark pair as Sphere's monoTheme.
+  // Collection exports retain their porcelain/iron palettes.
+  if (window.HEXSWEEPER_ONEPAGER?.palette === "sphere") {
+    for (const [plate, light] of [[PLATE_LIGHT, true], [PLATE_DARK, false]]) {
+      const ground = light ? "#ffffff" : "#000000";
+      const ink = light ? "#000000" : "#ffffff";
+      Object.assign(plate, {
+        flatPlate: true,
+        mono: true,
+        flagInk: "#ffffff",
+        css: {
+          "--bg-color": ground,
+          "--text-main": ink,
+          "--text-sub": light ? "#555555" : "#bbbbbb",
+          "--nav-bg": ground,
+          "--nav-ink": ink,
         },
-      },
-      states: {
-        // Sphere's #141a24 covers and #060a12 wells in the flat renderer's HSL.
-        covered: { h: 217.5, s: 28.57, l: 10.98 },
-        revealed: { h: 220, s: 50, l: 4.71 },
-        flagged: { h: 0, s: 55, l: 17 },
-      },
-      edges: {
-        covered: "rgba(120,180,220,0.22)",
-        revealed: "rgba(100,170,220,0.2)",
-      },
-      glow: {
-        ...PLATE_DARK.glow,
-        colors: ["rgba(94,200,255,0.2)", "rgba(58,160,232,0.14)", "rgba(7,16,24,0.2)"],
-      },
-      particles: {
-        ...PLATE_DARK.particles,
-        ambient: "rgba(94,200,255,0.14)",
-        reveal: "rgba(94,200,255,0.32)",
-        mine: "rgba(255,170,102,0.9)",
-        flag: "rgba(255,42,42,0.85)",
-      },
-    });
+        bodyBg: ground,
+        fx: { bg: ground },
+        theme: {
+          flag: "#ff0000",
+          text: light
+            ? { 1: "#ffffff", 2: "#eeeeee", 3: "#dddddd", 4: "#cccccc", 5: "#bbbbbb", 6: "#aaaaaa", mine: "#ffffff" }
+            : { 1: "#000000", 2: "#222222", 3: "#444444", 4: "#666666", 5: "#888888", 6: "#aaaaaa", mine: "#000000" },
+        },
+        states: {
+          covered: { h: 0, s: 0, l: light ? 100 : 0 },
+          revealed: { h: 0, s: 0, l: light ? 0 : 100 },
+          flagged: { h: 0, s: 100, l: 50 },
+        },
+        edges: { covered: ink, revealed: light ? "#6a6a6a" : "#999999" },
+        glow: { colors: ["transparent"], pulse: 0, bloom: 0 },
+        particles: { ...plate.particles, ambient: ink, reveal: ink, mine: ink, flag: "#ff0000" },
+      });
+    }
   }
 
   /**
@@ -1538,6 +1531,12 @@ body[data-mode="escape"] .menu-links {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = `800 ${fontPx}px "IBM Plex Sans", system-ui, sans-serif`;
+
+    if (th.mono) {
+      ctx.fillStyle = color;
+      ctx.fillText(digit, cell.x, ty);
+      return;
+    }
 
     if (th.rift || th.id === "escape") {
       // One reading channel only: a dark-haloed glyph. Vertex ticks and glow
@@ -1871,7 +1870,7 @@ body[data-mode="escape"] .menu-links {
   };
 
   // Bare play.html opens Light. Explicit ?mode= deep-links; storage restores last theme.
-  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane?, darkPalette? }.
+  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane?, palette? }.
   // allowModes: ["light","dark"] keeps the plate toggle; omit for a single locked theme.
   const ONEPAGER =
     typeof window !== "undefined" && window.HEXSWEEPER_ONEPAGER
@@ -6946,7 +6945,7 @@ body[data-mode="escape"] .menu-links {
             ctx.strokeStyle = T.flag;
             ctx.lineWidth = Math.max(2, size * 0.09);
             ctx.stroke(path);
-            ctx.fillStyle = T.flag;
+            ctx.fillStyle = th.flagInk || T.flag;
             ctx.font = `700 ${size * 0.9}px "IBM Plex Sans", system-ui, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -7174,7 +7173,7 @@ body[data-mode="escape"] .menu-links {
             ctx.strokeStyle = T.flag;
             ctx.lineWidth = Math.max(2, size * 0.1);
             ctx.stroke(path);
-            ctx.fillStyle = T.flag;
+            ctx.fillStyle = th.flagInk || T.flag;
             ctx.font = `700 ${size * 0.95}px "IBM Plex Sans", system-ui, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
