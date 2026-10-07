@@ -6,6 +6,8 @@
   Outputs: Live flat game at /games/hexsweeper/play.html (bare route = Light).
   Notes: Cold start applies chrome before startFreshRun (same path as Reset) so full-bleed canvas matches.
   Chrome: BR Appearance (sun/moon) · Reset · Menu; short Help sheet; minimal Menu.
+  minimalHelp (infinite.html): the exporter swaps in a one-line + three-row Help sheet and
+    strips title= tooltips; this file adds the first-visit cue and keeps titles off at runtime.
   Notes: Fire cameraLock — drag tilts while the pit fits; zoomed past the frame → clamped pan.
     Light = porcelain plate; Dark = night iron; Escape = cool rift steel.
     Plague = soil hive bed + living mycelial underlay (re-seeds on Reset); seam-only LOD at extreme zoom-out.
@@ -293,6 +295,9 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   backdrop-filter: blur(14px);
   padding: 8px 14px;
   border-radius: 999px;
+  /* left: 50% would cap a shrink-to-fit pill at half the viewport. */
+  width: max-content;
+  max-width: calc(100vw - 32px);
   opacity: 0;
   transform: translate(-50%, -6px);
   pointer-events: none;
@@ -442,6 +447,41 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   text-underline-offset: 0.12em;
 }
 .help-more a:hover { opacity: 0.85; }
+/* Minimal sheet (infinite.html): one line + three gesture rows, as on Sphere. */
+.help-controls {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+}
+.help-controls li {
+  display: grid;
+  grid-template-columns: 5.2rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.46rem 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-main);
+}
+.help-controls li + li {
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+.help-controls .act {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+@media (hover: none) and (pointer: coarse) {
+  .help-desk-only { display: none; }
+}
+@media (hover: hover) {
+  .help-controls li { grid-template-columns: 6.6rem 1fr; }
+}
 .help-done {
   appearance: none;
   width: 100%;
@@ -1008,9 +1048,9 @@ body[data-mode="escape"] .menu-links {
     </div>
     <div class="modal-row" id="size-row">
       <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
-        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small">S</button>
-        <button type="button" class="diff-option" data-val="medium" aria-pressed="false" title="Medium">M</button>
-        <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" title="Large">L</button>
+        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" aria-label="Small" title="Small">S</button>
+        <button type="button" class="diff-option" data-val="medium" aria-pressed="false" aria-label="Medium" title="Medium">M</button>
+        <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" aria-label="Large" title="Large">L</button>
       </div>
     </div>
     <div class="modal-actions">
@@ -1870,7 +1910,7 @@ body[data-mode="escape"] .menu-links {
   };
 
   // Bare play.html opens Light. Explicit ?mode= deep-links; storage restores last theme.
-  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane?, palette? }.
+  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane?, palette?, minimalHelp? }.
   // allowModes: ["light","dark"] keeps the plate toggle; omit for a single locked theme.
   const ONEPAGER =
     typeof window !== "undefined" && window.HEXSWEEPER_ONEPAGER
@@ -1878,6 +1918,8 @@ body[data-mode="escape"] .menu-links {
       : null;
   // stillPlane: the standalone infinite.html is a flat, motionless plate (no pointer parallax).
   const STILL_PLANE = !!(ONEPAGER && ONEPAGER.stillPlane);
+  // minimalHelp: infinite.html — no tooltips, a quiet first-visit cue instead of any card.
+  const MINIMAL_HELP = !!(ONEPAGER && ONEPAGER.minimalHelp);
   const HOME_THEME_ID = "light";
   const STORAGE_KEY = "hexsweeper-mode-v3";
   const LEGACY_TONE_KEY = "hexsweeper-minimalist-tone-v1";
@@ -5115,13 +5157,13 @@ body[data-mode="escape"] .menu-links {
     if (tip) tip.hidden = modeId !== "escape";
   }
 
-  function showToast(name) {
+  function showToast(name, ms) {
     const el = document.getElementById("theme-toast");
     if (!el) return;
     el.textContent = name;
     el.classList.add("show");
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => el.classList.remove("show"), 1400);
+    showToast._t = setTimeout(() => el.classList.remove("show"), ms > 0 ? ms : 1400);
   }
 
   function applyTheme(i, { toast = true, initial = false } = {}) {
@@ -5257,7 +5299,7 @@ body[data-mode="escape"] .menu-links {
       "aria-label",
       isDark ? "Switch to Light" : "Switch to Dark"
     );
-    el.title = isDark ? "Dark — tap for Light" : "Light — tap for Dark";
+    if (!MINIMAL_HELP) el.title = isDark ? "Dark — tap for Light" : "Light — tap for Dark";
   }
 
   function togglePlateAppearance() {
@@ -6555,6 +6597,7 @@ body[data-mode="escape"] .menu-links {
 
   const game = Hexsweeper.boot({
     endless: !!active.endless,
+    tooltips: !MINIMAL_HELP,
     theme: {
       bg: active.css["--bg-color"],
       flag: active.theme.flag,
@@ -7637,6 +7680,36 @@ body[data-mode="escape"] .menu-links {
   // Keep the explicit tutorial preview route for checking the welcome content.
   if (!ONEPAGER_ACTIVE && /(?:\?|&)welcome=1(?:&|$)/.test(location.search)) {
     openWelcome();
+  }
+
+  // Minimal-help pages (infinite.html): a first visit gets one quiet line above
+  // the bar instead of a card. It fades on its own; a restored run or a blocked
+  // store never shows it.
+  if (MINIMAL_HELP) {
+    (function firstVisitCue() {
+      const KEY = "hexsweeper-infinite-welcome-v1";
+      let seen = null;
+      try {
+        seen = localStorage.getItem(KEY);
+      } catch (_) {
+        return;
+      }
+      if (seen) return;
+      const cells = game?.state?.map ? Array.from(game.state.map.values()) : [];
+      if (cells.some((c) => c.revealed || c.flagged)) return;
+      const touch =
+        typeof matchMedia === "function" &&
+        matchMedia("(hover: none) and (pointer: coarse)").matches;
+      showToast(
+        touch
+          ? "Tap to clear · hold to flag · drag to pan"
+          : "Click to clear · ⌃-click to flag · drag to pan",
+        5200
+      );
+      try {
+        localStorage.setItem(KEY, "1");
+      } catch (_) {}
+    })();
   }
 
   // Test/debug: window.__hexBlast.force() after first click places mines

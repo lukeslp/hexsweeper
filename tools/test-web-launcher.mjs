@@ -133,6 +133,13 @@ for (const [label, page] of [["Infinite", infinite], ["Classic", bounded], ["Roo
   expect(!page.includes('class="app-back"') && !page.includes('class="web-games-back"'), `${label} grew a Games pill`);
 }
 expect(infinite.includes('"stillPlane": true'), "standalone Infinite lost its still plane");
+// Infinite help matches Sphere: no card, one line + three rows, no tooltips.
+expect(infinite.includes('"minimalHelp": true'), "Infinite lost its minimal-help config");
+expect(!infinite.includes('id="welcome-overlay"'), "Infinite carries the welcome card again");
+expect(!/\stitle="/.test(infinite), "Infinite has a title= tooltip");
+expect(!infinite.includes('class="help-glyphs"') && !infinite.includes('id="help-body"') && !infinite.includes("wikipedia.org"), "Infinite help grew back its glyph grid, paragraphs or Wikipedia line");
+expect((infinite.match(/<li><span class="act">/g) || []).length === 3, "Infinite help should have exactly three control rows");
+expect(play.includes('id="help-body"') && play.includes('id="welcome-overlay"'), "play.html lost its own help sheet or welcome preview");
 
 for (const [label, page] of [
   ["Infinite", infinite],

@@ -31,6 +31,14 @@ Help lives behind ? only: the Play tab is one line of what to do plus three
 gesture rows (Tap / Hold / Drag), no paragraphs, and no `title=` tooltips
 anywhere on the page (aria-labels carry the names). Keep it that way.
 
+Infinite (`infinite.html`) follows the same rule. The exporter's
+`minimal_flat_help` swaps play.html's sheet for one line plus Tap / Hold / Drag
+rows, drops the welcome card and strips every `title=`; `"minimalHelp": true`
+in its one-pager config turns on a quiet first-visit cue (the theme toast,
+marks `hexsweeper-infinite-welcome-v1`) and keeps runtime titles off
+(`Hexsweeper.boot({ tooltips: false })`). play.html, its theme pens and
+Classic keep their own sheets and tooltips.
+
 ## Docs to keep in sync
 
 - `README.md` — install-free usage, launcher/routes, layout, API

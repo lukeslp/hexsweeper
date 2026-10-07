@@ -488,7 +488,8 @@ body {
  *   dig/flag/chord, drag-pan, wheel/pinch zoom, RAF loop) with skin hooks.
  * Primary Functions/Classes: Cell; boot(); applyViewZoom; exportEndlessState;
  *   applyEndlessState; setFinish; Hexsweeper.DEFAULT_*.
- * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless }).
+ * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless,
+ *   tooltips }). tooltips: false keeps title= off the stats (infinite.html).
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
  *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
@@ -2366,22 +2367,22 @@ body {
         const score = state.clearedSafe || 0;
         statsTime.innerText =
           score >= 1000 ? String(score) : score.toString().padStart(3, "0");
-        statsMines.title = "Mines remaining (unflagged estimate)";
-        statsMines.setAttribute("data-label", "mines");
         const best = state.bestCleared || 0;
-        statsTime.title =
-          best > score
-            ? `Safe cells cleared · best ${best}`
-            : best > 0
-              ? `Safe cells cleared · best ${best}`
-              : "Safe cells cleared (score)";
+        if (opts.tooltips !== false) {
+          statsMines.title = "Mines remaining (unflagged estimate)";
+          statsTime.title =
+            best > 0 ? `Safe cells cleared · best ${best}` : "Safe cells cleared (score)";
+        }
+        statsMines.setAttribute("data-label", "mines");
         statsTime.setAttribute("data-label", best > 0 ? `best ${best}` : "cleared");
       } else {
         const left = Math.max(0, state.mineCount - state.flagsPlaced);
         statsMines.innerText = left.toString().padStart(2, "0");
         statsTime.innerText = Math.min(999, state.timeElapsed).toString().padStart(3, "0");
-        statsMines.title = "Mines remaining";
-        statsTime.title = "Time";
+        if (opts.tooltips !== false) {
+          statsMines.title = "Mines remaining";
+          statsTime.title = "Time";
+        }
         statsMines.setAttribute("data-label", "mines");
         statsTime.setAttribute("data-label", "time");
       }

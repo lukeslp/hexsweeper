@@ -664,6 +664,9 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   backdrop-filter: blur(14px);
   padding: 8px 14px;
   border-radius: 999px;
+  /* left: 50% would cap a shrink-to-fit pill at half the viewport. */
+  width: max-content;
+  max-width: calc(100vw - 32px);
   opacity: 0;
   transform: translate(-50%, -6px);
   pointer-events: none;
@@ -813,6 +816,41 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   text-underline-offset: 0.12em;
 }
 .help-more a:hover { opacity: 0.85; }
+/* Minimal sheet (infinite.html): one line + three gesture rows, as on Sphere. */
+.help-controls {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+}
+.help-controls li {
+  display: grid;
+  grid-template-columns: 5.2rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.46rem 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-main);
+}
+.help-controls li + li {
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 8%, transparent);
+}
+.help-controls .act {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+@media (hover: none) and (pointer: coarse) {
+  .help-desk-only { display: none; }
+}
+@media (hover: hover) {
+  .help-controls li { grid-template-columns: 6.6rem 1fr; }
+}
 .help-done {
   appearance: none;
   width: 100%;
@@ -1341,7 +1379,7 @@ body[data-mode="escape"] .menu-links {
 <div class="fx-layer" id="fx" aria-hidden="true"></div>
 
 <div class="hud-actions chrome-glass" role="toolbar" aria-label="Game controls">
-  <button type="button" id="plate-toggle" class="hud-btn" aria-label="Switch to Dark" title="Appearance" hidden>
+  <button type="button" id="plate-toggle" class="hud-btn" aria-label="Switch to Dark" hidden>
     <svg class="plate-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="4"></circle>
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
@@ -1350,14 +1388,14 @@ body[data-mode="escape"] .menu-links {
       <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"></path>
     </svg>
   </button>
-  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset">
+  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <polyline points="23 4 23 10 17 10"></polyline>
       <polyline points="1 20 1 14 7 14"></polyline>
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
     </svg>
   </button>
-  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu" title="Menu">
+  <button type="button" id="menu-btn" class="hud-btn" aria-label="Menu">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <line x1="5" y1="7" x2="19" y2="7"></line>
       <line x1="5" y1="12" x2="15" y2="12"></line>
@@ -1372,43 +1410,6 @@ body[data-mode="escape"] .menu-links {
   <canvas id="gameCanvas" aria-label="Hexsweeper board"></canvas>
 </div>
 
-<!-- Welcome: minesweeper familiarity + theme pick -->
-<div id="welcome-overlay" class="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
-  <div class="welcome-panel" id="welcome-ask">
-    <h2 id="welcome-title">Have you played minesweeper?</h2>
-    <p>Hexsweeper is the same puzzle on a honeycomb — six neighbors instead of eight.</p>
-    <div class="welcome-themes" id="welcome-themes" role="group" aria-label="Theme">
-      <button type="button" data-welcome-mode="light" aria-pressed="true">Light</button>
-      <button type="button" data-welcome-mode="dark" aria-pressed="false">Dark</button>
-      <button type="button" data-welcome-mode="fire" aria-pressed="false">Fire</button>
-      <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
-    </div>
-    <p class="welcome-theme-note" id="welcome-theme-note">Light — porcelain infinite plate</p>
-    <div class="welcome-actions">
-      <button type="button" id="welcome-yes" class="primary">Yes — play</button>
-      <button type="button" id="welcome-no">No — refresher</button>
-    </div>
-  </div>
-  <div class="welcome-panel" id="welcome-refresher" hidden>
-    <h2>Quick refresher</h2>
-    <ul>
-      <li>Right-click or press-and-hold to <strong>flag</strong> mines.</li>
-      <li>Use the <strong>numbers</strong> to figure out which hexes are dangerous.</li>
-      <li><strong>Clear</strong> every safe cell — don't step on a mine.</li>
-      <li id="welcome-escape-tip" hidden><strong>Escape:</strong> dig toward the finish hex (edge cue). A slow rift follows your digs. Mines and the rift both kill.</li>
-    </ul>
-    <div class="welcome-themes" role="group" aria-label="Theme">
-      <button type="button" data-welcome-mode="light" aria-pressed="true">Light</button>
-      <button type="button" data-welcome-mode="dark" aria-pressed="false">Dark</button>
-      <button type="button" data-welcome-mode="fire" aria-pressed="false">Fire</button>
-      <button type="button" data-welcome-mode="plague" aria-pressed="false">Plague</button>
-      <button type="button" data-welcome-mode="escape" aria-pressed="false">Escape</button>
-    </div>
-    <button type="button" class="welcome-play" id="welcome-play">Got it — play</button>
-  </div>
-</div>
-
 <!-- Menu: score, mode, size, aids -->
 <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
   <div class="modal-content">
@@ -1420,8 +1421,8 @@ body[data-mode="escape"] .menu-links {
     </button>
     <h2 id="menu-title" class="menu-title">Menu</h2>
     <div class="menu-stats" aria-label="Score">
-      <div id="stats-mines" class="stat-item visible" data-label="mines" title="Mines remaining">00</div>
-      <div id="stats-time" class="stat-item visible" data-label="cleared" title="Safe cells cleared">000</div>
+      <div id="stats-mines" class="stat-item visible" data-label="mines">00</div>
+      <div id="stats-time" class="stat-item visible" data-label="cleared">000</div>
     </div>
     <div class="mode-switch" role="group" aria-label="Mode">
       <button type="button" data-mode="light" aria-pressed="true">Light</button>
@@ -1432,18 +1433,18 @@ body[data-mode="escape"] .menu-links {
     </div>
     <div class="modal-row" id="size-row">
       <div class="diff-selector" id="diff-selector" role="group" aria-label="Board size">
-        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" title="Small">S</button>
-        <button type="button" class="diff-option" data-val="medium" aria-pressed="false" title="Medium">M</button>
-        <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" title="Large">L</button>
+        <button type="button" class="diff-option" data-val="easy" aria-pressed="false" aria-label="Small">S</button>
+        <button type="button" class="diff-option" data-val="medium" aria-pressed="false" aria-label="Medium">M</button>
+        <button type="button" class="diff-option active" data-val="hard" aria-pressed="true" aria-label="Large">L</button>
       </div>
     </div>
     <div class="modal-actions">
       <button type="button" id="flag-btn" aria-pressed="false">Flag</button>
       <button type="button" id="help-btn">Help</button>
-      <button type="button" id="fx-btn" title="Particles and motion">Effects: Auto</button>
+      <button type="button" id="fx-btn">Effects: Auto</button>
       <span id="persist-actions" class="persist-inline">
-        <button type="button" id="export-run-btn" title="Download run as JSON">Export</button>
-        <button type="button" id="import-run-btn" title="Load a saved run">Import</button>
+        <button type="button" id="export-run-btn">Export</button>
+        <button type="button" id="import-run-btn">Import</button>
       </span>
     </div>
     <input type="file" id="import-run-file" accept="application/json,.json" hidden>
@@ -1460,40 +1461,12 @@ body[data-mode="escape"] .menu-links {
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close" aria-label="Close help">×</button>
     <h2 id="help-title">Hexsweeper</h2>
-    <p class="help-lede" id="help-lede">Minesweeper on an infinite hex plate.<br>Six neighbors per cell · first dig is always safe.</p>
-    <div class="help-glyphs" aria-label="Controls">
-      <div class="help-glyph">
-        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
-        Dig
-      </div>
-      <div class="help-glyph">
-        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
-        Flag
-      </div>
-      <div class="help-glyph">
-        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></span>
-        Chord
-      </div>
-      <div class="help-glyph">
-        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 9l-4 3 4 3M19 9l4 3-4 3M9 5l3-4 3 4M9 19l3 4 3-4"/></svg></span>
-        Pan
-      </div>
-      <div class="help-glyph">
-        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg></span>
-        Zoom
-      </div>
-      <div class="help-glyph">
-        <span class="help-glyph-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg></span>
-        Reset
-      </div>
-    </div>
-    <div class="help-body" id="help-body">
-      <p>Reveal every safe cell without detonating a mine.<br>Numbers count mines among the six touching neighbors.</p>
-      <p>Flag suspected mines, then dig elsewhere.<br>When a revealed cell’s flags match its count, tap it again to chord-open the rest.</p>
-      <p>Drag to pan the field; scroll or pinch to zoom.<br>The board expands as you dig — there is no win screen.</p>
-    </div>
-    <p class="help-keys" id="help-keys"><kbd>F</kbd> flag · <kbd>R</kbd> reset · <kbd>?</kbd> help · <kbd>Esc</kbd> close</p>
-    <p class="help-more">New to the genre? <a href="https://en.wikipedia.org/wiki/Minesweeper_(video_game)" target="_blank" rel="noopener noreferrer">Minesweeper on Wikipedia</a> — classic rules on a square grid.</p>
+    <p class="help-lede">Clear safe cells as far as you can. Numbers count the mines in the six cells around them.</p>
+    <ul class="help-controls" aria-label="Controls">
+      <li><span class="act">Tap</span><span>Clear a cell</span></li>
+      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag it</span></li>
+      <li><span class="act">Drag</span><span>Pan the board</span></li>
+    </ul>
     <button type="button" class="help-done" id="help-done">Done</button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
@@ -1508,6 +1481,7 @@ body[data-mode="escape"] .menu-links {
 <script>
 window.HEXSWEEPER_ONEPAGER = {
   "stillPlane": true,
+  "minimalHelp": true,
   "mode": "dark",
   "skipWelcome": true,
   "allowModes": [
@@ -1525,7 +1499,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
  *   dig/flag/chord, drag-pan, wheel/pinch zoom, RAF loop) with skin hooks.
  * Primary Functions/Classes: Cell; boot(); applyViewZoom; exportEndlessState;
  *   applyEndlessState; setFinish; Hexsweeper.DEFAULT_*.
- * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless }).
+ * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless,
+ *   tooltips }). tooltips: false keeps title= off the stats (infinite.html).
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
  *   exportEndlessState, applyEndlessState, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
@@ -3403,22 +3378,22 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         const score = state.clearedSafe || 0;
         statsTime.innerText =
           score >= 1000 ? String(score) : score.toString().padStart(3, "0");
-        statsMines.title = "Mines remaining (unflagged estimate)";
-        statsMines.setAttribute("data-label", "mines");
         const best = state.bestCleared || 0;
-        statsTime.title =
-          best > score
-            ? `Safe cells cleared · best ${best}`
-            : best > 0
-              ? `Safe cells cleared · best ${best}`
-              : "Safe cells cleared (score)";
+        if (opts.tooltips !== false) {
+          statsMines.title = "Mines remaining (unflagged estimate)";
+          statsTime.title =
+            best > 0 ? `Safe cells cleared · best ${best}` : "Safe cells cleared (score)";
+        }
+        statsMines.setAttribute("data-label", "mines");
         statsTime.setAttribute("data-label", best > 0 ? `best ${best}` : "cleared");
       } else {
         const left = Math.max(0, state.mineCount - state.flagsPlaced);
         statsMines.innerText = left.toString().padStart(2, "0");
         statsTime.innerText = Math.min(999, state.timeElapsed).toString().padStart(3, "0");
-        statsMines.title = "Mines remaining";
-        statsTime.title = "Time";
+        if (opts.tooltips !== false) {
+          statsMines.title = "Mines remaining";
+          statsTime.title = "Time";
+        }
         statsMines.setAttribute("data-label", "mines");
         statsTime.setAttribute("data-label", "time");
       }
@@ -4529,7 +4504,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   };
 
   // Bare play.html opens Light. Explicit ?mode= deep-links; storage restores last theme.
-  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane?, palette? }.
+  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane?, palette?, minimalHelp? }.
   // allowModes: ["light","dark"] keeps the plate toggle; omit for a single locked theme.
   const ONEPAGER =
     typeof window !== "undefined" && window.HEXSWEEPER_ONEPAGER
@@ -4537,6 +4512,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       : null;
   // stillPlane: the standalone infinite.html is a flat, motionless plate (no pointer parallax).
   const STILL_PLANE = !!(ONEPAGER && ONEPAGER.stillPlane);
+  // minimalHelp: infinite.html — no tooltips, a quiet first-visit cue instead of any card.
+  const MINIMAL_HELP = !!(ONEPAGER && ONEPAGER.minimalHelp);
   const HOME_THEME_ID = "light";
   const STORAGE_KEY = "hexsweeper-mode-v3";
   const LEGACY_TONE_KEY = "hexsweeper-minimalist-tone-v1";
@@ -7774,13 +7751,13 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (tip) tip.hidden = modeId !== "escape";
   }
 
-  function showToast(name) {
+  function showToast(name, ms) {
     const el = document.getElementById("theme-toast");
     if (!el) return;
     el.textContent = name;
     el.classList.add("show");
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => el.classList.remove("show"), 1400);
+    showToast._t = setTimeout(() => el.classList.remove("show"), ms > 0 ? ms : 1400);
   }
 
   function applyTheme(i, { toast = true, initial = false } = {}) {
@@ -7916,7 +7893,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       "aria-label",
       isDark ? "Switch to Light" : "Switch to Dark"
     );
-    el.title = isDark ? "Dark — tap for Light" : "Light — tap for Dark";
+    if (!MINIMAL_HELP) el.title = isDark ? "Dark — tap for Light" : "Light — tap for Dark";
   }
 
   function togglePlateAppearance() {
@@ -9214,6 +9191,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
 
   const game = Hexsweeper.boot({
     endless: !!active.endless,
+    tooltips: !MINIMAL_HELP,
     theme: {
       bg: active.css["--bg-color"],
       flag: active.theme.flag,
@@ -10296,6 +10274,36 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   // Keep the explicit tutorial preview route for checking the welcome content.
   if (!ONEPAGER_ACTIVE && /(?:\?|&)welcome=1(?:&|$)/.test(location.search)) {
     openWelcome();
+  }
+
+  // Minimal-help pages (infinite.html): a first visit gets one quiet line above
+  // the bar instead of a card. It fades on its own; a restored run or a blocked
+  // store never shows it.
+  if (MINIMAL_HELP) {
+    (function firstVisitCue() {
+      const KEY = "hexsweeper-infinite-welcome-v1";
+      let seen = null;
+      try {
+        seen = localStorage.getItem(KEY);
+      } catch (_) {
+        return;
+      }
+      if (seen) return;
+      const cells = game?.state?.map ? Array.from(game.state.map.values()) : [];
+      if (cells.some((c) => c.revealed || c.flagged)) return;
+      const touch =
+        typeof matchMedia === "function" &&
+        matchMedia("(hover: none) and (pointer: coarse)").matches;
+      showToast(
+        touch
+          ? "Tap to clear · hold to flag · drag to pan"
+          : "Click to clear · ⌃-click to flag · drag to pan",
+        5200
+      );
+      try {
+        localStorage.setItem(KEY, "1");
+      } catch (_) {}
+    })();
   }
 
   // Test/debug: window.__hexBlast.force() after first click places mines

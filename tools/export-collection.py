@@ -1733,13 +1733,64 @@ def prepare_flat_product(markup: str, label: str) -> str:
     return markup
 
 
-def export_flat_web(markup: str, label: str, route: str, *, still_plane: bool = False) -> str:
+# Infinite's ? sheet, as on Sphere: one line of what to do and three gesture rows.
+MINIMAL_FLAT_HELP = """    <p class="help-lede">Clear safe cells as far as you can. Numbers count the mines in the six cells around them.</p>
+    <ul class="help-controls" aria-label="Controls">
+      <li><span class="act">Tap</span><span>Clear a cell</span></li>
+      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag it</span></li>
+      <li><span class="act">Drag</span><span>Pan the board</span></li>
+    </ul>
+"""
+
+
+def minimal_flat_help(markup: str, label: str) -> str:
+    """Infinite opens straight onto the board and keeps help to a few lines.
+
+    Swaps the shared sheet (glyph grid, rule paragraphs, key line, Wikipedia
+    pointer) for MINIMAL_FLAT_HELP, drops the welcome card (a one-pager never
+    opens it) and strips every title= tooltip; aria-labels carry the names.
+    play.html reads ONEPAGER.minimalHelp for the first-visit cue and to keep
+    runtime titles off.
+    """
+    markup, n = re.subn(
+        r'(<h2 id="help-title">[^<]*</h2>\n).*?(?=    <button type="button" class="help-done" id="help-done">)',
+        lambda m: m.group(1) + MINIMAL_FLAT_HELP,
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    if n != 1:
+        raise SystemExit(f"minimal_flat_help({label}): help sheet not found")
+    markup, n = re.subn(
+        r'<!-- Welcome: [^>]*-->\s*<div id="welcome-overlay".*?\n</div>\n\n',
+        "",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    if n != 1:
+        raise SystemExit(f"minimal_flat_help({label}): welcome card not found")
+    markup = re.sub(r'(<(?:button|div|span|a)\b[^>]*?)\s+title="[^"]*"', r"\1", markup)
+    if re.search(r'\stitle="', markup):
+        raise SystemExit(f"minimal_flat_help({label}): a title= tooltip survived")
+    onepager = "window.HEXSWEEPER_ONEPAGER = {\n"
+    if markup.count(onepager) != 1:
+        raise SystemExit(f"minimal_flat_help({label}): onepager config not found")
+    return markup.replace(onepager, onepager + '  "minimalHelp": true,\n', 1)
+
+
+def export_flat_web(
+    markup: str, label: str, route: str, *, still_plane: bool = False, minimal_help: bool = False
+) -> str:
     """Adapt a generated collection page into a first-class web game route.
 
     still_plane: the plate is a still, flat plane (stillPlane turns off pointer
     parallax in play.html). infinite.html sets it; a minimal index links there.
+    minimal_help: see minimal_flat_help (infinite.html).
     """
     markup = prepare_flat_product(markup, label)
+    if minimal_help:
+        markup = minimal_flat_help(markup, label)
     if still_plane:
         onepager = "window.HEXSWEEPER_ONEPAGER = {\n"
         if markup.count(onepager) != 1:
@@ -2307,7 +2358,7 @@ def main() -> int:
             "ogDescription": "Minesweeper on an endless hexagonal board. Black, white, and red flags. Keep clearing; there are no edges.",
             "ogImage": f"{OG}/infinite-og.png?v=20261007",
         }, source),
-        "infinite", "infinite.html", still_plane=True
+        "infinite", "infinite.html", still_plane=True, minimal_help=True
     )
     planned[ROOT / "bounded.html"] = export_flat_web(
         planned[COLLECTION / "skin-classic.html"], "bounded", "bounded.html"
