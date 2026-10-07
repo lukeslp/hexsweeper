@@ -17,6 +17,16 @@ product surfaces. Native iOS and Android retain the short first-launch intro.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Sphere controls and social preview (2026-10-07)
+
+- [x] Replace the Sphere social card with the real Dark board: black, white,
+  red flags, and a short title. Version the shared OG/Twitter image URL.
+- [x] Remove pill styling from the Sphere settings and endgame controls;
+  retain theme names, current settings, selection marks and keyboard focus.
+- [ ] Luke is unhappy with Sphere's overall menu system. This visual pass
+  does **not** resolve that concern. Reconsider the information structure,
+  settings discoverability, and mobile interaction before replacing it.
+
 ## Current status (2026-10-05)
 
 - [x] Web Sphere and flat-game entries open the board without automatic

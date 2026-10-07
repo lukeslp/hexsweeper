@@ -67,6 +67,15 @@
   }
   #stage.side #plate{right:auto;width:520px;top:50%;bottom:auto;transform:translateY(-50%)}
   #stage.side p{max-width:470px}
+  /* Sphere: the real monochrome board, whole and unobscured. */
+  #stage.sphere-card { background: #000; }
+  #stage.sphere-card #board { left: 440px; width: 760px; }
+  #stage.sphere-card #scrim { display: none; }
+  #stage.sphere-card #plate { left: 56px; right: auto; width: 380px; top: 50%; bottom: auto; transform: translateY(-50%); }
+  #stage.sphere-card h1 { color: #fff; font-size: 64px; line-height: 1.08; }
+  #stage.sphere-card p { color: #bdbdbd; font-size: 24px; }
+  #stage.sphere-card .url { color: #888; font-size: 15px; margin-top: 32px; }
+  #stage.sphere-card .rule { background: #ff0000; width: 32px; margin-bottom: 24px; }
 </style>
 </head>
 <body>
@@ -142,12 +151,14 @@
       url: "dr.eamer.dev/games/hexsweeper/collection",
     },
     sphere: {
-      src: "../sphere/?deal=1&welcome=0",
+      src: "../sphere/?theme=dark&deal=1&welcome=0",
       title: "Hexsweeper 3D",
-      desc: "The hex-tile take on classic Minesweeper — on a sphere. Themes, controls, and sharing.",
-      accent: "#111111", bg: "#ffffff", dark: false,
-      url: "dr.eamer.dev/games/hexsweeper/sphere",
-      hide: ".hud-cluster,.hud-stats,.sphere-banner,.help-overlay,.count-style-toast,#history-lightbox",
+      desc: "Minesweeper on a sphere.",
+      accent: "#ff0000", bg: "#000000", dark: true,
+      url: "dr.eamer.dev/games/hexsweeper",
+      layout: "sphere-card",
+      hide: ".quiet-chrome,.hud-cluster,.hud-stats,.sphere-banner,.help-overlay,.count-style-toast,#history-lightbox",
+      stage: stageSphere,
     },
     "flux-sphere": {
       src: "../flux-sphere/?deal=1&welcome=0",
@@ -231,6 +242,32 @@
       url: "dr.eamer.dev/games/hexsweeper/collection",
     },
   };
+
+  // A seeded, genuine playable deal. The preview URL suspends autosave.
+  function stageSphere(win) {
+    const game = win.HEXSWEEPER_SPHERE_GAME;
+    if (!game) throw new Error("Sphere was not ready for capture");
+    let seed = 20261007;
+    const random = win.Math.random;
+    win.Math.random = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+    try {
+      game.setSize("easy");
+      const st = game.getState();
+      st.reduceMotion = true;
+      st.ambientSpin = false;
+      const center = game.pickTile(st.centerX, st.centerY);
+      game.digAt(center);
+      // Flag two actual mines bordering the opening, preferring its front.
+      const front = st.tiles[center].centerPoint;
+      const choices = st.cells.map((c, i) => ({c, i})).filter(({c, i}) =>
+        c.isMine && st.tiles[i].neighborIndices.some(n => st.cells[n].revealed));
+      choices.sort((a, b) => {
+        const dot = i => { const p = st.tiles[i].centerPoint; return p.x * front.x + p.y * front.y + p.z * front.z; };
+        return dot(b.i) - dot(a.i);
+      });
+      choices.slice(0, 2).forEach(({i}) => game.flagAt(i));
+    } finally { win.Math.random = random; }
+  }
 
   /**
    * Flux Sphere: an echo arc between two twins, with the Twin button showing.
@@ -362,7 +399,7 @@
   const card = CARDS[key] || CARDS.home;
   const root = document.documentElement.style;
 
-  if (card.layout === "side") document.getElementById("stage").classList.add("side");
+  if (card.layout) document.getElementById("stage").classList.add(card.layout);
 
   const scale = parseFloat(params.get("scale") || "1");
   if (Number.isFinite(scale) && scale > 0 && scale !== 1) {

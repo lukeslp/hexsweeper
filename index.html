@@ -996,7 +996,7 @@ body.help-open { overflow: hidden; }
   background: transparent;
   color: var(--text-main);
   border-radius: 999px;
-  /* Labelled pills — the same grammar as the settings sheet's buttons. */
+  /* Compact rectangular actions; labels preserve share progress and meaning. */
   min-height: 44px;
   padding: 0 14px 0 12px;
   display: inline-flex;
@@ -1337,7 +1337,7 @@ body.help-open { overflow: hidden; }
   font-weight: 600;
   cursor: pointer;
 }
-/* Settings row: two even pills that read as switches, not bare buttons. */
+/* Plain settings rows; the text keeps each cycling control's current state. */
 .help-packs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1413,7 +1413,7 @@ body.help-open { overflow: hidden; }
   background: color-mix(in srgb, var(--text-main) 6%, transparent);
   outline: none;
 }
-/* Board size and warning style — same pill grammar as Theme. */
+/* Compact board-size choices with an underline for the active size. */
 .help-title-sub { font-weight: 500; opacity: 0.55; font-size: 0.85em; margin-left: 0.35rem; }
 .help-sizes, .help-warnings { margin: 0 0 0.85rem; }
 .help-sizes .help-packs-cap, .help-warnings .help-packs-cap { display: block; margin-bottom: 0.4rem; }
@@ -1536,6 +1536,71 @@ body.help-open { overflow: hidden; }
   .lightbox,
   .count-style-toast { transition: none; }
 }
+
+/* Sphere settings: flat swatches and rows, with icons reserved for familiar actions. */
+.help-panel { border-radius: 6px; padding: 20px 16px 14px; }
+.help-panel h2 { margin-bottom: 12px; }
+.help-close, .lightbox-close { border-radius: 4px; }
+.help-close svg, .help-done svg { width: 18px; height: 18px; flex: none; }
+.help-theme-grid { gap: 6px; }
+.help-theme {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  min-height: 82px;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+.help-theme .help-theme-dot { width: 24px; height: 24px; position: relative; }
+.help-theme[aria-pressed="true"] { border-bottom-color: var(--text-main); }
+.help-theme[aria-pressed="true"] .help-theme-dot::after {
+  content: "✓"; position: absolute; right: -5px; bottom: -3px;
+  width: 15px; height: 15px; display: grid; place-items: center;
+  background: var(--text-main); color: var(--bg-color); border-radius: 50%;
+  font-size: 11px; font-weight: 700;
+}
+.help-size, .help-warn { border: 0; border-bottom: 2px solid transparent; border-radius: 0; min-height: 64px; }
+.help-size[aria-pressed="true"], .help-warn[aria-pressed="true"] { border-bottom-color: var(--text-main); }
+.help-size small { font-size: 0.6rem; }
+.help-packs { grid-template-columns: 1fr; gap: 0; }
+.help-packs .help-packs-cap { margin-bottom: 10px; }
+.help-pack {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  border: 0; border-top: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 0; min-height: 56px; padding: 10px 8px; font-size: 0.88rem;
+}
+.help-pack:last-child { border-bottom: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent); }
+.help-pack::before {
+  content: ""; width: 20px; height: 20px; flex: none; background: currentColor;
+  mask: var(--control-icon) center / contain no-repeat;
+}
+.help-pack[data-ctl="invert"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8h18M3 8l4-4M3 8l4 4M21 16H3m18 0-4-4m4 4-4 4'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="effects"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m10 3 2.5 6.5L19 12l-6.5 2.5L10 21l-2.5-6.5L1 12l6.5-2.5Z M19 2v4m-2-2h4'/%3E%3C/svg%3E"); }
+.help-done {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 4px; min-height: 44px;
+}
+.help-done:hover, .help-done:focus-visible { background: var(--text-main); color: var(--bg-color); opacity: 0.85; }
+.help-egg-door { width: 44px; height: 44px; border: 0; border-radius: 4px; }
+.help-egg-door svg { width: 20px; height: 20px; }
+.sphere-banner { border-radius: 6px; }
+.sphere-banner .banner-btn { border-radius: 4px; }
+.help-panel button:focus-visible, .lightbox-close:focus-visible {
+  outline: 2px solid var(--text-main); outline-offset: 2px;
+}
+.lightbox-close:focus-visible { outline-color: #fff; }
+@media (max-width: 360px) {
+  .help-overlay { padding: 12px; }
+  .help-panel { padding-inline: 12px; max-height: calc(100dvh - 24px); }
+  .help-theme { font-size: 0.75rem; }
+  .help-tab { font-size: 0.73rem; }
+}
+
 </style>
 </head>
 <body data-sphere-theme="light" data-sphere-chrome="light">
@@ -1618,7 +1683,7 @@ body.help-open { overflow: hidden; }
 
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
   <div class="help-panel" id="help-panel" tabindex="-1">
-    <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
+    <button type="button" class="help-close" id="help-close-btn" aria-label="Close help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
     <h2 id="help-title">Hexsweeper 3D <span class="help-title-sub">settings</span></h2>
     <div class="help-tabs" role="tablist" aria-label="Sheet sections" id="help-tabs">
       <button type="button" role="tab" class="help-tab" id="help-tab-play" aria-controls="help-panel-play" aria-selected="true" data-tab="play">Play</button>
@@ -1693,7 +1758,7 @@ body.help-open { overflow: hidden; }
       <p>This tab appears wherever a keyboard plausibly does, so a tablet with one attached gets it too.</p>
     </div>
     </section>
-    <button type="button" class="help-done" id="help-done-btn">Done</button>
+    <button type="button" class="help-done" id="help-done-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Done</span></button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>
@@ -10286,7 +10351,7 @@ document.getElementById("help-tutorial-btn")?.addEventListener("click", () => {
 window.HEXSWEEPER_SPHERE_GAME = sphereGame;
 const sphereChrome = initQuietChrome(sphereGame);
 // Settings sheet (the ? overlay): theme grid, board size, warning style;
-// Invert and Effects pills are wired inside sphere.js.
+// Invert and Effects state is wired inside sphere.js.
 (function () {
   const grid = document.getElementById("help-theme-grid");
   if (!grid || !window.SphereSweeper) return;
@@ -10325,7 +10390,7 @@ const sphereChrome = initQuietChrome(sphereGame);
   document.addEventListener("keydown", (e) => { if (e.key === "?" || e.key === "t" || e.key === "T") setTimeout(sync, 0); });
   window.HEXSWEEPER_SYNC_HELP_THEMES = sync;
 
-  // Board size — five pills; a change starts a new sphere (as the size button always did).
+  // Board size — five choices; a change starts a new sphere (as the size button always did).
   const SIZES = [["xsmall", "XS", "162 faces"], ["easy", "S", "362 faces"], ["medium", "M", "1,002 faces"], ["hard", "L", "1,442 faces"], ["xlarge", "XL", "2,252 faces"]];
   const sizeGrid = document.getElementById("help-size-grid");
   const sizeButtons = [];
