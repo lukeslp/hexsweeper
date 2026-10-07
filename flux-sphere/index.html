@@ -52,7 +52,7 @@
   Dig any face. Twins link after your first dig.
 </p>
 
-<button type="button" id="twin-btn" class="flux-twin-btn" aria-pressed="false" aria-label="Twin: show a face's twin without digging" title="Show a face's twin (E)" hidden>
+<button type="button" id="twin-btn" class="flux-twin-btn" aria-pressed="false" aria-label="Twin: show a face's twin without digging" hidden>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M5.5 8.2 8 6.8l2.5 1.4v2.9L8 12.5l-2.5-1.4z"></path>
     <path d="M13.5 12.9 16 11.5l2.5 1.4v2.9L16 17.2l-2.5-1.4z"></path>
@@ -65,19 +65,19 @@
   <div class="banner-msg" id="banner-msg"></div>
   <div class="banner-meta" id="banner-meta" hidden></div>
   <div class="banner-actions" id="banner-actions" hidden>
-    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image" title="Share image">
+    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 15V3"></path><path d="M8 7l4-4 4 4"></path><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path>
       </svg>
       <span class="sr-only">Share image</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
+    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="3 7 3 13 9 13"></polyline><path d="M3.51 13a9 9 0 1 0 2.13-5.36L3 11"></path>
       </svg>
       <span class="sr-only">Undo last move</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
+    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
@@ -89,12 +89,12 @@
 <div class="hud-cluster dev-cluster" role="toolbar" aria-label="Game controls">
   <div class="customize-panel" id="customize-panel" data-open="false" role="dialog" aria-label="Customize board" hidden></div>
   <div class="hud-actions" aria-label="Board controls">
-    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
+    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board" title="Customize board (C)">
+    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="3.2"></circle><path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.72 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.72a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"></path>
       </svg>
@@ -107,7 +107,7 @@
     <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false"></button>
   </div>
   <div class="hud-actions" aria-label="Help">
-    <button type="button" id="help-btn" class="hud-btn" aria-label="Help" title="Help (?)">
+    <button type="button" id="help-btn" class="hud-btn" aria-label="Help">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>
       </svg>
@@ -121,30 +121,17 @@
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Flux Sphere</h2>
-    <p class="help-lede">Every face has a twin a few faces away. Twins match: both safe or both mines. Dig a face and its twin opens too.</p>
+    <p class="help-lede">Clear every safe face. Each face has a matching twin: dig one and both open.</p>
     <ul class="help-controls" aria-label="Controls">
-      <li><span class="act">Tap</span><span>Dig a face. Its twin opens with it</span></li>
-      <li><span class="act">Hold</span><span>Flag a face on touch screens</span></li>
-      <li><span class="act">Twin, then tap</span><span>Show a face's twin without digging</span></li>
-      <li><span class="act">Drag</span><span>Rotate the sphere</span></li>
-      <li><span class="act">Arrow keys</span><span>Rotate from the focused board</span></li>
-      <li><span class="act">Enter / Space</span><span>Dig the centered face</span></li>
-      <li><span class="act">Shift + Enter</span><span>Flag the centered face; Shift + Space also works</span></li>
-      <li><span class="act">E</span><span>Show the centered face's twin; press again to turn back</span></li>
+      <li><span class="act">Tap</span><span>Clear a face and its twin</span></li>
+      <li><span class="act">Hold</span><span>Flag it</span></li>
+      <li><span class="act">Drag</span><span>Spin the sphere</span></li>
     </ul>
-    <div class="help-body">
-      <p>Your first dig is always safe. Twins link right after it. An echo never sets off a mine: a safe face's twin is always safe, so only a face you dig yourself can be a mine.</p>
-      <p>Use the link to solve stuck spots. Trace a face to mark it A and its twin B. If B is proven safe, A is safe; if B must be a mine, so must A. When you flag a face, its twin gets a dashed red mark.</p>
-      <p>A flag on a twin holds its echo. After an echo, an arc links the two faces and both show a ↔ linked glyph. Reduced motion keeps the arc and glyphs still.</p>
-      <p>Open the menu for reset, undo, flag mode, board size, theme, warning style, and drag inversion. Twins and progress autosave through refresh.</p>
-    </div>
-    <p class="help-keys"><kbd>C</kbd> menu · <kbd>E</kbd> twin · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
-    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
-      <span class="help-packs-cap">Controls</span>
+    <div class="help-packs" id="help-controls" role="group" aria-label="Settings">
+      <span class="help-packs-cap">Settings</span>
       <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
       <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>
-    <p class="help-more">Also <a href="../sphere/">Hexsweeper 3D</a> · <a href="../glitch-sphere/">Glitch Sphere</a> · <a href="../">Hexsweeper launcher</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
@@ -157,9 +144,9 @@
 <script src="../sphere/hexasphere.js?v=20260813"></script>
 <script src="../sphere/sphere.js?v=20261002drag"></script>
 <script src="../sphere/mirror-material.js?v=20260817a1"></script>
-<script src="../sphere/hex-bloom.js?v=20260813"></script>
+<script src="../sphere/hex-bloom.js?v=20261007help"></script>
 <script src="flux-pairs.js?v=20261003b"></script>
-<script src="flux-sphere.js?v=20261003b"></script>
+<script src="flux-sphere.js?v=20261007help"></script>
 <script>
 const fluxSphereRoute = FluxSphere.boot();
 document.getElementById("open-menu-a11y")?.addEventListener("click", () => fluxSphereRoute.menu?.open());

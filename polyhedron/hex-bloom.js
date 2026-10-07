@@ -2058,7 +2058,6 @@
         iconOnly: true,
         ariaLabel: "Undo move",
       });
-      dockResetBtn.title = "Undo";
       dockResetBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -2078,7 +2077,6 @@
       dockBtn.setAttribute("aria-haspopup", "dialog");
       dockBtn.setAttribute("aria-controls", "hex-bloom-stage");
       dockBtn.setAttribute("aria-expanded", "false");
-      dockBtn.title = "Menu";
       dockBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -2102,7 +2100,6 @@
         iconOnly: true,
         ariaLabel: "Flag mode",
       });
-      dockFlagBtn.title = "Flag mode";
       dockFlagBtn.setAttribute("aria-pressed", "false");
       dockFlagBtn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -2124,7 +2121,6 @@
         iconOnly: true,
         ariaLabel: "Help",
       });
-      dockHelpBtn.title = "Help";
       dockHelpBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();

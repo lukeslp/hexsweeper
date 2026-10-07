@@ -204,12 +204,13 @@
       });
     }
 
-    function showToast(message) {
+    function showToast(message, ms) {
       if (!toast) return;
       clearTimeout(toastTimer);
       toast.textContent = message;
-      toast.classList.add("visible");
-      toastTimer = setTimeout(() => toast.classList.remove("visible"), 1700);
+      // The page styles .count-style-toast.show (as Sphere does).
+      toast.classList.add("show");
+      toastTimer = setTimeout(() => toast.classList.remove("show"), ms || 1700);
     }
 
     function updateUI(shouldPersist) {
@@ -370,7 +371,6 @@
       if (againButton) {
         againButton.hidden = false;
         againButton.setAttribute("aria-label", "Retry panel");
-        againButton.title = "Retry panel";
       }
       if (returnButton) returnButton.hidden = false;
     }
@@ -390,7 +390,6 @@
       if (againButton) {
         againButton.hidden = false;
         againButton.setAttribute("aria-label", "New campaign");
-        againButton.title = "New campaign";
       }
       if (returnButton) returnButton.hidden = true;
     }
@@ -580,10 +579,15 @@
     if (campaign.panels.some((panel) => panel.board.started)) startTimer();
 
     if (campaign.activePanel >= 0) renderer.focus(campaign.activePanel);
+    // Play starts at once: help stays behind ?. A first visit to a fresh
+    // campaign gets one quiet line above the bar; ?welcome=1 previews help.
     try {
-      const skipWelcome = new URLSearchParams(location.search).get("welcome") === "0";
-      if (!skipWelcome && !localStorage.getItem("hexsweeper-dodeca-welcome-v1")) {
-        openHelp();
+      const welcome = new URLSearchParams(location.search).get("welcome");
+      if (welcome === "1") openHelp();
+      else if (welcome !== "0" && !localStorage.getItem("hexsweeper-dodeca-welcome-v1")) {
+        if (!campaign.panels.some((panel) => panel.board.started)) {
+          showToast("Tap a panel · tap to clear · hold to flag", 5200);
+        }
         localStorage.setItem("hexsweeper-dodeca-welcome-v1", "1");
       }
     } catch (_) {}

@@ -460,8 +460,14 @@
     return DOCK_CONTEXT ? 140 : 180;
   }
 
-  function initHexBloom(game) {
+  function initHexBloom(game, bloomOptions) {
     if (!game) return null;
+    // Pages on the minimal brief pass { tooltips: false }: the names stay in
+    // aria-label and nothing grows a hover title. Everyone else keeps them.
+    const tooltips = !bloomOptions || bloomOptions.tooltips !== false;
+    function tip(el, text) {
+      if (tooltips && el) el.title = text;
+    }
     document.body.classList.add("hex-bloom-ui");
 
     const THEMES = (global.SphereSweeper && global.SphereSweeper.THEMES) || [];
@@ -1589,7 +1595,7 @@
         setHexIcon(cornerMenuBtn, open ? "close" : "gear");
         cornerMenuBtn.setAttribute("aria-label", open ? "Close menu" : "Open game menu");
         cornerMenuBtn.setAttribute("aria-expanded", open ? "true" : "false");
-        cornerMenuBtn.title = open ? "Close" : "Menu";
+        tip(cornerMenuBtn, open ? "Close" : "Menu");
       }
       const sideActionsShown = root.dataset.bottomSeed !== "true" || open;
       if (dockResetBtn) {
@@ -1961,7 +1967,7 @@
         iconOnly: true,
         ariaLabel: "Undo move",
       });
-      dockResetBtn.title = "Undo";
+      tip(dockResetBtn, "Undo");
       dockResetBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1981,7 +1987,7 @@
       dockBtn.setAttribute("aria-haspopup", "dialog");
       dockBtn.setAttribute("aria-controls", "hex-bloom-stage");
       dockBtn.setAttribute("aria-expanded", "false");
-      dockBtn.title = "Menu";
+      tip(dockBtn, "Menu");
       dockBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -2005,7 +2011,7 @@
         iconOnly: true,
         ariaLabel: "Flag mode",
       });
-      dockFlagBtn.title = "Flag mode";
+      tip(dockFlagBtn, "Flag mode");
       dockFlagBtn.setAttribute("aria-pressed", "false");
       dockFlagBtn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -2027,7 +2033,7 @@
         iconOnly: true,
         ariaLabel: "Help",
       });
-      dockHelpBtn.title = "Help";
+      tip(dockHelpBtn, "Help");
       dockHelpBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -2044,7 +2050,7 @@
           iconOnly: true,
           ariaLabel: "Open game menu",
         });
-        cornerMenuBtn.title = "Menu";
+        tip(cornerMenuBtn, "Menu");
         cornerMenuBtn.setAttribute("aria-haspopup", "dialog");
         cornerMenuBtn.setAttribute("aria-controls", "hex-bloom-stage");
         cornerMenuBtn.setAttribute("aria-expanded", "false");

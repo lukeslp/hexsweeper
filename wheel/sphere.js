@@ -1181,7 +1181,6 @@
       document.body.dataset.sphereTheme = t.id;
       document.body.dataset.sphereChrome = t.chrome || "light";
       if (themeBtn) {
-        themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
           `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Water.`
@@ -1198,7 +1197,6 @@
       const name = SIZE_NAMES[key] || "Medium";
       const faces = SIZE_FACES[key] || 362;
       if (sizeBtn) {
-        sizeBtn.title = `Board size ${letter} — ${name} (${faces} faces). Click to cycle XS → S → M → L → XL.`;
         sizeBtn.setAttribute(
           "aria-label",
           `Board size ${letter}, ${name}, ${faces} faces. Activate to cycle XS, S, M, L, XL.`
@@ -3169,7 +3167,6 @@
       if (!shareWinBtn) return;
       const label = SHARE_LABEL[kind] || SHARE_LABEL.idle;
       shareWinBtn.dataset.state = kind;
-      shareWinBtn.title = label;
       shareWinBtn.setAttribute("aria-label", label);
       const sr = shareWinBtn.querySelector(".sr-only");
       if (sr) sr.textContent = label;
@@ -3614,7 +3611,6 @@
       if (!nestBtn) return;
       const def = countStyleById(state.countStyle);
       nestBtn.classList.toggle("active", state.countStyle !== "numerals");
-      nestBtn.title = `Count style — ${def.name} (N)`;
       nestBtn.setAttribute("aria-label", `Count style: ${def.name}. Activate to cycle.`);
       // Empty stub only — no numeral glyph paint (was leaking over the gear).
       nestBtn.innerHTML = "";

@@ -376,6 +376,40 @@ body.help-open {
   cursor: pointer;
 }
 
+/* Settings row in the help sheet: two even pills, as on Flux Sphere. */
+.help-packs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0 0 0.85rem;
+}
+
+.help-packs-cap {
+  grid-column: 1 / -1;
+  color: var(--text-sub);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.help-pack {
+  appearance: none;
+  min-height: 44px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-main);
+  font: 600 0.78rem/1.2 "IBM Plex Sans", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.help-pack:hover {
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+
 .menu-links {
   margin-top: 0.65rem;
   text-align: center;

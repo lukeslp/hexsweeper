@@ -9,7 +9,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Hexsweeper · Dodecahedron</title>
 <meta name="description" content="Clear twelve connected Hexsweeper panels across a playable dodecahedron.">
 <meta property="og:type" content="website">
@@ -470,10 +470,10 @@ body[data-sphere-chrome="dark"] .help-overlay {
 }
 .help-close {
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  width: 1.75rem;
-  height: 1.75rem;
+  top: 0;
+  right: 0;
+  width: 2.75rem;
+  height: 2.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -494,7 +494,7 @@ body[data-sphere-chrome="dark"] .help-overlay {
 .help-panel h2 {
   font-size: 0.95rem;
   font-weight: 600;
-  margin: 0 1.5rem 0.35rem 0;
+  margin: 0 2.25rem 0.35rem 0;
   letter-spacing: -0.02em;
   color: var(--help-ink);
 }
@@ -532,122 +532,6 @@ body[data-sphere-chrome="dark"] .help-overlay {
   text-transform: uppercase;
   color: var(--help-ink);
 }
-.help-body {
-  margin: 0 0 0.65rem;
-  font-size: 0.76rem;
-  line-height: 1.45;
-  color: var(--help-ink);
-}
-.help-body p { margin: 0 0 0.4rem; }
-.help-body p:last-child { margin-bottom: 0; }
-.help-keys {
-  margin: 0 0 0.75rem;
-  font-size: 0.68rem;
-  line-height: 1.4;
-  color: var(--help-ink);
-}
-.help-keys kbd {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 0.92em;
-  border: 1px solid var(--help-ink);
-  border-radius: 0;
-  padding: 0.05em 0.28em;
-  color: var(--help-ink);
-  background: transparent;
-}
-.help-more {
-  margin: 0 0 0.65rem;
-  font-size: 0.68rem;
-  line-height: 1.4;
-  color: var(--help-ink);
-}
-.help-more a {
-  color: var(--help-ink);
-  text-decoration: underline;
-  text-underline-offset: 0.12em;
-}
-/* Classic Minesweeper thumb — documentary photo stays as-is; chrome is mono */
-.help-history-row {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 0 0 0.65rem;
-}
-.help-history {
-  flex: 0 0 auto;
-  width: 44px;
-  height: 33px;
-  padding: 0;
-  border: 1px solid var(--help-ink);
-  border-radius: 0;
-  overflow: hidden;
-  cursor: zoom-in;
-  background: #000000;
-  line-height: 0;
-}
-.help-history:focus-visible {
-  outline: 2px solid var(--help-ink);
-  outline-offset: 2px;
-}
-.help-history img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-}
-.help-history-cap {
-  margin: 0;
-  font-size: 0.68rem;
-  line-height: 1.35;
-  color: var(--help-ink);
-}
-.help-history-cap a {
-  color: var(--help-ink);
-  text-decoration: underline;
-  text-underline-offset: 0.12em;
-}
-.lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 130;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.25rem;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-.lightbox.open { opacity: 1; pointer-events: auto; }
-.lightbox img {
-  max-width: min(920px, 100%);
-  max-height: min(88vh, 100%);
-  border: 1px solid #ffffff;
-  border-radius: 0;
-  background: #000000;
-}
-.lightbox-close {
-  position: absolute;
-  top: max(12px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 1px solid #ffffff;
-  border-radius: 0;
-  background: #000000;
-  color: #ffffff;
-  font-size: 1.4rem;
-  cursor: pointer;
-}
-.lightbox-close:hover,
-.lightbox-close:focus-visible {
-  background: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
-  outline: none;
-}
 .help-done {
   appearance: none;
   width: 100%;
@@ -681,7 +565,6 @@ body[data-sphere-chrome="dark"] .help-overlay {
 @media (prefers-reduced-motion: reduce) {
   .sphere-banner,
   .help-overlay,
-  .lightbox,
   .count-style-toast { transition: none; }
 }
 /* Water · level — only present while the water theme is live. The globe's
@@ -784,7 +667,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
 <div class="canvas-container">
   <canvas id="gameCanvas" aria-label="Dodecahedron campaign. Select an unlocked panel."></canvas>
 </div>
-<button type="button" id="panel-back-btn" class="hud-btn panel-back" aria-label="Return to solid overview" title="Overview (Esc)" hidden>
+<button type="button" id="panel-back-btn" class="hud-btn panel-back" aria-label="Return to solid overview" hidden>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M5 12h14"></path><path d="m10 7-5 5 5 5"></path>
   </svg>
@@ -796,7 +679,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
   <div class="banner-msg" id="banner-msg"></div>
   <div class="banner-meta" id="banner-meta" hidden></div>
   <div class="banner-actions" id="banner-actions" hidden>
-    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image" title="Share image">
+    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 15V3"></path>
         <path d="M8 7l4-4 4 4"></path>
@@ -804,14 +687,14 @@ button, a, input[type="range"] { touch-action: manipulation; }
       </svg>
       <span class="sr-only">Share image</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
+    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M4 4v5h5"></path>
         <path d="M4.8 8.2A8.3 8.3 0 1 1 4 16"></path>
       </svg>
       <span class="sr-only">Undo last move</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
+    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20 8"></path>
         <path d="M20 3.5V8h-4.5"></path>
@@ -820,7 +703,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
       </svg>
       <span class="sr-only">Play again</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-return-btn" aria-label="Return to solid overview" title="Return to overview" hidden>
+    <button type="button" class="banner-btn" id="banner-return-btn" aria-label="Return to solid overview" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M5 12h14"></path>
         <path d="m10 7-5 5 5 5"></path>
@@ -838,7 +721,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
 <p id="campaign-live" class="sr-only" role="status" aria-live="polite"></p>
 
 <!-- Help — upper right -->
-<button type="button" id="help-btn" class="hud-btn hud-help-fixed" aria-label="Help" title="Help (?)">
+<button type="button" id="help-btn" class="hud-btn hud-help-fixed" aria-label="Help">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
     <circle cx="12" cy="12" r="10"></circle>
     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -852,14 +735,14 @@ button, a, input[type="range"] { touch-action: manipulation; }
     <div class="customize-panel" id="customize-panel" data-open="false" role="dialog" aria-label="Customize board"></div>
   </div>
   <div class="hud-actions" aria-label="Board controls">
-    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
+    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="23 4 23 10 17 10"></polyline>
         <polyline points="1 20 1 14 7 14"></polyline>
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board" title="Customize board (C)">
+    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <line x1="4" y1="21" x2="4" y2="14"></line>
         <line x1="4" y1="10" x2="4" y2="3"></line>
@@ -875,10 +758,10 @@ button, a, input[type="range"] { touch-action: manipulation; }
   </div>
   <!-- Shipped controls, kept in the DOM so sphere.js wiring and label sync are untouched. -->
   <div class="legacy-hud" aria-hidden="true">
-    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Panel density P19. Activate to cycle P19, P37, P61." title="Panel density"></button>
-    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light" title="Theme"></button>
-    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle." title="Count style"></button>
-    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false" title="Flag mode"></button>
+    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Panel density P19. Activate to cycle P19, P37, P61."></button>
+    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light"></button>
+    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle."></button>
+    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false"></button>
   </div>
 </div>
 
@@ -888,33 +771,17 @@ button, a, input[type="range"] { touch-action: manipulation; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hexsweeper · Dodecahedron</h2>
-    <p class="help-lede">Twelve connected pentagonal panels, each covered by its own Hexsweeper field. Clear a panel to open its five neighboring routes.<br>The first dig on every panel is safe.</p>
+    <p class="help-lede">Clear all twelve panels. Each one you clear unlocks the panels next to it.</p>
     <ul class="help-controls" aria-label="Controls">
-      <li><span class="act">Tap</span><span>Select an unlocked panel, then dig a cell</span></li>
-      <li><span class="act">Hold</span><span>Flag a cell (mobile)</span></li>
-      <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
-      <li><span class="act">Drag</span><span>Spin the solid in overview</span></li>
-      <li><span class="act">Esc</span><span>Return to the solid</span></li>
+      <li><span class="act">Tap</span><span>Open a panel, then clear a cell</span></li>
+      <li><span class="act">Hold</span><span>Flag it</span></li>
+      <li><span class="act">Drag</span><span>Spin the solid</span></li>
     </ul>
-    <div class="help-body">
-      <p>Clear every safe cell on the active panel. A completed panel settles into the solid and unlocks its five macro-neighbors. Counts and floods stay local to the current panel.</p>
-      <p>Tap the open canvas to bloom Undo, Flag, Reset, panel density, light/dark and warning style. P19 is touch-first; P37 and P61 make each panel denser. A mine fails only the active panel, and campaign progress autosaves.</p>
-    </div>
-    <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>1</kbd>–<kbd>3</kbd> density · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
-    <div class="help-history-row">
-      <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic square-grid Minesweeper screenshot">
-        <img src="../sphere/assets/classic-minesweeper.png" alt="Classic Windows Minesweeper (square grid)" width="44" height="33" loading="lazy">
-      </button>
-      <p class="help-history-cap">
-        Riding on the original — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
-      </p>
-    </div>
-    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
-      <span class="help-packs-cap">Controls</span>
+    <div class="help-packs" id="help-controls" role="group" aria-label="Settings">
+      <span class="help-packs-cap">Settings</span>
       <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
       <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>
-    <p class="help-more">Also <a href="../">flat Hexsweeper</a> · <a href="../?mode=fire">Fire</a> · <a href="../?mode=plague">Plague</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
@@ -924,45 +791,16 @@ button, a, input[type="range"] { touch-action: manipulation; }
   </div>
 </div>
 
-<div id="history-lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Classic Minesweeper" hidden>
-  <button type="button" class="lightbox-close" id="lightbox-close-btn" aria-label="Close">×</button>
-  <img src="../sphere/assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
-</div>
 
 <script src="hexasphere.js?v=20260810-poly4"></script>
 <script src="panel-board.js?v=20260810-poly4"></script>
 <script src="dodeca-layout.js?v=20260810-poly4"></script>
 <script src="campaign.js?v=20260810-poly4"></script>
 <script src="polyhedron-renderer.js?v=20261002-drag"></script>
-<script src="main.js?v=20260810-poly4"></script>
-<script src="hex-bloom.js?v=20260810-poly4"></script>
+<script src="main.js?v=20261007help"></script>
+<script src="hex-bloom.js?v=20261007help"></script>
 <script>
 initHexBloom(SphereSweeper.boot({ canvasId: "gameCanvas" }));
-(function () {
-  const lb = document.getElementById("history-lightbox");
-  const openBtn = document.getElementById("help-history-btn");
-  const closeBtn = document.getElementById("lightbox-close-btn");
-  if (!lb || !openBtn) return;
-  function openLb() {
-    lb.hidden = false;
-    requestAnimationFrame(() => lb.classList.add("open"));
-    closeBtn && closeBtn.focus();
-  }
-  function closeLb() {
-    lb.classList.remove("open");
-    setTimeout(() => { lb.hidden = true; }, 180);
-    openBtn.focus();
-  }
-  openBtn.addEventListener("click", openLb);
-  closeBtn && closeBtn.addEventListener("click", closeLb);
-  lb.addEventListener("click", (e) => { if (e.target === lb) closeLb(); });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && lb.classList.contains("open")) {
-      e.stopPropagation();
-      closeLb();
-    }
-  });
-})();
 </script>
 <!-- GoatCounter Analytics -->
 <script data-goatcounter="https://stats.dr.eamer.dev/count"
