@@ -14,6 +14,9 @@
 
   const STORAGE_KEY = "hexsweeper-glitch-sphere-run-v1";
   const RUN_KIND = "glitch-sphere";
+  /** Marks the one-line first-visit cue as shown (once per browser). */
+  const WELCOME_KEY = "hexsweeper-glitch-welcome-v1";
+  const CUE = "Tap to clear · hold to flag · drag to spin";
   const ROTATION_STEP = Math.PI / 18;
   const TERMINAL_REASONS = new Set(["trapped", "hazard-mine", "direct-mine"]);
 
@@ -369,6 +372,35 @@
     }
   }
 
+  /**
+   * Play starts at once: no sheet opens by itself. A first visit gets one
+   * quiet line above the bar instead (the engine's toast); a restored run, a
+   * ?welcome= preview or blocked storage never shows it.
+   */
+  function showFirstVisitCue(host, game) {
+    try {
+      if (/(?:\?|&)welcome=[01](?:&|$)/.test(host.location ? host.location.search || "" : "")) return;
+      const storage = host.localStorage;
+      if (!storage || storage.getItem(WELCOME_KEY)) return;
+      const frame = typeof host.requestAnimationFrame === "function"
+        ? host.requestAnimationFrame.bind(host)
+        : (callback) => setTimeout(callback, 16);
+      let tries = 0;
+      (function check() {
+        const state = typeof game.getState === "function" ? game.getState() : null;
+        if (!state || !state.cells || !state.cells.length) {
+          if (++tries < 180) frame(check);
+          return;
+        }
+        if (state.cells.some((cell) => cell.revealed || cell.flagged)) return;
+        if (typeof game.toast === "function") game.toast(CUE, 5200);
+        try { storage.setItem(WELCOME_KEY, "1"); } catch (_) {}
+      })();
+    } catch (_) {
+      // Storage blocked: no cue, and still no sheet.
+    }
+  }
+
   function boot(options) {
     options = options || {};
     const host = options.root || (typeof window !== "undefined" ? window : null);
@@ -403,6 +435,7 @@
       storageKey: STORAGE_KEY,
       runKind: RUN_KIND,
       createRunId: options.createRunId,
+      autoWelcome: false,
       onHelpOpen: acquireHelpPause,
       onHelpClose: releaseHelpPause,
       onRunComplete(payload) {
@@ -472,13 +505,15 @@
     });
     if (document.visibilityState === "hidden") game.pauseTimer("visibility");
 
-    const menu = typeof host.initHexBloom === "function" ? host.initHexBloom(game) : null;
+    const menu = typeof host.initHexBloom === "function" ? host.initHexBloom(game, { tooltips: false }) : null;
+    showFirstVisitCue(host, game);
     return { game, menu, adapter };
   }
 
   return {
     STORAGE_KEY,
     RUN_KIND,
+    WELCOME_KEY,
     createAdapter,
     forwardCompletion,
     boot,

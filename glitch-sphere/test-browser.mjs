@@ -399,6 +399,10 @@ async function assertRouteContract(cdp, sessionId) {
         canvasTabIndex: canvas && canvas.tabIndex,
         statusRole: status && status.getAttribute("role"),
         help: document.getElementById("help-overlay")?.textContent || "",
+        helpRows: document.querySelectorAll("#help-overlay .help-controls li").length,
+        helpOpen: !document.getElementById("help-overlay")?.hidden,
+        titles: document.querySelectorAll("[title]").length,
+        instructions: document.getElementById("board-instructions")?.textContent || "",
         scripts: Array.from(document.scripts, (script) => script.src).filter(Boolean),
       };
     })()`
@@ -408,8 +412,11 @@ async function assertRouteContract(cdp, sessionId) {
   assert.equal(contract.canvasName, "Glitch Sphere minesweeper board");
   assert.equal(contract.canvasTabIndex, 0);
   assert.equal(contract.statusRole, "status");
-  assert.match(contract.help, /revealed and flagged faces close routes/i);
-  assert.match(contract.help, /Shift \+ Enter/i);
+  assert.match(contract.help, /trap the Glitch/i);
+  assert.equal(contract.helpRows, 3);
+  assert.equal(contract.helpOpen, false, "help opened by itself");
+  assert.equal(contract.titles, 0, "title= tooltips in the page");
+  assert.match(contract.instructions, /Shift plus Enter/i);
   for (const asset of ["sphere.js", "glitch-hazard.js", "glitch-sphere.js"]) {
     assert.ok(contract.scripts.some((source) => source.includes(asset)), `missing loaded script ${asset}`);
   }

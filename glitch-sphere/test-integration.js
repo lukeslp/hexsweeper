@@ -106,8 +106,9 @@ function makeRoot(options) {
         return game;
       },
     },
-    initHexBloom(received) {
+    initHexBloom(received, bloomOptions) {
       assert.strictEqual(received, game);
+      assert.deepStrictEqual(bloomOptions, { tooltips: false });
       return { open() {}, close() {} };
     },
     CustomEvent: function CustomEvent(type, init) {
@@ -181,17 +182,52 @@ test("exposes a named keyboard-focusable board and restrained live status", () =
 
 test("documents the Glitch objective, closed routes, and keyboard controls", () => {
   assert.match(html, /trap the Glitch/i);
-  assert.match(html, /revealed[^<.]*flagged|flagged[^<.]*revealed/i);
+  assert.match(html, /(revealed|cleared)[^<.]*flagged|flagged[^<.]*(revealed|cleared)/i);
   assert.match(html, /Arrow keys/i);
   assert.match(html, /Enter[^<]*(dig|center)|dig[^<]*Enter/i);
   assert.match(html, /Shift[^<]*(flag|Space|Enter)/i);
-  assert.match(html, /direct dig[^<.]*blocked|blocks? a direct dig/i);
+  assert.match(html, /can't be dug directly|direct dig[^<.]*blocked/i);
+});
+
+test("help is one line of what to do and three gestures, with no tooltips", () => {
+  const sheet = html.slice(html.indexOf('id="help-overlay"'), html.indexOf("</nav>", html.indexOf('id="help-overlay"')));
+  const lede = sheet.match(/<p class="help-lede">([^<]*)<\/p>/);
+  assert.ok(lede, "help needs one lede line");
+  assert.match(lede[1], /trap the Glitch/i);
+  assert.strictEqual((sheet.match(/class="help-lede"/g) || []).length, 1);
+  const rows = sheet.match(/<li><span class="act">([^<]*)<\/span>/g) || [];
+  assert.deepStrictEqual(rows.map((row) => row.replace(/<[^>]+>/g, "")), ["Tap", "Hold", "Drag"]);
+  for (const gone of ["help-body", "help-keys", "help-more"]) {
+    assert.ok(!sheet.includes(gone), `help still carries ${gone}`);
+  }
+  assert.ok(!/\stitle="/.test(html), "the page carries a title= tooltip");
 });
 
 test("keeps the marker and cadence while reduced motion removes pulse and interpolation", () => {
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i);
   assert.match(css, /animation[^;]*none|transition[^;]*none/i);
-  assert.match(html, /non-color|exclamation|! marker/i);
+  assert.match(html, /exclamation/i);
+});
+
+test("play starts at once: no sheet opens by itself, the first visit gets one cue", () => {
+  const harness = makeRoot();
+  const toasts = [];
+  const stored = {};
+  harness.game.toast = (text, ms) => toasts.push([text, ms]);
+  harness.state.cells = [{ revealed: false, flagged: false }];
+  harness.root.location.search = "";
+  harness.root.localStorage = {
+    getItem: (key) => (key in stored ? stored[key] : null),
+    setItem: (key, value) => { stored[key] = String(value); },
+  };
+  harness.root.requestAnimationFrame = (callback) => callback();
+  GlitchSphere.boot({ root: harness.root });
+  assert.strictEqual(harness.getBootOptions().autoWelcome, false, "the engine may not open the sheet on a first visit");
+  assert.strictEqual(toasts.length, 1);
+  assert.match(toasts[0][0], /^Tap to clear/);
+  assert.strictEqual(stored[GlitchSphere.WELCOME_KEY], "1");
+  GlitchSphere.boot({ root: harness.root });
+  assert.strictEqual(toasts.length, 1, "the cue shows once");
 });
 
 test("boots Sphere with isolated persistence, run kind, variant, and completion callback", () => {
