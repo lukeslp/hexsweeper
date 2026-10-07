@@ -152,7 +152,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
 | `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
-| `collection/water-wheel.html` | Water Wheel — self-contained dousing-game one-pager with tutorial art |
+| `collection/water-wheel.html` | Water Wheel — self-contained dousing-game one-pager |
 | `build/app/wheel.html` | The Water Wheel sealed for the native app (app-flagged: globe themes dropped; help on demand; Sphere pill home) — reached by holding the mine count on the sphere or the wave button on the sheet's Board tab. The wheel **floats**: a spring–damper bob and sway forced by a two-frequency swell, churned down by spinning, hopped by a quench, slammed by a detonation (`BOB`/`tickBob` in `wheel/sphere.js`; the waterline stays anchored to the frame) |
 | `collection/polyhedron.html` | Dodecahedron campaign — 12 connected panels with 19/37/61 cells per panel |
 | `collection/sphere-reflection*.html` | Obsidian Mirror studies — five procedural environments plus fifteen image-backed surfaces, including animated storm, cloud, ink, and oil-cell plates |
@@ -336,6 +336,14 @@ console or local-resource failures. When Chrome is unavailable, the probe runs
 strict static route/resource checks and exits with status 2 so an interactive
 browser run is never reported as successful.
 
+Flux, Glitch, the Dodecahedron and the Water Wheel follow Sphere's help
+rule: play starts at once, nothing opens the sheet uninvited, Help is one line
+of what to do plus Tap / Hold / Drag, and no element carries a `title=`
+tooltip (the shared `initHexBloom(game, { tooltips: false })` drops the dock's
+hover titles; other pages keep them). Flux, Glitch and the Dodecahedron show
+one quiet cue above the bar on a first visit (`hexsweeper-flux-welcome-v3`,
+`hexsweeper-glitch-welcome-v1`, `hexsweeper-dodeca-welcome-v1`).
+
 The archive's flat Glitch Sweeper and Chain Reaction pages remain archived
 mechanic studies. The former label-only Flux page is now represented by the
 separate production Flux Sphere route.
@@ -416,7 +424,9 @@ real-face arrangement selected and styled below the waterline
 three; the face variants use a temporary camera zoom and restore the player's
 exact saved zoom when closed. The Wheel is an easter egg and opens straight
 into the game — the illustrated Dig / Menu / Quench tour was removed in
-`4c04cab`; the on-canvas alert line carries the rules as they come up.
+`4c04cab`; the on-canvas alert line carries the rules as they come up. Help
+sits in the bloom's lower-right corner seat, as on the other spheres: one line
+on quenching an armed mine, then Tap / Hold / Drag. Nothing opens it uninvited.
 
 ## Dodecahedron campaign (experimental)
 

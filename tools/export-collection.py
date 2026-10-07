@@ -2013,8 +2013,8 @@ def export_wheel_app() -> str:
     same way as index.html: fonts, chrome, scripts and the tutorial's SVGs are
     inlined by export_sphere; the globe daymaps (the Wheel's only network
     fetch) are dropped by the same HEXSWEEPER_SPHERE_APP filter the canonical
-    engine uses; the Wheel's own tutorial shows on first visit because it is
-    the only place quenching is explained.
+    engine uses; like the web page it opens straight into play, with its
+    one-line help behind the bloom's Help seat.
     """
     exp = next(e for e in EXPERIMENTS if e["id"] == "water-wheel")
     markup = export_sphere(exp)

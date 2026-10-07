@@ -27,6 +27,15 @@ product surfaces. Native iOS and Android retain the short first-launch intro.
   exporter copies Sphere's `sheet:begin … sheet:end` CSS verbatim. Every tab
   shares one grid cell on both pages, so neither sheet changes size between tabs.
 
+## Variant help (2026-10-07)
+
+- [x] Flux, Glitch, Dodecahedron: no sheet on a first visit, one quiet cue
+  instead; Help is one line plus Tap / Hold / Drag; every `title=` gone.
+- [x] Water Wheel: Help works again (corner seat + sheet), same shape.
+- [ ] Dodecahedron and Wheel sheets still use their older chip and toast
+  styles (uppercase tracked toast, small settings chips); align with the
+  brief's sheet when those pages get their own pass.
+
 ## Infinite social preview (2026-10-07)
 
 - [x] Dedicated 1200×630 Infinite card from the real monochrome board with
