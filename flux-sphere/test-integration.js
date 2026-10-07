@@ -149,8 +149,9 @@ function makeRoot(options) {
     SphereSweeper: {
       boot(received) { bootOptions = received; return game; },
     },
-    initHexBloom(received) {
+    initHexBloom(received, bloomOptions) {
       assert.strictEqual(received, game);
+      assert.deepStrictEqual(bloomOptions, { tooltips: false });
       return { open() {}, close() {} };
     },
     CustomEvent: function CustomEvent(type, init) {
@@ -218,15 +219,19 @@ test("exposes a named keyboard board, instructions, and polite atomic status", (
   assert.match(css, /#gameCanvas:focus-visible[\s\S]*outline/i);
 });
 
-test("documents matched twins, one-tap echoes, the Twin tool, flag marks, and reduced motion", () => {
-  assert.match(html, /both safe or both mines/i);
-  assert.match(html, /Dig a face[^<.]*twin opens/i);
-  assert.match(html, /echo never sets off a mine/i);
-  assert.match(html, /twin without digging/i);
-  assert.match(html, /flag on a twin holds its echo/i);
-  assert.match(html, /twin gets a dashed red mark/i);
-  assert.match(html, /(linked glyph|chain glyph|↔)/i);
-  assert.match(html, /<kbd>E<\/kbd>\s*twin/i);
+test("help is one line of what to do and three gestures, with no tooltips", () => {
+  const sheet = html.slice(html.indexOf('id="help-overlay"'), html.indexOf("</nav>", html.indexOf('id="help-overlay"')));
+  const lede = sheet.match(/<p class="help-lede">([^<]*)<\/p>/);
+  assert.ok(lede, "help needs one lede line");
+  assert.match(lede[1], /twin/i);
+  assert.match(lede[1], /dig one and both open/i);
+  assert.strictEqual((sheet.match(/class="help-lede"/g) || []).length, 1);
+  const rows = sheet.match(/<li><span class="act">([^<]*)<\/span>/g) || [];
+  assert.deepStrictEqual(rows.map((row) => row.replace(/<[^>]+>/g, "")), ["Tap", "Hold", "Drag"]);
+  for (const gone of ["help-body", "help-keys", "help-more"]) {
+    assert.ok(!sheet.includes(gone), `help still carries ${gone}`);
+  }
+  assert.ok(!/\stitle="/.test(html), "the page carries a title= tooltip");
   const twin = tagWithId(html, "button", "twin-btn");
   assert.match(twin, /aria-pressed=["']false["']/i);
   assert.match(twin, /aria-label=["'][^"']*twin[^"']*["']/i);
@@ -235,6 +240,44 @@ test("documents matched twins, one-tap echoes, the Twin tool, flag marks, and re
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i);
   assert.match(css, /animation[^;]*none|transition[^;]*none/i);
   assert.match(adapterSource, /reduceMotion/);
+});
+
+test("play starts at once: no sheet opens by itself, the first visit gets one cue", () => {
+  const options = { autoWelcome: null, bloom: null };
+  const toasts = [];
+  const stored = {};
+  let helpClicks = 0;
+  const cells = [{ revealed: false, flagged: false }];
+  const game = {
+    getState: () => ({ cells }),
+    toast(text, ms) { toasts.push([text, ms]); },
+  };
+  const root = {
+    document: {
+      getElementById(id) {
+        if (id === "help-btn") return { click() { helpClicks++; } };
+        if (id === "help-overlay") return { hidden: true };
+        return null;
+      },
+    },
+    location: { origin: "https://example.test", search: "" },
+    localStorage: {
+      getItem: (key) => (key in stored ? stored[key] : null),
+      setItem: (key, value) => { stored[key] = String(value); },
+    },
+    requestAnimationFrame: (callback) => callback(),
+    SphereSweeper: { boot(received) { options.autoWelcome = received.autoWelcome; return game; } },
+    initHexBloom(received, bloomOptions) { options.bloom = bloomOptions; return {}; },
+  };
+  FluxSphere.boot({ root });
+  assert.strictEqual(options.autoWelcome, false, "the engine may not open the sheet on a first visit");
+  assert.deepStrictEqual(options.bloom, { tooltips: false });
+  assert.strictEqual(helpClicks, 0, "help opened by itself");
+  assert.strictEqual(toasts.length, 1);
+  assert.match(toasts[0][0], /^Tap to clear/);
+  assert.strictEqual(stored[FluxSphere.WELCOME_KEY], "1");
+  FluxSphere.boot({ root });
+  assert.strictEqual(toasts.length, 1, "the cue shows once");
 });
 
 test("one tap digs a face and echoes onto its safe twin", () => {

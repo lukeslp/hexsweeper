@@ -24,8 +24,9 @@
 
   const STORAGE_KEY = "hexsweeper-flux-sphere-run-v1";
   const RUN_KIND = "flux-sphere";
-  /** Shown once per browser for the version-3 rules, even to earlier players. */
+  /** Marks the one-line first-visit cue as shown (once per browser). */
   const WELCOME_KEY = "hexsweeper-flux-welcome-v3";
+  const CUE = "Tap to clear · hold to flag · drag to spin";
   const ROTATION_STEP = Math.PI / 18;
   const ECHO_VISIBLE_MS = 2000;
   const ECHO_HOLD_MS = 1200;
@@ -765,18 +766,32 @@
     }
   }
 
-  function showWelcome(host, document) {
+  /**
+   * Play starts at once: no sheet opens by itself. A first visit gets one
+   * quiet line above the bar instead (the engine's toast); a restored run, a
+   * ?welcome= preview or blocked storage never shows it.
+   */
+  function showFirstVisitCue(host, game) {
     try {
-      if (/(?:\?|&)welcome=0(?:&|$)/.test(host.location ? host.location.search || "" : "")) return;
+      if (/(?:\?|&)welcome=[01](?:&|$)/.test(host.location ? host.location.search || "" : "")) return;
       const storage = host.localStorage;
       if (!storage || storage.getItem(WELCOME_KEY)) return;
-      storage.setItem(WELCOME_KEY, "1");
-      const overlay = document.getElementById("help-overlay");
-      if (overlay && !overlay.hidden) return;
-      const helpButton = document.getElementById("help-btn");
-      if (helpButton && typeof helpButton.click === "function") helpButton.click();
+      const frame = typeof host.requestAnimationFrame === "function"
+        ? host.requestAnimationFrame.bind(host)
+        : (callback) => setTimeout(callback, 16);
+      let tries = 0;
+      (function check() {
+        const state = typeof game.getState === "function" ? game.getState() : null;
+        if (!state || !state.cells || !state.cells.length) {
+          if (++tries < 180) frame(check);
+          return;
+        }
+        if (state.cells.some((cell) => cell.revealed || cell.flagged)) return;
+        if (typeof game.toast === "function") game.toast(CUE, 5200);
+        try { storage.setItem(WELCOME_KEY, "1"); } catch (_) {}
+      })();
     } catch (_) {
-      // Storage blocked: the engine's own first-visit sheet still applies.
+      // Storage blocked: no cue, and still no sheet.
     }
   }
 
@@ -798,6 +813,7 @@
       storageKey: STORAGE_KEY,
       runKind: RUN_KIND,
       createRunId: options.createRunId,
+      autoWelcome: false,
       onRunComplete(payload) {
         forwardCompletion(payload, host);
         if (typeof options.onRunComplete === "function") options.onRunComplete(payload);
@@ -876,8 +892,8 @@
       }
     });
 
-    const menu = typeof host.initHexBloom === "function" ? host.initHexBloom(game) : null;
-    showWelcome(host, document);
+    const menu = typeof host.initHexBloom === "function" ? host.initHexBloom(game, { tooltips: false }) : null;
+    showFirstVisitCue(host, game);
     return { game, menu, adapter };
   }
 
