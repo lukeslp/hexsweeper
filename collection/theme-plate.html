@@ -7838,6 +7838,26 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (tip) tip.hidden = modeId !== "escape";
   }
 
+  // —— Readout (infinite.html) ——
+  // An endless board has no honest "mines left", so the top line is the score:
+  // cells cleared, then the best run while it is ahead, or that the run is over.
+  let readoutKey = "";
+  function paintReadout() {
+    if (!MINIMAL_HELP) return;
+    const s = gameApi && gameApi.state;
+    const cleared = document.getElementById("readout-cleared");
+    const more = document.getElementById("readout-more");
+    if (!s || !cleared || !more) return;
+    const n = s.clearedSafe | 0;
+    const best = s.bestCleared | 0;
+    const tail = s.isGameOver && !s.win ? " · run over" : best > n ? ` · best ${best}` : "";
+    const key = n + tail;
+    if (key === readoutKey) return;
+    readoutKey = key;
+    cleared.textContent = String(n);
+    more.textContent = tail;
+  }
+
   function showToast(name, ms) {
     const el = document.getElementById("theme-toast");
     if (!el) return;
@@ -9480,6 +9500,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       },
       beforeFrame(ctx, api) {
         gameApi = api;
+        paintReadout();
         const s = api.state;
         const th = THEMES[themeIndex];
         const t = performance.now();
@@ -10479,6 +10500,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (typeof scheme.addEventListener === "function") scheme.addEventListener("change", follow);
     else if (typeof scheme.addListener === "function") scheme.addListener(follow);
   }
+  paintReadout();
 
   // Minimal-help pages (infinite.html): a first visit gets one quiet line above
   // the bar instead of a card. It fades on its own; a restored run or a blocked

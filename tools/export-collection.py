@@ -1734,19 +1734,162 @@ def prepare_flat_product(markup: str, label: str) -> str:
 
 
 # Infinite's help and settings sheet: Sphere's sheet (same markup, classes and
-# CSS) with three tabs. Play is one line of what to do, three gesture rows and a
-# quiet score line; Look is the Light / Dark tiles; Settings holds Flag mode,
-# Effects and the run export/import as plain rows. The element ids are the ones
-# core.js and play.html already wire (stats-*, flag-btn, fx-btn, *-run-*).
+# CSS) with three tabs. Play is one line of what to do and three gesture rows;
+# Look is the Light / Dark tiles; Settings holds Effects and the run
+# export/import as plain rows. The element ids are the ones core.js and
+# play.html already wire (fx-btn, *-run-*). The score and Flag mode live in the
+# quiet chrome below (INFINITE_CHROME), not in the sheet.
 ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'
 ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>'
-INFINITE_HELP_BUTTON = """  <button type="button" id="help-btn" class="hud-btn" aria-label="Help and settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9.2"></circle>
-      <path d="M9.3 9.4a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.6-2.7 4.1"></path>
-      <line x1="12" y1="17.6" x2="12.01" y2="17.6"></line>
-    </svg>
-  </button>
+
+# Infinite's quiet chrome (game-riffs docs/design/minimal-brief.md, Sphere's
+# quiet-chrome glyphs): a one-line readout at the top centre and a bottom bar,
+# New board · Flag mode on the left, Help and settings on the right. It replaces
+# play.html's glass pill (Appearance · Reset · Menu); Light / Dark lives in the
+# sheet's Look tab and follows the system until the player picks one.
+_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'
+INFINITE_CHROME = f"""<main class="game">
+<h1 class="sr-only">Hexsweeper Infinite</h1>
+<p class="readout" id="readout"><span id="readout-cleared">0</span> cleared<span id="readout-more"></span></p>
+<div class="bar" role="toolbar" aria-label="Game controls">
+  <div class="bar-group">
+    <button type="button" id="reset-btn" class="ib" aria-label="New board">{_SVG}><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg></button>
+    <button type="button" id="flag-btn" class="ib" aria-label="Flag mode" aria-pressed="false">{_SVG} class="ib-off"><path d="M6 21V4"/><path d="M6 4h10l-2 4 2 4H6"/></svg>{_SVG} class="ib-on"><path d="M6 21V4"/><path d="M6 4h10l-2 4 2 4H6z" fill="currentColor"/></svg></button>
+  </div>
+  <div class="bar-group">
+    <button type="button" id="help-btn" class="ib" aria-label="Help and settings">{_SVG}><circle cx="12" cy="12" r="9.2"/><path d="M9.3 9.4a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.6-2.7 4.1"/><path d="M12 17.6h.01"/></svg></button>
+  </div>
+</div>
+"""
+INFINITE_CHROME_CSS = """/* chrome:begin — Infinite's quiet chrome (minimal brief). Tokens follow the
+   system scheme; [data-theme] (set by play.html from the Look tab) forces one. */
+:root {
+  --bg: #ffffff;
+  --ink: #000000;
+  --sub: #5e5e5e;
+  --line: #d4d4d4;
+  --band: rgba(0, 0, 0, 0.05);
+  --flag: #ff0000;
+  --bar: 56px;
+  --top: 36px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --ink: #ffffff; --sub: #a6a6a6; --line: #2f2f2f; --band: rgba(255, 255, 255, 0.06);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --ink: #ffffff; --sub: #a6a6a6; --line: #2f2f2f; --band: rgba(255, 255, 255, 0.06);
+}
+/* First paint matches the scheme; boot then paints the plate inline. */
+body { background: var(--bg); height: 100dvh; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.readout {
+  position: fixed;
+  z-index: 40;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  box-sizing: border-box;
+  height: calc(var(--top) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  color: var(--sub);
+  font: 500 13px/1 var(--font-mono);
+  line-height: calc(var(--top) - 1px);
+  text-align: center;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bar {
+  position: fixed;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  height: calc(var(--bar) + env(safe-area-inset-bottom, 0px));
+  padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(4px, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+.bar-group { display: flex; gap: 4px; }
+.ib {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.ib svg { width: 24px; height: 24px; }
+.ib:active { transform: scale(0.94); }
+.ib:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) { .ib:hover { background: var(--band); } }
+/* Flag mode armed: the flag fills and turns flag red (game meaning, not accent). */
+.ib .ib-on { display: none; }
+.ib[aria-pressed="true"] { color: var(--flag); }
+.ib[aria-pressed="true"] .ib-off { display: none; }
+.ib[aria-pressed="true"] .ib-on { display: block; }
+/* The first-visit cue and theme name: a one-line strip above the bar. */
+.theme-toast {
+  bottom: calc(var(--bar) + env(safe-area-inset-bottom, 0px) + 12px);
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--ink);
+  font: 500 13px/1.2 var(--font-mono);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+/* Landscape phones: the bar becomes a 64px right rail. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .readout { right: calc(64px + env(safe-area-inset-right, 0px)); --top: 32px; }
+  .bar {
+    left: auto;
+    top: 0;
+    width: calc(64px + env(safe-area-inset-right, 0px));
+    height: auto;
+    flex-direction: column;
+    padding: max(8px, env(safe-area-inset-top, 0px)) env(safe-area-inset-right, 0px) max(8px, env(safe-area-inset-bottom, 0px)) 0;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+  .bar-group { flex-direction: column; }
+  .theme-toast { bottom: max(12px, env(safe-area-inset-bottom, 0px)); left: calc(50% - 32px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ib { transition: none; }
+  .ib:active { transform: none; }
+}
+:root[data-effects="reduced"] .ib { transition: none; }
+:root[data-effects="reduced"] .ib:active { transform: none; }
+@media (forced-colors: active) {
+  .readout, .bar { border-color: CanvasText; }
+  .ib[aria-pressed="true"] { color: Highlight; }
+}
+/* chrome:end */
 """
 INFINITE_SHEET = f"""<!-- Help and settings: one sheet, the same component as Sphere's -->
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
@@ -1766,7 +1909,6 @@ INFINITE_SHEET = f"""<!-- Help and settings: one sheet, the same component as Sp
       <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag it</span></li>
       <li><span class="act">Drag</span><span>Pan the board</span></li>
     </ul>
-    <p class="help-score"><b id="stats-mines">00</b> mines left · <b id="stats-time">000</b> cleared</p>
     <p class="help-more">Also <a href="index.html">Sphere</a> · <a href="bounded.html">Classic</a></p>
     </section>
     <section class="help-tabpanel" role="tabpanel" id="help-panel-look" aria-labelledby="help-tab-look" data-tab="look" hidden>
@@ -1781,7 +1923,6 @@ INFINITE_SHEET = f"""<!-- Help and settings: one sheet, the same component as Sp
     <section class="help-tabpanel" role="tabpanel" id="help-panel-settings" aria-labelledby="help-tab-settings" data-tab="settings" hidden>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
       <span class="help-packs-cap">Settings</span>
-      <button type="button" class="help-pack" id="flag-btn" data-ctl="flag" aria-label="Flag mode" aria-pressed="false">Flag mode</button>
       <button type="button" class="help-pack" id="fx-btn" data-ctl="effects">Effects auto</button>
       <button type="button" class="help-pack" id="export-run-btn" data-ctl="export">Export run</button>
       <button type="button" class="help-pack" id="import-run-btn" data-ctl="import">Import run</button>
@@ -1812,12 +1953,14 @@ def sphere_sheet_css() -> str:
 def minimal_flat_help(markup: str, label: str) -> str:
     """Infinite opens straight onto the board and shares Sphere's sheet.
 
-    Replaces the Menu and the Help sheet with INFINITE_SHEET, the bar's Menu
-    button with one Help and settings button, and play.html's help CSS with
-    Sphere's sheet block. Drops the welcome card (a one-pager never opens it)
-    and strips every title= tooltip; aria-labels carry the names. play.html
-    reads ONEPAGER.minimalHelp to wire the tabs, the first-visit cue and to
-    keep runtime titles off.
+    Replaces the Menu and the Help sheet with INFINITE_SHEET, the glass pill
+    (Appearance · Reset · Menu) with INFINITE_CHROME (readout + bar, inside
+    <main> with the canvas), play.html's help CSS with Sphere's sheet block
+    plus INFINITE_CHROME_CSS, and the fixed theme-color with one per scheme.
+    Drops the welcome card (a one-pager never opens it) and strips every
+    title= tooltip; aria-labels carry the names. play.html reads
+    ONEPAGER.minimalHelp to wire the tabs, the readout, the system theme, the
+    first-visit cue and to keep runtime titles off.
     """
     markup, n = re.subn(
         r'<!-- Menu: [^>]*-->\n<div id="modal-overlay".*?\n</div>\n\n<!-- Help -->\n<div id="help-overlay".*?\n</div>\n',
@@ -1829,14 +1972,23 @@ def minimal_flat_help(markup: str, label: str) -> str:
     if n != 1:
         raise SystemExit(f"minimal_flat_help({label}): Menu + Help sheets not found")
     markup, n = re.subn(
-        r'  <button type="button" id="menu-btn" class="hud-btn"[^>]*>.*?</button>\n',
-        lambda m: INFINITE_HELP_BUTTON,
+        r'<div class="hud-actions chrome-glass" role="toolbar"[^>]*>\n.*?\n</div>\n',
+        lambda m: INFINITE_CHROME,
         markup,
         count=1,
         flags=re.S,
     )
     if n != 1:
-        raise SystemExit(f"minimal_flat_help({label}): Menu button not found")
+        raise SystemExit(f"minimal_flat_help({label}): glass toolbar not found")
+    markup, n = re.subn(
+        r'(<div class="canvas-container">\n.*?\n</div>\n)',
+        r"\1</main>\n",
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    if n != 1:
+        raise SystemExit(f"minimal_flat_help({label}): canvas container not found")
     markup, n = re.subn(
         r'<meta name="theme-color" content="[^"]*">',
         '<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">\n'
@@ -1849,14 +2001,14 @@ def minimal_flat_help(markup: str, label: str) -> str:
     markup, n = re.subn(
         r"/\* Help panel — minimalist sheet aligned with sphere/index help \*/\n.*?"
         r"\.help-panel \.menu-links-sep \{[^}]*\}\n",
-        lambda m: sphere_sheet_css(),
+        lambda m: sphere_sheet_css() + INFINITE_CHROME_CSS,
         markup,
         count=1,
         flags=re.S,
     )
     if n != 1:
         raise SystemExit(f"minimal_flat_help({label}): help CSS block not found")
-    for gone in ('id="modal-overlay"', 'id="menu-btn"', 'class="help-glyphs"', 'id="help-body"'):
+    for gone in ('id="modal-overlay"', 'id="menu-btn"', 'id="plate-toggle"', 'class="hud-actions', 'class="help-glyphs"', 'id="help-body"'):
         if gone in markup:
             raise SystemExit(f"minimal_flat_help({label}): {gone} survived")
     markup, n = re.subn(

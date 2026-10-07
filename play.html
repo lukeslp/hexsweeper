@@ -7,8 +7,10 @@
   Notes: Cold start applies chrome before startFreshRun (same path as Reset) so full-bleed canvas matches.
   Chrome: BR Appearance (sun/moon) · Reset · Menu; short Help sheet; minimal Menu.
   minimalHelp (infinite.html): the exporter replaces Menu + Help with Sphere's tabbed sheet
-    (Play · Look · Settings) and strips title= tooltips; this file wires its tabs, focus
-    trap and labels, adds the first-visit cue and keeps titles off at runtime.
+    (Play · Look · Settings), the glass pill with a top readout (cleared count) and a
+    bottom icon bar (New board · Flag mode | Help), and strips title= tooltips; this file
+    wires its tabs, focus trap, readout and system light/dark, adds the first-visit cue
+    and keeps titles off at runtime.
   Notes: Fire cameraLock — drag tilts while the pit fits; zoomed past the frame → clamped pan.
     Light = porcelain plate; Dark = night iron; Escape = cool rift steel.
     Plague = soil hive bed + living mycelial underlay (re-seeds on Reset); seam-only LOD at extreme zoom-out.
@@ -5186,6 +5188,26 @@ body[data-mode="escape"] .menu-links {
     if (tip) tip.hidden = modeId !== "escape";
   }
 
+  // —— Readout (infinite.html) ——
+  // An endless board has no honest "mines left", so the top line is the score:
+  // cells cleared, then the best run while it is ahead, or that the run is over.
+  let readoutKey = "";
+  function paintReadout() {
+    if (!MINIMAL_HELP) return;
+    const s = gameApi && gameApi.state;
+    const cleared = document.getElementById("readout-cleared");
+    const more = document.getElementById("readout-more");
+    if (!s || !cleared || !more) return;
+    const n = s.clearedSafe | 0;
+    const best = s.bestCleared | 0;
+    const tail = s.isGameOver && !s.win ? " · run over" : best > n ? ` · best ${best}` : "";
+    const key = n + tail;
+    if (key === readoutKey) return;
+    readoutKey = key;
+    cleared.textContent = String(n);
+    more.textContent = tail;
+  }
+
   function showToast(name, ms) {
     const el = document.getElementById("theme-toast");
     if (!el) return;
@@ -6828,6 +6850,7 @@ body[data-mode="escape"] .menu-links {
       },
       beforeFrame(ctx, api) {
         gameApi = api;
+        paintReadout();
         const s = api.state;
         const th = THEMES[themeIndex];
         const t = performance.now();
@@ -7827,6 +7850,7 @@ body[data-mode="escape"] .menu-links {
     if (typeof scheme.addEventListener === "function") scheme.addEventListener("change", follow);
     else if (typeof scheme.addListener === "function") scheme.addListener(follow);
   }
+  paintReadout();
 
   // Minimal-help pages (infinite.html): a first visit gets one quiet line above
   // the bar instead of a card. It fades on its own; a restored run or a blocked

@@ -36,7 +36,15 @@ exporter's `minimal_flat_help` replaces play.html's Menu and Help with one
 Sphere-style sheet (Play · Look · Settings), copies Sphere's CSS between the
 `sheet:begin` / `sheet:end` markers in `sphere/index.html` verbatim (restyle the
 sheet there, for both pages), drops the welcome card and strips every `title=`.
-Tab panels share one grid cell, so neither sheet changes height between tabs; `"minimalHelp": true`
+Tab panels share one grid cell, so neither sheet changes height between tabs.
+Its chrome follows the minimal brief (`game-riffs/docs/design/minimal-brief.md`):
+the exporter swaps play.html's glass pill for `INFINITE_CHROME` (CSS between
+`chrome:begin` / `chrome:end`): a top readout of cells cleared (an endless board
+has no honest "mines left") and a bottom bar of bare `.ib` icons, New board ·
+Flag mode on the left and Help and settings on the right, which becomes a 64px
+right rail on landscape phones. The score and Flag mode are not repeated in the
+sheet. Light / Dark follows `prefers-color-scheme` until the player picks one in
+Look (kept under `hexsweeper-infinite-theme-v1`). `"minimalHelp": true`
 in its one-pager config turns on a quiet first-visit cue (the theme toast,
 marks `hexsweeper-infinite-welcome-v1`) and keeps runtime titles off
 (`Hexsweeper.boot({ tooltips: false })`). play.html, its theme pens and

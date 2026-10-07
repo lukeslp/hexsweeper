@@ -1092,6 +1092,135 @@ body[data-mode="dark"] #plate-toggle .plate-icon-moon { display: block !importan
   .help-tab { font-size: 0.73rem; }
 }
 /* sheet:end */
+/* chrome:begin — Infinite's quiet chrome (minimal brief). Tokens follow the
+   system scheme; [data-theme] (set by play.html from the Look tab) forces one. */
+:root {
+  --bg: #ffffff;
+  --ink: #000000;
+  --sub: #5e5e5e;
+  --line: #d4d4d4;
+  --band: rgba(0, 0, 0, 0.05);
+  --flag: #ff0000;
+  --bar: 56px;
+  --top: 36px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --ink: #ffffff; --sub: #a6a6a6; --line: #2f2f2f; --band: rgba(255, 255, 255, 0.06);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --ink: #ffffff; --sub: #a6a6a6; --line: #2f2f2f; --band: rgba(255, 255, 255, 0.06);
+}
+/* First paint matches the scheme; boot then paints the plate inline. */
+body { background: var(--bg); height: 100dvh; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.readout {
+  position: fixed;
+  z-index: 40;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  box-sizing: border-box;
+  height: calc(var(--top) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  color: var(--sub);
+  font: 500 13px/1 var(--font-mono);
+  line-height: calc(var(--top) - 1px);
+  text-align: center;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bar {
+  position: fixed;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  height: calc(var(--bar) + env(safe-area-inset-bottom, 0px));
+  padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(4px, env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+.bar-group { display: flex; gap: 4px; }
+.ib {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.ib svg { width: 24px; height: 24px; }
+.ib:active { transform: scale(0.94); }
+.ib:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) { .ib:hover { background: var(--band); } }
+/* Flag mode armed: the flag fills and turns flag red (game meaning, not accent). */
+.ib .ib-on { display: none; }
+.ib[aria-pressed="true"] { color: var(--flag); }
+.ib[aria-pressed="true"] .ib-off { display: none; }
+.ib[aria-pressed="true"] .ib-on { display: block; }
+/* The first-visit cue and theme name: a one-line strip above the bar. */
+.theme-toast {
+  bottom: calc(var(--bar) + env(safe-area-inset-bottom, 0px) + 12px);
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--ink);
+  font: 500 13px/1.2 var(--font-mono);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+/* Landscape phones: the bar becomes a 64px right rail. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .readout { right: calc(64px + env(safe-area-inset-right, 0px)); --top: 32px; }
+  .bar {
+    left: auto;
+    top: 0;
+    width: calc(64px + env(safe-area-inset-right, 0px));
+    height: auto;
+    flex-direction: column;
+    padding: max(8px, env(safe-area-inset-top, 0px)) env(safe-area-inset-right, 0px) max(8px, env(safe-area-inset-bottom, 0px)) 0;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+  .bar-group { flex-direction: column; }
+  .theme-toast { bottom: max(12px, env(safe-area-inset-bottom, 0px)); left: calc(50% - 32px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ib { transition: none; }
+  .ib:active { transform: none; }
+}
+:root[data-effects="reduced"] .ib { transition: none; }
+:root[data-effects="reduced"] .ib:active { transform: none; }
+@media (forced-colors: active) {
+  .readout, .bar { border-color: CanvasText; }
+  .ib[aria-pressed="true"] { color: Highlight; }
+}
+/* chrome:end */
 
 /* Menu modal inherits skin-chrome; production widens + left-aligns */
 .modal-content {
@@ -1588,30 +1717,17 @@ body[data-mode="escape"] .menu-links {
 <body>
 <div class="fx-layer" id="fx" aria-hidden="true"></div>
 
-<div class="hud-actions chrome-glass" role="toolbar" aria-label="Game controls">
-  <button type="button" id="plate-toggle" class="hud-btn" aria-label="Switch to Dark" hidden>
-    <svg class="plate-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4"></circle>
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
-    </svg>
-    <svg class="plate-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"></path>
-    </svg>
-  </button>
-  <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <polyline points="23 4 23 10 17 10"></polyline>
-      <polyline points="1 20 1 14 7 14"></polyline>
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-    </svg>
-  </button>
-  <button type="button" id="help-btn" class="hud-btn" aria-label="Help and settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9.2"></circle>
-      <path d="M9.3 9.4a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.6-2.7 4.1"></path>
-      <line x1="12" y1="17.6" x2="12.01" y2="17.6"></line>
-    </svg>
-  </button>
+<main class="game">
+<h1 class="sr-only">Hexsweeper Infinite</h1>
+<p class="readout" id="readout"><span id="readout-cleared">0</span> cleared<span id="readout-more"></span></p>
+<div class="bar" role="toolbar" aria-label="Game controls">
+  <div class="bar-group">
+    <button type="button" id="reset-btn" class="ib" aria-label="New board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg></button>
+    <button type="button" id="flag-btn" class="ib" aria-label="Flag mode" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="ib-off"><path d="M6 21V4"/><path d="M6 4h10l-2 4 2 4H6"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="ib-on"><path d="M6 21V4"/><path d="M6 4h10l-2 4 2 4H6z" fill="currentColor"/></svg></button>
+  </div>
+  <div class="bar-group">
+    <button type="button" id="help-btn" class="ib" aria-label="Help and settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M9.3 9.4a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.6-2.7 4.1"/><path d="M12 17.6h.01"/></svg></button>
+  </div>
 </div>
 
 <div id="theme-toast" class="theme-toast" role="status" aria-live="polite"></div>
@@ -1619,6 +1735,7 @@ body[data-mode="escape"] .menu-links {
 <div class="canvas-container">
   <canvas id="gameCanvas" aria-label="Hexsweeper board"></canvas>
 </div>
+</main>
 
 <!-- Help and settings: one sheet, the same component as Sphere's -->
 <div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
@@ -1638,7 +1755,6 @@ body[data-mode="escape"] .menu-links {
       <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag it</span></li>
       <li><span class="act">Drag</span><span>Pan the board</span></li>
     </ul>
-    <p class="help-score"><b id="stats-mines">00</b> mines left · <b id="stats-time">000</b> cleared</p>
     <p class="help-more">Also <a href="index.html">Sphere</a> · <a href="bounded.html">Classic</a></p>
     </section>
     <section class="help-tabpanel" role="tabpanel" id="help-panel-look" aria-labelledby="help-tab-look" data-tab="look" hidden>
@@ -1653,7 +1769,6 @@ body[data-mode="escape"] .menu-links {
     <section class="help-tabpanel" role="tabpanel" id="help-panel-settings" aria-labelledby="help-tab-settings" data-tab="settings" hidden>
     <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
       <span class="help-packs-cap">Settings</span>
-      <button type="button" class="help-pack" id="flag-btn" data-ctl="flag" aria-label="Flag mode" aria-pressed="false">Flag mode</button>
       <button type="button" class="help-pack" id="fx-btn" data-ctl="effects">Effects auto</button>
       <button type="button" class="help-pack" id="export-run-btn" data-ctl="export">Export run</button>
       <button type="button" class="help-pack" id="import-run-btn" data-ctl="import">Import run</button>
@@ -7973,6 +8088,26 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (tip) tip.hidden = modeId !== "escape";
   }
 
+  // —— Readout (infinite.html) ——
+  // An endless board has no honest "mines left", so the top line is the score:
+  // cells cleared, then the best run while it is ahead, or that the run is over.
+  let readoutKey = "";
+  function paintReadout() {
+    if (!MINIMAL_HELP) return;
+    const s = gameApi && gameApi.state;
+    const cleared = document.getElementById("readout-cleared");
+    const more = document.getElementById("readout-more");
+    if (!s || !cleared || !more) return;
+    const n = s.clearedSafe | 0;
+    const best = s.bestCleared | 0;
+    const tail = s.isGameOver && !s.win ? " · run over" : best > n ? ` · best ${best}` : "";
+    const key = n + tail;
+    if (key === readoutKey) return;
+    readoutKey = key;
+    cleared.textContent = String(n);
+    more.textContent = tail;
+  }
+
   function showToast(name, ms) {
     const el = document.getElementById("theme-toast");
     if (!el) return;
@@ -9615,6 +9750,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       },
       beforeFrame(ctx, api) {
         gameApi = api;
+        paintReadout();
         const s = api.state;
         const th = THEMES[themeIndex];
         const t = performance.now();
@@ -10614,6 +10750,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (typeof scheme.addEventListener === "function") scheme.addEventListener("change", follow);
     else if (typeof scheme.addListener === "function") scheme.addListener(follow);
   }
+  paintReadout();
 
   // Minimal-help pages (infinite.html): a first visit gets one quiet line above
   // the bar instead of a card. It fades on its own; a restored run or a blocked

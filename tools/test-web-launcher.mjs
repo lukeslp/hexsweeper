@@ -143,7 +143,20 @@ expect((infinite.match(/<li><span class="act">/g) || []).length === 3, "Infinite
 // tabs Play · Look · Settings, and Sphere's sheet CSS copied verbatim.
 expect(!infinite.includes('id="modal-overlay"') && !infinite.includes('id="menu-btn"'), "Infinite grew back its separate Menu");
 expect((infinite.match(/id="help-overlay"/g) || []).length === 1, "Infinite should have exactly one sheet");
-expect(infinite.includes('id="help-btn" class="hud-btn" aria-label="Help and settings"'), "Infinite bar lost its Help and settings button");
+// Quiet chrome (minimal brief): a top readout and a bottom bar of bare icon
+// buttons, New board · Flag mode | Help and settings; no glass pill.
+expect(infinite.includes('<p class="readout" id="readout">'), "Infinite lost its top readout");
+expect(infinite.includes('<div class="bar" role="toolbar" aria-label="Game controls">'), "Infinite lost its bottom bar");
+for (const [id, label] of [["reset-btn", "New board"], ["flag-btn", "Flag mode"], ["help-btn", "Help and settings"]]) {
+  expect(infinite.includes(`id="${id}" class="ib" aria-label="${label}"`), `Infinite bar lost ${label}`);
+}
+expect(!infinite.includes('class="hud-actions') && !infinite.includes('id="plate-toggle"'), "Infinite grew back its glass pill or Appearance button");
+expect(
+  infinite.includes('<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">') &&
+    infinite.includes('<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">'),
+  "Infinite needs one theme-color per scheme",
+);
+expect(infinite.includes("<main class=\"game\">") && infinite.includes('<h1 class="sr-only">Hexsweeper Infinite</h1>'), "Infinite lost its main landmark or sr-only title");
 expect(
   ["play", "look", "settings"].every((t) => infinite.includes(`role="tab" class="help-tab" id="help-tab-${t}"`)) &&
     (infinite.match(/role="tab"/g) || []).length === 3,
@@ -151,9 +164,12 @@ expect(
 );
 expect(infinite.includes('<h2 id="help-title">Hexsweeper Infinite <span class="help-title-sub">settings</span></h2>'), "Infinite sheet title drifted from Sphere's header style");
 expect(infinite.includes('id="help-tabstack"') && sphere.includes('id="help-tabstack"'), "a sheet lost its one-height tab stack");
-for (const id of ["flag-btn", "fx-btn", "export-run-btn", "import-run-btn", "import-run-file", "stats-mines", "stats-time"]) {
+for (const id of ["fx-btn", "export-run-btn", "import-run-btn", "import-run-file"]) {
   expect(infinite.includes(`id="${id}"`), `Infinite sheet lost #${id}`);
 }
+// The score lives in the readout and Flag mode in the bar, not twice.
+expect(!infinite.includes('id="stats-mines"') && !infinite.includes('class="help-score"'), "Infinite sheet still carries the score line");
+expect((infinite.match(/id="flag-btn"/g) || []).length === 1, "Infinite should have one Flag mode control");
 expect((infinite.match(/class="help-theme" data-mode="/g) || []).length === 2, "Infinite Look tab should offer exactly Light and Dark");
 {
   const block = (sphere.match(/\/\* sheet:begin [\s\S]*?\/\* sheet:end \*\/\n/) || [""])[0];
