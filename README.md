@@ -44,11 +44,12 @@ The root opens straight into Sphere, which restores its own unfinished run
 without asking. A small mines-left/seconds readout sits at the top, with
 **Undo · New sphere · Flag** at the bottom left and **?** at the bottom right.
 The three-hex games menu — Infinite, Classic, Sphere, with
-the newest run in the center Resume tile — lives at `launcher.html`, reached
-from Classic's **‹ Games** pill or from the sphere's Help sheet
-("Also Games · Infinite · Classic"). `infinite.html` is standalone (a minimal
-index links to it directly): no Games pill, and `stillPlane` keeps the plate
-flat with no pointer parallax. A mode tap starts a fresh run using the
+the newest run in the center Resume tile — lives at `launcher.html`, which is
+**unlinked and noindex** since 2026-10-07: it stays served only so old links
+resolve. Every web game stands alone, with no Games pill; the sphere's Help
+sheet ends "Also Infinite · Classic". `infinite.html` also sets `stillPlane`
+(a minimal index links to it), which keeps the plate flat with no pointer
+parallax. A mode tap on the launcher starts a fresh run using the
 last used style, board size, or theme. Settings live inside each game.
 
 Web visits open the board immediately, with instructions and settings behind

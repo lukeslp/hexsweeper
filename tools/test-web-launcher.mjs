@@ -106,10 +106,7 @@ expect(
   "Classic active runs no longer feed the centered Resume tile",
 );
 
-expect(
-  launcher.includes('rel="canonical" href="https://dr.eamer.dev/games/hexsweeper/launcher.html"'),
-  "launcher canonical is wrong",
-);
+expect(launcher.includes('<meta name="robots" content="noindex">'), "unlinked launcher lost its noindex");
 expect(
   template.includes('href: "{{SPHERE_HREF}}?resume=1"'),
   "Sphere resume route does not skip the root gate",
@@ -130,9 +127,11 @@ for (const [label, page, canonical] of [
 ]) {
   expect(page.includes(`rel="canonical" href="https://dr.eamer.dev/games/hexsweeper${canonical}"`), `${label} canonical is wrong`);
 }
-expect(bounded.includes('class="app-back" href="launcher.html"'), "Classic has no Games return");
-// Infinite stands alone (linked from a minimal index): no way back, no parallax.
-expect(!infinite.includes('class="app-back"'), "standalone Infinite grew a Games pill");
+// Every web game stands alone: nothing links back to the launcher.
+for (const [label, page] of [["Infinite", infinite], ["Classic", bounded], ["Root", rootPage], ["Sphere", sphere]]) {
+  expect(!page.includes("launcher.html\""), `${label} links to the unlisted launcher`);
+  expect(!page.includes('class="app-back"') && !page.includes('class="web-games-back"'), `${label} grew a Games pill`);
+}
 expect(infinite.includes('"stillPlane": true'), "standalone Infinite lost its still plane");
 
 for (const [label, page] of [
@@ -144,7 +143,6 @@ for (const [label, page] of [
   expect(!page.includes("maximum-scale=1"), `${label} caps browser zoom`);
 }
 
-expect(sphere.includes('class="web-games-back" href="../launcher.html"'), "Sphere has no Games return");
 expect(sphere.includes("window.HEXSWEEPER_SPHERE_GAME = sphereGame;"), "Sphere page no longer exposes the game");
 expect(play.includes("ONEPAGER_MODES") && play.includes('id="gameCanvas"'), "play.html no longer contains the flat game source");
 

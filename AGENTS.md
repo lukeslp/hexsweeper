@@ -13,7 +13,8 @@ The public root `index.html` is the Sphere game, sealed from `sphere/` by the
 exporter; the native app ships its offline export plus the hidden Water Wheel
 and history image. `launcher.html` is
 generated from `tools/app-launcher.html` and offers the three structural boards: **Infinite**,
-**Classic**, and **Sphere**. `infinite.html` and `bounded.html` are generated
+**Classic**, and **Sphere**. It is **unlinked and noindex** (Luke, 2026-10-07):
+no game carries a Games pill or links to it; don't re-add either. `infinite.html` and `bounded.html` are generated
 product pages; `sphere/` is authored in place (Mercury's WebGL renderer is
 `sphere/mirror-material.js`, shared with the reflection studio). The former flat
 production surface lives at `play.html` with Light / Dark / Fire / Plague /

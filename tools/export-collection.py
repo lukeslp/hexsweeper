@@ -1628,11 +1628,8 @@ GAME_MENU_PILL = """<style>
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
 """
 
-# Only the web's flat games carry a Games pill (back to launcher.html), and
-# not the standalone infinite.html, which a minimal index links to directly. Root
-# Sphere pages carry none: the sphere is the front door on both surfaces, and
-# the app ships nothing but the sphere.
-WEB_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
+# No web page links to launcher.html any more (Luke, 2026-10-07): every game
+# stands alone. The launcher stays served for old links but carries noindex.
 
 # Keeps the native launch screen up until the first painted frame; without it
 # the storyboard drops the moment the WebView mounts and the player watches a
@@ -1734,15 +1731,14 @@ def prepare_flat_product(markup: str, label: str) -> str:
     return markup
 
 
-def export_flat_web(markup: str, label: str, route: str, *, standalone: bool = False) -> str:
+def export_flat_web(markup: str, label: str, route: str, *, still_plane: bool = False) -> str:
     """Adapt a generated collection page into a first-class web game route.
 
-    standalone: the page is linked from a minimal index as a game in its own
-    right, so it carries no Games pill back to the launcher, and the plate is
-    a still, flat plane (stillPlane turns off pointer parallax in play.html).
+    still_plane: the plate is a still, flat plane (stillPlane turns off pointer
+    parallax in play.html). infinite.html sets it; a minimal index links there.
     """
     markup = prepare_flat_product(markup, label)
-    if standalone:
+    if still_plane:
         onepager = "window.HEXSWEEPER_ONEPAGER = {\n"
         if markup.count(onepager) != 1:
             raise SystemExit(f"export_flat_web({label}): onepager config not found")
@@ -1782,8 +1778,6 @@ def export_flat_web(markup: str, label: str, route: str, *, standalone: bool = F
         markup,
         count=1,
     )
-    if not standalone:
-        markup = markup.replace("</body>", f"{WEB_BACK_PILL}</body>", 1)
     return markup
 
 
@@ -2036,7 +2030,8 @@ def render_launcher(
 GOATCOUNTER_TAG = """<script data-goatcounter="https://stats.dr.eamer.dev/count"
         async src="https://stats.dr.eamer.dev/count.js"></script>"""
 
-WEB_LAUNCHER_HEAD = f"""<link rel="canonical" href="{SITE_BASE}/launcher.html">
+# Unlinked and noindex: kept only so old launcher links still resolve.
+WEB_LAUNCHER_HEAD = f"""<meta name="robots" content="noindex">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hexsweeper">
 <meta property="og:description" content="Choose an endless plate, a fixed classic board, or a 3D sphere.">
@@ -2071,7 +2066,7 @@ WEB_LAUNCHER_TAIL = """<noscript>
 
 
 def export_web_launcher() -> str:
-    """launcher.html: the three-hex games menu, reached from any game's Games pill."""
+    """launcher.html: the three-hex games menu. Unlinked; old URLs still resolve."""
     return render_launcher(
         fonts='<link rel="stylesheet" href="fonts/fonts.css">',
         infinite_href="infinite.html",
@@ -2295,7 +2290,7 @@ def main() -> int:
     planned[ROOT / "index.html"] = export_sphere_web()
     planned[ROOT / "launcher.html"] = export_web_launcher()
     planned[ROOT / "infinite.html"] = export_flat_web(
-        planned[COLLECTION / "theme-plate.html"], "infinite", "infinite.html", standalone=True
+        planned[COLLECTION / "theme-plate.html"], "infinite", "infinite.html", still_plane=True
     )
     planned[ROOT / "bounded.html"] = export_flat_web(
         planned[COLLECTION / "skin-classic.html"], "bounded", "bounded.html"
