@@ -1991,7 +1991,7 @@ body[data-mode="escape"] .menu-links {
       const startId = ONEPAGER_MODES.includes(start) ? start : ONEPAGER_MODES[0];
       themeIndex = THEMES.findIndex((t) => t.id === startId);
       document.body.classList.add(ONEPAGER_STRICT ? "onepager-locked" : "onepager-scoped");
-      document.querySelectorAll("[data-mode]").forEach((button) => {
+      document.querySelectorAll("button[data-mode]").forEach((button) => {
         if (!ONEPAGER_MODES.includes(button.dataset.mode)) button.hidden = true;
       });
       // Plate one-pager: keep BR Light/Dark; hide Mode list extras already filtered above.
@@ -5129,7 +5129,7 @@ body[data-mode="escape"] .menu-links {
     }
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.css["--bg-color"]);
     document.body.dataset.mode = t.id;
-    document.querySelectorAll("[data-mode]").forEach((button) => {
+    document.querySelectorAll("button[data-mode]").forEach((button) => {
       button.setAttribute("aria-pressed", button.dataset.mode === t.id ? "true" : "false");
     });
     syncWelcomeThemes(t.id);
@@ -6662,7 +6662,7 @@ body[data-mode="escape"] .menu-links {
     );
   }
 
-  document.querySelectorAll("[data-mode]").forEach((button) => {
+  document.querySelectorAll("button[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       if (ONEPAGER_STRICT) return;
       if (ONEPAGER_ACTIVE && !ONEPAGER_MODES.includes(button.dataset.mode)) return;
