@@ -17,6 +17,11 @@ product surfaces. Native iOS and Android retain the short first-launch intro.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Infinite social preview (2026-10-07)
+
+- [x] Dedicated 1200×630 Infinite card from the real monochrome board with
+  red flags. OG/Twitter now use its own image, title, description and alt text.
+
 ## Sphere controls and social preview (2026-10-07)
 
 - [x] Replace the Sphere social card with the real Dark board: black, white,

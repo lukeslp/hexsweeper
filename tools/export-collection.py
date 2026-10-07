@@ -1780,6 +1780,15 @@ def export_flat_web(markup: str, label: str, route: str, *, still_plane: bool = 
         markup,
         count=1,
     )
+    if label == "infinite":
+        image_alt = "A black and white endless hexagonal Minesweeper board with red flags beside the title Hexsweeper Infinite."
+        image_meta = (
+            '<meta property="og:image:width" content="1200">\n'
+            '<meta property="og:image:height" content="630">\n'
+            f'<meta property="og:image:alt" content="{image_alt}">\n'
+            f'<meta name="twitter:image:alt" content="{image_alt}">\n'
+        )
+        markup = markup.replace("</head>", image_meta + "</head>", 1)
     return markup
 
 
@@ -2292,7 +2301,12 @@ def main() -> int:
     planned[ROOT / "index.html"] = export_sphere_web()
     planned[ROOT / "launcher.html"] = export_web_launcher()
     planned[ROOT / "infinite.html"] = export_flat_web(
-        export_theme({**THEMES[0], "mode": "dark", "palette": "sphere"}, source),
+        export_theme({
+            **THEMES[0], "mode": "dark", "palette": "sphere",
+            "ogTitle": "Hexsweeper Infinite",
+            "ogDescription": "Minesweeper on an endless hexagonal board. Black, white, and red flags. Keep clearing; there are no edges.",
+            "ogImage": f"{OG}/infinite-og.png?v=20261007",
+        }, source),
         "infinite", "infinite.html", still_plane=True
     )
     planned[ROOT / "bounded.html"] = export_flat_web(
