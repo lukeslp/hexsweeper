@@ -1276,6 +1276,12 @@
       announce(b.textContent || "Effects changed");
     }
 
+    function doHelp() {
+      const b = document.getElementById("help-btn");
+      if (b) b.click();
+      if (state.phase === "open" || state.phase === "rising") collapse();
+    }
+
     function doHome() {
       // The native bundle has no parent to climb to — leaving the payload
       // root strands the WebView with no way back. The app build points this
@@ -1844,7 +1850,6 @@
         iconOnly: true,
         ariaLabel: "Undo move",
       });
-      dockResetBtn.title = "Undo";
       dockResetBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1864,7 +1869,6 @@
       dockBtn.setAttribute("aria-haspopup", "dialog");
       dockBtn.setAttribute("aria-controls", "hex-bloom-stage");
       dockBtn.setAttribute("aria-expanded", "false");
-      dockBtn.title = "Menu";
       dockBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1888,7 +1892,6 @@
         iconOnly: true,
         ariaLabel: "Flag mode",
       });
-      dockFlagBtn.title = "Flag mode";
       dockFlagBtn.setAttribute("aria-pressed", "false");
       dockFlagBtn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -1901,6 +1904,22 @@
         announce(on ? "Flag mode" : "Dig mode");
       });
 
+      // Help — corner seat, lower right, as on the other spheres.
+      helpCorner.textContent = "";
+      dockHelpBtn = makeHex({
+        cls: "is-dock is-dock-help",
+        label: "",
+        icon: "help",
+        iconOnly: true,
+        ariaLabel: "Help",
+      });
+      dockHelpBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ignoreOutsideUntil = Date.now() + 250;
+        doHelp();
+      });
+      helpCorner.appendChild(dockHelpBtn);
 
       dock.appendChild(dockResetBtn);
       dock.appendChild(dockBtn);
