@@ -39,6 +39,11 @@ product surfaces. Native iOS and Android retain the short first-launch intro.
   Help remains on demand; Sphere ? → Play can reopen the short tutorial.
 - [x] Native export retains its first-launch tutorial; the regenerated payload
   and provenance are committed in hexsweeper-app `07adf02`.
+- [x] Minimal help (October 7): the first-launch tutorial card, the Play tab's
+  rules paragraphs, the history tile and every `title=` tooltip are gone on
+  every surface, native included. Play is one line plus Tap / Hold / Drag; a
+  first visit gets one quiet status cue above the bar. hexsweeper-app needs a
+  payload re-vendor after this lands.
 - [x] Entry-policy regressions, exporter/gameplay checks, cross-repo smoke,
   Capacitor sync, and both repository CI runs passed for that change.
 - [x] Deployed root, sphere entry/script, flat game, and Infinite bytes matched
@@ -306,7 +311,7 @@ The archived decorative theme remains at `collection/theme-water.html` and
 
 Bare root is Sphere, restoring its own run silently. Browser entry opens no
 instructions modal; help and settings remain available through ?. Native apps
-retain their short first-launch tutorial. `launcher.html` is the
+open the board the same way, with no first-launch tutorial. `launcher.html` is the
 three-hex menu (Infinite, Classic, Sphere)
 with Resume in the center when a run is waiting; each mode opens its game with
 last-used settings and returns through Games; newest valid Infinite, Classic, or Sphere saves can resume;

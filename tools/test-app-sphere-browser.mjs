@@ -158,16 +158,17 @@ try {
   await send("Page.reload", { ignoreCache: true });
   await waitExpression('document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere did not reload");
   await delay(400);
-  // First launch: the tutorial sheet, not the settings sheet; Play dismisses and marks the key.
-  await waitExpression('!document.getElementById("tutorial-overlay").hidden', "first launch did not show the tutorial");
-  assert.equal(await evaluate('document.getElementById("help-overlay").hidden'), true, "settings sheet opened on first launch instead of the tutorial");
-  await evaluate('document.getElementById("tutorial-play-btn").click()');
-  await waitExpression('document.getElementById("tutorial-overlay").hidden', "tutorial did not dismiss");
-  assert.equal(await evaluate('localStorage.getItem("hexsweeper-sphere-welcome-v1")'), "1", "tutorial did not mark the welcome key");
+  // First launch: no card and no sheet; one quiet status cue above the bar, which marks the key.
+  assert.equal(await evaluate('!!document.getElementById("tutorial-overlay")'), false, "the tutorial card is back in the payload");
+  assert.equal(await evaluate('document.getElementById("help-overlay").hidden'), true, "settings sheet opened on first launch");
+  await waitExpression('document.getElementById("count-style-toast").classList.contains("show")', "first launch did not show the quiet cue");
+  assert.match(await evaluate('document.getElementById("count-style-toast").textContent'), /tap to clear/i, "first-visit cue has the wrong copy");
+  assert.equal(await evaluate('document.getElementById("count-style-toast").getAttribute("role")'), "status", "first-visit cue is not a status line");
+  assert.equal(await evaluate('localStorage.getItem("hexsweeper-sphere-welcome-v1")'), "1", "cue did not mark the welcome key");
   assert.deepEqual(
     await evaluate('window.HEXSWEEPER_SPHERE_GAME.getInvertDrag()'),
-    { x: true, y: false },
-    "v4 drag preference did not reset to the mirrored-X v5 default",
+    { x: false, y: false },
+    "v4 drag preference did not reset to the follow-the-finger v6 default",
   );
   assert.equal(
     await evaluate('localStorage.getItem("hexsweeper-sphere-invert-v4")'),
@@ -198,10 +199,13 @@ try {
   await evaluate('document.getElementById("qc-help").click()');
   await waitExpression('!document.getElementById("help-overlay").hidden', "help did not open");
   const help = await evaluate(`(() => {
-    const keys = document.querySelector(".help-keys");
+    const keys = document.querySelector(".help-desk-only");
     const done = document.getElementById("help-done-btn").getBoundingClientRect();
     const panel = document.getElementById("help-panel").getBoundingClientRect();
+    const play = document.getElementById("help-panel-play");
     return { keysHidden: getComputedStyle(keys).display === "none", doneH: Math.round(done.height), panelW: Math.round(panel.width), text: document.getElementById("help-panel").innerText,
+      playLines: play.querySelectorAll(".help-lede").length, playControls: play.querySelectorAll(".help-controls li").length, playParagraphs: play.querySelectorAll(".help-body, .help-body p").length,
+      tooltips: document.querySelectorAll("[title]").length,
       themes: Array.from(document.querySelectorAll("#help-theme-grid .help-theme")).map(b => b.dataset.theme),
       sizes: Array.from(document.querySelectorAll("#help-size-grid .help-size")).map(b => b.dataset.size),
       invert: !!document.querySelector('#help-controls [data-ctl="invert"]'), effects: !!document.querySelector('#help-controls [data-ctl="effects"]') };
@@ -209,7 +213,11 @@ try {
   assert.equal(help.keysHidden, true, "keyboard hints show on a touch device");
   assert.ok(help.doneH >= 44, `Done button is ${help.doneH}px tall`);
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
-  assert.match(help.text, /bottom left/i, "help copy does not point at the bottom bar");
+  // Minimal help: one line of what to do, at most three gesture rows, no paragraphs, no tooltips anywhere.
+  assert.equal(help.playLines, 1, `Play tab has ${help.playLines} lede lines`);
+  assert.ok(help.playControls >= 1 && help.playControls <= 3, `Play tab has ${help.playControls} control rows`);
+  assert.equal(help.playParagraphs, 0, "Play tab grew paragraphs again");
+  assert.equal(help.tooltips, 0, `${help.tooltips} title= tooltips in the page`);
   assert.doesNotMatch(help.text, /\bdig\b/i, "help copy still says dig");
   assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
   assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);

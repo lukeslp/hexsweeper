@@ -22,10 +22,14 @@ Escape. Old root `?mode=` links, and `?theme=` links naming flat-only themes,
 are forwarded there by the root page. Water remains a renderer/deep-link archive.
 Do not re-expose the skin lab from production chrome.
 
-Web Sphere and flat-game entries open the board without automatic instructions,
-including when storage is blocked. Native Sphere retains its first-launch
-tutorial. Both use the same ? settings sheet; the Play tab can reopen the
-tutorial explicitly. Keep this entry distinction when regenerating exports.
+Every Sphere entry (web root, `sphere/`, pens and the native payload) opens
+the board at once: there is no welcome card and no first-launch tutorial, and
+nothing opens the sheet uninvited, including when storage is blocked. A first
+visit gets one quiet status cue above the bar (the count-style toast) and that
+marks `hexsweeper-sphere-welcome-v1`; `?welcome=1` still previews the sheet.
+Help lives behind ? only: the Play tab is one line of what to do plus three
+gesture rows (Tap / Hold / Drag), no paragraphs, and no `title=` tooltips
+anywhere on the page (aria-labels carry the names). Keep it that way.
 
 ## Docs to keep in sync
 
@@ -73,8 +77,8 @@ deployed) for the **hexsweeper-app** Capacitor shell — `lukeslp/hexsweeper-app
 bundle `app.hexodus.ios`. It reuses `export_sphere` and then seals the page for
 offline use: sets `HEXSWEEPER_SPHERE_APP`, serves the history tile from the
 bundle, drops the cross-game links, sends credits to the system browser, and
-hides the native launch screen after first paint. It retains the native
-first-launch tutorial and seals `wheel.html` as the hidden second sphere.
+hides the native launch screen after first paint. It seals `wheel.html` as
+the hidden second sphere; like the web, it has no first-launch tutorial.
 
 `HEXSWEEPER_SPHERE_APP` also drops the **Earth / Moon** globe themes (the THEMES
 filter in `sphere.js`): these themes fetch textures over the network. Texture

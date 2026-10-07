@@ -48,9 +48,7 @@
     const stats = el("div", "qc-stats");
     stats.setAttribute("aria-live", "off");
     const mines = el("span", "qc-stat qc-mines", ICONS.mine + '<b id="qc-mines">0</b>');
-    mines.title = "Mines left";
     const time = el("span", "qc-stat qc-time", ICONS.clock + '<b id="qc-time">0</b>');
-    time.title = "Seconds";
     stats.appendChild(mines);
     stats.appendChild(time);
     root.appendChild(stats);
@@ -64,7 +62,6 @@
       b.type = "button";
       b.id = "qc-" + id;
       b.setAttribute("aria-label", label);
-      b.title = label;
       return b;
     }
     const undo = button("undo", "Undo last move", ICONS.undo);

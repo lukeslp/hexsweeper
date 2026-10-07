@@ -1628,7 +1628,6 @@
       document.body.dataset.sphereTheme = t.id;
       document.body.dataset.sphereChrome = t.chrome || "light";
       if (themeBtn) {
-        themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
           `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning.`
@@ -1643,7 +1642,6 @@
       const name = SIZE_NAMES[key] || "Medium";
       const faces = SIZE_FACES[key] || 1002;
       if (sizeBtn) {
-        sizeBtn.title = `Board size ${letter} — ${name} (${faces} faces). Click to cycle XS → S → M → L → XL.`;
         sizeBtn.setAttribute(
           "aria-label",
           `Board size ${letter}, ${name}, ${faces} faces. Activate to cycle XS, S, M, L, XL.`
@@ -3776,7 +3774,6 @@
       if (!shareWinBtn) return;
       const label = SHARE_LABEL[kind] || SHARE_LABEL.idle;
       shareWinBtn.dataset.state = kind;
-      shareWinBtn.title = label;
       shareWinBtn.setAttribute("aria-label", label);
       const sr = shareWinBtn.querySelector(".banner-btn-label, .sr-only");
       if (sr) sr.textContent = label;
@@ -4970,21 +4967,20 @@
 
     let countStyleToastTimer = null;
 
-    function showCountStyleToast(name) {
+    function showCountStyleToast(name, ms) {
       if (!countStyleToast) return;
       countStyleToast.textContent = name;
       countStyleToast.classList.add("show");
       clearTimeout(countStyleToastTimer);
       countStyleToastTimer = setTimeout(() => {
         countStyleToast.classList.remove("show");
-      }, 1400);
+      }, ms > 0 ? ms : 1400);
     }
 
     function syncCountStyleChrome() {
       if (!nestBtn) return;
       const def = countStyleById(state.countStyle);
       nestBtn.classList.toggle("active", state.countStyle !== "numerals");
-      nestBtn.title = `Count style — ${def.name} (N)`;
       nestBtn.setAttribute("aria-label", `Count style: ${def.name}. Activate to cycle.`);
       nestBtn.innerHTML =
         COUNT_STYLE_ICONS[state.countStyle] || COUNT_STYLE_ICONS.numerals;
@@ -6063,8 +6059,6 @@
         return;
       }
       if (e.key === "Escape") {
-        const lb = document.getElementById("history-lightbox");
-        if (lb?.classList.contains("open")) return; // lightbox owns Esc
         if (helpOverlay?.classList.contains("open")) closeHelp();
         return;
       }
@@ -6262,6 +6256,8 @@
       chordAt: (index) => chordAt(index),
       flagAt: (index) => toggleFlag(index),
       getState: () => state,
+      // Quiet status line above the bar (role=status); the page's first-visit cue uses it.
+      toast: (text, ms) => showCountStyleToast(text, ms),
       getBestTimes: () => readBestTimes(),
       formatTime,
       pickTile,
