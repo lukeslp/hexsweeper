@@ -1480,6 +1480,50 @@ body[data-mode="escape"] .menu-links {
     },
   };
 
+  // Infinite borrows Sphere's Glow palette (sphere/sphere.js, THEME_GLOW).
+  // This export-only choice preserves the original collection's iron material.
+  if (window.HEXSWEEPER_ONEPAGER?.darkPalette === "glow") {
+    Object.assign(PLATE_DARK, {
+      css: {
+        "--bg-color": "#03050a",
+        "--text-main": "#e8f6ff",
+        "--text-sub": "#91aec4",
+        "--nav-bg": "#071018",
+        "--nav-ink": "#e8f6ff",
+      },
+      bodyBg: "#03050a",
+      fx: { bg: "radial-gradient(ellipse at 50% 40%, #071018, #03050a 75%)" },
+      theme: {
+        flag: "#ff2a2a",
+        text: {
+          1: "#b8e8ff", 2: "#7ec8ff", 3: "#5ad4a8",
+          4: "#f0c060", 5: "#f09060", 6: "#f07090", mine: "#ff6644",
+        },
+      },
+      states: {
+        // Sphere's #141a24 covers and #060a12 wells in the flat renderer's HSL.
+        covered: { h: 217.5, s: 28.57, l: 10.98 },
+        revealed: { h: 220, s: 50, l: 4.71 },
+        flagged: { h: 0, s: 55, l: 17 },
+      },
+      edges: {
+        covered: "rgba(120,180,220,0.22)",
+        revealed: "rgba(100,170,220,0.2)",
+      },
+      glow: {
+        ...PLATE_DARK.glow,
+        colors: ["rgba(94,200,255,0.2)", "rgba(58,160,232,0.14)", "rgba(7,16,24,0.2)"],
+      },
+      particles: {
+        ...PLATE_DARK.particles,
+        ambient: "rgba(94,200,255,0.14)",
+        reveal: "rgba(94,200,255,0.32)",
+        mine: "rgba(255,170,102,0.9)",
+        flag: "rgba(255,42,42,0.85)",
+      },
+    });
+  }
+
   /**
    * Plate-theme danger marks — no pale discs.
    * Light: classic ink digit. Dark: luminous digit. Escape: dark-haloed digit.
@@ -1827,7 +1871,7 @@ body[data-mode="escape"] .menu-links {
   };
 
   // Bare play.html opens Light. Explicit ?mode= deep-links; storage restores last theme.
-  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane? }.
+  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane?, darkPalette? }.
   // allowModes: ["light","dark"] keeps the plate toggle; omit for a single locked theme.
   const ONEPAGER =
     typeof window !== "undefined" && window.HEXSWEEPER_ONEPAGER
@@ -6878,13 +6922,13 @@ body[data-mode="escape"] .menu-links {
           ctx.lineJoin = "round";
           ctx.lineCap = "round";
           ctx.lineWidth = seam;
-          ctx.strokeStyle = dark
+          ctx.strokeStyle = th.edges?.[cell.revealed ? "revealed" : "covered"] || (dark
             ? cell.revealed
               ? "rgba(255,255,255,0.22)"
               : "rgba(255,255,255,0.26)"
             : cell.revealed
               ? "rgba(0,0,0,0.24)"
-              : "rgba(0,0,0,0.28)";
+              : "rgba(0,0,0,0.28)");
           ctx.stroke(path);
           if (cell.animReveal > 0.1) {
             ctx.globalAlpha = cell.animReveal;
@@ -7042,13 +7086,13 @@ body[data-mode="escape"] .menu-links {
                   : "rgba(110,128,150,0.95)";
             drawFace(3, 5, hi);
             drawFace(0, 2, lo);
-            ctx.strokeStyle = porcelain
+            ctx.strokeStyle = th.edges?.covered || (porcelain
               ? "rgba(85,105,130,0.2)"
               : iron
                 ? "rgba(150,175,205,0.07)"
                 : darkPlate
                   ? "rgba(255,255,255,0.05)"
-                  : "rgba(90,110,135,0.28)";
+                  : "rgba(90,110,135,0.28)");
             ctx.lineWidth = Math.max(1, size * (porcelain ? 0.038 : iron ? 0.028 : softPlate ? 0.035 : 0.045));
             ctx.stroke(path);
             const spec = ctx.createRadialGradient(
@@ -7100,13 +7144,13 @@ body[data-mode="escape"] .menu-links {
               2,
               porcelain ? "rgba(255,255,255,0.5)" : iron ? "rgba(160,185,215,0.1)" : darkPlate ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.55)"
             );
-            ctx.strokeStyle = porcelain
+            ctx.strokeStyle = th.edges?.revealed || (porcelain
               ? "rgba(70,90,115,0.32)"
               : iron
                 ? "rgba(140,165,195,0.06)"
                 : darkPlate
                   ? "rgba(255,255,255,0.05)"
-                  : "rgba(70,90,115,0.35)";
+                  : "rgba(70,90,115,0.35)");
             ctx.lineWidth = Math.max(1, size * (iron ? 0.032 : 0.04));
             ctx.stroke(path);
           }
