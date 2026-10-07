@@ -92,11 +92,13 @@ regenerates the payload, so a stale `www/` fails the build. The public source
 repository is `lukeslp/hexsweeper`; `WWW_SOURCE.txt` identifies the exact
 canonical commit used for this snapshot.
 
-The current payload pins `d65b9a2` (October 4, 2026): web instructions became
-optional while native first-launch behavior stayed enabled. The payload sync
-is committed as `07adf02`. This repository update did not create or upload a
-new iOS/Android release. See [release notes](docs/RELEASE.md) for the distinction
-between payload checks and published builds.
+The current payload pins `d0082f7` (October 7, 2026): Sphere's settings
+use flat theme swatches, compact board-size choices, and icon-led settings
+rows. The first-launch tutorial and game behavior are unchanged. Luke's
+broader dissatisfaction with the menu system remains an open design item in
+the source repository's `PROJECT_PLAN.md`. This payload update does not create
+or upload an iOS/Android release. See [release notes](docs/RELEASE.md) for the
+distinction between payload checks and published builds.
 
 ## Verify
 
