@@ -128,9 +128,12 @@ for (const [label, page, canonical] of [
   ["Infinite", infinite, "/infinite.html"],
   ["Classic", bounded, "/bounded.html"],
 ]) {
-  expect(page.includes('class="app-back" href="launcher.html"'), `${label} has no Games return`);
   expect(page.includes(`rel="canonical" href="https://dr.eamer.dev/games/hexsweeper${canonical}"`), `${label} canonical is wrong`);
 }
+expect(bounded.includes('class="app-back" href="launcher.html"'), "Classic has no Games return");
+// Infinite stands alone (linked from a minimal index): no way back, no parallax.
+expect(!infinite.includes('class="app-back"'), "standalone Infinite grew a Games pill");
+expect(infinite.includes('"stillPlane": true'), "standalone Infinite lost its still plane");
 
 for (const [label, page] of [
   ["Infinite", infinite],

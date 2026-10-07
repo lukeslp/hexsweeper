@@ -1628,7 +1628,8 @@ GAME_MENU_PILL = """<style>
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
 """
 
-# Only the web's flat games carry a Games pill (back to launcher.html). Root
+# Only the web's flat games carry a Games pill (back to launcher.html), and
+# not the standalone infinite.html, which a minimal index links to directly. Root
 # Sphere pages carry none: the sphere is the front door on both surfaces, and
 # the app ships nothing but the sphere.
 WEB_BACK_PILL = GAME_MENU_PILL.replace("__MENU_HREF__", "launcher.html")
@@ -1733,9 +1734,19 @@ def prepare_flat_product(markup: str, label: str) -> str:
     return markup
 
 
-def export_flat_web(markup: str, label: str, route: str) -> str:
-    """Adapt a generated collection page into a first-class web game route."""
+def export_flat_web(markup: str, label: str, route: str, *, standalone: bool = False) -> str:
+    """Adapt a generated collection page into a first-class web game route.
+
+    standalone: the page is linked from a minimal index as a game in its own
+    right, so it carries no Games pill back to the launcher, and the plate is
+    a still, flat plane (stillPlane turns off pointer parallax in play.html).
+    """
     markup = prepare_flat_product(markup, label)
+    if standalone:
+        onepager = "window.HEXSWEEPER_ONEPAGER = {\n"
+        if markup.count(onepager) != 1:
+            raise SystemExit(f"export_flat_web({label}): onepager config not found")
+        markup = markup.replace(onepager, onepager + '  "stillPlane": true,\n', 1)
     # Collection pages may be appified elsewhere. Public browser routes must
     # always retain pinch zoom and text enlargement.
     markup = re.sub(
@@ -1771,7 +1782,8 @@ def export_flat_web(markup: str, label: str, route: str) -> str:
         markup,
         count=1,
     )
-    markup = markup.replace("</body>", f"{WEB_BACK_PILL}</body>", 1)
+    if not standalone:
+        markup = markup.replace("</body>", f"{WEB_BACK_PILL}</body>", 1)
     return markup
 
 
@@ -2283,7 +2295,7 @@ def main() -> int:
     planned[ROOT / "index.html"] = export_sphere_web()
     planned[ROOT / "launcher.html"] = export_web_launcher()
     planned[ROOT / "infinite.html"] = export_flat_web(
-        planned[COLLECTION / "theme-plate.html"], "infinite", "infinite.html"
+        planned[COLLECTION / "theme-plate.html"], "infinite", "infinite.html", standalone=True
     )
     planned[ROOT / "bounded.html"] = export_flat_web(
         planned[COLLECTION / "skin-classic.html"], "bounded", "bounded.html"

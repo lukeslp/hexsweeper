@@ -4477,12 +4477,14 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   };
 
   // Bare play.html opens Light. Explicit ?mode= deep-links; storage restores last theme.
-  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome }.
+  // Collection exports: HEXSWEEPER_ONEPAGER = { mode, allowModes?, skipWelcome, stillPlane? }.
   // allowModes: ["light","dark"] keeps the plate toggle; omit for a single locked theme.
   const ONEPAGER =
     typeof window !== "undefined" && window.HEXSWEEPER_ONEPAGER
       ? window.HEXSWEEPER_ONEPAGER
       : null;
+  // stillPlane: the standalone infinite.html is a flat, motionless plate (no pointer parallax).
+  const STILL_PLANE = !!(ONEPAGER && ONEPAGER.stillPlane);
   const HOME_THEME_ID = "light";
   const STORAGE_KEY = "hexsweeper-mode-v3";
   const LEGACY_TONE_KEY = "hexsweeper-minimalist-tone-v1";
@@ -9267,8 +9269,8 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         const inset = th.material === "magma";
         const endless = !!(th.endless || s.endless);
         // Plague flat; Fire gets a stronger pit tilt; endless plates stay calm.
-        const panX = flat ? 0 : inset ? 34 : endless ? 12 : 20;
-        const panY = flat ? 0 : inset ? 26 : endless ? 9 : 16;
+        const panX = flat || STILL_PLANE ? 0 : inset ? 34 : endless ? 12 : 20;
+        const panY = flat || STILL_PLANE ? 0 : inset ? 26 : endless ? 9 : 16;
         tx = (s.pointer.nx || 0) * panX;
         ty = (s.pointer.ny || 0) * panY;
         ox += (tx - ox) * 0.08;
