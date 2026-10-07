@@ -1838,6 +1838,15 @@ def minimal_flat_help(markup: str, label: str) -> str:
     if n != 1:
         raise SystemExit(f"minimal_flat_help({label}): Menu button not found")
     markup, n = re.subn(
+        r'<meta name="theme-color" content="[^"]*">',
+        '<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">\n'
+        '<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">',
+        markup,
+        count=1,
+    )
+    if n != 1:
+        raise SystemExit(f"minimal_flat_help({label}): theme-color meta not found")
+    markup, n = re.subn(
         r"/\* Help panel — minimalist sheet aligned with sphere/index help \*/\n.*?"
         r"\.help-panel \.menu-links-sep \{[^}]*\}\n",
         lambda m: sphere_sheet_css(),

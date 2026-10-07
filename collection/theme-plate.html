@@ -4574,6 +4574,28 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   const STILL_PLANE = !!(ONEPAGER && ONEPAGER.stillPlane);
   // minimalHelp: infinite.html — no tooltips, a quiet first-visit cue instead of any card.
   const MINIMAL_HELP = !!(ONEPAGER && ONEPAGER.minimalHelp);
+  // Minimal-help pages follow the system scheme; a Light / Dark pick from the
+  // sheet's Look tab (or T) is remembered as an override.
+  const PLATE_PICK_KEY = "hexsweeper-infinite-theme-v1";
+  function systemPlate() {
+    return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  function pickedPlate() {
+    try {
+      const v = localStorage.getItem(PLATE_PICK_KEY);
+      return v === "light" || v === "dark" ? v : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  function rememberPlate(id) {
+    if (!MINIMAL_HELP || (id !== "light" && id !== "dark")) return;
+    try {
+      localStorage.setItem(PLATE_PICK_KEY, id);
+    } catch (_) {}
+  }
   const HOME_THEME_ID = "light";
   const STORAGE_KEY = "hexsweeper-mode-v3";
   const LEGACY_TONE_KEY = "hexsweeper-minimalist-tone-v1";
@@ -4638,6 +4660,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   try {
     if (ONEPAGER_ACTIVE) {
       const start =
+        (MINIMAL_HELP && (pickedPlate() || systemPlate())) ||
         resolveThemeId(ONEPAGER.mode) ||
         ONEPAGER_MODES[0];
       const startId = ONEPAGER_MODES.includes(start) ? start : ONEPAGER_MODES[0];
@@ -7779,7 +7802,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         )
       );
     }
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.css["--bg-color"]);
+    // infinite.html ships one theme-color per scheme; both follow the live plate.
+    document
+      .querySelectorAll('meta[name="theme-color"]')
+      .forEach((meta) => meta.setAttribute("content", t.css["--bg-color"]));
+    if (MINIMAL_HELP) document.documentElement.dataset.theme = t.id === "dark" ? "dark" : "light";
     document.body.dataset.mode = t.id;
     document.querySelectorAll("button[data-mode]").forEach((button) => {
       button.setAttribute("aria-pressed", button.dataset.mode === t.id ? "true" : "false");
@@ -7984,6 +8011,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       const i = Math.max(0, ONEPAGER_MODES.indexOf(cur));
       const nextId = ONEPAGER_MODES[(i + 1) % ONEPAGER_MODES.length];
       const next = THEMES.findIndex((theme) => theme.id === nextId);
+      rememberPlate(nextId);
       if (next >= 0) applyTheme(next);
       return;
     }
@@ -9318,6 +9346,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     button.addEventListener("click", () => {
       if (ONEPAGER_STRICT) return;
       if (ONEPAGER_ACTIVE && !ONEPAGER_MODES.includes(button.dataset.mode)) return;
+      rememberPlate(button.dataset.mode);
       const i = THEMES.findIndex((theme) => theme.id === button.dataset.mode);
       if (i >= 0 && i !== themeIndex) {
         applyTheme(i);
@@ -10437,6 +10466,18 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   // Keep the explicit tutorial preview route for checking the welcome content.
   if (!ONEPAGER_ACTIVE && /(?:\?|&)welcome=1(?:&|$)/.test(location.search)) {
     openWelcome();
+  }
+
+  // Minimal-help pages follow a system scheme change until the player picks one.
+  if (MINIMAL_HELP && typeof matchMedia === "function") {
+    const scheme = matchMedia("(prefers-color-scheme: dark)");
+    const follow = () => {
+      if (pickedPlate()) return;
+      const i = THEMES.findIndex((theme) => theme.id === systemPlate());
+      if (i >= 0 && i !== themeIndex) applyTheme(i, { toast: false });
+    };
+    if (typeof scheme.addEventListener === "function") scheme.addEventListener("change", follow);
+    else if (typeof scheme.addListener === "function") scheme.addListener(follow);
   }
 
   // Minimal-help pages (infinite.html): a first visit gets one quiet line above
