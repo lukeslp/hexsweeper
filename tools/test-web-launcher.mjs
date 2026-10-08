@@ -2,9 +2,13 @@
 // Static contract for the generated web surface: Sphere at the root, the
 // three-hex launcher at launcher.html, and their destinations.
 
+import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { createServer } from "node:http";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, extname, join, normalize } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (path) => readFileSync(join(root, path), "utf8");
@@ -170,7 +174,14 @@ for (const id of ["fx-btn", "export-run-btn", "import-run-btn", "import-run-file
 // The score lives in the readout and Flag mode in the bar, not twice.
 expect(!infinite.includes('id="stats-mines"') && !infinite.includes('class="help-score"'), "Infinite sheet still carries the score line");
 expect((infinite.match(/id="flag-btn"/g) || []).length === 1, "Infinite should have one Flag mode control");
-expect((infinite.match(/class="help-theme" data-mode="/g) || []).length === 2, "Infinite Look tab should offer exactly Light and Dark");
+expect(
+  [...infinite.matchAll(/class="help-theme" data-(?:plate|mode)="([a-z]+)"/g)].map((m) => m[1]).join(" ") === "system light dark",
+  "Infinite Look tab should offer exactly System, Light and Dark, in that order",
+);
+expect(
+  infinite.includes('class="help-theme" data-plate="system" aria-pressed="true"'),
+  "Infinite Look tab should start on System",
+);
 {
   const block = (sphere.match(/\/\* sheet:begin [\s\S]*?\/\* sheet:end \*\/\n/) || [""])[0];
   expect(block && infinite.includes(block), "Infinite sheet CSS is not Sphere's sheet:begin … sheet:end block");
@@ -207,3 +218,176 @@ if (failures.length) {
 }
 
 console.log("web launcher contract: ok");
+
+// Infinite's Look tab in a real browser: System follows the scheme live, a
+// Light / Dark pick survives a reload, and System forgets the pick again.
+// HEXSWEEPER_SKIP_BROWSER=1 skips this step where Chrome is not installed.
+const chromePath = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+if (process.env.HEXSWEEPER_SKIP_BROWSER === "1") {
+  console.log("infinite look (browser): skipped");
+} else {
+  await infiniteLookBrowser();
+  console.log("infinite look (browser): ok");
+}
+
+async function infiniteLookBrowser() {
+  const delay = (ms) => new Promise((done) => setTimeout(done, ms));
+  async function waitFor(fn, message, timeout = 10000) {
+    const deadline = Date.now() + timeout;
+    let last;
+    while (Date.now() < deadline) {
+      try {
+        const value = await fn();
+        if (value) return value;
+      } catch (error) {
+        last = error;
+      }
+      await delay(50);
+    }
+    throw new Error(`${message}${last ? `: ${last.message}` : ""}`);
+  }
+  const mime = { ".css": "text/css", ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".woff2": "font/woff2" };
+  const server = createServer(async (request, response) => {
+    try {
+      const pathname = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
+      const file = normalize(join(root, pathname.replace(/^\/+/, "") || "index.html"));
+      if (!file.startsWith(`${root}/`)) throw new Error("outside root");
+      const data = await readFile(file);
+      response.writeHead(200, { "content-type": mime[extname(file)] || "application/octet-stream", "cache-control": "no-store" });
+      response.end(data);
+    } catch (_) {
+      response.writeHead(404);
+      response.end();
+    }
+  });
+  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  const url = `http://127.0.0.1:${server.address().port}/infinite.html`;
+  const profile = await mkdtemp(join(tmpdir(), "hexsweeper-infinite-"));
+  const chrome = spawn(chromePath, [
+    "--headless=new",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--remote-debugging-port=0",
+    `--user-data-dir=${profile}`,
+    "about:blank",
+  ], { stdio: "ignore" });
+  let socket;
+  try {
+    const debugPort = await waitFor(async () => Number((await readFile(join(profile, "DevToolsActivePort"), "utf8")).split("\n", 1)[0]) || 0, "Chrome did not expose DevTools");
+    const target = await waitFor(async () => (await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json()).find((t) => t.type === "page" && t.webSocketDebuggerUrl), "Chrome did not create a page");
+    socket = new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise((done, fail) => {
+      socket.addEventListener("open", done, { once: true });
+      socket.addEventListener("error", fail, { once: true });
+    });
+    let nextId = 0;
+    const pending = new Map();
+    socket.addEventListener("message", (event) => {
+      const msg = JSON.parse(event.data);
+      if (!msg.id || !pending.has(msg.id)) return;
+      const { done, fail } = pending.get(msg.id);
+      pending.delete(msg.id);
+      if (msg.error) fail(new Error(msg.error.message));
+      else done(msg.result);
+    });
+    const send = (method, params = {}) => new Promise((done, fail) => {
+      const id = ++nextId;
+      pending.set(id, { done, fail });
+      socket.send(JSON.stringify({ id, method, params }));
+    });
+    const evaluate = async (expression) => {
+      const r = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+      if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
+      return r.result.value;
+    };
+    const scheme = (value) => send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value }] });
+    const load = async (navigate) => {
+      if (navigate) await send("Page.navigate", { url });
+      else await send("Page.reload", { ignoreCache: true });
+      await waitFor(() => evaluate('location.pathname.endsWith("/infinite.html") && document.readyState === "complete" && !!document.querySelector("#help-panel-look .help-theme")'), "Infinite did not load");
+      await delay(150);
+    };
+    // The live look: plate, html[data-theme], both theme-color metas, pressed tile, saved key.
+    const look = () => evaluate(`(() => ({
+      plate: document.body.dataset.mode,
+      forced: document.documentElement.dataset.theme,
+      metas: [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.content),
+      pressed: [...document.querySelectorAll("#help-panel-look .help-theme")].filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.textContent.trim()),
+      saved: localStorage.getItem("hexsweeper-infinite-theme-v1"),
+    }))()`);
+    const tile = (name) => evaluate(`[...document.querySelectorAll("#help-panel-look .help-theme")].find((b) => b.textContent.trim() === ${JSON.stringify(name)}).click()`);
+    const check = async (want, step) => {
+      const got = await waitFor(async () => {
+        const l = await look();
+        return l.plate === want.plate ? l : null;
+      }, `${step}: plate never became ${want.plate}`).catch(async (e) => { failures.push(`${e.message} (${JSON.stringify(await look())})`); return null; });
+      if (!got) return;
+      const bg = want.plate === "dark" ? "#000000" : "#ffffff";
+      if (got.forced !== want.plate) failures.push(`${step}: html[data-theme] is ${got.forced}, want ${want.plate}`);
+      if (got.metas.length !== 2 || got.metas.some((c) => c.toLowerCase() !== bg)) failures.push(`${step}: theme-color metas ${JSON.stringify(got.metas)}, want both ${bg}`);
+      if (got.pressed.join() !== want.pressed) failures.push(`${step}: pressed ${JSON.stringify(got.pressed)}, want ${want.pressed}`);
+      if (got.saved !== want.saved) failures.push(`${step}: saved key ${got.saved}, want ${want.saved}`);
+    };
+    await send("Runtime.enable");
+    await send("Page.enable");
+    await send("Emulation.setDeviceMetricsOverride", { width: 393, height: 852, deviceScaleFactor: 1, mobile: false });
+
+    // Default: nothing saved, System pressed, follows the scheme live.
+    await scheme("light");
+    await load(true);
+    await evaluate("localStorage.clear()");
+    await load(false);
+    await check({ plate: "light", pressed: "System", saved: null }, "default, light scheme");
+    await scheme("dark");
+    await check({ plate: "dark", pressed: "System", saved: null }, "default, live switch to dark");
+    await load(false);
+    await check({ plate: "dark", pressed: "System", saved: null }, "default, dark scheme after reload");
+
+    // Light overrides a dark system and survives a reload and a scheme switch.
+    await tile("Light");
+    await check({ plate: "light", pressed: "Light", saved: "light" }, "picked Light");
+    await load(false);
+    await check({ plate: "light", pressed: "Light", saved: "light" }, "Light after reload");
+    await scheme("light");
+    await scheme("dark");
+    await check({ plate: "light", pressed: "Light", saved: "light" }, "Light ignores a scheme switch");
+
+    // Dark over a light system, across a reload.
+    await scheme("light");
+    await tile("Dark");
+    await check({ plate: "dark", pressed: "Dark", saved: "dark" }, "picked Dark");
+    await load(false);
+    await check({ plate: "dark", pressed: "Dark", saved: "dark" }, "Dark after reload");
+
+    // System clears the key and follows a live switch again.
+    await tile("System");
+    await check({ plate: "light", pressed: "System", saved: null }, "picked System");
+    await scheme("dark");
+    await check({ plate: "dark", pressed: "System", saved: null }, "System follows a live switch");
+    await load(false);
+    await check({ plate: "dark", pressed: "System", saved: null }, "System after reload");
+
+    // T steps System → Light → Dark → System.
+    const press = async (key) => {
+      for (const type of ["keyDown", "keyUp"]) await send("Input.dispatchKeyEvent", { type, key, text: type === "keyDown" ? key : undefined, code: "KeyT", windowsVirtualKeyCode: 84 });
+    };
+    await press("t");
+    await check({ plate: "light", pressed: "Light", saved: "light" }, "T to Light");
+    await press("t");
+    await check({ plate: "dark", pressed: "Dark", saved: "dark" }, "T to Dark");
+    await scheme("light");
+    await press("t");
+    await check({ plate: "light", pressed: "System", saved: null }, "T back to System");
+  } finally {
+    try { socket?.close(); } catch (_) {}
+    chrome.kill();
+    server.close();
+    await delay(200);
+    await rm(profile, { recursive: true, force: true }).catch(() => {});
+  }
+  if (failures.length) {
+    console.error(`infinite look (browser) failed (${failures.length})`);
+    failures.forEach((failure) => console.error(`- ${failure}`));
+    process.exit(1);
+  }
+}
