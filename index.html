@@ -10209,24 +10209,6 @@ document.getElementById("help-wheel-btn")?.addEventListener("click", () => {
 // Exposed for tooling and the settings sheet below.
 window.HEXSWEEPER_SPHERE_GAME = sphereGame;
 const sphereChrome = initQuietChrome(sphereGame);
-// First visit: one quiet cue above the bar instead of a card. It fades on
-// its own; a restored sphere or a blocked store never shows it.
-(function () {
-  const KEY = "hexsweeper-sphere-welcome-v1";
-  if (/(?:\?|&)welcome=[01](?:&|$)/.test(location.search)) return;
-  let seen = null;
-  try { seen = localStorage.getItem(KEY); } catch (_) { return; }
-  if (seen) return;
-  // The sphere may still be building when this runs; wait for its state (up to ~3 s).
-  let tries = 0;
-  (function check() {
-    const st = typeof sphereGame.getState === "function" ? sphereGame.getState() : null;
-    if (!st || !st.cells || !st.cells.length) { if (++tries < 180) requestAnimationFrame(check); return; }
-    if (st.cells.some((c) => c.revealed || c.flagged)) return;
-    if (typeof sphereGame.toast === "function") sphereGame.toast("Tap to clear · hold to flag · drag to spin", 5200);
-    try { localStorage.setItem(KEY, "1"); } catch (_) {}
-  })();
-})();
 // Settings sheet (the ? overlay): theme grid, board size, warning style;
 // Invert and Effects state is wired inside sphere.js.
 (function () {

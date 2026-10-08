@@ -10546,36 +10546,6 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
   paintReadout();
 
-  // Minimal-help pages (infinite.html): a first visit gets one quiet line above
-  // the bar instead of a card. It fades on its own; a restored run or a blocked
-  // store never shows it.
-  if (MINIMAL_HELP) {
-    (function firstVisitCue() {
-      const KEY = "hexsweeper-infinite-welcome-v1";
-      let seen = null;
-      try {
-        seen = localStorage.getItem(KEY);
-      } catch (_) {
-        return;
-      }
-      if (seen) return;
-      const cells = game?.state?.map ? Array.from(game.state.map.values()) : [];
-      if (cells.some((c) => c.revealed || c.flagged)) return;
-      const touch =
-        typeof matchMedia === "function" &&
-        matchMedia("(hover: none) and (pointer: coarse)").matches;
-      showToast(
-        touch
-          ? "Tap to clear · hold to flag · drag to pan"
-          : "Click to clear · ⌃-click to flag · drag to pan",
-        5200
-      );
-      try {
-        localStorage.setItem(KEY, "1");
-      } catch (_) {}
-    })();
-  }
-
   // Test/debug: window.__hexBlast.force() after first click places mines
   window.__hexBlast = {
     get active() {

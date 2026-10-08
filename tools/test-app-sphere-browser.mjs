@@ -160,13 +160,11 @@ try {
   await send("Page.reload", { ignoreCache: true });
   await waitExpression('document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere did not reload");
   await delay(400);
-  // First launch: no card and no sheet; one quiet status cue above the bar, which marks the key.
+  // First launch: no card, no sheet and no instruction text; the board is the whole page.
   assert.equal(await evaluate('!!document.getElementById("tutorial-overlay")'), false, "the tutorial card is back in the payload");
   assert.equal(await evaluate('document.getElementById("help-overlay").hidden'), true, "settings sheet opened on first launch");
-  await waitExpression('document.getElementById("count-style-toast").classList.contains("show")', "first launch did not show the quiet cue");
-  assert.match(await evaluate('document.getElementById("count-style-toast").textContent'), /tap to clear/i, "first-visit cue has the wrong copy");
-  assert.equal(await evaluate('document.getElementById("count-style-toast").getAttribute("role")'), "status", "first-visit cue is not a status line");
-  assert.equal(await evaluate('localStorage.getItem("hexsweeper-sphere-welcome-v1")'), "1", "cue did not mark the welcome key");
+  await delay(1500);
+  assert.equal(await evaluate('document.getElementById("count-style-toast").classList.contains("show")'), false, "first launch showed instruction text");
   assert.deepEqual(
     await evaluate('window.HEXSWEEPER_SPHERE_GAME.getInvertDrag()'),
     { x: false, y: false },
