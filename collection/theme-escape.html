@@ -4570,8 +4570,9 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   const STILL_PLANE = !!(ONEPAGER && ONEPAGER.stillPlane);
   // minimalHelp: infinite.html — no tooltips, a quiet first-visit cue instead of any card.
   const MINIMAL_HELP = !!(ONEPAGER && ONEPAGER.minimalHelp);
-  // Minimal-help pages follow the system scheme; a Light / Dark pick from the
-  // sheet's Look tab (or T) is remembered as an override.
+  // Minimal-help pages follow the system scheme by default (the Look tab's
+  // System tile). A Light / Dark pick from Look (or T) is remembered as an
+  // override; picking System again forgets it and follows the scheme live.
   const PLATE_PICK_KEY = "hexsweeper-infinite-theme-v1";
   function systemPlate() {
     return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches
@@ -4586,11 +4587,26 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
       return null;
     }
   }
+  /** "light" | "dark" while overridden; null follows the system. Kept in memory
+   *  too, so the Look tiles stay right when storage is blocked. */
+  let platePick = MINIMAL_HELP ? pickedPlate() : null;
   function rememberPlate(id) {
-    if (!MINIMAL_HELP || (id !== "light" && id !== "dark")) return;
+    if (!MINIMAL_HELP || (id !== "light" && id !== "dark" && id !== "system")) return;
+    platePick = id === "system" ? null : id;
     try {
-      localStorage.setItem(PLATE_PICK_KEY, id);
+      if (platePick) localStorage.setItem(PLATE_PICK_KEY, platePick);
+      else localStorage.removeItem(PLATE_PICK_KEY);
     } catch (_) {}
+    syncPlatePick();
+  }
+  /** Look tiles: System is pressed while following, else the picked plate. */
+  function syncPlatePick() {
+    if (!MINIMAL_HELP) return;
+    const active = platePick || "system";
+    document.querySelectorAll(".help-theme[data-mode], .help-theme[data-plate]").forEach((button) => {
+      const id = button.dataset.plate || button.dataset.mode;
+      button.setAttribute("aria-pressed", id === active ? "true" : "false");
+    });
   }
   const HOME_THEME_ID = "light";
   const STORAGE_KEY = "hexsweeper-mode-v3";
@@ -4656,7 +4672,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   try {
     if (ONEPAGER_ACTIVE) {
       const start =
-        (MINIMAL_HELP && (pickedPlate() || systemPlate())) ||
+        (MINIMAL_HELP && (platePick || systemPlate())) ||
         resolveThemeId(ONEPAGER.mode) ||
         ONEPAGER_MODES[0];
       const startId = ONEPAGER_MODES.includes(start) ? start : ONEPAGER_MODES[0];
@@ -7807,6 +7823,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     document.querySelectorAll("button[data-mode]").forEach((button) => {
       button.setAttribute("aria-pressed", button.dataset.mode === t.id ? "true" : "false");
     });
+    syncPlatePick();
     syncWelcomeThemes(t.id);
     const w = gameApi?.state?.canvas?.width || window.innerWidth;
     const h = gameApi?.state?.canvas?.height || window.innerHeight;
@@ -8020,8 +8037,30 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     syncPlateToggle();
   }
 
+  /** Minimal-help pages: forget the pick and show the system's plate. */
+  function followSystemPlate({ toast = true } = {}) {
+    rememberPlate("system");
+    const i = THEMES.findIndex((theme) => theme.id === systemPlate());
+    if (i >= 0 && i !== themeIndex) applyTheme(i, { toast: false });
+    if (toast) showToast("System");
+  }
+
   function cycleTheme() {
     if (ONEPAGER_STRICT) return;
+    // Minimal-help pages: T steps System → Light → Dark → System.
+    if (MINIMAL_HELP) {
+      const order = ["system", "light", "dark"];
+      const nextId = order[(order.indexOf(platePick || "system") + 1) % order.length];
+      if (nextId === "system") {
+        followSystemPlate();
+        return;
+      }
+      rememberPlate(nextId);
+      const next = THEMES.findIndex((theme) => theme.id === nextId);
+      if (next >= 0 && next !== themeIndex) applyTheme(next);
+      else showToast(THEMES[themeIndex].name);
+      return;
+    }
     if (ONEPAGER_ACTIVE) {
       const cur = THEMES[themeIndex]?.id;
       const i = Math.max(0, ONEPAGER_MODES.indexOf(cur));
@@ -9374,6 +9413,11 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     });
   });
 
+  // Minimal-help Look tab: System forgets the Light / Dark pick.
+  document.querySelectorAll('button[data-plate="system"]').forEach((button) => {
+    button.addEventListener("click", () => followSystemPlate());
+  });
+
   document.getElementById("plate-toggle")?.addEventListener("click", () => {
     togglePlateAppearance();
   });
@@ -10489,7 +10533,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   if (MINIMAL_HELP && typeof matchMedia === "function") {
     const scheme = matchMedia("(prefers-color-scheme: dark)");
     const follow = () => {
-      if (pickedPlate()) return;
+      if (platePick) return;
       const i = THEMES.findIndex((theme) => theme.id === systemPlate());
       if (i >= 0 && i !== themeIndex) applyTheme(i, { toast: false });
     };

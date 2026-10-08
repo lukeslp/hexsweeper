@@ -1915,6 +1915,7 @@ INFINITE_SHEET = f"""<!-- Help and settings: one sheet, the same component as Sp
     <div class="help-themes" role="group" aria-label="Theme">
       <span class="help-packs-cap">Theme</span>
       <div class="help-theme-grid">
+        <button type="button" class="help-theme" data-plate="system" aria-pressed="true" style="--swatch: linear-gradient(135deg, #ffffff 50%, #000000 50%)"><span class="help-theme-dot" aria-hidden="true"></span><span>System</span></button>
         <button type="button" class="help-theme" data-mode="light" aria-pressed="false" style="--swatch: linear-gradient(145deg, #ffffff 45%, #ffffff 55%)"><span class="help-theme-dot" aria-hidden="true"></span><span>Light</span></button>
         <button type="button" class="help-theme" data-mode="dark" aria-pressed="false" style="--swatch: linear-gradient(145deg, #000000 45%, #000000 55%)"><span class="help-theme-dot" aria-hidden="true"></span><span>Dark</span></button>
       </div>

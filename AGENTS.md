@@ -43,8 +43,9 @@ the exporter swaps play.html's glass pill for `INFINITE_CHROME` (CSS between
 has no honest "mines left") and a bottom bar of bare `.ib` icons, New board ·
 Flag mode on the left and Help and settings on the right, which becomes a 64px
 right rail on landscape phones. The score and Flag mode are not repeated in the
-sheet. Light / Dark follows `prefers-color-scheme` until the player picks one in
-Look (kept under `hexsweeper-infinite-theme-v1`). `"minimalHelp": true`
+sheet. Look offers System · Light · Dark: System (the default) follows
+`prefers-color-scheme` live; a Light or Dark pick is kept under
+`hexsweeper-infinite-theme-v1`, and System clears it. T cycles the three. `"minimalHelp": true`
 in its one-pager config turns on a quiet first-visit cue (the theme toast,
 marks `hexsweeper-infinite-welcome-v1`) and keeps runtime titles off
 (`Hexsweeper.boot({ tooltips: false })`). play.html, its theme pens and
