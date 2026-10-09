@@ -423,6 +423,16 @@
 
   const params = new URL(location.href).searchParams;
   const key = params.get("card") || "home";
+  // Production Minimal previews use reviewed board-only captures, never title plates.
+  if (["sphere", "infinite", "skin-classic"].includes(key)) {
+    const stage = document.getElementById("stage");
+    const image = document.createElement("img");
+    image.src = "../assets/social/" + key + "-og.png?v=board-20261009";
+    image.alt = "Board-only gameplay screenshot";
+    image.width = 1200; image.height = 630;
+    stage.replaceChildren(image);
+    return;
+  }
   const card = CARDS[key] || CARDS.home;
   const root = document.documentElement.style;
 

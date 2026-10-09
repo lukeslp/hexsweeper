@@ -2082,8 +2082,10 @@ def export_flat_web(
         markup,
         count=1,
     )
+    if label == "bounded":
+        markup = markup.replace("skin-classic-og.png", "skin-classic-og.png?v=board-20261009")
     if label == "infinite":
-        image_alt = "A black and white endless hexagonal Minesweeper board with red flags beside the title Hexsweeper Infinite."
+        image_alt = "A black and white endless hexagonal Minesweeper board with revealed number clues."
         image_meta = (
             '<meta property="og:image:width" content="1200">\n'
             '<meta property="og:image:height" content="630">\n'
@@ -2274,11 +2276,11 @@ def export_sphere_web() -> str:
         '<meta property="og:title" content="Hexsweeper">',
         '<meta property="og:description" content="Hex minesweeper on a sphere — plus Infinite and Classic boards.">',
         f'<meta property="og:url" content="{SITE_BASE}/">',
-        f'<meta property="og:image" content="{OG}/sphere-og.png">',
+        f'<meta property="og:image" content="{OG}/sphere-og.png?v=board-20261009">',
         '<meta name="twitter:card" content="summary_large_image">',
         '<meta name="twitter:title" content="Hexsweeper">',
         '<meta name="twitter:description" content="Hex minesweeper on a sphere — plus Infinite and Classic boards.">',
-        f'<meta name="twitter:image" content="{OG}/sphere-og.png">',
+        f'<meta name="twitter:image" content="{OG}/sphere-og.png?v=board-20261009">',
         WEB_ROOT_HEAD.rstrip("\n"),
     ])
     markup = re.sub(r'(<meta name="description" content="[^"]*">)', r"\1\n" + social.replace("\\", "\\\\"), markup, count=1)
@@ -2607,7 +2609,7 @@ def main() -> int:
             **THEMES[0], "mode": "dark", "palette": "sphere",
             "ogTitle": "Hexsweeper Infinite",
             "ogDescription": "Minesweeper on an endless hexagonal board. Black, white, and red flags. Keep clearing; there are no edges.",
-            "ogImage": f"{OG}/infinite-og.png?v=20261007",
+            "ogImage": f"{OG}/infinite-og.png?v=board-20261009",
         }, source),
         "infinite", "infinite.html", still_plane=True, minimal_help=True
     )

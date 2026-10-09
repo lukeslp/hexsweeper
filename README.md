@@ -468,3 +468,16 @@ Open `lab.html` or `choices.html` locally or by URL path. Experimental skins rem
 - Native apps (iOS, Android, Fire TV) are built from this repository's `--app`
   export in a separate repository; the web root and the sealed app page are the
   same Sphere.
+
+## Minimal social screenshots
+
+Classic, Infinite and Sphere use 1200 × 630 board-only PNG captures, shared with
+the Minimal artwork. No title, description, URL or controls are drawn over the
+board. Infinite shows the revealed monochrome field; Sphere the whole globe;
+Classic the raised honeycomb. Social alternative text describes the actual image.
+The image URLs carry `board-20261009` to refresh caches. The OG authoring page
+shows these reviewed captures directly, so later card exports preserve them.
+To update one, capture the gameplay board, crop away chrome, frame at 1200 × 630,
+visually inspect, and replace its existing file in `assets/social/`.
+
+This update changes social assets and metadata only. Gameplay controls are unchanged.
