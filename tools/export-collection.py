@@ -2083,7 +2083,7 @@ def export_flat_web(
         count=1,
     )
     if label == "bounded":
-        markup = markup.replace("skin-classic-og.png", "skin-classic-og.png?v=board-20261009")
+        markup = markup.replace("skin-classic-og.png", "skin-classic-og.png?v=board-20261010")
     if label == "infinite":
         image_alt = "A black and white endless hexagonal Minesweeper board with revealed number clues."
         image_meta = (
