@@ -339,3 +339,12 @@ old flat-game deep links retain their behavior at `play.html`; keyboard, touch,
 forced colors, reduced motion, safe areas, and no-script navigation remain
 usable. The flat game retains its five-theme acceptance contract: Light / Dark /
 Escape infinite, Fire / Plague finite, matching chrome, persistence, and effects.
+
+## October 14 web control frame
+
+The public Sphere, Infinite and Classic pages now share the Minimal control
+placement and target sizes described in [the control contract](docs/control-layout-20261014.md).
+Existing actions, sheets, save keys and game engines remain intact. The native
+export and other Sphere experiments remain byte for byte unchanged. The web
+contract, export drift guard and CI pass; physical phone acceptance remains
+separate.

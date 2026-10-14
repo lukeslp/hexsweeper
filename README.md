@@ -42,7 +42,12 @@ under the SIL Open Font License 1.1. No font CDN is used.
 
 The root opens straight into Sphere, which restores its own unfinished run
 without asking. A small mines-left/seconds readout sits at the top, with
-**Undo · New sphere · Flag** at the bottom left and **?** at the bottom right.
+**New sphere** at the upper left, **Undo · Flag** at the lower left and **?**
+at the lower right. Short landscape screens put actions above Help on a right
+rail. These web controls use the [shared Minimal frame](docs/control-layout-20261014.md):
+square 48px targets, 24px glyphs and visible keyboard focus. Infinite uses the
+same New board/Flag/? placement; Classic puts Reset above and Menu last. The
+sealed native payload keeps its existing control arrangement.
 The three-hex games menu — Infinite, Classic, Sphere, with
 the newest run in the center Resume tile — lives at `launcher.html`, which is
 **unlinked and noindex** since 2026-10-07: it stays served only so old links
