@@ -6,7 +6,7 @@ I use the same control frame across the Minimal games so a familiar action stays
 
 The October 14 audit covers the thirteen game destinations on Minimal and the three new builds. Harmonies is a navigation hub; Simple Machines has no visible puzzle toolbar. Neither gets decorative puzzle controls. Push, Stack and Cut remain unlisted local builds unless separately released.
 
-Implementation starts from `24728cb` in an isolated checkout. The original Games chat owns its checkout and its ongoing Akari links. Its newer committed Akari state must be incorporated before those files are patched or published. Publication uses each live edition's actual baseline, preserving newer changes, retained assets and routing; a changed baseline stops that swap.
+The current Akari editions retain their reciprocal appearance links and shared progress. Publication uses each live edition's actual baseline, preserving newer changes, retained assets and routing; a changed baseline stops that swap.
 
 ## Position and order
 

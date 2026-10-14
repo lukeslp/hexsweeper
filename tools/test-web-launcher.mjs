@@ -222,10 +222,15 @@ console.log("web launcher contract: ok");
 // Infinite's Look tab in a real browser: System follows the scheme live, a
 // Light / Dark pick survives a reload, and System forgets the pick again.
 // HEXSWEEPER_SKIP_BROWSER=1 skips this step where Chrome is not installed.
-const chromePath = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const chromePath = process.env.CHROME_PATH || [
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium", "/usr/bin/chromium-browser",
+].find(existsSync);
 if (process.env.HEXSWEEPER_SKIP_BROWSER === "1") {
   console.log("infinite look (browser): skipped");
 } else {
+  if (!chromePath) throw new Error("Chrome is unavailable; set CHROME_PATH to an installed browser");
   await infiniteLookBrowser();
   console.log("infinite look (browser): ok");
 }

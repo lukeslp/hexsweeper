@@ -1351,7 +1351,7 @@ def sphere_banner(exp: dict) -> str:
     )
 
 
-def export_sphere(exp: dict) -> str:
+def export_sphere(exp: dict, *, web_controls: bool = True) -> str:
     """Inline a sphere source tree into a single CodePen-ready HTML file.
 
     Defaults match live sphere/ (dev-chrome). sphere-ux sets source/css/scripts/boot.
@@ -1370,6 +1370,15 @@ def export_sphere(exp: dict) -> str:
     boot_fn = exp.get("boot") or "initDevChrome"
 
     markup = (source_dir / "index.html").read_text(encoding="utf-8")
+    # The shared web frame belongs to the canonical Sphere only. Preserve
+    # other experiments and the sealed native payload byte for byte.
+    frame = web_controls and source_name == "sphere" and exp["id"] == "sphere"
+    if frame:
+        css_names = [*css_names, "controls.css"]
+        script_names = [*script_names, "controls.js"]
+        markup = markup.replace("<!-- minimal-controls:start -->\n", "").replace("\n<!-- minimal-controls:end -->", "")
+    else:
+        markup = re.sub(r"\n<!-- minimal-controls:start -->.*?<!-- minimal-controls:end -->", "", markup, flags=re.S)
     markup = re.sub(
         r"/\* WEB_GAMES_BACK_START.*?WEB_GAMES_BACK_END \*/\s*",
         "",
@@ -2030,6 +2039,18 @@ def minimal_flat_help(markup: str, label: str) -> str:
     return markup.replace(onepager, onepager + '  "minimalHelp": true,\n', 1)
 
 
+def minimal_control_frame(markup: str, label: str) -> str:
+    """Keep the two public flat routes on the same web control frame."""
+    source = ROOT / "tools" / "control-frame"
+    configs = json.loads((source / "games.json").read_text())
+    key = {"infinite": "hex-infinite", "bounded": "hex-classic"}[label]
+    config = next(c for c in configs if c["id"] == key)
+    css = (source / "frame.css").read_text()
+    script = (source / "frame.js").read_text().replace("CONTROL_FRAME_CONFIG", json.dumps(config, separators=(",", ":")))
+    markup = markup.replace("</head>", "<style>\n/* Minimal control frame */\n" + css + "</style>\n</head>", 1)
+    return markup.replace("</body>", "<script>\n" + safe_script(script) + "</script>\n</body>", 1)
+
+
 def export_flat_web(
     markup: str, label: str, route: str, *, still_plane: bool = False, minimal_help: bool = False
 ) -> str:
@@ -2093,7 +2114,7 @@ def export_flat_web(
             f'<meta name="twitter:image:alt" content="{image_alt}">\n'
         )
         markup = markup.replace("</head>", image_meta + "</head>", 1)
-    return markup
+    return minimal_control_frame(markup, label)
 
 
 def export_sphere_app(exp: dict) -> str:
@@ -2111,7 +2132,7 @@ def export_sphere_app(exp: dict) -> str:
     4. Outbound credits open in the system browser instead of navigating the
        WebView away from the game with no way back.
     """
-    markup = export_sphere(exp)
+    markup = export_sphere(exp, web_controls=False)
     markup = re.sub(
         r"<title>.*?</title>",
         "<title>Hexsweeper</title>",

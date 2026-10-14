@@ -1,0 +1,41 @@
+[
+  {
+    "id": "hex-sphere",
+    "root": "quiet-chrome",
+    "bar": ".qc-bar",
+    "undo": "qc-undo",
+    "restart": "qc-reset",
+    "tools": [
+      "qc-flag"
+    ],
+    "help": "qc-help",
+    "required": [
+      "qc-undo",
+      "qc-reset",
+      "qc-help"
+    ]
+  },
+  {
+    "id": "hex-infinite",
+    "bar": ".bar",
+    "restart": "reset-btn",
+    "tools": [
+      "flag-btn"
+    ],
+    "help": "help-btn",
+    "required": [
+      "reset-btn",
+      "help-btn"
+    ]
+  },
+  {
+    "id": "hex-classic",
+    "bar": ".hud-actions",
+    "restart": "reset-btn",
+    "help": "menu-btn",
+    "required": [
+      "reset-btn",
+      "menu-btn"
+    ]
+  }
+]
