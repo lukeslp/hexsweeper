@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import mimetypes
 import re
@@ -2039,16 +2040,49 @@ def minimal_flat_help(markup: str, label: str) -> str:
     return markup.replace(onepager, onepager + '  "minimalHelp": true,\n', 1)
 
 
+def frame_hook(text: str, anchor: str, replacement: str) -> str:
+    if text.count(anchor) != 1:
+        raise SystemExit(f"minimal_control_frame: anchor drift in frame.js: {anchor[:70]!r}")
+    return text.replace(anchor, replacement, 1)
+
+
 def minimal_control_frame(markup: str, label: str) -> str:
-    """Keep the two public flat routes on the same web control frame."""
+    """Keep the two public flat routes on the same web control frame.
+
+    tools/control-frame/ is a verbatim copy of game-riffs' frame (frame.js,
+    frame.css, access.js) and its tools/input/bridge-client.js. The frame is
+    inlined, so it is told where it stands: access.js and bridge-client.js are
+    written beside the page (main() plans them) and load the first time a player turns Access on.
+    Hexsweeper's Settings has no Motion or Theme row, so its games.json entry
+    names the control (anchor) and row (anchorRow) the Access rows follow.
+    """
     source = ROOT / "tools" / "control-frame"
     configs = json.loads((source / "games.json").read_text())
     key = {"infinite": "hex-infinite", "bounded": "hex-classic"}[label]
     config = next(c for c in configs if c["id"] == key)
     css = (source / "frame.css").read_text()
+    access = (source / "access.js").read_bytes()
     script = (source / "frame.js").read_text().replace("CONTROL_FRAME_CONFIG", json.dumps(config, separators=(",", ":")))
-    markup = markup.replace("</head>", "<style>\n/* Minimal control frame */\n" + css + "</style>\n</head>", 1)
+    script = script.replace("CONTROL_ACCESS_VERSION", hashlib.sha1(access).hexdigest()[:8])
+    script = frame_hook(script, "const here = document.currentScript && document.currentScript.src;",
+                        "const here = new URL('controls.js', document.baseURI).href;")
+    script = frame_hook(script, "sheet.querySelector('#motion')||sheet.querySelector('#theme,#theme-btn'));",
+                        "sheet.querySelector('#motion')||sheet.querySelector('#theme,#theme-btn')||(config.anchor&&sheet.querySelector(config.anchor)));")
+    script = frame_hook(script, "anchor.closest('label,.row,.setting-row,.setting');",
+                        "anchor.closest('label,.row,.setting-row,.setting'+(config.anchorRow?','+config.anchorRow:''));")
+    markup = markup.replace("</head>", "<style>\n/* Minimal control frame */\n" + css + ACCESS_ROW_CSS + "</style>\n</head>", 1)
     return markup.replace("</body>", "<script>\n" + safe_script(script) + "</script>\n</body>", 1)
+
+
+# Access rows take the look of the sheet they join: a text button per choice.
+ACCESS_ROW_CSS = """
+#modal-overlay .access-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+#modal-overlay .access-row button{display:inline-flex;align-items:center;min-height:44px;width:auto;padding:0 12px;border:1px solid currentColor;border-radius:999px;background:none;color:inherit;font:inherit;cursor:pointer}
+#help-panel-settings .access-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
+#help-panel-settings .access-row .help-pack::before{content:none}
+#help-panel-settings .access-row .help-pack{border:1px solid color-mix(in srgb,currentColor 30%,transparent);border-radius:999px;min-height:44px;padding:0 14px}
+#help-panel-settings .access-row[hidden],#modal-overlay .access-row[hidden]{display:none}
+"""
 
 
 def export_flat_web(
@@ -2114,7 +2148,16 @@ def export_flat_web(
             f'<meta name="twitter:image:alt" content="{image_alt}">\n'
         )
         markup = markup.replace("</head>", image_meta + "</head>", 1)
+    # The app's own icon in the tab, as on every other Hexsweeper board.
+    markup = markup.replace("</head>", FLAT_ICONS + "</head>", 1)
     return minimal_control_frame(markup, label)
+
+
+FLAT_ICONS = (
+    '  <link rel="icon" href="/games/hexsweeper/favicon/favicon.ico?v=2" sizes="16x16 32x32 48x48">\n'
+    '  <link rel="icon" type="image/png" sizes="32x32" href="/games/hexsweeper/favicon/favicon-32.png?v=2">\n'
+    '  <link rel="apple-touch-icon" href="/games/hexsweeper/favicon/apple-touch-icon.png?v=2">\n'
+)
 
 
 def export_sphere_app(exp: dict) -> str:
@@ -2637,6 +2680,9 @@ def main() -> int:
     planned[ROOT / "bounded.html"] = export_flat_web(
         planned[COLLECTION / "skin-classic.html"], "bounded", "bounded.html"
     )
+    # Access for the two flat routes: loaded beside them, the first time it is turned on.
+    for name in ("access.js", "bridge-client.js"):
+        planned[ROOT / name] = (ROOT / "tools" / "control-frame" / name).read_text(encoding="utf-8")
 
     expected_theme = {f"theme-{t['id']}.html" for t in THEMES}
     expected_skin = {f"skin-{s['id']}.html" for s in skins}

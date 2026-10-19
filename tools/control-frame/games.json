@@ -26,6 +26,17 @@
     "required": [
       "reset-btn",
       "help-btn"
+    ],
+    "sheet": "help-panel-settings",
+    "anchor": "#fx-btn",
+    "anchorRow": ".help-packs",
+    "board": "#gameCanvas",
+    "keys": [
+      "point"
+    ],
+    "modes": [
+      "off",
+      "switch"
     ]
   },
   {
@@ -36,6 +47,17 @@
     "required": [
       "reset-btn",
       "menu-btn"
+    ],
+    "sheet": "modal-overlay",
+    "anchor": "#diff-selector",
+    "anchorRow": ".modal-row",
+    "board": "#gameCanvas",
+    "keys": [
+      "point"
+    ],
+    "modes": [
+      "off",
+      "switch"
     ]
   }
 ]
