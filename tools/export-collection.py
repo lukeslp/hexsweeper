@@ -2046,6 +2046,12 @@ def frame_hook(text: str, anchor: str, replacement: str) -> str:
     return text.replace(anchor, replacement, 1)
 
 
+def access_script() -> str:
+    """access.js as game-riffs ships it: the gaze core ahead of the frame's access.js."""
+    source = ROOT / "tools" / "control-frame"
+    return (source / "gaze-core.js").read_text(encoding="utf-8") + "\n" + (source / "access.js").read_text(encoding="utf-8")
+
+
 def minimal_control_frame(markup: str, label: str) -> str:
     """Keep the two public flat routes on the same web control frame.
 
@@ -2061,15 +2067,11 @@ def minimal_control_frame(markup: str, label: str) -> str:
     key = {"infinite": "hex-infinite", "bounded": "hex-classic"}[label]
     config = next(c for c in configs if c["id"] == key)
     css = (source / "frame.css").read_text()
-    access = (source / "access.js").read_bytes()
+    access = access_script().encode("utf-8")
     script = (source / "frame.js").read_text().replace("CONTROL_FRAME_CONFIG", json.dumps(config, separators=(",", ":")))
     script = script.replace("CONTROL_ACCESS_VERSION", hashlib.sha1(access).hexdigest()[:8])
     script = frame_hook(script, "const here = document.currentScript && document.currentScript.src;",
                         "const here = new URL('controls.js', document.baseURI).href;")
-    script = frame_hook(script, "sheet.querySelector('#motion')||sheet.querySelector('#theme,#theme-btn'));",
-                        "sheet.querySelector('#motion')||sheet.querySelector('#theme,#theme-btn')||(config.anchor&&sheet.querySelector(config.anchor)));")
-    script = frame_hook(script, "anchor.closest('label,.row,.setting-row,.setting');",
-                        "anchor.closest('label,.row,.setting-row,.setting'+(config.anchorRow?','+config.anchorRow:''));")
     markup = markup.replace("</head>", "<style>\n/* Minimal control frame */\n" + css + ACCESS_ROW_CSS + "</style>\n</head>", 1)
     return markup.replace("</body>", "<script>\n" + safe_script(script) + "</script>\n</body>", 1)
 
@@ -2681,8 +2683,8 @@ def main() -> int:
         planned[COLLECTION / "skin-classic.html"], "bounded", "bounded.html"
     )
     # Access for the two flat routes: loaded beside them, the first time it is turned on.
-    for name in ("access.js", "bridge-client.js"):
-        planned[ROOT / name] = (ROOT / "tools" / "control-frame" / name).read_text(encoding="utf-8")
+    planned[ROOT / "access.js"] = access_script()
+    planned[ROOT / "bridge-client.js"] = (ROOT / "tools" / "control-frame" / "bridge-client.js").read_text(encoding="utf-8")
 
     expected_theme = {f"theme-{t['id']}.html" for t in THEMES}
     expected_skin = {f"skin-{s['id']}.html" for s in skins}

@@ -1,3 +1,222 @@
+/* Gaze core: reading a face and turning a look into a choice. By Luke Steuber.
+   The one copy of the gaze math every game uses: the camera games' gaze.js
+   files and Look and hold in the shared control frame are generated from this
+   file by tools/sync-gaze.py and tools/apply-control-frame.py (never edit
+   those copies). Pure: a one-euro filter, the look-and-hold machine, the
+   features read from MediaPipe's face landmarks, and the calibrations that
+   turn them into a point on the page. No camera, page or clock lives here;
+   every call is given its time. The landmark math follows
+   gravitational-lens-tracker's lib/gaze and gazenav's irisOffset: each eye is
+   measured inside its own socket, from the corners, in units of its width. */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.GazeCore = api;
+})(typeof globalThis === 'object' ? globalThis : this, function () {
+  'use strict';
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  // The one-euro filter (Casiez, Roussel and Vogel, 2012): smooth at rest,
+  // quick when the point moves fast. Times in milliseconds.
+  function oneEuro({ minCutoff = 1, beta = 0, dCutoff = 1 } = {}) {
+    let x = null, dx = 0, last = null;
+    const alpha = (cutoff, dt) => 1 / (1 + 1 / (2 * Math.PI * cutoff * dt));
+    return {
+      filter(value, t) {
+        if (x === null || last === null || t <= last) { if (x === null) x = value; last = t; return x; }
+        const dt = Math.min(.25, (t - last) / 1000); last = t;
+        const raw = (value - x) / dt; dx += alpha(dCutoff, dt) * (raw - dx);
+        x += alpha(minCutoff + beta * Math.abs(dx), dt) * (value - x);
+        return x;
+      },
+      reset() { x = null; dx = 0; last = null; }
+    };
+  }
+  // Look and hold. `targets(x, y)` names what lies under a point (or null in
+  // the rest area); `holds(target, x, y)` says whether a point still counts
+  // as on a target, its own area grown by the dead zone. A ring fills while
+  // the point stays on its target and drains when it leaves; a full ring
+  // fires once, and that target cannot fire again until the point has left
+  // it. A short loss of the face changes nothing; a longer one is looking away.
+  function dwell({ time = 800, drain = 400, lost = 300, targets, holds }) {
+    let current = null, blocked = null, last = null, missing = null;
+    const progress = new Map();
+    function sample(t, x, y) {
+      const dt = last === null ? 0 : clamp(t - last, 0, 120), fired = [];
+      last = t;
+      if (x === null || x === undefined) {
+        if (missing === null) missing = t;
+        if (t - missing < lost) return fired;
+        current = null; blocked = null;
+      } else {
+        missing = null;
+        current = current && holds(current, x, y) ? current : targets(x, y);
+        if (blocked !== null && (!current || current.id !== blocked)) blocked = null;
+      }
+      const live = current && current.id !== blocked ? current.id : null;
+      for (const [id, p] of progress) if (id !== live) { const q = p - dt / drain; if (q <= 0) progress.delete(id); else progress.set(id, q); }
+      if (live !== null) {
+        const p = (progress.get(live) || 0) + dt / time;
+        if (p >= 1) { progress.delete(live); blocked = live; fired.push(current); }
+        else progress.set(live, p);
+      }
+      return fired;
+    }
+    return {
+      sample,
+      get current() { return current; }, get blocked() { return blocked; },
+      progress: id => progress.get(id) || 0,
+      rings: () => [...progress],
+      set time(v) { time = v; },
+      // Treat the point as already resting on this target, fired: it must
+      // leave before the target can fill. Used after calibration and a new board.
+      hold(target) { current = target || null; blocked = target ? target.id : null; },
+      // A board change or a mode switch starts every ring afresh; the target
+      // under the point stays blocked so a held look does not fire on what replaced it.
+      reset(keepBlock = false) { progress.clear(); if (!keepBlock) { blocked = null; current = null; } else if (current) blocked = current.id; last = null; missing = null; }
+    };
+  }
+  // Landmark indices in MediaPipe's 478-point face mesh.
+  const MESH = { nose: 1, forehead: 10, chin: 152, cheekR: 234, cheekL: 454, mouthTop: 13, mouthBottom: 14,
+    eyeR: { a: 33, b: 133, up: 159, down: 145, iris: 468 }, eyeL: { a: 362, b: 263, up: 386, down: 374, iris: 473 } };
+  // Head yaw and pitch in radians. From the facial transformation matrix
+  // (column-major, as MediaPipe gives it): the face's forward axis is its
+  // third column. Without a matrix, from the nose against the cheeks and
+  // brow, which gives the same signs in image terms.
+  function headPose(landmarks, matrix, aspect = 4 / 3) {
+    if (matrix && matrix.data && matrix.data.length === 16) {
+      const m = matrix.data, fx = m[8], fy = m[9], fz = m[10];
+      return { yaw: Math.atan2(fx, fz), pitch: Math.atan2(fy, Math.hypot(fx, fz)) };
+    }
+    return landmarkPose(landmarks, aspect);
+  }
+  const P = (lm, i, aspect) => ({ x: lm[i].x * aspect, y: lm[i].y });
+  // On a real face looking straight ahead the nose tip sits about 57.5 percent
+  // of the way from the brow landmark to the chin, so a still head reads as a
+  // 5 to 18 degree nod (the Eye Gaze review). Every use here is relative to a
+  // calibrated rest, which takes that offset out, and the asin's slope 18
+  // degrees off level differs by under 5 percent, so the reading stays halfway
+  // (NOSE_REST): moving it would change every saved eyes calibration for no
+  // gain in play.
+  const NOSE_REST = .5;
+  function landmarkPose(lm, aspect = 4 / 3) {
+    const n = P(lm, MESH.nose, aspect), r = P(lm, MESH.cheekR, aspect), l = P(lm, MESH.cheekL, aspect), top = P(lm, MESH.forehead, aspect), chin = P(lm, MESH.chin, aspect);
+    const width = Math.hypot(l.x - r.x, l.y - r.y) || 1, height = Math.hypot(chin.x - top.x, chin.y - top.y) || 1;
+    return { yaw: Math.asin(clamp((n.x - (l.x + r.x) / 2) / (width * .5), -1, 1)), pitch: Math.asin(clamp((n.y - (top.y + (chin.y - top.y) * NOSE_REST)) / (height * .5), -1, 1)) };
+  }
+  // Where the irises sit in the eyes, as a fraction of eye width, averaged
+  // over both eyes and measured along each eye's own corner line, so a tilted
+  // head does not read as a look sideways. Up and down are measured from the
+  // corners' midpoint, which stays put, not from the lids, which follow the
+  // iris up and down and so hid most of the eyes' vertical movement (as
+  // gazenav's irisOffset found).
+  // An eye whose iris reads further than this from its socket's centre (in
+  // eye widths) is a detection gone wrong, often a half blink; it is left out
+  // rather than trusted, and with both out the look is the head's alone.
+  const IMPLAUSIBLE = .8;
+  function irisOffset(lm, aspect = 4 / 3) {
+    let ex = 0, ey = 0, used = 0;
+    for (const e of [MESH.eyeR, MESH.eyeL]) {
+      const a = P(lm, e.a, aspect), b = P(lm, e.b, aspect), iris = P(lm, e.iris, aspect);
+      const w = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / w, uy = (b.y - a.y) / w;
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const x = ((iris.x - mid.x) * ux + (iris.y - mid.y) * uy) / w, y = ((iris.x - mid.x) * -uy + (iris.y - mid.y) * ux) / w;
+      if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > IMPLAUSIBLE || Math.abs(y) > IMPLAUSIBLE) continue;
+      ex += x; ey += y; used++;
+    }
+    return used ? { ex: ex / used, ey: ey / used, used } : { ex: 0, ey: 0, used: 0 };
+  }
+  // The look: head turn plus the eyes' turn within the head, both in image
+  // terms and roughly in radians. The nose tip stands about a third of a face
+  // width proud of the cheeks; the iris moves about two fifths of an eye width
+  // per radian.
+  function lookAngles(lm, aspect = 4 / 3) {
+    const h = landmarkPose(lm, aspect), e = irisOffset(lm, aspect);
+    return { ax: Math.sin(h.yaw) * .5 / .35 + e.ex / .4, ay: Math.sin(h.pitch) * .5 / .35 + e.ey / .4 };
+  }
+  // The five calibration places, in page units: -1 to 1 across the reach of
+  // the page inside its edge band, left to right and top to bottom.
+  const SPOTS = [{ u: 0, v: 0 }, { u: -.8, v: 0 }, { u: .8, v: 0 }, { u: 0, v: -.8 }, { u: 0, v: .8 }];
+  // Head: the centre sets the resting pose, each edge the comfortable turn
+  // that way; between them the page follows the turn in proportion. A side
+  // turned too little to measure borrows the other side's reach.
+  function headCalibration(poses) {
+    const [c, l, r, t, b] = poses, min = .035;
+    const side = (lo, hi, key) => {
+      let a = lo[key] - c[key], z = hi[key] - c[key];
+      if (Math.abs(a) < min && Math.abs(z) < min) return null;
+      if (Math.abs(a) < min || Math.sign(a) === Math.sign(z)) a = -z;
+      if (Math.abs(z) < min) z = -a;
+      return { lo: a, hi: z };
+    };
+    const yaw = side(l, r, 'yaw'), pitch = side(t, b, 'pitch');
+    if (!yaw || !pitch) return null;
+    return { kind: 'head', centre: { yaw: c.yaw, pitch: c.pitch }, yaw, pitch };
+  }
+  // Up and down must not be far touchier than left and right. Most people
+  // reach the top and bottom dots with their eyes and barely nod, so the
+  // nod a calibration measures can be tiny, and mapped as it stands it made a
+  // degree of head move the dot many times further up and down than across.
+  // So the reach up and down is kept to at least the reach across over
+  // BALANCE: a degree moves the dot at most BALANCE times as far across the
+  // page's height as across its width. `invertY` flips up and down for a
+  // player who wants it the other way.
+  const BALANCE = 2;
+  function balance(own, other) { const floor = Math.abs(other) / BALANCE; return Math.sign(own) * Math.max(Math.abs(own), floor) || floor; }
+  function headMap(cal, pose, { invertY = false } = {}) {
+    const along = (d, s) => .8 * (d * s.hi > 0 ? d / s.hi : -d / s.lo);
+    const across = Math.min(Math.abs(cal.yaw.lo), Math.abs(cal.yaw.hi)), p = { lo: balance(cal.pitch.lo, across), hi: balance(cal.pitch.hi, across) };
+    const v = clamp(along(pose.pitch - cal.centre.pitch, p), -1.25, 1.25);
+    return { u: clamp(along(pose.yaw - cal.centre.yaw, cal.yaw), -1.25, 1.25), v: invertY ? -v : v };
+  }
+  // Eyes: a straight line per axis from the look to the page, fitted to the
+  // five places by least squares.
+  function eyesCalibration(looks) {
+    const fit = (xs, ys) => {
+      const n = xs.length, mx = xs.reduce((s, v) => s + v, 0) / n, my = ys.reduce((s, v) => s + v, 0) / n;
+      let sxy = 0, sxx = 0; for (let i = 0; i < n; i++) { sxy += (xs[i] - mx) * (ys[i] - my); sxx += (xs[i] - mx) ** 2; }
+      if (sxx < 1e-6) return null;
+      const k = sxy / sxx; return { k, b: my - k * mx };
+    };
+    const u = fit(looks.map(l => l.ax), SPOTS.map(s => s.u)), v = fit(looks.map(l => l.ay), SPOTS.map(s => s.v));
+    if (!u || !v || Math.abs(u.k) < .2 || Math.abs(v.k) < .2) return null;
+    return { kind: 'eyes', e: 2, u, v };
+  }
+  function eyesMap(cal, look, { invertY = false } = {}) {
+    // A gain is page units per unit of look: the larger, the touchier.
+    const most = Math.abs(cal.u.k) * BALANCE, kv = Math.abs(cal.v.k) > most ? Math.sign(cal.v.k) * most : cal.v.k;
+    // Turned about the look that lands mid-page, so the middle stays put.
+    const v = clamp(kv * (look.ay + cal.v.b / cal.v.k), -1.25, 1.25);
+    return { u: clamp(cal.u.b + cal.u.k * look.ax, -1.25, 1.25), v: invertY ? -v : v };
+  }
+  // A fresh start keeps the reach and moves only the rest to where the
+  // player sits now.
+  function recentre(cal, rest) {
+    if (cal.kind === 'head') return { ...cal, centre: { yaw: rest.yaw, pitch: rest.pitch } };
+    return { ...cal, u: { k: cal.u.k, b: -cal.u.k * rest.ax }, v: { k: cal.v.k, b: -cal.v.k * rest.ay } };
+  }
+  // Holding still: every recent reading lies close to their mean.
+  function stillness(window, keys, tolerance) {
+    if (!window.length) return { still: false };
+    const mean = Object.fromEntries(keys.map(k => [k, window.reduce((s, w) => s + w[k], 0) / window.length]));
+    const spread = Math.max(...window.map(w => Math.max(...keys.map(k => Math.abs(w[k] - mean[k])))));
+    return { still: spread <= tolerance, mean, spread };
+  }
+  // An eyes calibration made before the eyes' up and down were measured from
+  // the corners (no `e: 2`) still loads, but asks for a full calibration
+  // again; a head calibration is unchanged.
+  const current = c => !!c && (c.kind !== 'eyes' || c.e === 2);
+  function validCalibration(c) {
+    const num = v => typeof v === 'number' && Number.isFinite(v);
+    if (!c || typeof c !== 'object') return false;
+    if (c.kind === 'head') return num(c.centre?.yaw) && num(c.centre?.pitch) && ['yaw', 'pitch'].every(k => num(c[k]?.lo) && num(c[k]?.hi) && c[k].lo * c[k].hi < 0);
+    if (c.kind === 'eyes') return ['u', 'v'].every(k => num(c[k]?.k) && num(c[k]?.b) && Math.abs(c[k].k) >= .2);
+    // An eye tracker's one-dot correction for the window's place on the screen.
+    if (c.kind === 'tracker') return num(c.dx) && num(c.dy);
+    return false;
+  }
+  return { clamp, oneEuro, dwell, MESH, headPose, landmarkPose, irisOffset, lookAngles, SPOTS, headCalibration, headMap, eyesCalibration, eyesMap, recentre, stillness, validCalibration, current };
+});
+
 /* Minimal Access: one switch, or look and hold, for every game in the shared
    control frame. The frame (controls.js) loads this file the first time a
    player turns Access on in Settings. A pad of the game's own keys stands in
@@ -8,7 +227,9 @@
    wordless calibration and edge band (glance/gaze.js), and its camera
    (glance/track.js), with the MediaPipe files loaded from Glance's published
    vendor folder the first time the camera starts. Camera frames stay in the
-   page; only landmarks come out. Luke Steuber. */
+   page; only landmarks come out. The gaze math comes from the gaze core,
+   tools/input/gaze-core.js, placed ahead of this file when it is copied into
+   a game. Luke Steuber. */
 (function () {
   'use strict';
   if (window.MinimalAccessEngine) return;
@@ -68,79 +289,21 @@ body[data-access-highlight="outline"] .access-key[data-scan-group] {outline:2px 
 body[data-control-frame] .access-zoom {position:fixed;box-sizing:border-box;border:1px solid var(--access-ink);background:var(--access-paper);pointer-events:auto;z-index:1;}
 body[data-control-frame] .access-zoom[hidden] {display:none;}
 body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid var(--access-ink);outline-offset:3px;}`;
-  // Glance's pure parts: the one-euro filter (Casiez, Roussel and Vogel,
-  // 2012), look and hold, the look read from face landmarks, and calibration.
-  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-  function oneEuro({minCutoff=1,beta=0,dCutoff=1}={}){
-    let x=null,dx=0,last=null;const alpha=(c,dt)=>1/(1+1/(2*Math.PI*c*dt));
-    return {filter(v,t){if(x===null||last===null||t<=last){if(x===null)x=v;last=t;return x;}const dt=Math.min(.25,(t-last)/1000);last=t;dx+=alpha(dCutoff,dt)*((v-x)/dt-dx);x+=alpha(minCutoff+beta*Math.abs(dx),dt)*(v-x);return x;}};
-  }
-  // A ring fills while the point stays on its target and drains when it
-  // leaves; a full ring fires once, and that target cannot fire again until
-  // the point has left it. A short loss of the face changes nothing.
-  function lookAndHold({time=800,drain=400,lost=300,targets,holds}){
-    let current=null,blocked=null,last=null,missing=null;const progress=new Map();
-    return {
-      sample(t,x,y){
-        const dt=last===null?0:clamp(t-last,0,120),fired=[];last=t;
-        if(x===null||x===undefined){if(missing===null)missing=t;if(t-missing<lost)return fired;current=null;blocked=null;}
-        else{missing=null;current=current&&holds(current,x,y)?current:targets(x,y);if(blocked!==null&&(!current||current.id!==blocked))blocked=null;}
-        const live=current&&current.id!==blocked?current.id:null;
-        for(const [id,p] of progress)if(id!==live){const q=p-dt/drain;if(q<=0)progress.delete(id);else progress.set(id,q);}
-        if(live!==null){const p=(progress.get(live)||0)+dt/time;if(p>=1){progress.delete(live);blocked=live;fired.push(current);}else progress.set(live,p);}
-        return fired;
-      },
-      get current(){return current;},get blocked(){return blocked;},rings:()=>[...progress],set time(v){time=v;},
-      hold(target){current=target||null;blocked=target?target.id:null;},
-      reset(){progress.clear();blocked=null;current=null;last=null;missing=null;}
-    };
-  }
-  const MESH={nose:1,forehead:10,chin:152,cheekR:234,cheekL:454,eyeR:{a:33,b:133,up:159,down:145,iris:468},eyeL:{a:362,b:263,up:386,down:374,iris:473}};
-  const P=(lm,i,k)=>({x:lm[i].x*k,y:lm[i].y});
-  function landmarkPose(lm,k=4/3){
-    const n=P(lm,MESH.nose,k),r=P(lm,MESH.cheekR,k),l=P(lm,MESH.cheekL,k),top=P(lm,MESH.forehead,k),chin=P(lm,MESH.chin,k);
-    const w=Math.hypot(l.x-r.x,l.y-r.y)||1,h=Math.hypot(chin.x-top.x,chin.y-top.y)||1;
-    return {yaw:Math.asin(clamp((n.x-(l.x+r.x)/2)/(w*.5),-1,1)),pitch:Math.asin(clamp((n.y-(top.y+chin.y)/2)/(h*.5),-1,1))};
-  }
-  function headPose(lm,matrix,k){if(matrix&&matrix.data&&matrix.data.length===16){const m=matrix.data;return {yaw:Math.atan2(m[8],m[10]),pitch:Math.atan2(m[9],Math.hypot(m[8],m[10]))};}return landmarkPose(lm,k);}
-  function lookAngles(lm,k=4/3){
-    const h=landmarkPose(lm,k);let ex=0,ey=0;
-    for(const e of [MESH.eyeR,MESH.eyeL]){
-      const a=P(lm,e.a,k),b=P(lm,e.b,k),iris=P(lm,e.iris,k),w=Math.hypot(b.x-a.x,b.y-a.y)||1,ux=(b.x-a.x)/w,uy=(b.y-a.y)/w;
-      // Up and down from the corners' midpoint, which stays put; the lids follow the iris (as in glance/gaze.js).
-      const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-      ex+=((iris.x-mid.x)*ux+(iris.y-mid.y)*uy)/w;ey+=((iris.x-mid.x)*-uy+(iris.y-mid.y)*ux)/w;
-    }
-    return {ax:Math.sin(h.yaw)*.5/.35+ex/2/.4,ay:Math.sin(h.pitch)*.5/.35+ey/2/.4};
-  }
-  const SPOTS=[{u:0,v:0},{u:-.8,v:0},{u:.8,v:0},{u:0,v:-.8},{u:0,v:.8}];
-  function headCalibration([c,l,r,t,b]){
-    const side=(lo,hi,key)=>{let a=lo[key]-c[key],z=hi[key]-c[key];if(Math.abs(a)<.035&&Math.abs(z)<.035)return null;if(Math.abs(a)<.035||Math.sign(a)===Math.sign(z))a=-z;if(Math.abs(z)<.035)z=-a;return {lo:a,hi:z};};
-    const yaw=side(l,r,'yaw'),pitch=side(t,b,'pitch');return yaw&&pitch?{kind:'head',centre:{yaw:c.yaw,pitch:c.pitch},yaw,pitch}:null;
-  }
-  // Up and down's reach kept to at least the reach across over BALANCE (a calibration's nod is often tiny), and flipped for Up and down: Flipped, as in glance/gaze.js.
-  const BALANCE=2,balance=(own,other)=>{const f=Math.abs(other)/BALANCE;return Math.sign(own)*Math.max(Math.abs(own),f)||f;};
-  const headMap=(cal,p,{invertY=false}={})=>{const along=(d,s)=>.8*(d*s.hi>0?d/s.hi:-d/s.lo);const a=Math.min(Math.abs(cal.yaw.lo),Math.abs(cal.yaw.hi)),q={lo:balance(cal.pitch.lo,a),hi:balance(cal.pitch.hi,a)};const v=clamp(along(p.pitch-cal.centre.pitch,q),-1.25,1.25);return {u:clamp(along(p.yaw-cal.centre.yaw,cal.yaw),-1.25,1.25),v:invertY?-v:v};};
-  function eyesCalibration(looks){
-    const fit=(xs,ys)=>{const n=xs.length,mx=xs.reduce((s,v)=>s+v,0)/n,my=ys.reduce((s,v)=>s+v,0)/n;let sxy=0,sxx=0;for(let i=0;i<n;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=(xs[i]-mx)**2;}if(sxx<1e-6)return null;const k=sxy/sxx;return {k,b:my-k*mx};};
-    const u=fit(looks.map(l=>l.ax),SPOTS.map(s=>s.u)),v=fit(looks.map(l=>l.ay),SPOTS.map(s=>s.v));
-    return u&&v&&Math.abs(u.k)>=.2&&Math.abs(v.k)>=.2?{kind:'eyes',e:2,u,v}:null;
-  }
-  const eyesMap=(cal,l,{invertY=false}={})=>{const most=Math.abs(cal.u.k)*BALANCE,kv=Math.abs(cal.v.k)>most?Math.sign(cal.v.k)*most:cal.v.k;const v=clamp(kv*(l.ay+cal.v.b/cal.v.k),-1.25,1.25);return {u:clamp(cal.u.b+cal.u.k*l.ax,-1.25,1.25),v:invertY?-v:v};};
-  // An eyes calibration from before the corner-based reading still loads but asks for a full calibration again.
-  const current=c=>!!c&&(c.kind!=='eyes'||c.e===2);
-  const recentre=(cal,rest)=>cal.kind==='head'?{...cal,centre:{yaw:rest.yaw,pitch:rest.pitch}}:{...cal,u:{k:cal.u.k,b:-cal.u.k*rest.ax},v:{k:cal.v.k,b:-cal.v.k*rest.ay}};
-  function stillness(win,keys,tol){if(!win.length)return {still:false};const mean=Object.fromEntries(keys.map(k=>[k,win.reduce((s,w)=>s+w[k],0)/win.length]));const spread=Math.max(...win.map(w=>Math.max(...keys.map(k=>Math.abs(w[k]-mean[k])))));return {still:spread<=tol,mean};}
-  function validCalibration(c){
-    const num=v=>typeof v==='number'&&Number.isFinite(v);if(!c||typeof c!=='object')return false;
-    if(c.kind==='head')return num(c.centre?.yaw)&&num(c.centre?.pitch)&&['yaw','pitch'].every(k=>num(c[k]?.lo)&&num(c[k]?.hi)&&c[k].lo*c[k].hi<0);
-    if(c.kind==='eyes')return ['u','v'].every(k=>num(c[k]?.k)&&num(c[k]?.b)&&Math.abs(c[k].k)>=.2);
-    if(c.kind==='tracker')return num(c.dx)&&num(c.dy);
-    return false;
-  }
+  // The gaze math is the gaze core's (tools/input/gaze-core.js), which
+  // apply-control-frame.py places ahead of this file in each game's access.js:
+  // the same filter, look and hold, landmark reading and calibration as the
+  // camera games, from one copy.
+  const {clamp,oneEuro,dwell:lookAndHold,SPOTS,headPose,lookAngles,headCalibration,headMap,eyesCalibration,eyesMap,current,recentre,stillness,validCalibration}=window.GazeCore;
 
   window.MinimalAccessEngine = function (A) {
     const {config,prefs,save,paintRows,completionNodes,nexts,spot,here,SPEEDS}=A,place=A.place||(()=>{});
+    // Exact timings a clinician set in the accessible app (minimal-access.v1:exact),
+    // each held to its range; where one is missing or out of range the game's
+    // own choice stands. Read live, so a change takes effect at once.
+    const RANGE={holdMs:[300,5000],scanMs:[400,4000],pressMs:[0,2000],releaseMs:[0,3000],longMs:[0,4000],rest:[0,20]};
+    const exact=k=>{let e=null;try{e=A.exact&&A.exact();}catch(_){}const v=e&&e[k],r=RANGE[k];return typeof v==='number'&&Number.isFinite(v)&&v>=r[0]&&v<=r[1]?v:null;};
+    const T={get hold(){return exact('holdMs')??prefs.hold;},get scan(){return exact('scanMs')??(SPEEDS[prefs.speed]||1100);},get press(){return exact('pressMs')??prefs.press;},
+      get release(){return exact('releaseMs')??prefs.release;},get long(){return exact('longMs')??prefs.long;},get rest(){return exact('rest')??prefs.rest;}};
     const byId=id=>id&&document.getElementById(id),CAL='minimal-access.v1:calibration';
     // A calibration is shared by every game: it is about the player, not the board.
     const calibration={head:null,eyes:null,tracker:null};
@@ -156,7 +319,7 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     // The frame's own controls and the sheets keep their pointer roles.
     const exempt=n=>!!(n&&n.closest&&n.closest('.control-toolbar,.control-restart,.control-completion,dialog,[role="dialog"],button#readout'));
     const outside=n=>exempt(n)||!!(n&&n.closest&&n.closest('.access-pad'));
-    const ICON={up:'<path d="M12 19V5M6 11l6-6 6 6"/>',right:'<path d="M5 12h14M13 6l6 6-6 6"/>',down:'<path d="M12 5v14M6 13l6 6 6-6"/>',left:'<path d="M19 12H5M11 6l-6 6 6 6"/>',
+    const ICON={home:'<path d="M4 11 12 4l8 7M6 9.5V20h12V9.5"/>',up:'<path d="M12 19V5M6 11l6-6 6 6"/>',right:'<path d="M5 12h14M13 6l6 6-6 6"/>',down:'<path d="M12 5v14M6 13l6 6 6-6"/>',left:'<path d="M19 12H5M11 6l-6 6 6 6"/>',
       select:'<circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none"/>',back:'<circle cx="12" cy="12" r="5"/>',tab:'<path d="M4 12h11M11 7l5 5-5 5M20 5v14"/>',
       undo:'<path d="M9 5 4 10l5 5M4 10h9a6 6 0 0 1 0 12"/>',hint:'<path d="M9 18h6M10 22h4M8 14a7 7 0 1 1 8 0l-1 4H9Z"/>',next:'<path d="M5 12h14M13 6l6 6-6 6"/>',
       diamond:'<path d="M12 4l8 8-8 8-8-8Z"/>',mark:'<path d="M7 7l10 10M17 7 7 17"/>',size1:'<circle cx="12" cy="12" r="3"/>',size2:'<circle cx="12" cy="12" r="5.5"/>',size3:'<circle cx="12" cy="12" r="8.5"/>',
@@ -171,7 +334,11 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     const keys=[];
     for(const e of config.keys){if(e==='arrows'){for(const id of ['up','right','down','left'])keys.push({id,icon:id,...DEF[id]});continue;}const o=typeof e==='string'?{id:e}:e;if(!['undo','hint','next'].includes(o.id))keys.push({icon:o.id,...DEF[o.id],...o});}
     const disc=nexts[0]||null,nextEl=disc||completionNodes.map(n=>(n.matches('button')?[n]:[...n.querySelectorAll('button')]).find(b=>/next/i.test(b.id))).find(Boolean)||null;
-    const bar=[['undo',byId(config.undo)],['hint',byId(config.hint)],['next',nextEl]].filter(([,el])=>el).map(([id,el])=>({id,el}));
+    // The game's own tools in the toolbar (config.tools: Mark, Flag, Replay) join
+    // them where they stand, apart from any a game keeps out (config.unscanned,
+    // as the camera games keep their camera button out).
+    const toolIds=(config.tools||[]).filter(id=>!(config.unscanned||[]).includes(id));
+    const bar=[['undo',byId(config.undo)],['hint',byId(config.hint)],...toolIds.map(id=>[id,byId(id)]),['next',nextEl]].filter(([,el])=>el).map(([id,el])=>({id,el,tool:!['undo','hint','next'].includes(id)}));
     const order=keys.concat(bar);
     const pad=document.createElement('div');pad.className='access-pad';pad.setAttribute('aria-hidden','true');pad.hidden=true;
     const node=(id,icon)=>{const n=document.createElement('div');n.className='access-key';n.dataset.key=id;n.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICON[icon]||ICON.select)+'</svg>';n.hidden=true;pad.append(n);return n;};
@@ -179,6 +346,10 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     const camKey={id:'camera',camera:true};camKey.node=node('camera','camera');
     // Looking needs somewhere to rest: a pause key, the only one that still fills while resting.
     const restKey={id:'rest',rest:true,lookOnly:true};restKey.node=node('rest','rest');keys.push(restKey);order.push(restKey);
+    // Inside the accessible app (?in=accessible, or a frame of the same origin) the
+    // scan and the look reach Home too; choosing it tells the app.
+    const inApp=(()=>{try{if(new URLSearchParams(location.search).get('in')==='accessible')return true;return window.parent!==window&&window.parent.location.origin===location.origin;}catch(_){return false;}})();
+    if(inApp){const homeKey={id:'home',icon:'home',home:true};homeKey.node=node('home','home');keys.push(homeKey);order.push(homeKey);}
     let resting=false;
     const layer=document.createElementNS(NS,'svg');layer.setAttribute('class','access-layer');layer.setAttribute('aria-hidden','true');layer.setAttribute('focusable','false');layer.style.display='none';
     const status=document.createElement('p');status.className='access-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
@@ -223,8 +394,20 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
       list[i<0?(back?list.length-1:0):(i+(back?-1:1)+list.length)%list.length].focus({preventScroll:true});
     }
     let sent=0,lastSent=null;
+    // Events for a parent page of the same origin (the accessible app): presses,
+    // choices, abandoned rings, Undo, Hint, a finished board and Home, with the
+    // time that led to each. No coordinates and no gaze: the Eye Tracker 5 is
+    // licensed for interaction only.
+    let lastEvent=performance.now();const peaks=new Map();
+    const via=()=>mode==='switch'?'switch':prefs.look==='tracker'?'tracker':prefs.look==='pointer'?'pointer':'look';
+    function post(type,extra){
+      const now=performance.now(),ms=Math.round(now-lastEvent);if(type!=='ring-abandoned')lastEvent=now;
+      try{if(window.parent!==window)window.parent.postMessage({source:'minimal-access',v:1,type,via:via(),ms,...extra},location.origin);}catch(_){}
+    }
     function send(k){
       sent++;lastSent=k.id;
+      if(k.home){post('home');return;}
+      post(k.id==='undo'||k.id==='hint'?k.id:'choice',{key:k.id});
       // Undo, Hint and Next: the button where it stands is pressed.
       if(k.el){if(usable(k.el))k.el.click();return;}
       if(k.click){const b=byId(k.click);if(usable(b))b.click();return;}
@@ -246,7 +429,7 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     // is a press. A press can be asked to last a set time, shown by a
     // filling ring, and presses closer together than the release time are
     // bounces. Settings and Help stay out of the scan, as touch-only.
-    const interval=()=>SPEEDS[prefs.speed]||1100;
+    const interval=()=>T.scan;
     let top=[],level=null,idx=0,pass=0,hold=null,point=null,topScan=null,presses=0,laps=0,asleep=false;
     const entryLive=e=>!!e&&(e.group?e.group.some(live):live(e.key));
     function buildTop(){
@@ -295,11 +478,11 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     // it stops and its highlight goes, until the next press starts it again
     // from the top, choosing nothing (iOS Switch Control's Loops).
     function lap(){
-      if(!prefs.rest||++laps<prefs.rest)return false;
+      if(!T.rest||++laps<T.rest)return false;
       asleep=true;clearTimeout(timer);timer=0;paint();say('The scan is resting. Press to start it again.');return true;
     }
     function wakeUp(){
-      const t=performance.now();if(t-lastPress<prefs.release)return;lastPress=t;presses++;
+      const t=performance.now();if(t-lastPress<T.release)return;lastPress=t;presses++;
       asleep=false;laps=0;level=null;pass=0;idx=Math.max(0,top.findIndex(entryLive));
       if(top[idx]&&top[idx].group&&alone())enter(top[idx],false);paint();schedule(interval()*1.5);say('Scanning again.');
     }
@@ -325,7 +508,7 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     function schedule(ms){clearTimeout(timer);timer=mode==='switch'?setTimeout(tick,ms):0;}
     function tick(){if(mode!=='switch'||asleep)return;if(!document.hidden&&!dialogOpen()&&!hold&&!point)advance();schedule(interval());}
     function press(){
-      const t=performance.now();if(mode!=='switch'||t-lastPress<prefs.release)return;lastPress=t;presses++;laps=0;
+      const t=performance.now();if(mode!=='switch'||t-lastPress<T.release)return;lastPress=t;presses++;laps=0;post('press');
       if(point){pointPress();return;}
       let e=current();if(!entryLive(e)){advance();e=current();}if(!entryLive(e))return;
       // Entering a group: its first key holds a moment longer, so it is not missed.
@@ -340,18 +523,18 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     // press acts as it is let go; held for the long press time it takes back
     // a step instead, once, however long it is held. With it off, a press
     // acts as before.
-    const longAt=()=>prefs.long?Math.max(prefs.long,prefs.press+500):0;
+    const longAt=()=>T.long?Math.max(T.long,T.press+500):0;
     function down(t){
       if(mode!=='switch'||hold)return;
       if(asleep){hold={t,woke:true};wakeUp();return;}
-      if(prefs.long){hold={t,long:true,timer:setTimeout(()=>{if(hold&&hold.long&&!hold.fired){hold.fired=true;back();}},longAt())};wake();return;}
-      if(!prefs.press){press();return;}
-      hold={t,timer:setTimeout(()=>{hold=null;press();paint();},prefs.press)};wake();
+      if(T.long){hold={t,long:true,timer:setTimeout(()=>{if(hold&&hold.long&&!hold.fired){hold.fired=true;back();}},longAt())};wake();return;}
+      if(!T.press){press();return;}
+      hold={t,timer:setTimeout(()=>{hold=null;press();paint();},T.press)};wake();
     }
     function up(t){
       if(!hold||held.size||swallowed.size)return;
       const h=hold;hold=null;clearTimeout(h.timer);
-      if(h.long&&!h.fired&&t-h.t>=prefs.press)press();
+      if(h.long&&!h.fired&&t-h.t>=T.press)press();
       paint();
     }
     // A lost window, a hidden page or a cancelled pointer drops a hold: nothing is chosen.
@@ -526,6 +709,7 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     function watch(){
       if(signature()!==sig)layout();
       const n=bar.find(k=>k.id==='next');const now=!!n&&live(n);
+      if(now&&!nextWas)post('complete');
       if(now&&!nextWas&&mode==='switch'&&!point){reach(n);schedule(interval()*1.5);}
       nextWas=now;paint();
     }
@@ -549,20 +733,35 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
       for(const t of targets)if(live(t.k)&&(!resting||t.k.rest)&&Math.hypot(x-t.cx,y-t.cy)<=t.r)return t;
       if(resting)return null;
       if(phase!=='prompt')for(const t of barTargets)if(live(t.k)){const c=circleOf(t);if(c.r&&Math.hypot(x-c.cx,y-c.cy)<=c.r)return t;}
+      if(boardKey&&phase!=='prompt'){const b=drawn();if(b&&x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom&&!outside(document.elementFromPoint(x,y)))return boardAt(x,y);}
       return null;
     }
+    // A board chosen by a point (a point key, no drag) is looked at directly:
+    // a look held still on the board fills a ring where it rests, and a full
+    // ring taps there. Each place is a new target, so the same cell is not
+    // tapped twice without looking away; the pause key stops it, as it stops
+    // the keys.
+    const boardKey=keys.some(k=>k.point&&!k.drag)?{id:'board',board:true}:null;let boardSeq=0;const boardSpots=[];
+    function boardAt(x,y){
+      const t={id:'board:'+(++boardSeq),k:boardKey,board:true,cx:x,cy:y,r:Math.max(20,Math.round((plan?plan.s:48)*.4))};
+      boardSpots.push(t);if(boardSpots.length>8)boardSpots.shift();return t;
+    }
     function holds(t,x,y){if(!inSafe(x,y)||dialogOpen()||(zoom?!zoom.targets.includes(t):false)||(!t.zoomClose&&!live(t.k))||(resting&&!t.k.rest)||(t.k.camera&&phase!=='prompt'))return false;const c=circleOf(t);return Math.hypot(x-c.cx,y-c.cy)<=c.r+dead();}
-    const dwell=lookAndHold({time:prefs.hold,targets:targetAt,holds});
+    const dwell=lookAndHold({time:T.hold,targets:targetAt,holds});
     const pointerDwell=()=>mode==='look'&&(phase==='pointer'||phase==='prompt');
     function feed(t,x,y){
       if(freshHold&&x!==null){dwell.hold(targetAt(x,y));freshHold=false;}
       gaze=x===null?null:{x,y};
       // An open zoom closes when the look stays away from it.
       if(zoom&&x!==null){if(targetAt(x,y))zoom.away=null;else if(zoom.away===null)zoom.away=t;else if(t-zoom.away>1500)closeZoom();}
-      for(const f of dwell.sample(t,x,y)){
+      const fired=dwell.sample(t,x,y),firedIds=new Set(fired.map(f=>f.id)),after=new Map(dwell.rings());
+      for(const [id,p] of after)peaks.set(id,Math.max(peaks.get(id)||0,p));
+      for(const [id,p] of peaks)if(!after.has(id)){peaks.delete(id);if(!firedIds.has(id)&&p>=.25)post('ring-abandoned',{key:String(id)});}
+      for(const f of fired){
         if(f.k.camera)startCamera(false);
         else if(f.zoomClose)closeZoom();
         else if(f.k.rest){closeZoom();resting=!resting;flash(f.k);paint();say(resting?'Resting. Look at the pause key to go on.':'Looking again.');}
+        else if(f.board){sent++;lastSent='board';post('choice',{key:'board'});tap({x:f.cx,y:f.cy});}
         else if(!zoom&&!f.k.el&&plan&&plan.s<ZOOM)openZoom(f.k);
         else{closeZoom();flash(f.k);send(f.k);}
       }
@@ -610,7 +809,9 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     // straight into the Face Landmarker, read on the page's frame clock.
     const webcam=(()=>{
       const base=new URL('../glance/vendor/',here).href;let video=null,landmarker=null,loading=null,stream=null,running=false,handle=0,last=-1,seen=-1,generation=0;
-      const api={onResult:null};
+      const api={onResult:null,onLost:null};let fails=0,moved=0;
+      // A camera that ends, a detector that keeps failing, or frames that stop: let go and say so (as in glance/track.js).
+      const lose=reason=>{if(!running&&!stream)return;generation++;running=false;release();fails=0;moved=0;showLive(virtual);api.onLost&&api.onLost(reason);};
       function load(){
         if(!loading)loading=(async()=>{
           const vision=await import(base+'vision_bundle.mjs'),files={wasmLoaderPath:base+'vision_wasm_internal.js',wasmBinaryPath:base+'vision_wasm_internal.wasm'};
@@ -623,7 +824,8 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
       function release(){if(handle){cancelAnimationFrame(handle);handle=0;}if(stream)for(const t of stream.getTracks())t.stop();stream=null;if(video){video.srcObject=null;video.remove();video=null;}seen=-1;}
       function tickCam(){
         handle=0;if(!running)return;const now=performance.now();
-        if(video&&video.readyState>=2&&now-last>=30&&video.currentTime!==seen){last=now;seen=video.currentTime;let r=null;try{r=landmarker.detectForVideo(video,now);}catch(_){r=null;}if(r&&api.onResult)api.onResult(r,now);}
+        if(video&&video.readyState>=2&&now-last>=30&&video.currentTime!==seen){last=now;seen=video.currentTime;let r=null;try{r=landmarker.detectForVideo(video,now);fails=0;}catch(_){r=null;fails++;}if(fails>=30){lose('detector');return;}if(r&&api.onResult)api.onResult(r,now);moved=now;}
+        else if(video&&video.readyState>=2&&moved&&now-moved>5000){lose('stalled');return;}
         if(running)handle=requestAnimationFrame(tickCam);
       }
       api.start=async()=>{
@@ -632,15 +834,15 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
         const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}},audio:false});
         if(mine!==generation){for(const t of s.getTracks())t.stop();throw Error('Stopped');}
         video=document.createElement('video');video.className='access-video';video.muted=true;video.playsInline=true;video.setAttribute('playsinline','');video.setAttribute('aria-hidden','true');body.append(video);
-        stream=s;video.srcObject=s;showLive(true);
+        stream=s;video.srcObject=s;showLive(true);for(const t of s.getVideoTracks())t.addEventListener('ended',()=>{if(stream===s)lose('ended');});
         try{await video.play();await load();}catch(e){if(mine===generation){release();showLive(virtual);}throw e;}
         if(mine!==generation)throw Error('Stopped');
-        running=true;last=-1;handle=requestAnimationFrame(tickCam);
+        running=true;last=-1;fails=0;moved=performance.now();handle=requestAnimationFrame(tickCam);
       };
       api.stop=()=>{generation++;running=false;release();showLive(virtual);};
       api.aspect=()=>video&&video.videoWidth&&video.videoHeight?video.videoWidth/video.videoHeight:4/3;
       api.status=()=>({running,live:stream?stream.getVideoTracks().filter(t=>t.readyState==='live').length:0,loaded:!!landmarker});
-      Object.defineProperty(api,'running',{get:()=>running});
+      Object.defineProperty(api,'running',{get:()=>running});api.base=base;
       return api;
     })();
     // An eye tracker, through the gaze bridge on this computer: its client
@@ -678,6 +880,7 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
       get running(){return prefs.look==='tracker'?tracker.running:webcam.running;}
     };
     webcam.onResult=(r,t)=>processFace(r,t);
+    webcam.onLost=()=>{if(phase!=='camera'&&phase!=='calibrating')return;calib=null;activeLook=null;setPhase('pointer');say('The camera stopped. Look and hold by pointer; choose the camera again to retry.');};
     tracker.onSample=(t,p)=>processTracker(t,p);
     tracker.onLost=()=>{feed(performance.now(),null,null);say('Eye tracker lost. Looking for it again.');};
     const pixelFilters=()=>[oneEuro({minCutoff:.9,beta:.01}),oneEuro({minCutoff:.9,beta:.01})];
@@ -721,9 +924,10 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
       if(calib.progress>=1){calib.captured.push(s.mean);calib.step++;calib.win=[];calib.progress=0;calib.last=null;if(calib.step>=calib.spots.length)finishCalibration();else say('Dot '+(calib.step+1)+' of '+calib.spots.length+'.');}
       wake();
     }
+    let calFails=0;
     function finishCalibration(){
       const {look,full,captured}=calib,mid=toScreen(0,0),made=look==='tracker'?{kind:'tracker',dx:mid.x-captured[0].x,dy:mid.y-captured[0].y}:full?(look==='head'?headCalibration(captured):eyesCalibration(captured)):recentre(calibration[look],captured[0]);
-      if(!made){beginCalibration(true);say('Again: look at each dot and hold still.');return;}
+      if(!made){if(++calFails>=2){calFails=0;calib=null;stopCamera();setPhase('pointer');say('Calibration did not take. Look and hold by pointer; Calibrate tries again.');return;}beginCalibration(true);say('Again: look at each dot and hold still.');return;}calFails=0;
       calibration[look]=made;calib=null;activeLook=look;try{localStorage.setItem(CAL,JSON.stringify(calibration));}catch(_){}
       [fu,fv]=filters();[tx,ty]=pixelFilters();setPhase('camera');say(look==='tracker'?'Eye tracker ready. Look at a key and hold.':'Camera ready. Look at a key and hold.');
     }
@@ -736,7 +940,14 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
       beginCalibration(full||!current(calibration[prefs.look]));
     }
     function stopCamera(){camera.stop();virtual=false;showLive(false);calib=null;resume=false;activeLook=null;}
-    function fallback(){const was=prefs.look;stopCamera();prefs.look='pointer';save();paintRows();setPhase('pointer');say(was==='tracker'?'No eye tracker found: start the gaze bridge. Look and hold by pointer.':'Camera unavailable. Look and hold by pointer.');}
+    // No eye tracker yet: the choice stays Eye tracker, play goes on by pointer, and the bridge is looked for every few seconds (it may start later).
+    let seek=0;
+    function fallback(){
+      if(prefs.look==='tracker'){stopCamera();setPhase('pointer');const msg='No eye tracker found yet: start the gaze bridge. Look and hold by pointer until it comes.';if(status.textContent!==msg)say(msg);clearTimeout(seek);
+        const again=()=>{seek=0;if(mode!=='look'||prefs.look!=='tracker'||phase!=='pointer'||document.hidden){if(mode==='look'&&prefs.look==='tracker'&&phase==='pointer')seek=setTimeout(again,5000);return;}startCamera(false);};seek=setTimeout(again,5000);return;}
+      stopCamera();prefs.look='pointer';save();paintRows();setPhase('pointer');say('Camera unavailable. Look and hold by pointer.');
+      // Head and Eyes load MediaPipe from Glance's folder on this site; a site without it (playnotan.com) is told so, not left guessing.
+      fetch(webcam.base+'vision_bundle.mjs',{method:'HEAD'}).then(r=>{if(!r.ok)say('This site does not have the camera files Head and Eyes need. Look and hold by pointer.');},()=>{});}
     addEventListener('keydown',e=>{if(e.key==='Escape'&&mode==='look'&&(phase==='starting'||phase==='calibrating')&&!dialogOpen()){stopCamera();prefs.look='pointer';save();paintRows();setPhase('pointer');}});
     document.addEventListener('visibilitychange',()=>{
       if(document.hidden){pointer.present=false;held.clear();swallowed.clear();dropHold();if(camera.running||phase==='starting'){resume=true;camera.stop();if(phase==='starting')setPhase('prompt');}}
@@ -762,8 +973,8 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     function drawHold(){
       holdRings.replaceChildren();ring=null;if(!hold||mode!=='switch'||hold.woke||hold.fired)return;
       const held1=performance.now()-hold.t;let p;
-      if(hold.long&&held1>=prefs.press){if(held1<120)return;p=Math.min(1,(held1-prefs.press)/(longAt()-prefs.press));if(reduced())p=Math.floor(p*4)/4;ring={kind:'long',p};}
-      else{p=Math.min(1,held1/prefs.press);ring={kind:'press',p};}
+      if(hold.long&&held1>=T.press){if(held1<120)return;p=Math.min(1,(held1-T.press)/(longAt()-T.press));if(reduced())p=Math.floor(p*4)/4;ring={kind:'long',p};}
+      else{p=Math.min(1,held1/T.press);ring={kind:'press',p};}
       const e=point?null:current(),lit=e?e.group||[e.key]:[];
       const spots=point?[{x:point.x,y:point.y,r:16}]:lit.map(k=>{const n=k.node||k.el;if(!n||n.hidden)return null;const b=n.getBoundingClientRect();return {x:b.left+b.width/2,y:b.top+b.height/2,r:b.width/2+7};}).filter(Boolean);
       for(const q of spots){const C=2*Math.PI*q.r;svg('circle',{class:'a-track',cx:q.x,cy:q.y,r:q.r},holdRings);svg('circle',{class:'a-arc',cx:q.x,cy:q.y,r:q.r,'stroke-dasharray':(p*C).toFixed(1)+' '+C.toFixed(1),transform:`rotate(-90 ${q.x} ${q.y})`},holdRings);}
@@ -780,7 +991,7 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
       dot.setAttribute('transform',showDot?`translate(${gaze.x.toFixed(1)} ${gaze.y.toFixed(1)})`:'translate(-99 -99)');dot.style.display=showDot?'':'none';
       const seen=new Set();
       for(const [id,p] of mode==='look'?dwell.rings():[]){
-        const b=barTargets.find(x=>x.id===id),t=b?circleOf(b):(zoom&&zoom.targets.find(x=>x.id===id))||targets.find(x=>x.id===id);if(!t||!t.r)continue;
+        const b=barTargets.find(x=>x.id===id),t=b?circleOf(b):(zoom&&zoom.targets.find(x=>x.id===id))||targets.find(x=>x.id===id)||boardSpots.find(x=>x.id===id);if(!t||!t.r)continue;
         let n=rings.get(id);if(!n){n={track:svg('circle',{class:'a-track'},ringLayer),arc:svg('circle',{class:'a-arc'},ringLayer)};rings.set(id,n);}
         // The ring fills just inside a key's hairline circle, and outside the solid Next disc.
         const r=b&&b.k.el===disc?t.r+8:Math.max(6,t.r-4),C=2*Math.PI*r,cx=t.cx.toFixed(1),cy=t.cy.toFixed(1);
@@ -797,7 +1008,7 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
 
     // ---- Turning Access on, changing it and turning it off.
     function set(user){
-      const was=mode;mode=prefs.mode;dwell.time=prefs.hold;asleep=false;laps=0;
+      const was=mode;mode=prefs.mode;dwell.time=T.hold;asleep=false;laps=0;
       clearInterval(poll);poll=0;clearTimeout(timer);timer=0;closeZoom();if(hold){clearTimeout(hold.timer);hold=null;}if(mode!=='switch')point=null;if(mode!=='look')resting=false;
       if(mode!=='look'&&(camera.running||virtual||phase!=='pointer')){stopCamera();phase='pointer';}
       if(mode==='off'){paint();grow();delete body.dataset.access;delete body.dataset.accessPhase;pad.hidden=true;layer.style.display='none';dwell.reset();draw();return;}
@@ -831,7 +1042,7 @@ body[data-control-frame] .access-zoom .access-key[data-from] {outline:3px solid 
     // The test hook: the pad, the scan and synthetic looks.
     const rectOf=n=>{const r=n.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};};
     window.__access={
-      get state(){return {mode,phase,speed:prefs.speed,look:prefs.look,hold:prefs.hold,scan:mode==='switch'?scanId():null,level:level&&level.entry.id,groups:top.map(e=>e.group?{id:'group:'+e.id,keys:e.group.map(k=>k.id)}:{id:e.key.id}),point:point&&{stage:point.stage,x:point.x,y:point.y,slow:point.slow,from:point.from},holding:!!hold,ring,asleep,laps,long:prefs.long,rest:prefs.rest,resting,sent,lastSent,presses,zoom:zoom&&zoom.targets.map(t=>({id:t.id,x:t.cx,y:t.cy,r:t.r})),size:plan&&plan.s,shape:plan&&plan.shape||null,
+      get state(){return {mode,phase,speed:prefs.speed,look:prefs.look,hold:T.hold,scanMs:T.scan,scan:mode==='switch'?scanId():null,level:level&&level.entry.id,groups:top.map(e=>e.group?{id:'group:'+e.id,keys:e.group.map(k=>k.id)}:{id:e.key.id}),point:point&&{stage:point.stage,x:point.x,y:point.y,slow:point.slow,from:point.from},holding:!!hold,ring,asleep,laps,long:T.long,rest:T.rest,resting,sent,lastSent,presses,zoom:zoom&&zoom.targets.map(t=>({id:t.id,x:t.cx,y:t.cy,r:t.r})),size:plan&&plan.s,shape:plan&&plan.shape||null,
         keys:order.map(k=>({id:k.id,live:live(k),bar:!!k.el,disc:!!k.el&&k.el===disc,rect:k.el?(visible(k.el)?rectOf(k.el):null):k.node&&!k.node.hidden?rectOf(k.node):null})),
         camera:{...camera.status(),virtual},current:dwell.current&&dwell.current.id,blocked:dwell.blocked,rings:dwell.rings(),calibrating:calib&&{step:calib.step,of:calib.spots.length,progress:calib.progress}};},
       // Time passing: the highlight moves on n steps.
