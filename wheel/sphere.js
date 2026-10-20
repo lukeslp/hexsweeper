@@ -3138,7 +3138,7 @@
 
       octx.font = '400 32px "IBM Plex Sans", system-ui, sans-serif';
       octx.fillStyle = colorMix(muted, bg, 0.15);
-      octx.fillText("dr.eamer.dev/games/hexsweeper/sphere/", side / 2, side - 32);
+      octx.fillText("lukesteuber.com/minimal/", side / 2, side - 32);
 
       return out;
     }
