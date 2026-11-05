@@ -61,7 +61,11 @@ and increments independently for every Play upload.
 
 ## Deliberately absent
 
-No bundler, no TypeScript, no unit tests, no `@capacitor/app`, no `CapacitorHttp`.
+No bundler, no TypeScript or JavaScript unit-test toolchain, no `@capacitor/app`,
+no `CapacitorHttp`. Native Android JVM and instrumentation suites do exist:
+`android/app/src/test/` and `android/app/src/androidTest/`. Use the documented
+Gradle checks and the [native restoration record](docs/native-ui-restoration-20261105.md);
+do not introduce a web toolchain merely to duplicate the canonical-source tests.
 The payload makes zero network calls and the export asserts that (it fails if any
 `src`/`href` points off-device). Do not add a toolchain to a repo whose entire
 web surface is one prebuilt file. `capacitor.config` stays `.js` — a `.ts` config
