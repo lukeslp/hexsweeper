@@ -21,7 +21,8 @@ including a canvas-size guard, so no canonical game-source change was necessary.
 
 `MainActivity` now wraps the existing Capacitor view tree in `GameViewport`,
 clears `FLAG_LAYOUT_NO_LIMITS`, and requests fresh insets after configuration,
-resume and focus changes. The WebView is retained; folding does not reload it.
+resume and focus changes. The WebView is retained during handled window-mode
+changes; physical fold continuity remains unverified.
 The wrapper computes its padding from the incoming window measure specs before
 `FrameLayout` measures the existing Capacitor tree. Visible system bars and
 window-local cutout rectangles determine the safe rectangle. Inset changes
@@ -141,6 +142,15 @@ Local screenshots record the final artifact:
 - `/tmp/hex-cover-final-full-help.png`
 - `/tmp/hex-cover-final-full-flag.png`
 - `/tmp/hex-cover-final-clean.png`
+
+Durable evidence is retained in the [coordinating handoff](https://github.com/ambient-time/clocks-app/blob/7466a6dd8fbb0cdaef20292289b22f82bf8f655f/docs/reviews/flip-apps-20261104.md),
+including the [native measurement receipt](https://github.com/ambient-time/clocks-app/blob/7466a6dd8fbb0cdaef20292289b22f82bf8f655f/docs/reviews/hex-cover-native-layout-tests-20261104.log)
+and [final full-frame screenshot](https://github.com/ambient-time/clocks-app/blob/7466a6dd8fbb0cdaef20292289b22f82bf8f655f/docs/reviews/assets/flip-apps-20261104/hexsweeper-full.png).
+The `/tmp` paths above are transient local captures.
+
+The equivalent viewport in `data-poems/attractive-native` is maintained
+separately. Changes to measurement order, inset clearing or origin updates
+should be checked in both shells against the existing native regression cases.
 
 ## Remaining evidence and rollback
 

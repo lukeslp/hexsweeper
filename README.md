@@ -29,6 +29,14 @@ browser storage is blocked. Instructions are optional: **? → Play**, then
 Play · Themes · Board · Settings sheet; a Keys tab appears for keyboard users.
 The native first-launch intro is the intended entry difference.
 
+## Flip cover testing — November 4, 2026
+
+The local Android 1.0.7 (32) candidate fits Samsung cover windows using a native
+safe viewport around the unchanged game. Real cover App Tray launch, controls
+and window resizing are verified; physical fold continuity and TalkBack remain
+unverified. See the [dated build and device evidence](docs/flip-cover-20261104.md).
+This candidate has not been publicly released.
+
 ## The names do not match, on purpose
 
 | Thing | Value |
