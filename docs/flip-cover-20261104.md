@@ -22,8 +22,11 @@ including a canvas-size guard, so no canonical game-source change was necessary.
 `MainActivity` now wraps the existing Capacitor view tree in `GameViewport`,
 clears `FLAG_LAYOUT_NO_LIMITS`, and requests fresh insets after configuration,
 resume and focus changes. The WebView is retained; folding does not reload it.
-The wrapper recomputes its padding from the actual window size, visible system
-bars and window-local cutout rectangles. It passes cleared bar/cutout insets to
+The wrapper computes its padding from the incoming window measure specs before
+`FrameLayout` measures the existing Capacitor tree. Visible system bars and
+window-local cutout rectangles determine the safe rectangle. Inset changes
+request measurement; a changed window origin queues a fresh pass outside layout.
+It passes cleared bar/cutout insets to
 Capacitor so the same safe area is not applied twice. IME insets remain available
 to Capacitor.
 
@@ -37,6 +40,33 @@ y839/1048. Other model families, inner/tall screens and wide frames receive no
 model fallback. This geometry comes from the Ambient Time workstream's physical
 Flip8 evidence in `ambient-time/docs/reviews/flip-cover-launch-20261104.md`;
 the fallback is an estimate, not a Samsung API guarantee.
+
+## Native resize correction
+
+Actual Flip testing passed wide-frame board visibility, tap reveal, Undo and
+drag. A subsequent warm wide → tall → full-panel transition exposed a native
+measurement gap that browser viewport tests did not cover: padding was applied
+during layout after the child had already been measured. The full-height sphere
+then remained centered at physical y524, and the lower controls were clipped
+below the safe block ending around y839. This was clipping without a WebView
+viewport resize.
+
+The wrapper now computes padding in `onMeasure` before calling
+`FrameLayout.onMeasure`, so the game receives the safe child dimensions. The same
+correction was physically verified in the Attractive shell, which shares this
+native policy: a full-panel root of 1422×1572 and bottom padding 314 now produces
+a child measured/actual size of 1422×1258, with settled DOM inner size 598×529.
+Its wide window remains 1422×1259 with no padding, and its tall window remains
+885×1572 with no padding. Samsung's retained physical WebView DPR of 2.375 can
+differ from the Activity compatibility density of 3.0; native, CSS and physical
+pixel dimensions must be recorded separately. Attractive therefore keeps its
+toolbar scrollable in all windows up to 640 CSS pixels wide, including tall
+phones, and uses its top-right compact HUD only when also at most 600 CSS pixels
+high. Hexsweeper needs no CSS or generated-game change.
+The shared-policy evidence does not replace a final Hexsweeper signed-artifact
+resize check. Local Attractive proof is
+`/tmp/attractive-fixed-resize-metrics.log` and
+`/tmp/attractive-fixed-full-toolbar.png`.
 
 ## Checks
 
@@ -61,24 +91,23 @@ the fallback is an estimate, not a Samsung API guarantee.
 
 Browser scripts and screenshots are local evidence under
 `/tmp/hexsweeper-cover-20261104*`; they are not physical Android validation.
-Native device checks, App Tray selection and a data-preserving signed update
-remain a separate runtime gate. Napoleon’s Keychain copy was unavailable; the
+The native observations above are separate from those browser checks. The final
+corrected Hexsweeper artifact still needs repeated resize and cover-control
+verification. Napoleon’s Keychain copy was unavailable; the
 existing encrypted signing vault on Beast supplied the credential in memory to
-the local build. No key or Keychain item was created or replaced. This change was not
-published or installed by this workstream.
+the local build. No key or Keychain item was created or replaced. No public
+catalog or store publication was performed.
 
-Signed local candidate: `android/app/build/outputs/apk/release/app-release.apk`
+Previous signed local candidate, before the native measurement correction:
+`android/app/build/outputs/apk/release/app-release.apk`
 (1.0.7 / versionCode 32), SHA-256
 `c1e373e949d284b7d57dea841f6eab01305330cf7124d9c2d6417a7d5b5154e2`.
 Its certificate SHA-256 matches installed 1.0.6:
 `404fd13d59f95b59fb9342e20e5953b15603832dda8ca75181c959b41fb5d592`.
-No public catalog or store release was performed.
-
-Initial debug artifact:
-`android/app/build/outputs/apk/debug/app-debug.apk` (1.0.6 / versionCode 31),
-SHA-256 `8dc5b4bbc5e57a87c9e53c08d30e0d48f33634e31b9ce1bd4a9f6ee0492ecc0e`.
-This is the default debug signature; the parent handles compatibility with any
-existing installation without clearing game data.
+No public catalog or store release was performed. Rebuild and record a fresh
+signed checksum for the corrected source before using that path as the final
+candidate. The local debug build is suitable for compilation checks and does not
+replace the installed release certificate.
 
 ## Remaining evidence and rollback
 

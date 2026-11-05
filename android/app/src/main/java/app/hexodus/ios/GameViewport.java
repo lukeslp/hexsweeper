@@ -15,6 +15,9 @@ import java.util.List;
 @SuppressWarnings("deprecation")
 final class GameViewport extends FrameLayout {
     private WindowInsets lastInsets;
+    private final int[] windowOrigin = new int[2];
+    private int measuredOriginX, measuredOriginY;
+    private boolean originUpdatePending;
 
     GameViewport(Context context) {
         super(context);
@@ -24,7 +27,7 @@ final class GameViewport extends FrameLayout {
     @Override
     public WindowInsets onApplyWindowInsets(WindowInsets insets) {
         lastInsets = insets;
-        updateBounds();
+        requestLayout();
         // Insets are handled by the native rectangle. Pass explicit zeroes rather than
         // CONSUMED so Capacitor/WebView also clear any previous CSS safe-area values.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -41,24 +44,43 @@ final class GameViewport extends FrameLayout {
     }
 
     @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        // These MATCH_PARENT Activity roots receive the window's exact specs. Padding
+        // must be current before FrameLayout measures its child: changing it during
+        // onSizeChanged/onLayout can clip an old full-height WebView without resizing it.
+        updateBounds(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.getSize(heightMeasureSpec));
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+    }
+
+    @Override
     protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
         super.onSizeChanged(width, height, oldWidth, oldHeight);
-        updateBounds();
         requestApplyInsets();
     }
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        // The window origin can change when Samsung switches its compatibility frame.
-        updateBounds();
         super.onLayout(changed, left, top, right, bottom);
+        // A moved compatibility frame can change origin without changing size. Queue
+        // measurement outside layout rather than mutating padding after child measurement.
+        int[] origin = windowOrigin;
+        getLocationInWindow(origin);
+        if (!originUpdatePending && (origin[0] != measuredOriginX || origin[1] != measuredOriginY)) {
+            originUpdatePending = true;
+            post(() -> {
+                originUpdatePending = false;
+                requestLayout();
+                requestApplyInsets();
+            });
+        }
     }
 
-    private void updateBounds() {
-        int width = getWidth(), height = getHeight();
+    private void updateBounds(int width, int height) {
         if (width <= 0 || height <= 0) return;
-        int[] origin = new int[2];
+        int[] origin = windowOrigin;
         getLocationInWindow(origin);
+        measuredOriginX = origin[0];
+        measuredOriginY = origin[1];
         int left = 0, top = 0, right = width, bottom = height;
         List<GameViewportBounds.Box> cutouts = new ArrayList<>();
         if (lastInsets != null) {
