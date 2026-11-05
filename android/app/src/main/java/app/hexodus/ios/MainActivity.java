@@ -1,6 +1,7 @@
 package app.hexodus.ios;
 
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -10,15 +11,36 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.webkit.WebView;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.WebViewListener;
 
 @SuppressWarnings("deprecation")
 public class MainActivity extends BridgeActivity {
     private GameViewport gameViewport;
+    private boolean restoreUiSessionPending;
+    private boolean uiSessionBootstrapInFlight;
+    private int uiSessionGeneration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        restoreUiSessionPending = savedInstanceState != null;
+        // Samsung can recreate an Activity with a WebView during display transfer,
+        // even when its configuration changes are handled. Replay only the game's
+        // bounded panel projection after its own scripts have initialized.
+        bridgeBuilder.addWebViewListener(new WebViewListener() {
+            @Override
+            public void onPageStarted(WebView webView) {
+                uiSessionGeneration++;
+                uiSessionBootstrapInFlight = false;
+            }
+
+            @Override
+            public void onPageLoaded(WebView webView) {
+                bootstrapUiSession(webView, uiSessionGeneration, 0);
+            }
+        });
         super.onCreate(savedInstanceState);
         if (getBridge() != null) {
             ViewGroup content = findViewById(android.R.id.content);
@@ -31,6 +53,34 @@ public class MainActivity extends BridgeActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
         keepScreenImmersive();
+    }
+
+    private void bootstrapUiSession(WebView webView, int generation, int attempt) {
+        if (generation != uiSessionGeneration || uiSessionBootstrapInFlight || isFinishing() || isDestroyed()) return;
+        String url = webView.getUrl();
+        if (url == null) return;
+        Uri uri = Uri.parse(url);
+        String path = uri.getPath();
+        if (!"https".equals(uri.getScheme()) || !"localhost".equals(uri.getHost()) ||
+            uri.getUserInfo() != null || (uri.getPort() != -1 && uri.getPort() != 443) ||
+            !(path == null || path.isEmpty() || "/".equals(path) || "/index.html".equals(path))) return;
+
+        uiSessionBootstrapInFlight = true;
+        webView.evaluateJavascript(
+            "(function(){if(typeof window.__restoreNativeUiSession!=='function')return false;" +
+            "window.__restoreNativeUiSession(" + restoreUiSessionPending + ");return true;})()",
+            result -> {
+                if (generation != uiSessionGeneration) return;
+                uiSessionBootstrapInFlight = false;
+                if ("true".equals(result)) {
+                    restoreUiSessionPending = false;
+                } else if (attempt < 10 && !isFinishing() && !isDestroyed()) {
+                    // A listener may finish before deferred page setup. Do not
+                    // consume restoration until the owned hook accepts it.
+                    webView.postDelayed(() -> bootstrapUiSession(webView, generation, attempt + 1), 50);
+                }
+            }
+        );
     }
 
     @Override

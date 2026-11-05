@@ -10,7 +10,7 @@
 #   scripts/smoke.sh --with-source /path/to/hexsweeper
 #                                 # also regenerate from source and diff
 #
-# CI passes --with-source after checking out hexsweeper (it is public).
+# CI passes --with-source after checking out the recorded canonical source pin.
 
 set -euo pipefail
 

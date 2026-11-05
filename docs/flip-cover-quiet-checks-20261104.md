@@ -1,5 +1,8 @@
 # Quiet cover follow-up — November 4, 2026
 
+This records build33. The later [build34 native restoration](native-ui-restoration-20261105.md)
+fixes the framework recreation subsequently observed during the return check.
+
 Android 1.0.8 (33) updates the existing Flip installation in place. The saved
 timer-zero test board and its one flagged cell remained after the update. The
 native safe-window wrapper is unchanged from the earlier

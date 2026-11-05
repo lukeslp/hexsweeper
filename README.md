@@ -31,13 +31,13 @@ The native first-launch intro is the intended entry difference.
 
 ## Flip cover testing — November 4, 2026
 
-The local Android 1.0.8 (33) candidate retains the safe native cover viewport and
-adds dialog focus fixes from canonical game source. The prior candidate has real
-cover App Tray, controls and window-resize evidence; the updated candidate has
-quiet keyboard/focus and in-place saved-board checks. See the
+The local Android 1.0.9 (34) candidate retains the safe native cover viewport,
+dialog focus fixes and bounded Help restoration after native WebView recreation.
+It passed native saved-state restart and Wheel → Sphere re-entry checks. See the
 [initial viewport evidence](docs/flip-cover-20261104.md) and
-[current quiet-focus follow-up](docs/flip-cover-quiet-checks-20261104.md).
-Physical fold continuity is prepared; TalkBack is skipped at the owner's request.
+[quiet-focus follow-up](docs/flip-cover-quiet-checks-20261104.md), then the
+[current native restoration receipt](docs/native-ui-restoration-20261105.md).
+New-build physical fold acceptance is pending; TalkBack is skipped at the owner's request.
 This candidate has not been publicly released.
 
 ## The names do not match, on purpose

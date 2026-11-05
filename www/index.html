@@ -10625,6 +10625,85 @@ const sphereChrome = initQuietChrome(sphereGame);
     }
   });
 })();
+// Android can recreate the Activity/WebView during display transfer while
+// retaining the task and process. Native bootstraps each owned document, passing
+// whether its saved Activity bundle exists. Ordinary web visits never opt in.
+// Only Help UI metadata lives here; the engine owns its existing game autosave.
+(function () {
+  const KEY = "hexsweeper-sphere-native-ui-v1";
+  const help = document.getElementById("help-overlay");
+  const panel = document.getElementById("help-panel");
+  let started = false;
+  function focusToken() {
+    const node = document.activeElement;
+    if (!help.contains(node)) return "id:help-panel";
+    if (node.id) return "id:" + node.id;
+    if (node.dataset.theme) return "theme:" + node.dataset.theme;
+    if (node.dataset.size) return "size:" + node.dataset.size;
+    return "id:help-panel";
+  }
+  function save() {
+    const tab = help.querySelector('.help-tab[aria-selected="true"]');
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        version: 1,
+        // Opening is synchronous; its opacity class follows on the next frame.
+        // A nested history modal makes Help inert without closing its parent.
+        open: !help.hidden && (help.classList.contains("open") || !help.inert),
+        tab: tab ? tab.dataset.tab : "play",
+        scroll: panel.scrollTop,
+        focus: focusToken(),
+      }));
+    } catch (_) {} // Blocked/full storage must not interfere with the sheet.
+  }
+  function read() {
+    try {
+      const value = JSON.parse(localStorage.getItem(KEY));
+      return value && value.version === 1 && typeof value.open === "boolean"
+        && typeof value.tab === "string" && value.tab.length < 32
+        && Number.isFinite(value.scroll) && value.scroll >= 0
+        && typeof value.focus === "string" && value.focus.length < 100 ? value : null;
+    } catch (_) { return null; }
+  }
+  window.__restoreNativeUiSession = function (restoreSavedBundle) {
+    if (!window.HEXSWEEPER_SPHERE_APP || started || !help || !panel) return;
+    started = true;
+    // Read/reset before enabling any writers, or the new closed DOM would
+    // overwrite the old open sheet before it could be restored.
+    const saved = restoreSavedBundle === true ? read() : null;
+    if (restoreSavedBundle !== true) {
+      try { localStorage.removeItem(KEY); } catch (_) {}
+    }
+    const tutorial = document.getElementById("tutorial-overlay");
+    if (saved && saved.open && (!tutorial || tutorial.hidden)) {
+      document.getElementById("qc-help")?.click();
+      window.HEXSWEEPER_SHOW_SHEET_TAB?.(saved.tab, false);
+      const target = [...help.querySelectorAll('[id], [data-theme], [data-size]')].find(node =>
+        (node.id && saved.focus === "id:" + node.id)
+        || (node.dataset.theme && saved.focus === "theme:" + node.dataset.theme)
+        || (node.dataset.size && saved.focus === "size:" + node.dataset.size));
+      if (target && !target.disabled && !target.closest("[hidden], [inert]") && target.getClientRects().length) {
+        target.focus({ preventScroll: true });
+      }
+      panel.scrollTop = Math.min(saved.scroll, Math.max(0, panel.scrollHeight - panel.clientHeight));
+    }
+    let queued = false;
+    function saveSoon() {
+      if (queued) return;
+      queued = true;
+      queueMicrotask(() => { queued = false; save(); });
+    }
+    // Capture changes made through existing Close/Done/Escape handlers,
+    // keyboard tabs and programmatic Help activation.
+    new MutationObserver(saveSoon).observe(help, {
+      subtree: true, attributes: true, attributeFilter: ["hidden", "class", "aria-selected"],
+    });
+    help.addEventListener("focusin", saveSoon);
+    panel.addEventListener("scroll", save, { passive: true });
+    window.addEventListener("pagehide", save);
+    save();
+  };
+})();
 </script>
 <!-- GoatCounter Analytics -->
 <script>
