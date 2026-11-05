@@ -109,6 +109,29 @@ signed checksum for the corrected source before using that path as the final
 candidate. The local debug build is suitable for compilation checks and does not
 replace the installed release certificate.
 
+## Native measurement regression — coordinating device run
+
+The corrected signed local APK is SHA-256
+`4cd018ad8d2d986e0b001e1e07be38441c224ae92f4386495bb6e7a9696677e4`
+(version 1.0.7 / code 32), retaining certificate
+`404fd13d59f95b59fb9342e20e5953b15603832dda8ca75181c959b41fb5d592`.
+It was installed in place on the Flip without removing the game.
+
+`GameViewportLayoutTest` adds two native Android regression cases using the
+existing AndroidX instrumentation dependencies. An unattached viewport and
+plain MATCH_PARENT child receive synthetic bottom cutouts on the main thread.
+The tests assert both measured and laid-out dimensions through full → wide →
+full, preserve the same child, and change the cutout at unchanged window size.
+These are actual `FrameLayout` measurements, not just the pure rectangle math.
+No Activity, WebView, game state or file is opened by either case.
+
+Both cases passed on the connected SM-F776U1 against the installed signed
+release (`OK (2 tests)`). The test APK was signed with the same existing app
+certificate for that run; the default-debug base APK was not installed over the
+release. Only `app.hexodus.ios.test` was removed afterward. The local execution
+receipt is `/tmp/hex-cover-native-layout-tests-20261104.log`. This component proof
+is separate from the remaining final-artifact visual/fold check below.
+
 ## Remaining evidence and rollback
 
 Verify the native wrapper on the actual Flip in both Samsung wide-frame and
