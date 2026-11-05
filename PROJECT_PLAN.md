@@ -5,7 +5,8 @@
 Ship a polished hexagonal minesweeper as a live static game on dr.eamer.dev,
 opening directly into Sphere with optional help. Infinite and Classic remain
 on the web Games page, with the five-mode flat game and skin lab as deeper
-product surfaces. Native iOS and Android retain the short first-launch intro.
+product surfaces. Current-main native exports also open directly on the board;
+the separately pinned native maintenance payload retains its shipped entry policy.
 
 ## Architecture
 
@@ -16,6 +17,23 @@ product surfaces. Native iOS and Android retain the short first-launch intro.
 - **`infinite.html` / `bounded.html`**: generated web product pages from the plate and Classic collection exports.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
+
+## Dialog focus integration (2026-11-04)
+
+- [x] Integrate the bounded Help focus fix from maintenance candidate `ca710f7`
+  into current main while preserving its immediate-board entry, quiet first-visit
+  cue, existing tabs and themes. Current main has no tutorial or history dialog;
+  those maintenance-only surfaces are not reintroduced.
+- [x] Share reversible background isolation and dynamic visible-control focus
+  containment. The source-browser regression covers Help and a test-only nested
+  dialog fixture; it does not claim a tutorial or history surface on current main.
+- [x] Regenerated tracked collection exports; exporter drift check, Sphere
+  variant/lifecycle contract and neighbor/flood tests pass. Quiet Chrome checks
+  pass for authored Sphere, generated root and collection Sphere at 379×336,
+  399×353 and 598×530 CSS pixels. No native payload was regenerated here.
+- [ ] Physical accessibility acceptance remains unverified. The owner canceled
+  TalkBack runtime testing; keyboard/browser checks do not establish spoken
+  gameplay accessibility. Native maintenance payload publication is separate.
 
 ## Infinite minimal help (2026-10-07)
 

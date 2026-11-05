@@ -464,6 +464,10 @@ Open `lab.html` or `choices.html` locally or by URL path. Experimental skins rem
 ## Accessibility
 
 - Help dialog and keyboard shortcuts (`?`, `T`, difficulty keys as documented in-game)
+- Sphere Help keeps keyboard focus inside visible controls, isolates background
+  content and returns focus to the visible Help button. Quiet browser checks are
+  in `tools/test-sphere-dialog-focus.mjs`; nested-dialog coverage uses a test-only
+  fixture. This does not establish TalkBack gameplay acceptance or add a tutorial.
 - `prefers-reduced-motion` respected for particle / blast motion
 - Touch: long-hold to flag; Fire drag tilts (camera locked); canvas uses `touch-action: none`
 
