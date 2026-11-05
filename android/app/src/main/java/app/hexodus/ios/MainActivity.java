@@ -1,20 +1,35 @@
 package app.hexodus.ios;
 
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 
 import com.getcapacitor.BridgeActivity;
 
 @SuppressWarnings("deprecation")
 public class MainActivity extends BridgeActivity {
+    private GameViewport gameViewport;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (getBridge() != null) {
+            ViewGroup content = findViewById(android.R.id.content);
+            View bridgeRoot = content.getChildAt(0);
+            content.removeView(bridgeRoot);
+            gameViewport = new GameViewport(this);
+            gameViewport.addView(bridgeRoot, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            content.addView(gameViewport, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
         keepScreenImmersive();
     }
 
@@ -30,12 +45,17 @@ public class MainActivity extends BridgeActivity {
         if (hasFocus) keepScreenImmersive();
     }
 
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        keepScreenImmersive();
+    }
+
     private void keepScreenImmersive() {
         Window activityWindow = getWindow();
-        activityWindow.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        );
+        // Keep the WebView in the real app window so fold and compatibility-frame
+        // resizes produce an actual viewport resize instead of drawing off-window.
+        activityWindow.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         activityWindow.getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_FULLSCREEN |
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
@@ -55,5 +75,6 @@ public class MainActivity extends BridgeActivity {
                 controller.hide(WindowInsets.Type.systemBars());
             }
         }
+        if (gameViewport != null) gameViewport.requestApplyInsets();
     }
 }
