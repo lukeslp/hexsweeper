@@ -6,8 +6,8 @@ Work was performed on Luke's Mac in `/Users/luke/workspace/hexsweeper-flip-cover
 The original `android-builds/appcat-20261103/hexsweeper-app` checkout was not edited.
 The sealed game remains the `d0082f7` source snapshot recorded in `WWW_SOURCE.txt`;
 no `www/` bytes, save schema, app identity or permissions were changed. The
-local Android candidate advances to 1.0.7 (32). Its existing release signing
-profile is required for an update over the installed 1.0.6 (31).
+local Android candidate is 1.0.7 (32), installed in place over 1.0.6 (31) with
+the existing release identity. It has not been publicly published.
 
 ## Reproduction and change
 
@@ -63,8 +63,8 @@ pixel dimensions must be recorded separately. Attractive therefore keeps its
 toolbar scrollable in all windows up to 640 CSS pixels wide, including tall
 phones, and uses its top-right compact HUD only when also at most 600 CSS pixels
 high. Hexsweeper needs no CSS or generated-game change.
-The shared-policy evidence does not replace a final Hexsweeper signed-artifact
-resize check. Local Attractive proof is
+The shared-policy evidence is separate from the final Hexsweeper signed-artifact
+checks recorded below. Local Attractive proof is
 `/tmp/attractive-fixed-resize-metrics.log` and
 `/tmp/attractive-fixed-full-toolbar.png`.
 
@@ -91,27 +91,16 @@ resize check. Local Attractive proof is
 
 Browser scripts and screenshots are local evidence under
 `/tmp/hexsweeper-cover-20261104*`; they are not physical Android validation.
-The native observations above are separate from those browser checks. The final
-corrected Hexsweeper artifact still needs repeated resize and cover-control
-verification. Napoleon’s Keychain copy was unavailable; the
+The native observations above and final device checks below are separate from
+those browser checks. Napoleon’s Keychain copy was unavailable; the
 existing encrypted signing vault on Beast supplied the credential in memory to
 the local build. No key or Keychain item was created or replaced. No public
 catalog or store publication was performed.
 
-Previous signed local candidate, before the native measurement correction:
-`android/app/build/outputs/apk/release/app-release.apk`
-(1.0.7 / versionCode 32), SHA-256
-`c1e373e949d284b7d57dea841f6eab01305330cf7124d9c2d6417a7d5b5154e2`.
-Its certificate SHA-256 matches installed 1.0.6:
-`404fd13d59f95b59fb9342e20e5953b15603832dda8ca75181c959b41fb5d592`.
-No public catalog or store release was performed. Rebuild and record a fresh
-signed checksum for the corrected source before using that path as the final
-candidate. The local debug build is suitable for compilation checks and does not
-replace the installed release certificate.
+## Native measurement regression
 
-## Native measurement regression — coordinating device run
-
-The corrected signed local APK is SHA-256
+The corrected signed local APK at
+`android/app/build/outputs/apk/release/app-release.apk` is SHA-256
 `4cd018ad8d2d986e0b001e1e07be38441c224ae92f4386495bb6e7a9696677e4`
 (version 1.0.7 / code 32), retaining certificate
 `404fd13d59f95b59fb9342e20e5953b15603832dda8ca75181c959b41fb5d592`.
@@ -130,15 +119,35 @@ release (`OK (2 tests)`). The test APK was signed with the same existing app
 certificate for that run; the default-debug base APK was not installed over the
 release. Only `app.hexodus.ios.test` was removed afterward. The local execution
 receipt is `/tmp/hex-cover-native-layout-tests-20261104.log`. This component proof
-is separate from the remaining final-artifact visual/fold check below.
+is separate from the final-artifact interaction checks below.
+
+## Final cover launch and interaction evidence
+
+The corrected production APK above was verified on the actual closed Flip's
+cover display 1. A cold launch came from its cover App Tray icon through System
+UI (caller UID 10054, launch result 0), without an ADB activity-launch command.
+
+Warm transitions through wide → tall → full → wide passed. The Help sheet
+survived resizing and could be closed in full-panel mode. All four controls
+were physically visible above the camera strip beginning around y839, and the
+Flag toggle worked in full-panel mode. Only the newly created one-cell test run
+was replaced through New sphere, leaving a fresh board with timer 0; no other
+user data was reset.
+
+Local screenshots record the final artifact:
+
+- `/tmp/hex-cover-final-wide.png`
+- `/tmp/hex-cover-final-tall-help.png`
+- `/tmp/hex-cover-final-full-help.png`
+- `/tmp/hex-cover-final-full-flag.png`
+- `/tmp/hex-cover-final-clean.png`
 
 ## Remaining evidence and rollback
 
-Verify the native wrapper on the actual Flip in both Samsung wide-frame and
-full-panel modes, then unfold/refold with an unfinished run and an open sheet.
-Confirm camera clearance, current WebView safe-area behavior, touch alignment,
-and no ADB command required to launch from the cover App Tray. Model fallback
-must be revisited if Samsung changes that window geometry.
+Physical unfolding/refolding with an unfinished run and an open sheet, plus
+TalkBack interaction, remain pending. The window-mode transitions above do not
+establish those separate behaviors. Revisit the model fallback if Samsung
+changes its window geometry.
 
 Rollback removes `GameViewport`, `GameViewportBounds` and their test and restores
 the previous `MainActivity`. The generated game and persisted runs are untouched
