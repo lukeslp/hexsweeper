@@ -216,6 +216,13 @@ board like the web, with no first-launch tutorial. The entry-policy cases in
 the engine's optional welcome hook, and the explicit `?welcome=1` preview. They verify engine behavior; browser checks and physical-device
 acceptance remain separate evidence.
 
+The native shell can opt into bounded Help restoration after a WebView
+recreation through `window.__restoreNativeUiSession(savedBundleExists)`.
+It retains Help/tab/scroll/DOM focus metadata separately from the engine's
+existing autosave; fresh native cold starts clear the old UI snapshot.
+[The protocol and its limits](docs/native-ui-session-20261105.md) include
+real-export quiet reload checks in `tools/test-native-ui-session.mjs`.
+
 The launcher is three hexes — **Infinite**, **Classic**, and **Sphere** — with an
 empty seat in the middle. Tapping a mode opens that game at once with its
 last-used settings (Infinite theme from `hexsweeper-mode-v3`, Classic size from
