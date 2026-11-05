@@ -43,10 +43,12 @@ scripts/smoke.sh --with-source ../hexsweeper
 ```
 
 Check the source checkout's branch before exporting; an older feature branch
-can reintroduce behavior that canonical main has already replaced. CI runs
-that same `--with-source` gate against `lukeslp/hexsweeper-private-history`'s `main`, so a
-re-vendor that lands here without the matching hexsweeper commit pushed — or a
-hexsweeper change that never gets re-vendored — fails the build.
+can reintroduce behavior that canonical main has already replaced. Normally use
+reviewed current main. A deliberately scoped maintenance snapshot must document
+its preserved baseline and divergence, as in the November 4 quiet-focus follow-up.
+CI runs `--with-source` against the exact pushed source commit recorded in
+`WWW_SOURCE.txt`, not moving source main. A missing source commit or payload that
+differs from that commit fails the build.
 
 ## Build numbers
 

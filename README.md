@@ -31,10 +31,13 @@ The native first-launch intro is the intended entry difference.
 
 ## Flip cover testing — November 4, 2026
 
-The local Android 1.0.7 (32) candidate fits Samsung cover windows using a native
-safe viewport around the unchanged game. Real cover App Tray launch, controls
-and window resizing are verified; physical fold continuity and TalkBack remain
-unverified. See the [dated build and device evidence](docs/flip-cover-20261104.md).
+The local Android 1.0.8 (33) candidate retains the safe native cover viewport and
+adds dialog focus fixes from canonical game source. The prior candidate has real
+cover App Tray, controls and window-resize evidence; the updated candidate has
+quiet keyboard/focus and in-place saved-board checks. See the
+[initial viewport evidence](docs/flip-cover-20261104.md) and
+[current quiet-focus follow-up](docs/flip-cover-quiet-checks-20261104.md).
+Physical fold continuity is prepared; TalkBack is skipped at the owner's request.
 This candidate has not been publicly released.
 
 ## The names do not match, on purpose
@@ -93,14 +96,16 @@ cp -R build/app/. ../hexsweeper-app/www/
 ```
 
 Then refresh `WWW_SOURCE.txt` (source commit + `shasum -a 256` of each file
-under `www/`) and re-run the smoke script. Use a checkout of canonical `main`,
-not an older feature branch. Push the source change before the native payload
-update: CI checks out `lukeslp/hexsweeper-private-history` at `main` and
+under `www/`) and re-run the smoke script. Normally use reviewed canonical
+`main`; document any deliberately bounded maintenance snapshot and its baseline.
+Push the source change before the native payload update: CI checks out
+`lukeslp/hexsweeper-private-history` at the exact `WWW_SOURCE.txt` commit and
 regenerates the payload, so a stale `www/` fails the build. The public source
 repository is `lukeslp/hexsweeper`; `WWW_SOURCE.txt` identifies the exact
 canonical commit used for this snapshot.
 
-The current payload pins `d0082f7` (October 7, 2026): Sphere's settings
+The current payload pins `ca710f7`, a bounded focus update over `d0082f7`
+(October 7, 2026): Sphere's settings
 use flat theme swatches, compact board-size choices, and icon-led settings
 rows. The first-launch tutorial and game behavior are unchanged. Luke's
 broader dissatisfaction with the menu system remains an open design item in

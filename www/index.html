@@ -3920,10 +3920,10 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         } catch (_) {}
       }
       if (fromWelcome) markWelcomeSeen = true;
-      helpFocusReturn =
+      helpFocusReturn = document.getElementById("qc-help") || (
         document.activeElement && document.activeElement !== document.body
           ? document.activeElement
-          : helpBtn;
+          : helpBtn);
       helpOverlay.hidden = false;
       document.body.classList.add("help-open");
       // Deferred a frame so the opacity transition runs; closeHelp cancels it
@@ -3935,8 +3935,15 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         helpOverlay.classList.add("open");
       });
       if (releaseFocusTrap) releaseFocusTrap();
-      releaseFocusTrap = trapFocus(helpOverlay);
-      (helpPanel || helpOverlay).focus?.();
+      if (global.SphereDialogFocus) {
+        releaseFocusTrap = global.SphereDialogFocus.open(helpOverlay, {
+          initialFocus: helpPanel || helpOverlay,
+          onEscape: closeHelp,
+        });
+      } else {
+        releaseFocusTrap = trapFocus(helpOverlay);
+        (helpPanel || helpOverlay).focus?.();
+      }
     }
 
     function closeHelp() {
@@ -10154,7 +10161,7 @@ void main() {
  *   (red while armed) on the left, Help on the right. Everything else —
  *   theme, board size, warning style, drag inversion, effects — lives in the
  *   Help sheet, which sphere/index.html turns into a settings sheet.
- * Primary Functions/Classes: initQuietChrome(game)
+ * Primary Functions/Classes: initQuietChrome(game), shared dialog focus isolation
  * Inputs: the SphereSweeper game API. Outputs: DOM chrome, live region.
  * A11y: 48px targets, aria-pressed on Flag, polite announcements, keyboard
  *   focusable, honours prefers-reduced-motion via CSS.
@@ -10341,6 +10348,77 @@ void main() {
   global.initQuietChrome = initQuietChrome;
 })(typeof window !== "undefined" ? window : globalThis);
 
+/*
+ * File Purpose: Keep keyboard and assistive focus inside Sphere's existing dialogs.
+ * Primary Components: Dynamic Tab boundary, background isolation, nested-dialog cleanup.
+ * Inputs/Outputs: Existing dialog and focus targets in; reversible DOM state out.
+ * Copyright (c) 2026 Luke Steuber. MIT; see ../LICENSE.
+ */
+(function (global) {
+  "use strict";
+
+  function open(overlay, options) {
+    options = options || {};
+    const document = overlay.ownerDocument;
+    const saved = new Map();
+    overlay.inert = false;
+    overlay.removeAttribute("aria-hidden");
+    const initial = options.initialFocus || overlay;
+    initial.focus();
+    function isolate() {
+      for (const node of document.body.children) {
+        if (node === overlay || node.contains(overlay) || /^(SCRIPT|STYLE|LINK)$/.test(node.tagName)) continue;
+        if (!saved.has(node)) saved.set(node, { inert: node.inert, aria: node.getAttribute("aria-hidden") });
+        node.inert = true;
+        node.setAttribute("aria-hidden", "true");
+      }
+    }
+    isolate();
+    // Quiet chrome is inserted after the native first-launch tutorial opens.
+    const observer = new global.MutationObserver(isolate);
+    observer.observe(document.body, { childList: true });
+    function onKey(event) {
+      if (options.blockBackgroundShortcuts) event.stopPropagation();
+      if (event.key === "Escape" && options.onEscape) {
+        event.preventDefault();
+        event.stopPropagation();
+        options.onEscape();
+      }
+      if (event.key !== "Tab") return;
+      const nodes = [...overlay.querySelectorAll(
+        'button, a[href], input, select, textarea, summary, [tabindex]'
+      )].filter(node => !node.disabled && node.tabIndex >= 0
+        && !node.closest("[hidden], [inert]") && node.getClientRects().length);
+      if (!nodes.length) { event.preventDefault(); initial.focus(); return; }
+      const index = nodes.indexOf(document.activeElement);
+      if (event.shiftKey ? index <= 0 : index < 0 || index === nodes.length - 1) {
+        event.preventDefault();
+        nodes[event.shiftKey ? nodes.length - 1 : 0].focus();
+      }
+    }
+    overlay.addEventListener("keydown", onKey);
+    let closed = false;
+    return () => {
+      if (closed) return;
+      closed = true;
+      observer.disconnect();
+      overlay.removeEventListener("keydown", onKey);
+      // Hide the closing fade from focus/AT immediately; its visual transition stays.
+      overlay.inert = true;
+      overlay.setAttribute("aria-hidden", "true");
+      for (const [node, prior] of saved) {
+        node.inert = prior.inert;
+        if (prior.aria == null) node.removeAttribute("aria-hidden");
+        else node.setAttribute("aria-hidden", prior.aria);
+      }
+      const target = typeof options.returnFocus === "function" ? options.returnFocus() : options.returnFocus;
+      if (target && target.isConnected && !target.disabled && target.getClientRects().length) target.focus();
+    };
+  }
+
+  global.SphereDialogFocus = { open };
+})(typeof window !== "undefined" ? window : globalThis);
+
 </script>
 <script>
 // First-timer tutorial: a short sheet instead of the full settings sheet.
@@ -10350,19 +10428,32 @@ function showTutorial() {
   const play = document.getElementById("tutorial-play-btn");
   if (!overlay || !play) return false;
   overlay.hidden = false;
-  requestAnimationFrame(() => overlay.classList.add("open"));
+  let closed = false;
+  requestAnimationFrame(() => { if (!closed) overlay.classList.add("open"); });
   document.body.classList.add("help-open");
-  (panel || overlay).focus?.();
+  const returnFocus = () => document.getElementById("qc-help") || document.getElementById("help-btn");
+  let releaseFocus = null;
   function done() {
+    if (closed) return;
+    closed = true;
     try { localStorage.setItem("hexsweeper-sphere-welcome-v1", "1"); } catch (_) {}
     overlay.classList.remove("open");
     document.body.classList.remove("help-open");
     setTimeout(() => { overlay.hidden = true; }, 200);
-    document.getElementById("gameCanvas")?.focus?.();
+    play.removeEventListener("click", done);
+    overlay.removeEventListener("click", outside);
+    document.removeEventListener("keydown", escape);
+    if (releaseFocus) releaseFocus();
+    else returnFocus()?.focus();
   }
-  play.addEventListener("click", done, { once: true });
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) done(); });
-  document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { done(); document.removeEventListener("keydown", esc); } });
+  function outside(e) { if (e.target === overlay) done(); }
+  function escape(e) { if (e.key === "Escape") done(); }
+  if (window.SphereDialogFocus) releaseFocus = SphereDialogFocus.open(overlay, {
+    initialFocus: panel || overlay, returnFocus, onEscape: done, blockBackgroundShortcuts: true,
+  });
+  else { (panel || overlay).focus?.(); document.addEventListener("keydown", escape); }
+  play.addEventListener("click", done);
+  overlay.addEventListener("click", outside);
   return true;
 }
 const sphereGame = SphereSweeper.boot({
@@ -10509,15 +10600,20 @@ const sphereChrome = initQuietChrome(sphereGame);
   const openBtn = document.getElementById("help-history-btn");
   const closeBtn = document.getElementById("lightbox-close-btn");
   if (!lb || !openBtn) return;
+  let releaseFocus = null;
   function openLb() {
     lb.hidden = false;
     requestAnimationFrame(() => lb.classList.add("open"));
-    closeBtn && closeBtn.focus();
+    if (window.SphereDialogFocus) releaseFocus = SphereDialogFocus.open(lb, {
+      initialFocus: closeBtn || lb, returnFocus: openBtn, onEscape: closeLb, blockBackgroundShortcuts: true,
+    });
+    else closeBtn && closeBtn.focus();
   }
   function closeLb() {
     lb.classList.remove("open");
     setTimeout(() => { lb.hidden = true; }, 180);
-    openBtn.focus();
+    if (releaseFocus) { releaseFocus(); releaseFocus = null; }
+    else openBtn.focus();
   }
   openBtn.addEventListener("click", openLb);
   closeBtn && closeBtn.addEventListener("click", closeLb);

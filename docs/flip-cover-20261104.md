@@ -1,5 +1,9 @@
 # Flip cover viewport — November 4, 2026
 
+This records the initial 1.0.7 (32) viewport candidate. The later
+[1.0.8 (33) quiet-focus follow-up](flip-cover-quiet-checks-20261104.md) records the
+generated payload update, exact source pin and current accessibility limits.
+
 Development source: `lukeslp/hexsweeper-app`, isolated branch
 `codex/flip-cover-20261104`, based on canonical `origin/main` at `ae38970`.
 Work was performed on Luke's Mac in `/Users/luke/workspace/hexsweeper-flip-cover`.
