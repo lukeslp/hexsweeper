@@ -445,6 +445,11 @@ Open `lab.html` or `choices.html` locally or by URL path. Experimental skins rem
 ## Accessibility
 
 - Help dialog and keyboard shortcuts (`?`, `T`, difficulty keys as documented in-game)
+- Help, the native tutorial and the nested history dialog keep focus inside
+  visible controls, isolate background content, and restore the visible return
+  control. Quiet source-browser checks are in `tools/test-sphere-dialog-focus.mjs`;
+  this is not a claim of TalkBack gameplay acceptance. Canvas cell controls
+  remain a deferred proposal in `docs/talkback-board-plan-20261104.md`.
 - `prefers-reduced-motion` respected for particle / blast motion
 - Touch: long-hold to flag; Fire drag tilts (camera locked); canvas uses `touch-action: none`
 

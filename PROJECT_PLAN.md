@@ -17,6 +17,18 @@ product surfaces. Native iOS and Android retain the short first-launch intro.
 - **`play.html`**: production flat-game chrome + declarative profiles over custom Canvas rendering. Mode, material identity, cosmetic particle channels, and endgame feedback are separate axes.
 - **Lab tree**: `lab.html`, `classic.html`, `skins/*`, `skins.json` — not linked from production UI.
 
+## Dialog focus source candidate (2026-11-04)
+
+- [x] Preserve the shipped native entry policy on pinned `d0082f7` while fixing
+  Help focus return, tutorial keyboard containment, background isolation and
+  nested history focus. Quiet authored-source browser checks passed at three
+  cover-sized CSS viewports; existing Sphere lifecycle/entry tests passed.
+- [ ] Review and integrate this isolated source candidate before any export,
+  native re-vendor or publication. No generated output was updated here.
+- [ ] Spoken cell navigation remains a design/prototype, not an implemented
+  release feature. The owner canceled TalkBack runtime testing; its acceptance
+  remains unverified. See `docs/talkback-board-plan-20261104.md`.
+
 ## Sphere controls and social preview (2026-10-07)
 
 - [x] Replace the Sphere social card with the real Dark board: black, white,

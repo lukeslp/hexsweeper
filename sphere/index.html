@@ -979,19 +979,32 @@ function showTutorial() {
   const play = document.getElementById("tutorial-play-btn");
   if (!overlay || !play) return false;
   overlay.hidden = false;
-  requestAnimationFrame(() => overlay.classList.add("open"));
+  let closed = false;
+  requestAnimationFrame(() => { if (!closed) overlay.classList.add("open"); });
   document.body.classList.add("help-open");
-  (panel || overlay).focus?.();
+  const returnFocus = () => document.getElementById("qc-help") || document.getElementById("help-btn");
+  let releaseFocus = null;
   function done() {
+    if (closed) return;
+    closed = true;
     try { localStorage.setItem("hexsweeper-sphere-welcome-v1", "1"); } catch (_) {}
     overlay.classList.remove("open");
     document.body.classList.remove("help-open");
     setTimeout(() => { overlay.hidden = true; }, 200);
-    document.getElementById("gameCanvas")?.focus?.();
+    play.removeEventListener("click", done);
+    overlay.removeEventListener("click", outside);
+    document.removeEventListener("keydown", escape);
+    if (releaseFocus) releaseFocus();
+    else returnFocus()?.focus();
   }
-  play.addEventListener("click", done, { once: true });
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) done(); });
-  document.addEventListener("keydown", function esc(e) { if (e.key === "Escape") { done(); document.removeEventListener("keydown", esc); } });
+  function outside(e) { if (e.target === overlay) done(); }
+  function escape(e) { if (e.key === "Escape") done(); }
+  if (window.SphereDialogFocus) releaseFocus = SphereDialogFocus.open(overlay, {
+    initialFocus: panel || overlay, returnFocus, onEscape: done, blockBackgroundShortcuts: true,
+  });
+  else { (panel || overlay).focus?.(); document.addEventListener("keydown", escape); }
+  play.addEventListener("click", done);
+  overlay.addEventListener("click", outside);
   return true;
 }
 const sphereGame = SphereSweeper.boot({
@@ -1138,15 +1151,20 @@ const sphereChrome = initQuietChrome(sphereGame);
   const openBtn = document.getElementById("help-history-btn");
   const closeBtn = document.getElementById("lightbox-close-btn");
   if (!lb || !openBtn) return;
+  let releaseFocus = null;
   function openLb() {
     lb.hidden = false;
     requestAnimationFrame(() => lb.classList.add("open"));
-    closeBtn && closeBtn.focus();
+    if (window.SphereDialogFocus) releaseFocus = SphereDialogFocus.open(lb, {
+      initialFocus: closeBtn || lb, returnFocus: openBtn, onEscape: closeLb, blockBackgroundShortcuts: true,
+    });
+    else closeBtn && closeBtn.focus();
   }
   function closeLb() {
     lb.classList.remove("open");
     setTimeout(() => { lb.hidden = true; }, 180);
-    openBtn.focus();
+    if (releaseFocus) { releaseFocus(); releaseFocus = null; }
+    else openBtn.focus();
   }
   openBtn.addEventListener("click", openLb);
   closeBtn && closeBtn.addEventListener("click", closeLb);

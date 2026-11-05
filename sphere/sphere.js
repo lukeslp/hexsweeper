@@ -1841,10 +1841,10 @@
         } catch (_) {}
       }
       if (fromWelcome) markWelcomeSeen = true;
-      helpFocusReturn =
+      helpFocusReturn = document.getElementById("qc-help") || (
         document.activeElement && document.activeElement !== document.body
           ? document.activeElement
-          : helpBtn;
+          : helpBtn);
       helpOverlay.hidden = false;
       document.body.classList.add("help-open");
       // Deferred a frame so the opacity transition runs; closeHelp cancels it
@@ -1856,8 +1856,15 @@
         helpOverlay.classList.add("open");
       });
       if (releaseFocusTrap) releaseFocusTrap();
-      releaseFocusTrap = trapFocus(helpOverlay);
-      (helpPanel || helpOverlay).focus?.();
+      if (global.SphereDialogFocus) {
+        releaseFocusTrap = global.SphereDialogFocus.open(helpOverlay, {
+          initialFocus: helpPanel || helpOverlay,
+          onEscape: closeHelp,
+        });
+      } else {
+        releaseFocusTrap = trapFocus(helpOverlay);
+        (helpPanel || helpOverlay).focus?.();
+      }
     }
 
     function closeHelp() {
