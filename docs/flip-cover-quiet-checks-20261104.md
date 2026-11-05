@@ -44,8 +44,14 @@ Ambient Time review; the local captures are
 
 TalkBack was canceled at the owner's request and remains off. The temporary
 observer test was removed; keyboard/focus results do not establish screen-reader
-acceptance. Physical unfold/refold with the flagged board and open Help sheet
-is prepared but not yet verified in this follow-up. No public APK, store release
+acceptance. On November 5, inner resume in task169 retained the flagged board,
+counter169 and timer zero. Help was initially closed after intervening use;
+scoped logs show Activity recreation on the first explicit cross-display resume.
+A same-display resume retained freshly opened Help. The
+[dated inner-screen receipt](https://github.com/ambient-time/clocks-app/blob/b1038d7bbc162ada910fa5d61ba0f3ac13132970/docs/reviews/flip-quiet-checks-20261104.md)
+records that distinction. A controlled physical return with the open sheet is
+prepared, but the phone still reports OPENED3 and cover OFF. Do not attribute
+recreation to folding without that controlled observation. No public APK, store release
 or F-Droid publication was made.
 
 Rollback restores the prior recorded payload/source pin and native version
