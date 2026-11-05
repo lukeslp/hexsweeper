@@ -62,11 +62,19 @@ the fallback is an estimate, not a Samsung API guarantee.
 Browser scripts and screenshots are local evidence under
 `/tmp/hexsweeper-cover-20261104*`; they are not physical Android validation.
 Native device checks, App Tray selection and a data-preserving signed update
-remain pending. The existing signing profile returned a missing Keychain
-credential on Napoleon; no key was replaced and the installed game was retained. This change was not
+remain a separate runtime gate. Napoleon’s Keychain copy was unavailable; the
+existing encrypted signing vault on Beast supplied the credential in memory to
+the local build. No key or Keychain item was created or replaced. This change was not
 published or installed by this workstream.
 
-Debug artifact:
+Signed local candidate: `android/app/build/outputs/apk/release/app-release.apk`
+(1.0.7 / versionCode 32), SHA-256
+`c1e373e949d284b7d57dea841f6eab01305330cf7124d9c2d6417a7d5b5154e2`.
+Its certificate SHA-256 matches installed 1.0.6:
+`404fd13d59f95b59fb9342e20e5953b15603832dda8ca75181c959b41fb5d592`.
+No public catalog or store release was performed.
+
+Initial debug artifact:
 `android/app/build/outputs/apk/debug/app-debug.apk` (1.0.6 / versionCode 31),
 SHA-256 `8dc5b4bbc5e57a87c9e53c08d30e0d48f33634e31b9ce1bd4a9f6ee0492ecc0e`.
 This is the default debug signature; the parent handles compatibility with any
