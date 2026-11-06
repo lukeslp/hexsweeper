@@ -79,3 +79,18 @@ The [guarded native restoration suite](native-restoration-emulator-20261105.md)
 now exercises real Activity recreation, native Escape without a prior touch,
 closed-state persistence and later-document writers using only synthetic emulator
 data. It does not close the physical fold or signed-release acceptance gates.
+
+## Later quiet physical return
+
+The installed build34 bytes were re-read and still match the SHA above. On the
+actual OPENED3 inner screen after the physical opening, existing Help remained
+on its Keys tab. The earlier closed-cover LocalLauncher search/Enter launch
+also showed Help. The final refold/no-touch-Escape pair was not independently
+completed in this run. Luke subsequently confirmed the apps were working fine;
+that is owner confirmation rather than an invented measured fold result.
+
+The [qualified return and artifact-bound media](https://github.com/ambient-time/clocks-app/blob/codex/flip-apps-20261104/docs/reviews/flip-quiet-return-20261105.md)
+record the observed path. TalkBack remains off. The current board has advanced
+since the old timer-zero flag fixture, so preserve it and do not perform the old
+synthetic-flag cleanup automatically. No runtime, payload pin, signing identity,
+permission, saved board or public release changed in this documentation update.
