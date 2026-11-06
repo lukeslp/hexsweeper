@@ -37,7 +37,10 @@ It passed native saved-state restart and Wheel → Sphere re-entry checks. See t
 [initial viewport evidence](docs/flip-cover-20261104.md) and
 [quiet-focus follow-up](docs/flip-cover-quiet-checks-20261104.md), then the
 [current native restoration receipt](docs/native-ui-restoration-20261105.md).
-New-build physical fold acceptance is pending; TalkBack is skipped at the owner's request.
+Later quiet return: build34 Help Keys retained on inner resume, and the owner
+confirmed the apps work. The final refold/no-touch-Escape pair is not independently
+completed; TalkBack remains skipped/off. The native restoration receipt records
+these separate scopes.
 This candidate has not been publicly released.
 
 ## The names do not match, on purpose
@@ -104,7 +107,7 @@ regenerates the payload, so a stale `www/` fails the build. The public source
 repository is `lukeslp/hexsweeper`; `WWW_SOURCE.txt` identifies the exact
 canonical commit used for this snapshot.
 
-The current payload pins `ca710f7`, a bounded focus update over `d0082f7`
+The current payload pins `f7d7546`, bounded focus and Help-restoration updates over `d0082f7`
 (October 7, 2026): Sphere's settings
 use flat theme swatches, compact board-size choices, and icon-led settings
 rows. The first-launch tutorial and game behavior are unchanged. Luke's
