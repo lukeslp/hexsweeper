@@ -884,51 +884,19 @@ button, a, input[type="range"] { touch-action: manipulation; }
   <div class="help-panel" id="help-panel" tabindex="-1">
     <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
     <h2 id="help-title">Hexsweeper 3D</h2>
-    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Same dig-and-flag idea. First dig is always safe.</p>
+    <p class="help-lede">Clear every safe face. Numbers count the mines on the six faces around them.</p>
     <ul class="help-controls" aria-label="Controls">
-      <li><span class="act">Tap</span><span>Dig a face</span></li>
-      <li><span class="act">Hold / ⌃-click</span><span>Flag a face</span></li>
-      <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
+      <li><span class="act">Tap</span><span>Clear a face</span></li>
+      <li><span class="act">Hold / ⌃-click</span><span>Flag it</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
-      <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
     </ul>
-    <div class="help-body">
-      <p>Clear every safe face. Numbers count mines among the six touching neighbors. Solid red faces are flags.</p>
-      <p>The bottom seed opens Undo, Flag, Reset, board size, theme, warning style and inversion. Surface packs are just below. Progress autosaves through refresh. Reset or size change starts a new sphere (no confirm).</p>
-    </div>
-    <p class="help-keys"><kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
-    <div class="help-history-row">
-      <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic square-grid Minesweeper screenshot">
-        <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper (square grid)" width="44" height="33" loading="lazy">
-      </button>
-      <p class="help-history-cap">
-        Riding on the original — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
-      </p>
-    </div>
-    <div class="help-packs" id="help-packs" role="group" aria-label="Surface">
-      <span class="help-packs-cap">Surface</span>
-      <button type="button" class="help-pack" data-pack="classic" style="--sw:linear-gradient(90deg,#fff 50%,#111 50%)" aria-pressed="true">Classic</button>
-      <button type="button" class="help-pack" data-pack="earth" style="--sw:#2a6a9a" aria-pressed="false">Earth</button>
-      <button type="button" class="help-pack" data-pack="moon" style="--sw:#9a9a9a" aria-pressed="false">Moon</button>
-    </div>
-    <div class="help-packs" id="help-controls" role="group" aria-label="Controls">
-      <span class="help-packs-cap">Controls</span>
-      <button type="button" class="help-pack is-text" data-ctl="invert">Invert off</button>
-      <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
-    </div>
-    <p class="help-more">Also <a href="../">flat Hexsweeper</a> · <a href="../?mode=fire">Fire</a> · <a href="../?mode=plague">Plague</a></p>
     <button type="button" class="help-done" id="help-done-btn">Done</button>
     <nav class="menu-links" aria-label="Elsewhere">
-      <a href="https://lukesteuber.com" rel="noopener noreferrer">lukesteuber.com</a>
+      <a href="https://lukesteuber.com">lukesteuber.com</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>
-      <a href="https://datapoems.io" rel="noopener noreferrer">datapoems.io</a>
+      <a href="https://dr.eamer.dev/minimal/">minimal</a>
     </nav>
   </div>
-</div>
-
-<div id="history-lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Classic Minesweeper" hidden>
-  <button type="button" class="lightbox-close" id="lightbox-close-btn" aria-label="Close">×</button>
-  <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
 <script src="hexasphere.js?v=20260820a"></script>
