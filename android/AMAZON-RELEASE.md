@@ -31,8 +31,6 @@ the final stress/soak gates pass on KFRASWI.
 
 | | |
 |---|---|
-| App ID | `amzn1.devportal.mobileapp.4903bf85d6ce408d88c447445269c591` |
-| Release ID | `amzn1.devportal.apprelease.38019068174844b79d7da61fc00e1268` |
 | SKU | `hexsweeper-fire` |
 | Category | Games > Brain & Puzzle |
 | Refinements | Indie, Casual |
@@ -61,9 +59,8 @@ Consequences:
   They have to uninstall first. Say so on the download page when 26 goes up.
 - There is no Play App Signing enrolment, so this key *is* the signature the
   device checks. It cannot be rotated later without the same break.
-- The key is backed up in the sops vault as `android/hexsweeper.yaml`
-  (restore verified 2026-09-03) and in the login Keychain under toolkit
-  profile `hexsweeper`.
+- The key and its passwords are kept outside this repository, with a
+  verified backup. Losing it means the same break.
 
 ## Staged artifacts
 
@@ -79,13 +76,15 @@ APK SHA-256:
 
 ## Build signed release
 
+Set `HEXSWEEPER_ANDROID_STORE_FILE`, `HEXSWEEPER_ANDROID_STORE_PASSWORD`,
+`HEXSWEEPER_ANDROID_KEY_ALIAS` and `HEXSWEEPER_ANDROID_KEY_PASSWORD` from your
+own secret store, then:
+
 ```sh
-cd /Users/luke/workspace/android-release-toolkit
-scripts/android-release with-signing --profile hexsweeper -- /bin/sh -c \
-  'cd /Users/luke/workspace/hexsweeper-app/android && \
-   export JAVA_HOME=$(/usr/libexec/java_home -v 21) && \
-   export ANDROID_HOME="$HOME/Library/Android/sdk" && \
-   ./gradlew :app:clean :app:lintRelease :app:assembleRelease'
+cd android
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+./gradlew :app:clean :app:lintRelease :app:assembleRelease
 ```
 
 Without those environment variables Gradle silently produces an **unsigned**

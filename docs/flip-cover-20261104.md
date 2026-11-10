@@ -6,8 +6,7 @@ generated payload update, exact source pin and current accessibility limits.
 
 Development source: `lukeslp/hexsweeper-app`, isolated branch
 `codex/flip-cover-20261104`, based on canonical `origin/main` at `ae38970`.
-Work was performed on Luke's Mac in `/Users/luke/workspace/hexsweeper-flip-cover`.
-The original `android-builds/appcat-20261103/hexsweeper-app` checkout was not edited.
+Work was performed in a separate checkout; the original checkout was not edited.
 The sealed game remains the `d0082f7` source snapshot recorded in `WWW_SOURCE.txt`;
 no `www/` bytes, save schema, app identity or permissions were changed. The
 local Android candidate is 1.0.7 (32), installed in place over 1.0.6 (31) with
@@ -77,9 +76,8 @@ checks recorded below. Local Attractive proof is
 
 - `pnpm smoke`: all three payload-integrity and Capacitor sync gates passed.
   Generated host-local dependency paths were restored after sync.
-- `pnpm android:build:debug`: passed using JDK 21 at
-  `/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` and SDK at
-  `/Users/luke/Library/Android/sdk`. The machine's Java launcher did not discover
+- `pnpm android:build:debug`: passed using a Homebrew JDK 21 and the default
+  macOS Android SDK location. The machine's Java launcher did not discover
   that JDK automatically, so `JAVA_HOME` was supplied explicitly.
 - `./android/gradlew --project-dir android :app:testDebugUnitTest :app:lintDebug`:
   eight geometry tests passed; lint passed with warnings concerning unchanged
@@ -97,9 +95,9 @@ checks recorded below. Local Attractive proof is
 Browser scripts and screenshots are local evidence under
 `/tmp/hexsweeper-cover-20261104*`; they are not physical Android validation.
 The native observations above and final device checks below are separate from
-those browser checks. Napoleon’s Keychain copy was unavailable; the
-existing encrypted signing vault on Beast supplied the credential in memory to
-the local build. No key or Keychain item was created or replaced. No public
+those browser checks. The existing release signing
+identity was supplied to the local build in memory from outside the
+repository. No key was created or replaced. No public
 catalog or store publication was performed.
 
 ## Native measurement regression

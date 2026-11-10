@@ -7,7 +7,7 @@ physical fold check.
 
 Canonical HTTPS default main was verified at `3cdd8426de55f4337f07aae7beb20a803b3aad12` before
 creating this isolated test worktree. Tests use a locally built **1.0.9 (34), debug**,
-package `app.hexodus.ios`. It is not the signed APK installed on Luke’s phone.
+package `app.hexodus.ios`. It is not the signed APK installed on the owner’s phone.
 No production runtime or generated web payload changed. Exact APK, test-source,
 runtime-source and payload hashes are in the
 [machine-readable receipt](reviews/native-restoration-emulator-20261105.json).

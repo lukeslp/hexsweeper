@@ -77,5 +77,8 @@ abandoned product that merely shared this bundle id.
 
 ## Safety
 
-No secrets in this tree. Signing is automatic under team `596T7J7FB6`.
-Uploads to App Store Connect or Google Play are Luke's to trigger, never automated from here.
+No secrets in this tree. iOS signing is automatic under the owner's Apple
+developer team, set as `DEVELOPMENT_TEAM` in the Xcode project. Android release
+signing reads the `HEXSWEEPER_ANDROID_*` environment variables; keystores and
+passwords stay outside the repository. Uploads to App Store Connect, Google
+Play or Amazon are the owner's to trigger, never automated from here.

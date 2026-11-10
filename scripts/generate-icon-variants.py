@@ -21,7 +21,7 @@ from pathlib import Path
 
 from PIL import Image, ImageChops
 
-REPO = Path("/Users/luke/workspace/hexsweeper-app")
+REPO = Path(__file__).resolve().parent.parent
 OUT_DIR = Path(__file__).resolve().parent
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
