@@ -20,3 +20,20 @@ The native shells depend on Capacitor (`@capacitor/core`, `@capacitor/ios`,
 licensed. These packages are installed by pnpm, Swift Package Manager and
 Gradle at build time and are not checked in. Source:
 <https://github.com/ionic-team/capacitor>.
+
+## Hexasphere geometry
+
+The sealed game payload (`www/index.html`, `www/wheel.html`) inlines geodesic
+sphere math ported from Hexasphere.js by Robert Scanlon
+(<https://github.com/arscan/hexasphere.js>), MIT licensed.
+
+Copyright (c) 2014-2017 Robert Scanlon. The permission notice is the standard
+MIT text, the same wording as in [LICENSE](LICENSE), and applies to that
+portion under the copyright line above.
+
+## Classic Minesweeper screenshot
+
+`www/assets/classic-minesweeper.png` is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
+as a history note in the help sheet. It is not this project's artwork, its
+source is not recorded, and the MIT license here does not cover it. Microsoft,
+Windows and Minesweeper are trademarks of Microsoft Corporation.
