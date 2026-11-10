@@ -1,6 +1,6 @@
 # Minimal control layout
 
-I use the same control frame across the Minimal games so a familiar action stays easy to find. I am Luke Steuber. This is a presentation change: rules, keyboard shortcuts, save keys, meaningful state colors and current catalog choices stay intact.
+I use the same control frame across the Minimal games so a familiar action stays easy to find. This is a presentation change: rules, keyboard shortcuts, save keys, meaningful state colors and current catalog choices stay intact.
 
 ## Scope and source
 

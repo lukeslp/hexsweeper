@@ -37,5 +37,5 @@ og-frames/
 
 # Native-app payload from `export-collection.py --app`. Regenerated on demand
 # and vendored into hexsweeper-app; never committed here, so it never reaches
-# the live site (this repo root IS the deployed web root on Drummer).
+# the live site (this repo root IS the deployed web root).
 build/
