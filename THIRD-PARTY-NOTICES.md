@@ -25,16 +25,6 @@ and modification history are in
 [sphere/assets/textures/README.md](sphere/assets/textures/README.md) and
 [sphere/assets/textures/sources.json](sphere/assets/textures/sources.json).
 
-## Hexasphere geometry
-
-`sphere/hexasphere.js`, `sphere-ux/hexasphere.js`, `wheel/hexasphere.js` and
-`polyhedron/hexasphere.js` hold geodesic sphere math ported from Hexasphere.js by Robert Scanlon
-(<https://github.com/arscan/hexasphere.js>), MIT licensed.
-
-Copyright (c) 2014-2017 Robert Scanlon. The permission notice is the standard
-MIT text, the same wording as in [LICENSE](LICENSE), and applies to that
-portion under the copyright line above.
-
 ## Classic Minesweeper screenshot
 
 `sphere/assets/classic-minesweeper.png` (also under `sphere-ux/assets/`) is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
