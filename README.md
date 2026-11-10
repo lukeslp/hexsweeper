@@ -83,7 +83,7 @@ distinct materials and mechanics:
 
 Fire and Plague open on the **large** board; board size (S·M·L) lives in Menu and only appears for those two, since the infinite themes have no fixed board.
 
-Sphere’s social card uses a seeded Dark board with red flags, without game chrome. Its versioned OG/Twitter image is shared by the root and Sphere entry. Theme swatches and board-size choices use flat selection marks; settings use icon-led rows with visible state. The overall menu redesign remains open in `PROJECT_PLAN.md`.
+Sphere’s social card uses a seeded Dark board with red flags, without game chrome. Its versioned OG/Twitter image is shared by the root and Sphere entry. Theme swatches and board-size choices use flat selection marks; settings use icon-led rows with visible state. The overall menu redesign remains open.
 
 Infinite has its own `infinite-og.png`: a seeded endless Dark board with red flags, separate from the older Light/Dark collection card. Capture it with `tools/shoot-og-cards.sh infinite`; metadata comes from the Infinite configuration in the exporter.
 
@@ -481,9 +481,15 @@ Open `lab.html` or `choices.html` locally or by URL path. Experimental skins rem
 ## Related
 
 - Games index: https://dr.eamer.dev/games/
-- Native apps (iOS, Android, Fire TV) are built from this repository's `--app`
-  export in a separate repository; the web root and the sealed app page are the
-  same Sphere.
+- Native apps (iOS, Android, Fire tablets) are built from this repository's
+  `--app` export in a separate repository, `lukeslp/hexsweeper-app`; the web
+  root and the sealed app page are the same Sphere.
+
+## License
+
+MIT; see [LICENSE](LICENSE). Bundled third-party material (the IBM Plex fonts
+and the Earth and Moon daymaps) is listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Minimal social screenshots
 

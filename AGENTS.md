@@ -5,7 +5,7 @@
 Canonical (live): the checkout on the production host is the served web root.  
 Development mirror: the build machine's checkout · remote `lukeslp/hexsweeper`
 
-Saved edits on Drummer are live on the public site. Prefer: edit → verify locally or via public URL → commit → push → `git pull` on Drummer so disk matches git.
+Saved edits on the production host are live on the public site. Prefer: edit → verify locally or via public URL → commit → push → `git pull` on the production host so disk matches git.
 
 ## Product surface
 
@@ -13,7 +13,7 @@ The public root `index.html` is the Sphere game, sealed from `sphere/` by the
 exporter; the native app ships its offline export plus the hidden Water Wheel
 and history image. `launcher.html` is
 generated from `tools/app-launcher.html` and offers the three structural boards: **Infinite**,
-**Classic**, and **Sphere**. It is **unlinked and noindex** (Luke, 2026-10-07):
+**Classic**, and **Sphere**. It is **unlinked and noindex** (owner's decision, 2026-10-07):
 no game carries a Games pill or links to it; don't re-add either. `infinite.html` and `bounded.html` are generated
 product pages; `sphere/` is authored in place (Mercury's WebGL renderer is
 `sphere/mirror-material.js`, shared with the reflection studio). The former flat
@@ -54,7 +54,6 @@ Classic keep their own sheets and tooltips.
 ## Docs to keep in sync
 
 - `README.md` — install-free usage, launcher/routes, layout, API
-- `PROJECT_PLAN.md` — objectives and outstanding work
 - File banners on `core.js`, `skin-chrome.css`, and other code entrypoints
 
 ## Collection exports
@@ -77,7 +76,7 @@ Do not hand-edit root `index.html`, `launcher.html`, `infinite.html`, `bounded.h
 `collection/sphere.html` (CodePen-ready inline of `sphere/`) and is listed
 under Experiments.
 
-After changing OG card keys in `tools/og-card.html`, regenerate PNGs: `bash tools/shoot-og-cards.sh` (Chromium + Pillow on Drummer).
+After changing OG card keys in `tools/og-card.html`, regenerate PNGs: `bash tools/shoot-og-cards.sh` (needs Chromium and Pillow).
 Pass card names to shoot only those (`bash tools/shoot-og-cards.sh flux-sphere`) and `BASE=http://127.0.0.1:<port>`
 to shoot a local checkout. The `flux-sphere` card writes `flux-sphere/assets/og.png`; it stages its own scene
 (seeded deal, an echo) with autosave suspended. Snap Chromium cannot write under `/tmp` or hidden dirs, so
@@ -124,4 +123,4 @@ Do not hand-edit `choices/lab/*.html` — they redirect to `collection/skin-*.ht
 
 ## Safety
 
-No new public ports. No secrets in this tree. Prefer loopback + Caddy for any future backend (none required today).
+No new public ports. No secrets in this tree. Any future backend should listen on loopback behind the existing web server (none required today).
