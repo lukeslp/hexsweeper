@@ -21,7 +21,16 @@ and you drop into the **Water Wheel**, a hidden second sphere
 its Sphere pill brings you back and the run resumes. Infinite and Classic are
 web-only; they are not in this binary.
 
-Web version: <https://dr.eamer.dev/games/hexsweeper/>
+## Where to get it
+
+- Web: <https://dr.eamer.dev/games/hexsweeper/>
+- iPhone and iPad: **Hexsweeper 3D** on the App Store,
+  <https://apps.apple.com/app/id6768871973>
+- Android (direct download): <https://dr.eamer.dev/downloads/apps/hexsweeper/>
+
+This repository holds two platforms: the iOS shell under `ios/` and the
+Android shell under `android/`. Build steps for both are under
+[Verify](#verify).
 
 The web game opens the board immediately, including on a first visit or when
 browser storage is blocked. Instructions are optional: **? → Play**, then
@@ -70,10 +79,12 @@ App Store Connect app and abandoning this one.
 | `www/` | The game. Vendored payload — **do not hand-edit** |
 | `WWW_SOURCE.txt` | Which hexsweeper commit `www/` came from, plus checksums |
 | `capacitor.config.js` | Capacitor config (`.js`, not `.ts` — see below) |
-| `ios/` | Xcode project, team `596T7J7FB6`, automatic signing |
+| `ios/` | Xcode project, automatic signing (set your own `DEVELOPMENT_TEAM` to build for a device) |
 | `android/` | Generated Capacitor Android project, API 24–36 |
 | `scripts/smoke.sh` | Payload integrity + cap sync gates |
 | `scripts/android-build.sh` | JDK-21 Gradle wrapper for APK/AAB builds |
+| `app-store/` | Store listing copy and screenshots |
+| `licenses/`, `THIRD-PARTY-NOTICES.md` | Notices for bundled third-party material |
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
 the sealed Sphere game — one self-contained file with fonts, CSS, and all JS
@@ -110,9 +121,8 @@ canonical commit used for this snapshot.
 The current payload pins `f7d7546`, bounded focus and Help-restoration updates over `d0082f7`
 (October 7, 2026): Sphere's settings
 use flat theme swatches, compact board-size choices, and icon-led settings
-rows. The first-launch tutorial and game behavior are unchanged. Luke's
-broader dissatisfaction with the menu system remains an open design item in
-the source repository's `PROJECT_PLAN.md`. This payload update does not create
+rows. The first-launch tutorial and game behavior are unchanged. The
+menu system remains an open design item in the source repository. This payload update does not create
 or upload an iOS/Android release. See [release notes](docs/RELEASE.md) for the
 distinction between payload checks and published builds.
 
@@ -137,7 +147,8 @@ gitignored. The shell requests no sensitive permissions and deliberately omits
 
 The Android AAB is intentionally unsigned until a Play signing key is created
 and stored outside this repository. The Amazon Fire-tablet APK uses a separate
-release identity managed by the Android release toolkit; its staged artifact
+release identity supplied through the `HEXSWEEPER_ANDROID_*` environment
+variables that `android/app/build.gradle` reads; its staged artifact
 and device evidence are documented in
 [`android/AMAZON-RELEASE.md`](android/AMAZON-RELEASE.md). Signed `1.0.4 (29)`
 uses the Fire-tuned path for both direct and ambient XL rotation. See
@@ -164,3 +175,10 @@ sixteen. Mercury's mirrored body is a WebGL2 shader
 with no texture asset; The textured materials carry their small
 files sealed as data URIs (about 310KB together). Without WebGL each falls back to a
 plain field in its own palette.
+
+## License
+
+MIT; see [LICENSE](LICENSE). The sealed payload in `www/` embeds the IBM Plex
+Sans and IBM Plex Mono fonts under the SIL Open Font License 1.1; see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Capacitor is fetched by the
+package managers at build time and is not checked in.

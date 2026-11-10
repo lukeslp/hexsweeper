@@ -9,7 +9,6 @@
 | iOS bundle id | `app.hexodus.ios` (inherited; do not "fix") |
 | Android application id | `app.hexodus.ios` (shared Capacitor id; unusual but valid) |
 | ASC app id | `6768871973` |
-| Team | `596T7J7FB6` (Bridge City Lab LLC) |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
 this same record. The checked-in iOS project is `1.0.1 (69)` and Android is
@@ -84,7 +83,7 @@ live in `android/AMAZON-RELEASE.md`. Verify the served APK and store console
 when preparing the next release; the current source payload is newer than
 those recorded binaries. The curated download page
 and `catalog.json` are patched in place, never regenerated — see
-`downloads/CURATED_DO_NOT_REGENERATE.md` on Drummer; each publish leaves an
+the note beside them on the web server; each publish leaves an
 `index.html.bak-before-…` beside the page. The Play release AAB remains
 deliberately unsigned. Create and
 retain the Play signing key outside this repository, then use Android Studio's
@@ -115,7 +114,7 @@ Done (updated 2026-08-11, through the App Store Connect API):
       for the sphere-only app (nine looks, undo, autosave, offline)
 - [x] Support + marketing URLs → the live web game
 - [x] Privacy policy → `privacy.html`, added to the hexsweeper repo and
-      deployed to Drummer
+      deployed to the web server
 - [x] Age rating — every content question NONE, every behaviour flag false
 - [x] Screenshots — replaced 2026-08-18 with six 6.9" iPhone (1320×2868) and
       six 13" iPad (2064×2752) captures of the sealed sphere, captioned;
@@ -241,8 +240,8 @@ Done (updated 2026-08-11, through the App Store Connect API):
       shelved from the cycle); help sheet documents the real keys (T, S/M/L;
       dead C removed) (vendored from hexsweeper `da4194e`). Android test 17
       ships the same payload. Archived, exported and uploaded from a local
-      terminal — the SSH login-keychain lock (`errSecInternalComponent` on
-      codesign) does not apply there, so no unlock was needed. Processing
+      terminal, where codesign can reach the login keychain
+      (`errSecInternalComponent` appears over a remote shell). Processing
       took ~40 minutes. Screenshots regenerated at 61 and uploaded (six 6.9"
       iPhone, six iPad 13"), replacing the build-51 sets; description,
       keywords and promotional text pushed. No What's New — App Store

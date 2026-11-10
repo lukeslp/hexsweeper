@@ -86,7 +86,7 @@ The installed build34 bytes were re-read and still match the SHA above. On the
 actual OPENED3 inner screen after the physical opening, existing Help remained
 on its Keys tab. The earlier closed-cover LocalLauncher search/Enter launch
 also showed Help. The final refold/no-touch-Escape pair was not independently
-completed in this run. Luke subsequently confirmed the apps were working fine;
+completed in this run. The owner subsequently confirmed the apps were working fine;
 that is owner confirmation rather than an invented measured fold result.
 
 The [qualified return and artifact-bound media](https://github.com/ambient-time/clocks-app/blob/codex/flip-apps-20261104/docs/reviews/flip-quiet-return-20261105.md)
