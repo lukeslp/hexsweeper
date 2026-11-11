@@ -117,8 +117,9 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `f7d7546`, bounded focus and Help-restoration updates over `d0082f7`
-(October 7, 2026): Sphere's settings
+The current payload pins `3b119e5`: the bounded focus and Help-restoration updates
+(`f7d7546`) over `d0082f7` (October 7, 2026), plus the project's own Classic
+board as the Help history image. Sphere's settings
 use flat theme swatches, compact board-size choices, and icon-led settings
 rows. The first-launch tutorial and game behavior are unchanged. The
 menu system remains an open design item in the source repository. This payload update does not create

@@ -39,3 +39,8 @@ og-frames/
 # and vendored into hexsweeper-app; never committed here, so it never reaches
 # the live site (this repo root IS the deployed web root).
 build/
+
+# The native app in app/ tracks its own images (icons, splash screens, store
+# screenshots and the game payload). app/.gitignore decides what to skip there.
+!app/**/*.png
+!app/**/*.jpg
