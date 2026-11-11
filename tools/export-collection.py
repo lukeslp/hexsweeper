@@ -1397,7 +1397,7 @@ def export_sphere(exp: dict, *, web_controls: bool = True) -> str:
     file_name = exp["file"]
     public_url = f"{PUBLIC_BASE}/{file_name}"
     history_img = (
-        "https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-board.png"
+        "https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"
     )
 
     # Strip existing file banner; attach collection banner.
@@ -1476,10 +1476,10 @@ def export_sphere(exp: dict, *, web_controls: bool = True) -> str:
 
     # History screenshot: absolute URL (not inlined — keeps the pen under ~250KB).
     markup = markup.replace(
-        'src="assets/classic-board.png"', f'src="{history_img}"'
+        'src="assets/classic-minesweeper.png"', f'src="{history_img}"'
     )
     markup = markup.replace(
-        'src="../sphere/assets/classic-board.png"', f'src="{history_img}"'
+        'src="../sphere/assets/classic-minesweeper.png"', f'src="{history_img}"'
     )
 
     for css_name in css_names:
@@ -2225,8 +2225,8 @@ def export_sphere_app(exp: dict) -> str:
 
     # Sphere is the app root (www/index.html); bundle assets sit beside it.
     markup = markup.replace(
-        'src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-board.png"',
-        'src="assets/classic-board.png"',
+        'src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"',
+        'src="assets/classic-minesweeper.png"',
     )
 
     # Drop the "Also flat Hexsweeper · Fire · Plague" row: those modes are not
@@ -2376,8 +2376,8 @@ def export_sphere_web() -> str:
         raise SystemExit("export_sphere_web: font link not restored")
     # The history screenshot lives beside this page.
     markup = markup.replace(
-        'src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-board.png"',
-        'src="sphere/assets/classic-board.png"',
+        'src="https://dr.eamer.dev/games/hexsweeper/sphere/assets/classic-minesweeper.png"',
+        'src="sphere/assets/classic-minesweeper.png"',
     )
     # Cross-game links: the pen points at the live site; the root can be relative.
     markup = markup.replace('href="https://dr.eamer.dev/games/hexsweeper/launcher.html"', 'href="launcher.html"')
@@ -2495,8 +2495,8 @@ def write_app_build() -> list[Path]:
     written.append(wheel)
 
     # The sphere's help lightbox reads this from the bundle, beside index.html.
-    history = APP_BUILD / "assets" / "classic-board.png"
-    history.write_bytes((ROOT / "sphere" / "assets" / "classic-board.png").read_bytes())
+    history = APP_BUILD / "assets" / "classic-minesweeper.png"
+    history.write_bytes((ROOT / "sphere" / "assets" / "classic-minesweeper.png").read_bytes())
     written.append(history)
 
     return written

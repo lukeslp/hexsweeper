@@ -24,3 +24,10 @@ Source: <https://github.com/IBM/plex>.
 and modification history are in
 [sphere/assets/textures/README.md](sphere/assets/textures/README.md) and
 [sphere/assets/textures/sources.json](sphere/assets/textures/sources.json).
+
+## Classic Minesweeper screenshot
+
+`sphere/assets/classic-minesweeper.png` (also under `sphere-ux/assets/`) is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
+as a history note in the help sheet. It is not this project's artwork, its
+source is not recorded, and the MIT license here does not cover it. Microsoft,
+Windows and Minesweeper are trademarks of Microsoft Corporation.
