@@ -117,11 +117,11 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `f7d7546`, bounded focus and Help-restoration updates over `d0082f7`
-(October 7, 2026): Sphere's settings
-use flat theme swatches, compact board-size choices, and icon-led settings
-rows. The first-launch tutorial and game behavior are unchanged. The
-menu system remains an open design item in the source repository. This payload update does not create
+The current payload pins `8dab71d` (November 10, 2026), this repository's
+main at that date plus the exporter fix that keeps web tab-icon links out of
+the sealed pages. Over the earlier `f7d7546` maintenance snapshot it brings
+the Help image of the project's own Classic board and the Sphere and Water
+Wheel changes merged to main since October 7. This payload update does not create
 or upload an iOS/Android release. See [release notes](docs/RELEASE.md) for the
 distinction between payload checks and published builds.
 
