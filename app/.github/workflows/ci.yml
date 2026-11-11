@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Check the payload against the source commit WWW_SOURCE.txt records,
+      # not the source's moving main branch.
+      - id: source
+        run: echo "commit=$(awk '$1 == "source_commit" {print $2}' WWW_SOURCE.txt)" >> "$GITHUB_OUTPUT"
+
+      # The game source is private. A repository-scoped read-only deploy key
+      # lets this job regenerate the payload and prove www/ still matches it.
+      - uses: actions/checkout@v4
+        with:
+          repository: lukeslp/hexsweeper-private-history
+          ref: ${{ steps.source.outputs.commit }}
+          path: .hexsweeper-source
+          ssh-key: ${{ secrets.HEXSWEEPER_DEPLOY_KEY }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # The action's default package list includes the retired 'tools' package.
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: bash scripts/smoke.sh --with-source "$GITHUB_WORKSPACE/.hexsweeper-source"
+
+      - run: pnpm android:build:debug

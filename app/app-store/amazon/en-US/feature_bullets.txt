@@ -1,0 +1,5 @@
+Hexagonal minesweeper wrapped around a 3D sphere - no edges, no corners
+Nine looks: Light, Dark, and seven mirrored materials rendered live
+Five board sizes from 162 to 2,252 faces
+Undo, autosave, and a first clear that is always safe
+Entirely offline - no account, no ads, no analytics

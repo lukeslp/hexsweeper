@@ -1,0 +1,20 @@
+Minesweeper you already know, on a board you have never seen: a hexagonal grid wrapped around a 3D sphere. Spin the globe, read the numbers, and clear every safe face. There are no edges to hide against and no corners to save you.
+
+HOW IT PLAYS
+
+• Tap to clear a face. Long-press to place a flag where you think a mine is. Your first clear is always safe.
+• Every face touches six neighbors, so numbers count up to six — cleaner deduction than squares.
+• Drag to spin, pinch to zoom. The board is a closed Goldberg sphere: five sizes from a quick 162 faces to a 2,252-face slog.
+• Undo a bad tap. Progress autosaves; close the app mid-game and pick it up where you left it.
+
+NINE LOOKS, ONE TAP AWAY
+
+Light and Dark for a clean read, then a set of mirrored materials rendered live: Stratosphere (a sky drifting across the shell), Mercury (smoked liquid metal with gilded flags), Ion Storm, Aurora, Galaxy, Gilded Ribbon, and Heat Lightning. Cleared faces open onto the material beneath.
+
+QUIET BY DESIGN
+
+• Entirely offline. No account, no ads, no analytics, nothing to accept.
+• A quiet bar — undo, new sphere, flag — and one settings sheet for theme, board size, warning style, drag inversion and effects. Nothing else on screen but the sphere.
+• Share card of your finished board.
+
+Free and complete. Just minesweeper, with better geometry.

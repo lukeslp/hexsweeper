@@ -1,0 +1,25 @@
+{
+  "name": "hexsweeper-app",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "cap:sync:ios": "npx cap sync ios",
+    "cap:sync:android": "npx cap sync android",
+    "cap:open": "npx cap open ios",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android",
+    "android:build:debug": "scripts/android-build.sh assembleDebug",
+    "android:bundle:release": "scripts/android-build.sh bundleRelease",
+    "icons:generate": "python3 scripts/generate-icon.py",
+    "icons:generate:android": "python3 scripts/generate-icon.py --android-only",
+    "smoke": "scripts/smoke.sh"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
+    "@capacitor/splash-screen": "^8.0.1"
+  },
+  "packageManager": "pnpm@10.18.0"
+}

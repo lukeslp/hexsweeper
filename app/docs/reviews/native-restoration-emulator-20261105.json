@@ -1,0 +1,194 @@
+{
+  "native": {
+    "observations": [
+      {
+        "step": "prepared",
+        "state": {
+          "focus": "help-tab-themes",
+          "open": true,
+          "scroll": 120,
+          "stored": {
+            "focus": "id:help-tab-themes",
+            "open": true,
+            "scroll": 120,
+            "tab": "themes",
+            "version": 1
+          },
+          "tab": "themes",
+          "timeOrigin": 1793930688689.6,
+          "url": "https://localhost/",
+          "viewport": {
+            "dpr": 2.5,
+            "height": 317,
+            "width": 379
+          }
+        },
+        "nativeWebFocus": true
+      },
+      {
+        "step": "recreated-open",
+        "state": {
+          "focus": "help-tab-themes",
+          "open": true,
+          "scroll": 120,
+          "stored": {
+            "focus": "id:help-tab-themes",
+            "open": true,
+            "scroll": 120,
+            "tab": "themes",
+            "version": 1
+          },
+          "tab": "themes",
+          "timeOrigin": 1793930692185.2,
+          "url": "https://localhost/",
+          "viewport": {
+            "dpr": 2.5,
+            "height": 287,
+            "width": 379
+          }
+        },
+        "nativeWebFocus": true
+      },
+      {
+        "step": "native-escape",
+        "state": {
+          "focus": "qc-help",
+          "open": false,
+          "scroll": 0,
+          "stored": {
+            "focus": "id:help-panel",
+            "open": false,
+            "scroll": 0,
+            "tab": "themes",
+            "version": 1
+          },
+          "tab": "themes",
+          "timeOrigin": 1793930692185.2,
+          "url": "https://localhost/",
+          "viewport": {
+            "dpr": 2.5,
+            "height": 287,
+            "width": 379
+          }
+        },
+        "nativeWebFocus": true
+      },
+      {
+        "step": "recreated-closed",
+        "state": {
+          "focus": "",
+          "open": false,
+          "scroll": 0,
+          "stored": {
+            "focus": "id:help-panel",
+            "open": false,
+            "scroll": 0,
+            "tab": "themes",
+            "version": 1
+          },
+          "tab": "themes",
+          "timeOrigin": 1793930692697.6,
+          "url": "https://localhost/",
+          "viewport": {
+            "dpr": 2.5,
+            "height": 287,
+            "width": 379
+          }
+        },
+        "nativeWebFocus": true
+      },
+      {
+        "step": "later-document-prepared",
+        "state": {
+          "focus": "help-tab-themes",
+          "open": true,
+          "scroll": 120,
+          "stored": {
+            "focus": "id:help-tab-themes",
+            "open": true,
+            "scroll": 120,
+            "tab": "themes",
+            "version": 1
+          },
+          "tab": "themes",
+          "timeOrigin": 1793930693658.1,
+          "url": "https://localhost/index.html",
+          "viewport": {
+            "dpr": 2.5,
+            "height": 287,
+            "width": 379
+          }
+        },
+        "nativeWebFocus": true
+      },
+      {
+        "step": "later-document-restored-then-escaped",
+        "state": {
+          "focus": "qc-help",
+          "open": false,
+          "scroll": 0,
+          "stored": {
+            "focus": "id:help-panel",
+            "open": false,
+            "scroll": 0,
+            "tab": "themes",
+            "version": 1
+          },
+          "tab": "themes",
+          "timeOrigin": 1793930695243.4,
+          "url": "https://localhost/",
+          "viewport": {
+            "dpr": 2.5,
+            "height": 287,
+            "width": 379
+          }
+        },
+        "nativeWebFocus": true
+      }
+    ],
+    "activityRecreations": 3,
+    "nativeEscapeWithoutTouch": 2,
+    "productionNetworkPermission": false,
+    "model": "sdk_gphone64_arm64",
+    "api": 36,
+    "limits": "Activity.recreate in one emulator process; not process death, physical folding, TalkBack or a signed release build. DOM setup uses existing click/focus handlers; native keys traverse the actual Android View."
+  },
+  "avd": "NativeUi_Restore_20261105",
+  "serial": "emulator-5590",
+  "appPackage": "app.hexodus.ios",
+  "versionCode": "34",
+  "versionName": "1.0.9",
+  "appApkSha256": "600a3a02587a074fa911075e3c308c5f0acbf61e4d5ff209c27c6ca68bffb217",
+  "testApkSha256": "7d5627e35f3cef0a6d5a0e585eaba1fcc1248447cf34999e80e529412c02dc54",
+  "sourceBaseHead": "3cdd8426de55f4337f07aae7beb20a803b3aad12",
+  "testSourceSha256": {
+    "android/app/src/androidTest/java/app/hexodus/ios/GameViewportLayoutTest.java": "44892cec33782effe47a5a2807058dbbb8f7834e3ee5d1f0cef41c628bc0ea8e",
+    "android/app/src/androidTest/java/app/hexodus/ios/NativeUiRestorationChecks.java": "b10f1dd470a69cdccdfc7dfa226ce231262a5eb35b4cb3b1b63dcca104b215a7",
+    "android/app/src/androidTest/java/app/hexodus/ios/NativeUiRestorationTest.java": "b00f7e38e06c113fb500f317c5138695b9b1a8a0c4df3e2a4880078e9c6d5be4"
+  },
+  "driverSha256": "384b5fff4eef5c80c6f2c2cc8a23b42f0fabfafbbd9c513ae6be36414abce2fc",
+  "appData": "Only synthetic target package reset on a dedicated emulator",
+  "immersiveOnboarding": "Acknowledged before run, never during restoration",
+  "displaySize": "Physical size: 1080x2400\nOverride size: 948x839",
+  "displayDensity": "Physical density: 420\nOverride density: 400",
+  "limits": "Debug artifact; not installed signed-phone candidate, process death, OEM display transfer or physical folding",
+  "recorded": "2026-11-05",
+  "verification": {
+    "debugAndTestBuild": "passed",
+    "jvmTests": 8,
+    "lintErrors": 0,
+    "lintWarnings": 24,
+    "physicalSerialRefusal": "Observed parser rejection before ADB; no evidence directory created",
+    "missingNativeOptInRefusal": "Observed AssertionError before Activity start; intended negative test",
+    "productionRuntimeChanges": false,
+    "generatedPayloadChanges": false,
+    "newDependencies": false,
+    "testRunner": "Existing AndroidJUnitRunner"
+  },
+  "runtimeSourceSha256": {
+    "android/app/src/main/java/app/hexodus/ios/MainActivity.java": "16fbac19cdc2196da53d269cd5973e4362a0fd304386864c9c541afc121e1640"
+  },
+  "payloadTreeSha256": "5bf2dd20c6de48c2e8223ad76802104b6c7e90109fdaec5b0dd654cf4f2436ea",
+  "payloadFileCount": 3,
+  "scope": "Same runtime source as candidate6/34, locally built debug artifacts. New test sources were uncommitted when executed; exact test-source digests above bind the compiled test APK. No signed release artifact or physical device acceptance."
+}
