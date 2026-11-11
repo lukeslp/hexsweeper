@@ -1,9 +1,9 @@
 # Hexsweeper (iOS + Android)
 
 Native Capacitor shell for **Hexsweeper 3D** — hex minesweeper on a closed
-sphere. The game is the Canvas/vanilla-JS build from
-[lukeslp/hexsweeper](https://github.com/lukeslp/hexsweeper) (`sphere/`); this
-repo wraps it for iOS and Android as a sealed offline payload.
+sphere. The game is the Canvas/vanilla-JS build at the root of this
+repository (`sphere/`); this folder wraps it for iOS and Android as a sealed
+offline payload.
 
 The app opens straight into the sphere, which restores its own unfinished run
 without asking. On a fresh native launch, a short tutorial introduces Tap,
@@ -57,8 +57,8 @@ This candidate has not been publicly released.
 | Thing | Value |
 |---|---|
 | Product / display name | **Hexsweeper** |
-| This repo | `lukeslp/hexsweeper-app` |
-| Game source | `lukeslp/hexsweeper` (`sphere/`) |
+| Repository | `lukeslp/hexsweeper`, in this folder (`app/`) |
+| Game source | the repository root (`sphere/`) |
 | iOS bundle id / Android application id | `app.hexodus.ios` |
 | App Store Connect record | app id `6768871973` |
 
@@ -102,21 +102,20 @@ read a `.ts` config, which is not worth a toolchain in a repo with no TS source.
 ## Updating the games
 
 The payload is a pinned snapshot, not a live dependency. To pull in sphere
-changes from a `hexsweeper` checkout:
+changes, from the repository root:
 
 ```bash
 python3 tools/export-collection.py --app     # writes build/app/
-cp -R build/app/. ../hexsweeper-app/www/
+cp -R build/app/. app/www/
 ```
 
 Then refresh `WWW_SOURCE.txt` (source commit + `shasum -a 256` of each file
 under `www/`) and re-run the smoke script. Normally use reviewed canonical
 `main`; document any deliberately bounded maintenance snapshot and its baseline.
-Push the source change before the native payload update: CI checks out
-`lukeslp/hexsweeper-private-history` at the exact `WWW_SOURCE.txt` commit and
-regenerates the payload, so a stale `www/` fails the build. The public source
-repository is `lukeslp/hexsweeper`; `WWW_SOURCE.txt` identifies the exact
-canonical commit used for this snapshot.
+Commit the source change before the native payload update: CI checks out
+the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
+payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
+exact commit used for this snapshot.
 
 The current payload pins `f7d7546`, bounded focus and Help-restoration updates over `d0082f7`
 (October 7, 2026): Sphere's settings
@@ -167,7 +166,7 @@ fetch anything at runtime — `globeUrl()` in `sphere.js` only resolves textures
 relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
 back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
 network. Their texture provenance is recorded in the source repository's
-[`sphere/assets/textures/README.md`](https://github.com/lukeslp/hexsweeper/blob/main/sphere/assets/textures/README.md).
+[`sphere/assets/textures/README.md`](../sphere/assets/textures/README.md).
 The fourteen offline themes
 (Light, Shell, Dark, Ink, Float, Card, Glow, Mercury, Stratosphere, Ion Storm,
 Aurora, Galaxy, Gilded Ribbon, Heat Lightning) ship; the web build keeps all

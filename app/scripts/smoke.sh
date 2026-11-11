@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # Hexsweeper pre-commit / native-build smoke
 #
-# www/ is a prebuilt payload vendored from lukeslp/hexsweeper. The lightweight
+# www/ is a prebuilt payload generated from the game source at the root of
+# this repository. The lightweight
 # smoke checks source integrity and both Capacitor shells; Gradle/Xcode builds
 # remain separate release gates.
 #
 # Usage:
 #   scripts/smoke.sh              # payload integrity + cap sync
-#   scripts/smoke.sh --with-source /path/to/hexsweeper
-#                                 # also regenerate from source and diff
+#   scripts/smoke.sh --with-source /path/to/source
+#                                 # also regenerate from a checkout of the
+#                                 # recorded source commit and diff
 #
 # CI passes --with-source after checking out the recorded canonical source pin.
 

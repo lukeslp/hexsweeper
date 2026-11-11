@@ -9,4 +9,5 @@ regexes = [
 ]
 paths = [
   '''collection/theme-.*\.html''',
+  '''app/www/.*\.html''',
 ]

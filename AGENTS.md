@@ -92,8 +92,7 @@ frame that removes it: Flux's still echo arc books one repaint for its expiry (`
 ## Native app payload
 
 `python3 tools/export-collection.py --app` stages `build/app/` (gitignored, never
-deployed) for the **hexsweeper-app** Capacitor shell — `lukeslp/hexsweeper-app`,
-bundle `app.hexodus.ios`. It reuses `export_sphere` and then seals the page for
+deployed) for the Capacitor shell in [`app/`](app/), bundle `app.hexodus.ios`. It reuses `export_sphere` and then seals the page for
 offline use: sets `HEXSWEEPER_SPHERE_APP`, serves the history tile from the
 bundle, drops the cross-game links, sends credits to the system browser, and
 hides the native launch screen after first paint. It seals `wheel.html` as
@@ -108,8 +107,8 @@ fourteen offline themes; the production Themes tab exposes nine choices.
 
 Export from canonical main, after checking the source branch; an older
 feature checkout may not match shipped behavior. After any sphere payload
-change, re-run `--app` and re-vendor into hexsweeper-app's
-`www/`; that repo's smoke gate regenerates this payload and fails on drift.
+change, re-run `--app` and re-vendor into `app/www/`; the app's smoke gate
+regenerates this payload and fails on drift.
 
 ## Choices lab redirects
 

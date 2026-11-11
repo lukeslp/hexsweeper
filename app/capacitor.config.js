@@ -10,7 +10,7 @@
 // environment-specific config.
 const appId = "app.hexodus.ios";
 const appName = "Hexsweeper";
-// Vendored static payload from lukeslp/hexsweeper — see WWW_SOURCE.txt.
+// Vendored static payload from the game source at the repository root; see WWW_SOURCE.txt.
 // No bundler runs here; www/ is already the finished game.
 const webDir = "www";
 const loggingBehavior = "production";

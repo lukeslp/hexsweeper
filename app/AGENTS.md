@@ -18,28 +18,30 @@ do not implement it by patching `www/`.
 
 ## The one rule
 
-**`www/` is generated. Never edit it by hand.** It is vendored from
-`lukeslp/hexsweeper` via `python3 tools/export-collection.py --app`. Editing it
+**`www/` is generated. Never edit it by hand.** It is generated from
+the game source at the repository root via `python3 tools/export-collection.py --app`. Editing it
 here desynchronises the app from the game with no way to tell which is right,
 and `scripts/smoke.sh` will fail on the checksums in `WWW_SOURCE.txt`.
 
-Sphere behaviour, themes, chrome, and gameplay bugs are fixed **in hexsweeper**,
-then re-vendored. Nothing about the game is authored in this repo.
+Sphere behaviour, themes, chrome, and gameplay bugs are fixed **in the game
+source at the repository root**, then re-vendored. Nothing about the game is
+authored in this folder.
 
-## What this repo owns
+## What this folder owns
 
 Native shell only: Xcode/Gradle projects, signing metadata, platform manifests,
 launch screens, icon and splash assets, Capacitor config, and release process. If a change is not
-about one of those, it probably belongs in hexsweeper.
+about one of those, it probably belongs in the game source.
 
 ## Re-vendoring
 
 ```bash
-# in a hexsweeper checkout
+# from the repository root
 python3 tools/export-collection.py --app
-cp -R build/app/. ../hexsweeper-app/www/
-# then in this repo, refresh WWW_SOURCE.txt (source commit + per-file sha256)
-scripts/smoke.sh --with-source ../hexsweeper
+cp -R build/app/. app/www/
+# then refresh app/WWW_SOURCE.txt (source commit + per-file sha256) and, from app/,
+# check against a checkout of that recorded commit
+scripts/smoke.sh --with-source /path/to/a/checkout/of/the/recorded/commit
 ```
 
 Check the source checkout's branch before exporting; an older feature branch

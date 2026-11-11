@@ -482,8 +482,8 @@ Open `lab.html` or `choices.html` locally or by URL path. Experimental skins rem
 
 - Games index: https://dr.eamer.dev/games/
 - Native apps (iOS, Android, Fire tablets) are built from this repository's
-  `--app` export in a separate repository, `lukeslp/hexsweeper-app`; the web
-  root and the sealed app page are the same Sphere.
+  `--app` export by the Capacitor shell in [`app/`](app/); the web root and the
+  sealed app page are the same Sphere.
 
 ## License
 

@@ -59,3 +59,58 @@ jobs:
 
       - name: Choices lab redirect drift guard
         run: python3 tools/export-choices-lab.py --check
+
+  # The native app in app/ ships a pinned snapshot of the game. This job
+  # regenerates that snapshot from the recorded commit of this repository and
+  # fails if app/www/ has drifted, then builds the Android shell.
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Check the payload against the commit app/WWW_SOURCE.txt records, not
+      # against the moving tip of the game source.
+      - name: Check out the recorded game source
+        run: |
+          commit="$(awk '$1 == "source_commit" {print $2}' app/WWW_SOURCE.txt)"
+          git worktree add --detach "$RUNNER_TEMP/hexsweeper-source" "$commit"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # The action's default package list includes the retired 'tools' package.
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install app dependencies
+        working-directory: app
+        run: pnpm install --frozen-lockfile
+
+      - name: Payload integrity, Capacitor sync and source drift guard
+        working-directory: app
+        run: bash scripts/smoke.sh --with-source "$RUNNER_TEMP/hexsweeper-source"
+
+      - name: Android debug build
+        working-directory: app
+        run: pnpm android:build:debug
