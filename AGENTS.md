@@ -28,7 +28,9 @@ nothing opens the sheet uninvited, including when storage is blocked. A first
 visit gets one quiet status cue above the bar (the count-style toast) and that
 marks `hexsweeper-sphere-welcome-v1`; `?welcome=1` still previews the sheet.
 Help lives behind ? only: the Play tab is one line of what to do plus three
-gesture rows (Tap / Hold / Drag), no paragraphs, and no `title=` tooltips
+gesture rows (Tap / Hold / Drag) and, on Sphere, the classic Minesweeper
+history thumb that opens the full screenshot (owner's request, 2026-11-11);
+no paragraphs, and no `title=` tooltips
 anywhere on the page (aria-labels carry the names). Keep it that way.
 
 Infinite (`infinite.html`) follows the same rule and shares Sphere's sheet. The
