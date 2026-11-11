@@ -1813,7 +1813,8 @@ def export_sphere_app(exp: dict) -> str:
         + reflection_texture_boot(SPHERE_APP_MATERIALS, mobile_only=True),
         1,
     )
-    # First launch shows the tutorial sheet once; pens pre-set the key, the app does not.
+    # The app opens straight to the board. Pens pre-set the welcome key; the app
+    # leaves it unset, and the page no longer opens the tutorial by itself.
     markup = markup.replace("  localStorage.setItem('hexsweeper-sphere-welcome-v1', '1');\n", "", 1)
     if "HEXSWEEPER_REFLECTION_TEXTURES" not in markup:
         raise SystemExit("export_sphere_app: reflection textures not sealed")
