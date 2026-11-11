@@ -2162,6 +2162,20 @@ FLAT_ICONS = (
 )
 
 
+def drop_site_icons(markup: str, label: str) -> str:
+    """Remove the tab-icon links from a sealed app page.
+
+    They point at the web site's /games/hexsweeper/favicon/ files, which the
+    app bundle does not carry; a WebView has no tab to show them in.
+    """
+    markup = re.sub(
+        r'[ \t]*<link rel="(?:icon|apple-touch-icon)"[^>]*?/favicon/[^>]*>\n?', "", markup
+    )
+    if "/games/hexsweeper/favicon/" in markup:
+        raise SystemExit(f"{label}: site tab icons are still linked")
+    return markup
+
+
 def export_sphere_app(exp: dict) -> str:
     """Adapt the collection one-pager into the offline native-app payload.
 
@@ -2226,6 +2240,7 @@ def export_sphere_app(exp: dict) -> str:
     # string constant in the inlined sphere.js, but it is unreachable here:
     # globeUrl is only called for themes carrying `globeMap`, and the THEMES
     # filter drops every one of those under HEXSWEEPER_SPHERE_APP.
+    markup = drop_site_icons(markup, "export_sphere_app")
     return appify(markup, label="sphere")
 
 
@@ -2277,6 +2292,7 @@ def export_wheel_app() -> str:
     markup = markup.replace("</body>", f"{APP_WHEEL_BACK_PILL}</body>", 1)
     if 'class="app-back" href="index.html"' not in markup:
         raise SystemExit("export_wheel_app: Sphere pill missing")
+    markup = drop_site_icons(markup, "export_wheel_app")
     return appify(markup, label="wheel")
 
 
