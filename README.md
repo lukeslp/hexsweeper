@@ -3,6 +3,10 @@
 [![Play Hexsweeper](https://img.shields.io/badge/Play-live-7c3aed?logo=gamepad&logoColor=white)](https://dr.eamer.dev/games/hexsweeper/)
 [![CI](https://github.com/lukeslp/hexsweeper/actions/workflows/ci.yml/badge.svg)](https://github.com/lukeslp/hexsweeper/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
+[![App Store](https://img.shields.io/badge/App_Store-iPhone_and_iPad-blue)](https://apps.apple.com/us/app/hexsweeper-3d/id6768871973)
+[![Android download](https://img.shields.io/badge/Android-direct_download-34A853)](https://dr.eamer.dev/downloads/apps/hexsweeper/)
+[![F-Droid repository](https://img.shields.io/badge/F--Droid-LocalType_releases_repo-1976D2)](https://dr.eamer.dev/downloads/fdroid/)
+[![Pebble Appstore](https://img.shields.io/badge/Pebble-Appstore-FF4700)](https://apps.repebble.com/94e4d9abfb8e44488f419862)
 
 A hexagonal minesweeper in three shapes: an endless plate, a fixed classic
 board, and a closed 3D sphere. The web root opens Sphere immediately; the
