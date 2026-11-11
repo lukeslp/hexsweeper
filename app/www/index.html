@@ -1142,6 +1142,8 @@ body.help-open { overflow: hidden; }
   opacity: 1;
   transform: translate(-50%, 0);
 }
+/* sheet:begin — the help and settings sheet. tools/export-collection.py copies
+   this block verbatim into infinite.html, so Sphere and Infinite share one sheet. */
 /* Help — pure mono sheet, same language as the empty sphere chrome */
 .help-overlay {
   position: fixed;
@@ -1161,9 +1163,10 @@ body.help-open { overflow: hidden; }
 .help-panel {
   width: min(360px, 100%);
   max-height: calc(100dvh - 2.5rem);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
   background: var(--bg-color);
   color: var(--text-main);
   border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
@@ -1235,28 +1238,6 @@ body.help-open { overflow: hidden; }
   text-transform: uppercase;
   color: var(--text-sub);
 }
-.help-body {
-  margin: 0 0 0.75rem;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--text-sub);
-}
-.help-body p { margin: 0 0 0.45rem; }
-.help-body p:last-child { margin-bottom: 0; }
-.help-keys {
-  margin: 0 0 0.85rem;
-  font-size: 0.68rem;
-  line-height: 1.4;
-  color: var(--text-sub);
-}
-.help-keys kbd {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 0.92em;
-  border: 1px solid color-mix(in srgb, var(--text-main) 18%, transparent);
-  border-radius: 3px;
-  padding: 0.05em 0.28em;
-  color: var(--text-main);
-}
 .help-keylist kbd {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.92em;
@@ -1275,84 +1256,6 @@ body.help-open { overflow: hidden; }
   color: var(--text-main);
   text-decoration: underline;
   text-underline-offset: 0.12em;
-}
-/* Tiny classic Minesweeper thumb — full color, lightbox on click */
-.help-history-row {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 0 0 0.75rem;
-}
-.help-history {
-  flex: 0 0 auto;
-  width: 44px;
-  height: 33px;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: zoom-in;
-  background: #000;
-  line-height: 0;
-}
-.help-history:focus-visible {
-  outline: 2px solid var(--text-main);
-  outline-offset: 2px;
-}
-.help-history img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-}
-.help-history-cap {
-  margin: 0;
-  font-size: 0.68rem;
-  line-height: 1.35;
-  color: var(--text-sub);
-}
-.help-history-cap a {
-  color: var(--text-main);
-  text-decoration: underline;
-  text-underline-offset: 0.12em;
-}
-.lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 130;
-  background: rgba(0, 0, 0, 0.88);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.25rem;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-.lightbox.open { opacity: 1; pointer-events: auto; }
-.lightbox img {
-  max-width: min(920px, 100%);
-  max-height: min(88vh, 100%);
-  border-radius: 4px;
-}
-.lightbox-close {
-  position: absolute;
-  top: max(12px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
-  width: 2.25rem;
-  height: 2.25rem;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  font-size: 1.4rem;
-  cursor: pointer;
-}
-.lightbox-close:hover,
-.lightbox-close:focus-visible {
-  background: rgba(255, 255, 255, 0.22);
-  outline: none;
 }
 .help-done {
   appearance: none;
@@ -1504,8 +1407,21 @@ body.help-open { overflow: hidden; }
 .help-tab[aria-selected="true"] { color: var(--text-main); border-bottom-color: var(--text-main); }
 .help-tab:hover, .help-tab:focus-visible { background: color-mix(in srgb, var(--text-main) 6%, transparent); outline: none; }
 .help-tab:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text-main) 45%, transparent); }
-.help-tabpanel[hidden] { display: none; }
-.help-tabpanel { min-height: 9rem; }
+/* One height for every tab: the panels share one grid cell, so the stack is as
+   tall as the tallest. Inactive panels keep their space but are invisible and
+   inert (hidden + inert, visibility removes them from the a11y tree). When the
+   sheet is capped by the viewport, only this stack scrolls; the title, tabs,
+   Done and links stay put. */
+.help-tabstack {
+  display: grid;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.help-tabstack > .help-tabpanel { grid-area: 1 / 1; min-width: 0; }
+.help-tabstack > .help-tabpanel[hidden] { display: block; visibility: hidden; }
 .help-tabpanel .help-themes, .help-tabpanel .help-sizes, .help-tabpanel .help-packs { margin-top: 0.1rem; }
 .help-size .help-size-best { opacity: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
 .help-size .help-size-best[hidden] { display: none; }
@@ -1517,61 +1433,52 @@ body.help-open { overflow: hidden; }
   background: color-mix(in srgb, var(--text-main) 6%, transparent);
   outline: none;
 }
-/* Inline text button inside the sheet's copy. */
-.help-link {
-  appearance: none;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--text-main);
-  font: inherit;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-  min-height: 1.6rem;
-}
-.help-link:focus-visible { outline: 2px solid color-mix(in srgb, var(--text-main) 55%, transparent); outline-offset: 2px; }
-/* First-timer tutorial shares the sheet's panel; just shorter and centred. */
-.help-panel.is-tutorial { width: min(340px, 100%); }
-.help-panel.is-tutorial .help-lede { font-size: 0.86rem; }
-.help-panel.is-tutorial .tutorial-steps li { font-size: 0.86rem; padding: 0.55rem 0; }
-.help-panel.is-tutorial .help-body { font-size: 0.82rem; margin-bottom: 0.9rem; }
 /* Touch: no keyboard, no modifier-click. Keep the copy honest per surface. */
 @media (hover: none) and (pointer: coarse) {
-  .help-keys,
-  .help-desk-only { display: none; }
+  .help-desk-only,
+  .help-tabstack > .help-tabpanel.help-desk-only[hidden] { display: none; }
 }
 @media (hover: hover) {
   .help-touch-only { display: none; }
+  /* Room for "Hold / ⌃-click" on one line. */
+  .help-controls li { grid-template-columns: 6.6rem 1fr; }
 }
 .help-done:hover,
 .help-done:focus-visible {
   background: color-mix(in srgb, var(--text-main) 6%, transparent);
   outline: none;
 }
-.menu-links {
+/* Footer links, spelled out in full so a host page's own .menu-links rules
+   (play.html, skin-chrome.css) cannot restyle the sheet's footer. */
+.help-panel .menu-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
   margin-top: 0.65rem;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  font: 600 0.64rem/1.3 "IBM Plex Sans", system-ui, sans-serif;
   text-align: center;
-  font-size: 0.64rem;
 }
-.menu-links a {
+.help-panel .menu-links a {
   color: var(--text-sub);
   text-decoration: none;
+  border-radius: 4px;
 }
-.menu-links a:hover { color: var(--text-main); }
-.menu-links-sep { opacity: 0.45; margin: 0 0.3rem; }
-@media (prefers-reduced-motion: reduce) {
-  .sphere-banner,
-  .help-overlay,
-  .lightbox,
-  .count-style-toast { transition: none; }
+.help-panel .menu-links a:hover { color: var(--text-main); }
+.help-panel .menu-links-sep {
+  color: color-mix(in srgb, var(--text-sub) 70%, transparent);
+  opacity: 0.45;
+  margin: 0 0.3rem;
+  user-select: none;
 }
 
 /* Sphere settings: flat swatches and rows, with icons reserved for familiar actions. */
 .help-panel { border-radius: 6px; padding: 20px 16px 14px; }
 .help-panel h2 { margin-bottom: 12px; }
-.help-close, .lightbox-close { border-radius: 4px; }
+.help-close { border-radius: 4px; }
 .help-close svg, .help-done svg { width: 18px; height: 18px; flex: none; }
 .help-theme-grid { gap: 6px; }
 .help-theme {
@@ -1612,6 +1519,24 @@ body.help-open { overflow: hidden; }
 }
 .help-pack[data-ctl="invert"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8h18M3 8l4-4M3 8l4 4M21 16H3m18 0-4-4m4 4-4 4'/%3E%3C/svg%3E"); }
 .help-pack[data-ctl="effects"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m10 3 2.5 6.5L19 12l-6.5 2.5L10 21l-2.5-6.5L1 12l6.5-2.5Z M19 2v4m-2-2h4'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="flag"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 21V4M6 4h10l-2 4 2 4H6'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="export"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12m-5-5 5 5 5-5M5 21h14'/%3E%3C/svg%3E"); }
+.help-pack[data-ctl="import"] { --control-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 15V3M7 8l5-5 5 5M5 21h14'/%3E%3C/svg%3E"); }
+/* A toggle row (aria-pressed) shows its state at the far end; the name stays in aria-label. */
+.help-pack[aria-pressed]::after {
+  content: "Off"; margin-left: auto;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.68rem; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-sub);
+}
+.help-pack[aria-pressed="true"]::after { content: "On"; color: var(--text-main); }
+/* Quiet score line (Infinite's Play tab). */
+.help-score {
+  margin: 0 0 0.6rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.68rem; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+.help-score b { font-weight: 600; color: var(--text-main); }
 .help-done {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border-radius: 4px; min-height: 44px;
@@ -1619,18 +1544,25 @@ body.help-open { overflow: hidden; }
 .help-done:hover, .help-done:focus-visible { background: var(--text-main); color: var(--bg-color); opacity: 0.85; }
 .help-egg-door { width: 44px; height: 44px; border: 0; border-radius: 4px; }
 .help-egg-door svg { width: 20px; height: 20px; }
-.sphere-banner { border-radius: 6px; }
-.sphere-banner .banner-btn { border-radius: 4px; }
-.help-panel button:focus-visible, .lightbox-close:focus-visible {
+.help-panel:focus { outline: none; }
+.help-panel button:focus-visible,
+.help-panel a:focus-visible {
   outline: 2px solid var(--text-main); outline-offset: 2px;
 }
-.lightbox-close:focus-visible { outline-color: #fff; }
 @media (max-width: 360px) {
   .help-overlay { padding: 12px; }
   .help-panel { padding-inline: 12px; max-height: calc(100dvh - 24px); }
   .help-theme { font-size: 0.75rem; }
   .help-tab { font-size: 0.73rem; }
 }
+/* sheet:end */
+@media (prefers-reduced-motion: reduce) {
+  .sphere-banner,
+  .help-overlay,
+  .count-style-toast { transition: none; }
+}
+.sphere-banner { border-radius: 6px; }
+.sphere-banner .banner-btn { border-radius: 4px; }
 
 </style>
 </head>
@@ -1648,7 +1580,7 @@ body.help-open { overflow: hidden; }
   <div class="banner-msg" id="banner-msg"></div>
   <div class="banner-meta" id="banner-meta" hidden></div>
   <div class="banner-actions" id="banner-actions" hidden>
-    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image" title="Share image">
+    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 15V3"></path>
         <path d="M8 7l4-4 4 4"></path>
@@ -1656,14 +1588,14 @@ body.help-open { overflow: hidden; }
       </svg>
       <span class="banner-btn-label">Share</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
+    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M9 14 4 9l5-5"></path>
         <path d="M4 9h9.5a6.5 6.5 0 1 1 0 13H11"></path>
       </svg>
       <span class="banner-btn-label">Undo</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
+    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M20 11a8 8 0 1 0-2.34 5.66"></path>
         <path d="M20 4v7h-7"></path>
@@ -1676,14 +1608,14 @@ body.help-open { overflow: hidden; }
 <div class="hud-cluster dev-cluster" role="toolbar" aria-label="Game controls">
   <div class="customize-panel" id="customize-panel" data-open="false" role="dialog" aria-label="Customize board" hidden></div>
   <div class="hud-actions" aria-label="Board controls">
-    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
+    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="23 4 23 10 17 10"></polyline>
         <polyline points="1 20 1 14 7 14"></polyline>
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board" title="Customize board (C)">
+    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="3.2"></circle>
         <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.72 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.72a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"></path>
@@ -1692,15 +1624,15 @@ body.help-open { overflow: hidden; }
   </div>
   <!-- Shipped controls, kept in the DOM so sphere.js wiring and label sync are untouched. -->
   <div class="legacy-hud" aria-hidden="true">
-    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Board size M, Medium, 1002 faces. Activate to cycle XS, S, M, L, XL." title="Board size">
+    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Board size M, Medium, 1002 faces. Activate to cycle XS, S, M, L, XL.">
       <span class="size-mark" data-size="M" aria-hidden="true">M</span>
     </button>
-    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light" title="Theme"></button>
-    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle." title="Count style"></button>
-    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false" title="Flag mode"></button>
+    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light"></button>
+    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle."></button>
+    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false"></button>
   </div>
   <div class="hud-actions" aria-label="Help">
-    <button type="button" id="help-btn" class="hud-btn" aria-label="Help" title="Help (?)">
+    <button type="button" id="help-btn" class="hud-btn" aria-label="Help">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10"></circle>
         <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -1723,30 +1655,14 @@ body.help-open { overflow: hidden; }
       <button type="button" role="tab" class="help-tab" id="help-tab-settings" aria-controls="help-panel-settings" aria-selected="false" data-tab="settings" tabindex="-1">Settings</button>
       <button type="button" role="tab" class="help-tab help-desk-only" id="help-tab-keys" aria-controls="help-panel-keys" aria-selected="false" data-tab="keys" tabindex="-1">Keys</button>
     </div>
+    <div class="help-tabstack" id="help-tabstack">
     <section class="help-tabpanel" role="tabpanel" id="help-panel-play" aria-labelledby="help-tab-play" data-tab="play">
-    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Clear a face; place a flag where you think a mine is. Your first clear is always safe.</p>
+    <p class="help-lede">Clear every safe face. Numbers count the mines on the six faces around them.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Clear a face</span></li>
-      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Place a flag</span></li>
-      <li><span class="act">Flag</span><span>Toggle flag mode, then tap</span></li>
-      <li><span class="act">Double-tap</span><span>On a number whose flags are all placed, clear the rest</span></li>
+      <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Flag it</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere</span></li>
-      <li><span class="act">Pinch</span><span>Zoom in or out</span></li>
     </ul>
-    <div class="help-body">
-      <p>Clear every safe face. Numbers count mines among the six touching neighbors. Flags mark where you think a mine is.</p>
-      <p>Once a number has as many flags around it as it says, double-tap the number to clear its remaining neighbors in one go. It goes by your flags, not by the board — if one is in the wrong place, that shortcut finds the mine.</p>
-      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet — Themes, Board (size and your best times) and Settings (drag inversion, effects) are the tabs above; each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
-    </div>
-    <p class="help-keys"><kbd>T</kbd> theme · <kbd>S</kbd>/<kbd>M</kbd>/<kbd>L</kbd> size · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
-    <div class="help-history-row">
-      <button type="button" class="help-history" id="help-history-btn" aria-label="Open classic square-grid Minesweeper screenshot">
-        <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper (square grid)" width="44" height="33" loading="lazy">
-      </button>
-      <p class="help-history-cap">
-        Riding on the original — <a href="https://www.coolmathgames.com/blog/the-history-of-minesweeper" target="_blank" rel="noopener noreferrer">history of Minesweeper</a>
-      </p>
-    </div>
     </section>
     <section class="help-tabpanel" role="tabpanel" id="help-panel-themes" aria-labelledby="help-tab-themes" data-tab="themes" hidden>
     <div class="help-themes" id="help-themes" role="group" aria-label="Theme">
@@ -1760,7 +1676,7 @@ body.help-open { overflow: hidden; }
       <div class="help-size-grid" id="help-size-grid"></div>
     </div>
     <p class="help-egg-row" id="help-egg-row">
-      <button type="button" class="help-egg-door" id="help-wheel-btn" aria-label="Open the Water Wheel" title="Water Wheel">
+      <button type="button" class="help-egg-door" id="help-wheel-btn" aria-label="Open the Water Wheel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l4 2.3v4.6L12 12 8 9.9V5.3z"/><path d="M2.5 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2.5 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>
       </button></p>
     </section>
@@ -1771,7 +1687,7 @@ body.help-open { overflow: hidden; }
       <button type="button" class="help-pack is-text" data-ctl="effects">Effects auto</button>
     </div>
     </section>
-    <section class="help-tabpanel" role="tabpanel" id="help-panel-keys" aria-labelledby="help-tab-keys" data-tab="keys" hidden>
+    <section class="help-tabpanel help-desk-only" role="tabpanel" id="help-panel-keys" aria-labelledby="help-tab-keys" data-tab="keys" hidden>
     <ul class="help-controls help-keylist" aria-label="Keyboard shortcuts">
       <li><span class="act"><kbd>?</kbd></span><span>Open or close this sheet</span></li>
       <li><span class="act"><kbd>Esc</kbd></span><span>Close this sheet</span></li>
@@ -1783,11 +1699,8 @@ body.help-open { overflow: hidden; }
       <li><span class="act"><kbd>M</kbd></span><span>Medium board</span></li>
       <li><span class="act"><kbd>L</kbd></span><span>Large board</span></li>
     </ul>
-    <div class="help-body">
-      <p>Shortcuts work whether this sheet is open or closed — the only exception is while you are typing in a field. XS and XL boards have no shortcut; pick them from the Board tab.</p>
-      <p>This tab appears wherever a keyboard plausibly does, so a tablet with one attached gets it too.</p>
-    </div>
     </section>
+    </div>
     <button type="button" class="help-done" id="help-done-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Done</span></button>
     <nav class="menu-links" aria-label="Elsewhere">
       <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">lukesteuber.com</a>
@@ -1795,25 +1708,6 @@ body.help-open { overflow: hidden; }
       <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">datapoems.io</a>
     </nav>
   </div>
-</div>
-
-<div id="tutorial-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" hidden>
-  <div class="help-panel is-tutorial" id="tutorial-panel" tabindex="-1">
-    <h2 id="tutorial-title">Hexsweeper 3D</h2>
-    <p class="help-lede">Minesweeper on a sphere. Six neighbors per face — numbers count up to six.</p>
-    <ul class="help-controls tutorial-steps" aria-label="How to play">
-      <li><span class="act">Tap</span><span>Clear a face. Your first clear is always safe.</span></li>
-      <li><span class="act">Hold</span><span>Place a flag where you think a mine is — or arm flag mode at the bottom.</span></li>
-      <li><span class="act">Drag</span><span>Spin the sphere. Pinch to zoom.</span></li>
-    </ul>
-    <p class="help-body">Clear every safe face. Undo, New sphere and Flag live at the bottom; themes, sizes and everything else are behind <b>?</b>.</p>
-    <button type="button" class="help-done" id="tutorial-play-btn">Play</button>
-  </div>
-</div>
-
-<div id="history-lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Classic Minesweeper" hidden>
-  <button type="button" class="lightbox-close" id="lightbox-close-btn" aria-label="Close">×</button>
-  <img src="assets/classic-minesweeper.png" alt="Classic Windows Minesweeper on the Bliss desktop">
 </div>
 
 <script>
@@ -1831,7 +1725,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
  * File Purpose: Minimal hexasphere geometry (Goldberg dual of subdivided icosahedron).
  * Primary Functions/Classes: generateHexasphere, floodClosure, vec3 helpers.
  * Inputs: radius, subdivisions (0–12+). Outputs: { tiles, radius, subdivisions }.
- * Notes: Plain-object Vec3 — no Three.js. Ported from Rind hexasphere.ts (Rob Scanlon lineage).
+ * Notes: Plain-object Vec3 — no Three.js.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
@@ -3707,7 +3601,6 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       document.body.dataset.sphereTheme = t.id;
       document.body.dataset.sphereChrome = t.chrome || "light";
       if (themeBtn) {
-        themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
           `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning.`
@@ -3722,7 +3615,6 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       const name = SIZE_NAMES[key] || "Medium";
       const faces = SIZE_FACES[key] || 1002;
       if (sizeBtn) {
-        sizeBtn.title = `Board size ${letter} — ${name} (${faces} faces). Click to cycle XS → S → M → L → XL.`;
         sizeBtn.setAttribute(
           "aria-label",
           `Board size ${letter}, ${name}, ${faces} faces. Activate to cycle XS, S, M, L, XL.`
@@ -5833,7 +5725,7 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
 
       octx.font = '400 32px "IBM Plex Sans", system-ui, sans-serif';
       octx.fillStyle = colorMix(muted, bg, 0.15);
-      octx.fillText("dr.eamer.dev/games/hexsweeper/sphere/", side / 2, side - 32);
+      octx.fillText("lukesteuber.com/minimal/", side / 2, side - 32);
 
       return out;
     }
@@ -5862,7 +5754,6 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       if (!shareWinBtn) return;
       const label = SHARE_LABEL[kind] || SHARE_LABEL.idle;
       shareWinBtn.dataset.state = kind;
-      shareWinBtn.title = label;
       shareWinBtn.setAttribute("aria-label", label);
       const sr = shareWinBtn.querySelector(".banner-btn-label, .sr-only");
       if (sr) sr.textContent = label;
@@ -7056,21 +6947,20 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
 
     let countStyleToastTimer = null;
 
-    function showCountStyleToast(name) {
+    function showCountStyleToast(name, ms) {
       if (!countStyleToast) return;
       countStyleToast.textContent = name;
       countStyleToast.classList.add("show");
       clearTimeout(countStyleToastTimer);
       countStyleToastTimer = setTimeout(() => {
         countStyleToast.classList.remove("show");
-      }, 1400);
+      }, ms > 0 ? ms : 1400);
     }
 
     function syncCountStyleChrome() {
       if (!nestBtn) return;
       const def = countStyleById(state.countStyle);
       nestBtn.classList.toggle("active", state.countStyle !== "numerals");
-      nestBtn.title = `Count style — ${def.name} (N)`;
       nestBtn.setAttribute("aria-label", `Count style: ${def.name}. Activate to cycle.`);
       nestBtn.innerHTML =
         COUNT_STYLE_ICONS[state.countStyle] || COUNT_STYLE_ICONS.numerals;
@@ -8149,8 +8039,6 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
         return;
       }
       if (e.key === "Escape") {
-        const lb = document.getElementById("history-lightbox");
-        if (lb?.classList.contains("open")) return; // lightbox owns Esc
         if (helpOverlay?.classList.contains("open")) closeHelp();
         return;
       }
@@ -8348,6 +8236,8 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       chordAt: (index) => chordAt(index),
       flagAt: (index) => toggleFlag(index),
       getState: () => state,
+      // Quiet status line above the bar (role=status); the page's first-visit cue uses it.
+      toast: (text, ms) => showCountStyleToast(text, ms),
       getBestTimes: () => readBestTimes(),
       formatTime,
       pickTile,
@@ -10205,9 +10095,7 @@ void main() {
     const stats = el("div", "qc-stats");
     stats.setAttribute("aria-live", "off");
     const mines = el("span", "qc-stat qc-mines", ICONS.mine + '<b id="qc-mines">0</b>');
-    mines.title = "Mines left";
     const time = el("span", "qc-stat qc-time", ICONS.clock + '<b id="qc-time">0</b>');
-    time.title = "Seconds";
     stats.appendChild(mines);
     stats.appendChild(time);
     root.appendChild(stats);
@@ -10221,7 +10109,6 @@ void main() {
       b.type = "button";
       b.id = "qc-" + id;
       b.setAttribute("aria-label", label);
-      b.title = label;
       return b;
     }
     const undo = button("undo", "Undo last move", ICONS.undo);
@@ -10374,7 +10261,7 @@ void main() {
       }
     }
     isolate();
-    // Quiet chrome is inserted after the native first-launch tutorial opens.
+    // Include background elements inserted while a dialog is open.
     const observer = new global.MutationObserver(isolate);
     observer.observe(document.body, { childList: true });
     function onKey(event) {
@@ -10421,53 +10308,12 @@ void main() {
 
 </script>
 <script>
-// First-timer tutorial: a short sheet instead of the full settings sheet.
-function showTutorial() {
-  const overlay = document.getElementById("tutorial-overlay");
-  const panel = document.getElementById("tutorial-panel");
-  const play = document.getElementById("tutorial-play-btn");
-  if (!overlay || !play) return false;
-  overlay.hidden = false;
-  let closed = false;
-  requestAnimationFrame(() => { if (!closed) overlay.classList.add("open"); });
-  document.body.classList.add("help-open");
-  const returnFocus = () => document.getElementById("qc-help") || document.getElementById("help-btn");
-  let releaseFocus = null;
-  function done() {
-    if (closed) return;
-    closed = true;
-    try { localStorage.setItem("hexsweeper-sphere-welcome-v1", "1"); } catch (_) {}
-    overlay.classList.remove("open");
-    document.body.classList.remove("help-open");
-    setTimeout(() => { overlay.hidden = true; }, 200);
-    play.removeEventListener("click", done);
-    overlay.removeEventListener("click", outside);
-    document.removeEventListener("keydown", escape);
-    if (releaseFocus) releaseFocus();
-    else returnFocus()?.focus();
-  }
-  function outside(e) { if (e.target === overlay) done(); }
-  function escape(e) { if (e.key === "Escape") done(); }
-  if (window.SphereDialogFocus) releaseFocus = SphereDialogFocus.open(overlay, {
-    initialFocus: panel || overlay, returnFocus, onEscape: done, blockBackgroundShortcuts: true,
-  });
-  else { (panel || overlay).focus?.(); document.addEventListener("keydown", escape); }
-  play.addEventListener("click", done);
-  overlay.addEventListener("click", outside);
-  return true;
-}
-const sphereGame = SphereSweeper.boot({
-  canvasId: "gameCanvas",
-  onWelcome: showTutorial,
-  autoWelcome: !!window.HEXSWEEPER_SPHERE_APP,
-});
+// Play starts at once on every surface: no welcome card, no settings
+// sheet. Help stays behind ? (and ?welcome=1 still previews it).
+const sphereGame = SphereSweeper.boot({ canvasId: "gameCanvas", autoWelcome: false });
 document.getElementById("help-wheel-btn")?.addEventListener("click", () => {
   if (typeof sphereGame.pauseTimer === "function") sphereGame.pauseTimer();
   window.location.href = window.HEXSWEEPER_WHEEL_HREF || "../wheel/";
-});
-document.getElementById("help-tutorial-btn")?.addEventListener("click", () => {
-  document.getElementById("help-done-btn")?.click();
-  setTimeout(showTutorial, 220);
 });
 // Exposed for tooling and the settings sheet below.
 window.HEXSWEEPER_SPHERE_GAME = sphereGame;
@@ -10573,10 +10419,14 @@ const sphereChrome = initQuietChrome(sphereGame);
       t.tabIndex = on ? 0 : -1;
       if (on && focus) t.focus();
     });
-    panels.forEach((p) => { p.hidden = p.dataset.tab !== id; });
+    panels.forEach((p) => {
+      const off = p.dataset.tab !== id;
+      p.hidden = off;
+      p.inert = off;
+    });
     try { localStorage.setItem(TAB_KEY, id); } catch (_) {}
-    const panel = document.getElementById("help-panel");
-    if (panel) panel.scrollTop = 0;
+    const stack = document.getElementById("help-tabstack");
+    if (stack) stack.scrollTop = 0;
   }
   tabs.forEach((t) => {
     t.addEventListener("click", () => showTab(t.dataset.tab));
@@ -10595,36 +10445,6 @@ const sphereChrome = initQuietChrome(sphereGame);
   showTab(stored);
   window.HEXSWEEPER_SHOW_SHEET_TAB = showTab;
 })();
-(function () {
-  const lb = document.getElementById("history-lightbox");
-  const openBtn = document.getElementById("help-history-btn");
-  const closeBtn = document.getElementById("lightbox-close-btn");
-  if (!lb || !openBtn) return;
-  let releaseFocus = null;
-  function openLb() {
-    lb.hidden = false;
-    requestAnimationFrame(() => lb.classList.add("open"));
-    if (window.SphereDialogFocus) releaseFocus = SphereDialogFocus.open(lb, {
-      initialFocus: closeBtn || lb, returnFocus: openBtn, onEscape: closeLb, blockBackgroundShortcuts: true,
-    });
-    else closeBtn && closeBtn.focus();
-  }
-  function closeLb() {
-    lb.classList.remove("open");
-    setTimeout(() => { lb.hidden = true; }, 180);
-    if (releaseFocus) { releaseFocus(); releaseFocus = null; }
-    else openBtn.focus();
-  }
-  openBtn.addEventListener("click", openLb);
-  closeBtn && closeBtn.addEventListener("click", closeLb);
-  lb.addEventListener("click", (e) => { if (e.target === lb) closeLb(); });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && lb.classList.contains("open")) {
-      e.stopPropagation();
-      closeLb();
-    }
-  });
-})();
 // Android can recreate the Activity/WebView during display transfer while
 // retaining the task and process. Native bootstraps each owned document, passing
 // whether its saved Activity bundle exists. Ordinary web visits never opt in.
@@ -10633,6 +10453,7 @@ const sphereChrome = initQuietChrome(sphereGame);
   const KEY = "hexsweeper-sphere-native-ui-v1";
   const help = document.getElementById("help-overlay");
   const panel = document.getElementById("help-panel");
+  const scroller = document.getElementById("help-tabstack") || panel;
   let started = false;
   function focusToken() {
     const node = document.activeElement;
@@ -10648,10 +10469,10 @@ const sphereChrome = initQuietChrome(sphereGame);
       localStorage.setItem(KEY, JSON.stringify({
         version: 1,
         // Opening is synchronous; its opacity class follows on the next frame.
-        // A nested history modal makes Help inert without closing its parent.
+        // Modal isolation can make Help inert without closing its parent.
         open: !help.hidden && (help.classList.contains("open") || !help.inert),
         tab: tab ? tab.dataset.tab : "play",
-        scroll: panel.scrollTop,
+        scroll: scroller.scrollTop,
         focus: focusToken(),
       }));
     } catch (_) {} // Blocked/full storage must not interfere with the sheet.
@@ -10674,8 +10495,7 @@ const sphereChrome = initQuietChrome(sphereGame);
     if (restoreSavedBundle !== true) {
       try { localStorage.removeItem(KEY); } catch (_) {}
     }
-    const tutorial = document.getElementById("tutorial-overlay");
-    if (saved && saved.open && (!tutorial || tutorial.hidden)) {
+    if (saved && saved.open) {
       document.getElementById("qc-help")?.click();
       window.HEXSWEEPER_SHOW_SHEET_TAB?.(saved.tab, false);
       const target = [...help.querySelectorAll('[id], [data-theme], [data-size]')].find(node =>
@@ -10685,7 +10505,7 @@ const sphereChrome = initQuietChrome(sphereGame);
       if (target && !target.disabled && !target.closest("[hidden], [inert]") && target.getClientRects().length) {
         target.focus({ preventScroll: true });
       }
-      panel.scrollTop = Math.min(saved.scroll, Math.max(0, panel.scrollHeight - panel.clientHeight));
+      scroller.scrollTop = Math.min(saved.scroll, Math.max(0, scroller.scrollHeight - scroller.clientHeight));
     }
     let queued = false;
     function saveSoon() {
@@ -10699,7 +10519,7 @@ const sphereChrome = initQuietChrome(sphereGame);
       subtree: true, attributes: true, attributeFilter: ["hidden", "class", "aria-selected"],
     });
     help.addEventListener("focusin", saveSoon);
-    panel.addEventListener("scroll", save, { passive: true });
+    scroller.addEventListener("scroll", save, { passive: true });
     window.addEventListener("pagehide", save);
     save();
   };

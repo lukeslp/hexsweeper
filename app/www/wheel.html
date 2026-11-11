@@ -2031,10 +2031,10 @@ body[data-sphere-chrome="dark"] .help-overlay {
 }
 .help-close {
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  width: 1.75rem;
-  height: 1.75rem;
+  top: 0;
+  right: 0;
+  width: 2.75rem;
+  height: 2.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2055,7 +2055,7 @@ body[data-sphere-chrome="dark"] .help-overlay {
 .help-panel h2 {
   font-size: 0.95rem;
   font-weight: 600;
-  margin: 0 1.5rem 0.35rem 0;
+  margin: 0 2.25rem 0.35rem 0;
   letter-spacing: -0.02em;
   color: var(--help-ink);
 }
@@ -2333,7 +2333,7 @@ button, a, input[type="range"] { touch-action: manipulation; }
   <div class="banner-msg" id="banner-msg"></div>
   <div class="banner-meta" id="banner-meta" hidden></div>
   <div class="banner-actions" id="banner-actions" hidden>
-    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image" title="Share image">
+    <button type="button" class="banner-btn primary" id="share-win-btn" aria-label="Share image">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 15V3"></path>
         <path d="M8 7l4-4 4 4"></path>
@@ -2341,14 +2341,14 @@ button, a, input[type="range"] { touch-action: manipulation; }
       </svg>
       <span class="sr-only">Share image</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" title="Undo last move" hidden>
+    <button type="button" class="banner-btn" id="banner-undo-btn" aria-label="Undo last move" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="3 7 3 13 9 13"></polyline>
         <path d="M3.51 13a9 9 0 1 0 2.13-5.36L3 11"></path>
       </svg>
       <span class="sr-only">Undo last move</span>
     </button>
-    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again" title="Play again">
+    <button type="button" class="banner-btn" id="banner-again-btn" aria-label="Play again">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="23 4 23 10 17 10"></polyline>
         <polyline points="1 20 1 14 7 14"></polyline>
@@ -2365,20 +2365,29 @@ button, a, input[type="range"] { touch-action: manipulation; }
   <span id="stats-time">000s</span>
 </div>
 
+<!-- Help: the bloom's corner seat clicks this; sphere.js opens the sheet. -->
+<button type="button" id="help-btn" class="hud-btn hud-help-fixed" aria-label="Help">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10"></circle>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+  </svg>
+</button>
+
 <!-- Settings gear + flyout — bottom right -->
 <div class="hud-cluster dev-cluster" role="toolbar" aria-label="Game settings">
   <div class="settings-stack" id="settings-stack" data-open="false" hidden>
     <div class="customize-panel" id="customize-panel" data-open="false" role="dialog" aria-label="Customize board"></div>
   </div>
   <div class="hud-actions" aria-label="Board controls">
-    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset" title="Reset (R)">
+    <button type="button" id="reset-btn" class="hud-btn" aria-label="Reset">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="23 4 23 10 17 10"></polyline>
         <polyline points="1 20 1 14 7 14"></polyline>
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
       </svg>
     </button>
-    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board" title="Customize board (C)">
+    <button type="button" id="customize-btn" class="hud-btn" aria-expanded="false" aria-controls="customize-panel" aria-label="Customize board">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <line x1="4" y1="21" x2="4" y2="14"></line>
         <line x1="4" y1="10" x2="4" y2="3"></line>
@@ -2394,14 +2403,33 @@ button, a, input[type="range"] { touch-action: manipulation; }
   </div>
   <!-- Shipped controls, kept in the DOM so sphere.js wiring and label sync are untouched. -->
   <div class="legacy-hud" aria-hidden="true">
-    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Board size S, Small, 362 faces. Activate to cycle XS, S, M, L, XL." title="Board size"></button>
-    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light" title="Theme"></button>
-    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle." title="Count style"></button>
-    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false" title="Flag mode"></button>
+    <button type="button" id="size-btn" class="hud-btn" tabindex="-1" aria-label="Board size S, Small, 362 faces. Activate to cycle XS, S, M, L, XL."></button>
+    <button type="button" id="theme-btn" class="hud-btn" tabindex="-1" aria-label="Theme: Light"></button>
+    <button type="button" id="nest-btn" class="hud-btn" tabindex="-1" aria-label="Count style: Numerals. Activate to cycle."></button>
+    <button type="button" id="flag-toggle" class="hud-btn" tabindex="-1" aria-label="Flag mode" aria-pressed="false"></button>
   </div>
 </div>
 
 <div id="count-style-toast" class="count-style-toast" role="status" aria-live="polite"></div>
+
+<div id="help-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+  <div class="help-panel" id="help-panel" tabindex="-1">
+    <button type="button" class="help-close" id="help-close-btn" aria-label="Close help">×</button>
+    <h2 id="help-title" tabindex="-1">Water Wheel</h2>
+    <p class="help-lede">Clear every safe face. Hit a mine and its fuse lights: spin it under the water before the fuse runs out.</p>
+    <ul class="help-controls" aria-label="Controls">
+      <li><span class="act">Tap</span><span>Clear a face</span></li>
+      <li><span class="act">Hold</span><span>Flag it</span></li>
+      <li><span class="act">Drag</span><span>Spin the sphere</span></li>
+    </ul>
+    <button type="button" class="help-done" id="help-done-btn">Done</button>
+    <nav class="menu-links" aria-label="Elsewhere">
+      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">lukesteuber.com</a>
+      <span class="menu-links-sep" aria-hidden="true">·</span>
+      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">datapoems.io</a>
+    </nav>
+  </div>
+</div>
 
 <script>
 /* collection / CodePen boot */
@@ -2416,7 +2444,7 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
  * File Purpose: Minimal hexasphere geometry (Goldberg dual of subdivided icosahedron).
  * Primary Functions/Classes: generateHexasphere, floodClosure, vec3 helpers.
  * Inputs: radius, subdivisions (0–12+). Outputs: { tiles, radius, subdivisions }.
- * Notes: Plain-object Vec3 — no Three.js. Ported from Rind hexasphere.ts (Rob Scanlon lineage).
+ * Notes: Plain-object Vec3 — no Three.js.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
@@ -4443,7 +4471,6 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       document.body.dataset.sphereTheme = t.id;
       document.body.dataset.sphereChrome = t.chrome || "light";
       if (themeBtn) {
-        themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
           `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Water.`
@@ -4460,7 +4487,6 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       const name = SIZE_NAMES[key] || "Medium";
       const faces = SIZE_FACES[key] || 362;
       if (sizeBtn) {
-        sizeBtn.title = `Board size ${letter} — ${name} (${faces} faces). Click to cycle XS → S → M → L → XL.`;
         sizeBtn.setAttribute(
           "aria-label",
           `Board size ${letter}, ${name}, ${faces} faces. Activate to cycle XS, S, M, L, XL.`
@@ -6402,7 +6428,7 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
 
       octx.font = '400 32px "IBM Plex Sans", system-ui, sans-serif';
       octx.fillStyle = colorMix(muted, bg, 0.15);
-      octx.fillText("dr.eamer.dev/games/hexsweeper/sphere/", side / 2, side - 32);
+      octx.fillText("lukesteuber.com/minimal/", side / 2, side - 32);
 
       return out;
     }
@@ -6431,7 +6457,6 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       if (!shareWinBtn) return;
       const label = SHARE_LABEL[kind] || SHARE_LABEL.idle;
       shareWinBtn.dataset.state = kind;
-      shareWinBtn.title = label;
       shareWinBtn.setAttribute("aria-label", label);
       const sr = shareWinBtn.querySelector(".sr-only");
       if (sr) sr.textContent = label;
@@ -6876,7 +6901,6 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       if (!nestBtn) return;
       const def = countStyleById(state.countStyle);
       nestBtn.classList.toggle("active", state.countStyle !== "numerals");
-      nestBtn.title = `Count style — ${def.name} (N)`;
       nestBtn.setAttribute("aria-label", `Count style: ${def.name}. Activate to cycle.`);
       // Empty stub only — no numeral glyph paint (was leaking over the gear).
       nestBtn.innerHTML = "";
@@ -10213,6 +10237,12 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       announce(b.textContent || "Effects changed");
     }
 
+    function doHelp() {
+      const b = document.getElementById("help-btn");
+      if (b) b.click();
+      if (state.phase === "open" || state.phase === "rising") collapse();
+    }
+
     function doHome() {
       // The native bundle has no parent to climb to — leaving the payload
       // root strands the WebView with no way back. The app build points this
@@ -10781,7 +10811,6 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
         iconOnly: true,
         ariaLabel: "Undo move",
       });
-      dockResetBtn.title = "Undo";
       dockResetBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -10801,7 +10830,6 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       dockBtn.setAttribute("aria-haspopup", "dialog");
       dockBtn.setAttribute("aria-controls", "hex-bloom-stage");
       dockBtn.setAttribute("aria-expanded", "false");
-      dockBtn.title = "Menu";
       dockBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -10825,7 +10853,6 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
         iconOnly: true,
         ariaLabel: "Flag mode",
       });
-      dockFlagBtn.title = "Flag mode";
       dockFlagBtn.setAttribute("aria-pressed", "false");
       dockFlagBtn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -10838,6 +10865,22 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
         announce(on ? "Flag mode" : "Dig mode");
       });
 
+      // Help — corner seat, lower right, as on the other spheres.
+      helpCorner.textContent = "";
+      dockHelpBtn = makeHex({
+        cls: "is-dock is-dock-help",
+        label: "",
+        icon: "help",
+        iconOnly: true,
+        ariaLabel: "Help",
+      });
+      dockHelpBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ignoreOutsideUntil = Date.now() + 250;
+        doHelp();
+      });
+      helpCorner.appendChild(dockHelpBtn);
 
       dock.appendChild(dockResetBtn);
       dock.appendChild(dockBtn);
