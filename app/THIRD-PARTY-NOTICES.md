@@ -20,3 +20,10 @@ The native shells depend on Capacitor (`@capacitor/core`, `@capacitor/ios`,
 licensed. These packages are installed by pnpm, Swift Package Manager and
 Gradle at build time and are not checked in. Source:
 <https://github.com/ionic-team/capacitor>.
+
+## Classic Minesweeper screenshot
+
+`www/assets/classic-minesweeper.png` is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
+as a history note in the help sheet. It is not this project's artwork, its
+source is not recorded, and the MIT license here does not cover it. Microsoft,
+Windows and Minesweeper are trademarks of Microsoft Corporation.
