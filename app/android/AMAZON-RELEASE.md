@@ -127,7 +127,7 @@ signed build.
   inside the display bounds.
 - Horizontal drag follows the finger by default after the versioned preference
   migration. The Invert X control still lets a player choose the old direction.
-- Tutorial card renders and dismisses via **Play**.
+- Tutorial card opens from **?** (Show the tutorial) and dismisses via **Play**.
 - Tap cleared a region with correct flood-fill and 1/2/3 neighbour counts;
   the timer started on that first clear; drag spun the sphere; Undo enabled
   itself after the first move.

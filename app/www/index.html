@@ -1736,7 +1736,7 @@ body.help-open { overflow: hidden; }
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Flags mark where you think a mine is.</p>
       <p>Once a number has as many flags around it as it says, double-tap the number to clear its remaining neighbors in one go. It goes by your flags, not by the board — if one is in the wrong place, that shortcut finds the mine.</p>
-      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet — Themes, Board (size and your best times) and Settings (drag inversion, effects) are the tabs above; each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial again</button></p>
+      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet — Themes, Board (size and your best times) and Settings (drag inversion, effects) are the tabs above; each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial</button></p>
     </div>
     <p class="help-keys"><kbd>T</kbd> theme · <kbd>S</kbd>/<kbd>M</kbd>/<kbd>L</kbd> size · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -10459,7 +10459,9 @@ function showTutorial() {
 const sphereGame = SphereSweeper.boot({
   canvasId: "gameCanvas",
   onWelcome: showTutorial,
-  autoWelcome: !!window.HEXSWEEPER_SPHERE_APP,
+  // Nothing opens by itself, in the app or on the web. The tutorial is
+  // behind ? ("Show the tutorial").
+  autoWelcome: false,
 });
 document.getElementById("help-wheel-btn")?.addEventListener("click", () => {
   if (typeof sphereGame.pauseTimer === "function") sphereGame.pauseTimer();

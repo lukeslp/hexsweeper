@@ -9,8 +9,9 @@ explains why the bundle id says `hexodus` and why the build number starts at 7.
 
 ## Entry policy
 
-The native payload keeps its short first-launch tutorial; dismissing it records
-the seen marker, and saved runs restore in place. The web game opens the board
+The native payload opens straight to the board, like the web. Its short
+tutorial is behind ? ("Show the tutorial"); dismissing it records the seen
+marker, and saved runs restore in place. The web game opens the board
 without an automatic instructions modal, including when storage is blocked.
 Both use the same ? sheet: Play, Themes, Board, Settings, and a Keys tab for
 keyboard users. Keep this distinction in canonical source and its exporter;

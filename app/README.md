@@ -6,9 +6,9 @@ repository (`sphere/`); this folder wraps it for iOS and Android as a sealed
 offline payload.
 
 The app opens straight into the sphere, which restores its own unfinished run
-without asking. On a fresh native launch, a short tutorial introduces Tap,
-Hold, Drag, and the controls; Play dismisses it and records that it was seen.
-Returning players go straight to their board. The fixed chrome is a quiet bar:
+without asking. Nothing opens by itself on launch, including the first one.
+The short tutorial (Tap, Hold, Drag) is behind **?**, under **Show the
+tutorial**. The fixed chrome is a quiet bar:
 **Undo · New sphere · Flag**
 (red while armed) bottom left, **?** bottom right, and a small mines-left ·
 seconds readout at the top. Everything else — theme (Light · Dark ·
@@ -34,7 +34,7 @@ Android shell under `android/`. Build steps for both are under
 
 The web game opens the board immediately, including on a first visit or when
 browser storage is blocked. Instructions are optional: **? → Play**, then
-**Show the tutorial again** for the short intro. Web and native use the same
+**Show the tutorial** for the short intro. Web and native use the same
 Play · Themes · Board · Settings sheet; a Keys tab appears for keyboard users.
 The native first-launch intro is the intended entry difference.
 
@@ -117,10 +117,11 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `f7d7546`, bounded focus and Help-restoration updates over `d0082f7`
-(October 7, 2026): Sphere's settings
+The current payload pins `c91cd20`: the bounded focus and Help-restoration updates
+(`f7d7546`) over `d0082f7` (October 7, 2026), with one change. The app now
+opens straight to the board, and the tutorial is reached from **?**. Sphere's settings
 use flat theme swatches, compact board-size choices, and icon-led settings
-rows. The first-launch tutorial and game behavior are unchanged. The
+rows. Game behavior is unchanged. The
 menu system remains an open design item in the source repository. This payload update does not create
 or upload an iOS/Android release. See [release notes](docs/RELEASE.md) for the
 distinction between payload checks and published builds.

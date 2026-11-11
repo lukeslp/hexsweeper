@@ -23,7 +23,7 @@ and any network dependency is a defect.
 
 | # | Check | Pass criteria | Result |
 |---|---|---|---|
-| 1 | Cold launch | With no saved run or tutorial-seen marker, launch screen hands off to Sphere with no blank frame and the short tutorial appears; Play dismisses it; later launches do not repeat it while the marker persists; an unfinished run restores in place | |
+| 1 | Cold launch | With no saved run or tutorial-seen marker, launch screen hands off to Sphere with no blank frame and nothing opens by itself; ? → Play → Show the tutorial opens the short tutorial and Play dismisses it; an unfinished run restores in place | |
 | 1a | Quiet bar | Undo · New sphere · Flag (bottom left) and ? (bottom right) are visible, ≥ 44 pt each, clear of the home indicator; mines-left · seconds readout at the top; no Games pill, no menu | |
 | 1b | Bar first tap | One tap on Undo takes back the last move; one tap on Flag arms flag mode and the glyph turns red (board taps then flag; tap again to disarm); New sphere restarts | |
 | 1c | Cleared faces | Mercury liquid metal; Ion Storm cobalt, Gilded Ribbon gold, Heat Lightning copper, all with seamless interiors. Aurora has dark wells with seams; Stratosphere white wells with dark digits and seams. Galaxy has a central black hole and white nested-ring counts. **Spin every theme with faces cleared: nothing paints past the rim.** Flags red on Stratosphere and Gilded Ribbon, steel blue on Heat Lightning; holding a face flags it visibly during the hold | |
