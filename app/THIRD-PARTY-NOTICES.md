@@ -46,12 +46,12 @@ here and the MIT license does not cover it. Gilded Ribbon, which also had no
 source, left the payload in 1.0.10. Source links and the search record are in
 [the reflection source notes](../sphere/assets/reflections/SOURCES.md).
 
-## Help image
+## Classic Minesweeper screenshot
 
-`www/assets/classic-board.png` is a screenshot of this project's own Classic
-board and is covered by the MIT license. The Windows Minesweeper screenshot
-that 1.0.6 carried is not in the app payload from 1.0.10 on. The web game still
-shows that screenshot; see the notices at the repository root.
+`www/assets/classic-minesweeper.png` is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
+as a history note in the help sheet. It is not this project's artwork, its
+source is not recorded, and the MIT license here does not cover it. Microsoft,
+Windows and Minesweeper are trademarks of Microsoft Corporation.
 
 ## Notices inside the app
 

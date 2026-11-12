@@ -56,8 +56,7 @@ This candidate has not been publicly released.
 Prepared for a first Google Play release; not released, and not signed in this
 repository. It is the 1.0.9 (34) candidate plus: a working Share button, the
 cutout strip matched to the theme, system Back that closes sheets before it
-leaves the app, backup turned off, eight themes, the project's own Help image,
-a Licenses page, and a sheet that holds up at large system text. Checked on
+leaves the app, backup turned off, eight themes, a Licenses page, and a sheet that holds up at large system text. Checked on
 phone and tablet emulators only. 34 was installed on a test phone, so this
 candidate takes the next code.
 
@@ -135,16 +134,16 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `1a4d987`, a bounded maintenance line on the
+The current payload pins `dcedc23`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
+Help keeps the classic Minesweeper screenshot, as on the web (a swap to the
+project's own board was tried on this line and reverted at the owner's
+instruction on November 12, 2026).
 
 - the reflection materials with no known source are gone, so the Themes tab
   shows eight themes (the change main took in #13);
 - the gesture fixes main took in #15;
-- Help shows the project's own Classic board, not the Windows Minesweeper
-  screenshot. The web keeps the screenshot. This is one source commit
-  (`2a778c5`) so it can be reverted by itself;
 - a Licenses page (`www/notices.html`) linked from the foot of the sheet;
 - each page reports its background color to the Android shell, which paints
   the strip beside a camera cutout to match;

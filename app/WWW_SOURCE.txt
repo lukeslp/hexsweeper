@@ -6,9 +6,9 @@
 # then refresh this file. scripts/smoke.sh verifies these checksums.
 
 source_repo   https://github.com/lukeslp/hexsweeper
-source_commit 1a4d9876adc77b4da59a538532311dc7f03d5abb
+source_commit dcedc23296957374b537503d4d9060d5f5524cc5
 
-a87ad40e61ecffb502e444e197f2a74bb0c42214b6c356c7a1aea625b516031f  assets/classic-board.png
-47b7b5aa6d328eba6c21676f3cf729695cc25c92998abe707bff4466c73a9450  index.html
-f701dbee445b7b0a4f6c02429f25f7a7463d8136cf4c709243ab470a30588075  notices.html
+b42114581fded77b4aa8e003634ee68682a7013f3ce7d43f2ac119b4fc0360fa  assets/classic-minesweeper.png
+6280e852240fee4d7749d533bff68404224da68bb5d4707a4a61ae5790b96c9f  index.html
+84abb17572009c94230dda37a8f8923550b2841b72ba47b2dce2335dba60f116  notices.html
 23f955078ee0da4efa1c1ea8b70858dfa919e8c6fdf1c665f084c9fcc114495a  wheel.html
