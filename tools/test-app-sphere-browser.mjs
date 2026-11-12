@@ -216,8 +216,9 @@ try {
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /bottom left/i, "help copy does not point at the bottom bar");
   assert.doesNotMatch(help.text, /\bdig\b/i, "help copy still says dig");
-  assert.doesNotMatch(help.text, /\u2014/, "help copy has a long dash");
-  // The bundle's own image and licenses page: nothing third-party in Help, credits one tap away.
+  // The history caption is the owner's wording, the same as on the web, and keeps its dash.
+  assert.doesNotMatch(help.text.replace("Riding on the original \u2014 history of Minesweeper", ""), /\u2014/, "help copy has a long dash");
+  // The history screenshot the owner asked to keep is served from the bundle; licenses are one tap away.
   const bundled = await evaluate(`(async () => {
     const img = document.querySelector("#help-history-btn img");
     if (img.decode) { try { await img.decode(); } catch (_) {} }
@@ -225,11 +226,11 @@ try {
     const notices = await fetch("notices.html").then(r => r.ok ? r.text() : "");
     return { src: img.getAttribute("src"), width: img.naturalWidth, link: link ? link.textContent.trim() : "",
       back: notices.includes('href="index.html"'), ofl: notices.includes("SIL OPEN FONT LICENSE"), apache: notices.includes("Apache License"),
-      placeholders: /__[A-Z0-9_]+__/.test(notices), old: await fetch("assets/classic-minesweeper.png").then(r => r.ok, () => false) };
+      placeholders: /__[A-Z0-9_]+__/.test(notices), noted: notices.includes("Minesweeper screenshot") };
   })()`);
-  assert.equal(bundled.src, "assets/classic-board.png", "Help image is not the project's Classic board");
+  assert.equal(bundled.src, "assets/classic-minesweeper.png", "Help image is not the classic Minesweeper screenshot");
   assert.ok(bundled.width > 0, "Help image did not load from the bundle");
-  assert.equal(bundled.old, false, "the Windows Minesweeper screenshot is still in the bundle");
+  assert.ok(bundled.noted, "the licenses page does not say the screenshot is not project artwork");
   assert.equal(bundled.link, "Licenses", "the sheet has no Licenses link");
   assert.ok(bundled.back && bundled.ofl && bundled.apache && !bundled.placeholders, `licenses page is incomplete: ${JSON.stringify(bundled)}`);
   assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
