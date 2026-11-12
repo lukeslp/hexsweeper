@@ -27,6 +27,17 @@ and modification history are in
 [sphere/assets/textures/README.md](sphere/assets/textures/README.md) and
 [sphere/assets/textures/sources.json](sphere/assets/textures/sources.json).
 
+## Reflection photographs
+
+The 24 WebP files in `sphere/assets/reflections/` (two sizes each of
+`amber-cells`, `amber-tempest`, `canopy`, `chromatic-ink`, `deco`, `galaxy`,
+`gilded-ribbon`, `heat-lightning`, `ion-storm`, `oculus`, `portoro` and
+`stratosphere`) are the environment maps for the sphere's reflection
+materials. Some generated pages embed them as inline data. No source, author
+or license is confirmed for any of them yet, so none is credited here and the
+MIT license does not cover them. The search record and the open questions are in
+[sphere/assets/reflections/SOURCES.md](sphere/assets/reflections/SOURCES.md).
+
 ## Classic Minesweeper screenshot
 
 `sphere/assets/classic-minesweeper.png` (also under `sphere-ux/assets/`) is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
