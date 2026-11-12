@@ -29,13 +29,19 @@ and modification history are in
 
 ## Reflection photographs
 
-The 24 WebP files in `sphere/assets/reflections/` (two sizes each of
-`amber-cells`, `amber-tempest`, `canopy`, `chromatic-ink`, `deco`, `galaxy`,
-`gilded-ribbon`, `heat-lightning`, `ion-storm`, `oculus`, `portoro` and
-`stratosphere`) are the environment maps for the sphere's reflection
-materials. Some generated pages embed them as inline data. No source, author
-or license is confirmed for any of them yet, so none is credited here and the
-MIT license does not cover them. The search record and the open questions are in
+The 24 WebP files in `sphere/assets/reflections/` (two sizes each of twelve
+images) are the environment maps for the sphere's reflection materials. Some
+generated pages embed them as inline data.
+
+Six are photographs from Unsplash, used under the
+[Unsplash License](https://unsplash.com/license) and not covered by the MIT
+license: `amber-tempest` (Johannes Plenio), `chromatic-ink` (Daniel Olah),
+`galaxy` (Jose G. Ortega Castro), `heat-lightning` (Max LaRochelle),
+`ion-storm` (Felix Mittermeier) and `oculus` (Adam Gonzales).
+
+No source is confirmed for `amber-cells`, `canopy`, `deco`, `gilded-ribbon`,
+`portoro` or `stratosphere`, so none of those is credited here and the MIT
+license does not cover them. Source links and the search record are in
 [sphere/assets/reflections/SOURCES.md](sphere/assets/reflections/SOURCES.md).
 
 ## Classic Minesweeper screenshot

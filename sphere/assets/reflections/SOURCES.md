@@ -2,53 +2,61 @@
 
 The twelve images in this folder are the environment maps for the sphere's
 reflection materials. They were added between August 11 and 18, 2026 without a
-record of where each one came from. The working assumption was that all twelve
-came from Wikimedia Commons.
+record of where each one came from.
 
-A search of Wikimedia Commons on November 11, 2026 did not confirm that for any
-of them. Each image was viewed and compared by eye with the Commons files found
-by keyword and category search. None matched. The tracked files carry no
-embedded metadata, and the repository history holds no original file names,
-captions or links.
+On November 11, 2026 each image was run through a reverse image search and the
+candidates were opened and compared by eye with the file here. Six are
+photographs published on Unsplash under the
+[Unsplash License](https://unsplash.com/license), which allows free use,
+including commercial use and modification, and asks for no credit. It is not an
+open-source license: it forbids selling unaltered copies and compiling the
+photos into a competing image service. The repository's MIT license does not
+cover these six; they stay under the Unsplash License. One more has a probable
+Unsplash source, and five have none.
 
-Until a source is confirmed, treat every image here as **unconfirmed**: no
-author and no license is recorded, and the repository's MIT license does not
-cover them. Do not add a license to this table without the source page in hand.
+An earlier keyword search of Wikimedia Commons the same day matched none of the
+twelve. The tracked files carry no embedded metadata, and the repository
+history holds no original file names, captions or links.
 
-| Subject | Files | What it shows | Commons page | Author | License | Changes | Status |
-|---|---|---|---|---|---|---|---|
-| Amber Cells | `amber-cells-1024.webp`, `amber-cells-2048.webp` | Macro of amber oil drops on water, 2:1 | none found | not recorded | not recorded | resized to two widths, WebP; anything else unknown | unconfirmed |
-| Amber Tempest | `amber-tempest-768.webp`, `amber-tempest-1280.webp` | Orange thunderstorm with lightning over a small wooded island on calm water; looks like a composite | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Verdant Canopy | `canopy-1024.webp`, `canopy-2048.webp` | Misty old-growth conifer forest with ferns, 2:1 equirectangular panorama | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Chromatic Ink | `chromatic-ink-768.webp`, `chromatic-ink-1280.webp` | Rainbow interference swirls in a soap film, portrait | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Deco Lacquer | `deco-1024.webp`, `deco-2048.webp` | Black lacquer wall panels with brass fan and step inlay, 2:1 | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Galaxy | `galaxy-768.webp`, `galaxy-1280.webp` | Milky Way core with a red haze and a bright object at lower left | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Gilded Ribbon | `gilded-ribbon-768.webp`, `gilded-ribbon-1280.webp` | Abstract bronze and violet ribbon curves on black, 16:9; looks like a render | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Heat Lightning | `heat-lightning-768.webp`, `heat-lightning-1280.webp` | Orange and violet thundercloud with lightning behind a tree line at night, portrait | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Ion Storm | `ion-storm-768.webp`, `ion-storm-1280.webp` | Blue and violet storm clouds with a lightning bolt at lower right, 16:9 | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Stained Oculus | `oculus-768.webp`, `oculus-1280.webp` | The spiral stained-glass ceiling of the Chapel of Thanksgiving, Thanks-Giving Square, Dallas, seen from below, portrait | none matched; see below | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Portoro Marble | `portoro-1024.webp`, `portoro-2048.webp` | Black marble with gold and ivory veins, 2:1 | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
-| Stratosphere | `stratosphere-1024.webp`, `stratosphere-2048.webp` | Cloud deck from above under a blue sky with cirrus, 2:1 | none found | not recorded | not recorded | resized, WebP; anything else unknown | unconfirmed |
+## Confirmed
+
+| Subject | Files | Source | Author | Published | License | Changes |
+|---|---|---|---|---|---|---|
+| Amber Tempest | `amber-tempest-768.webp`, `amber-tempest-1280.webp` | [Photo of island and thunder](https://unsplash.com/photos/E-Zuyev2XWo) | Johannes Plenio | July 21, 2017 | Unsplash License | resized, WebP |
+| Chromatic Ink | `chromatic-ink-768.webp`, `chromatic-ink-1280.webp` | [Swirling iridescent soap film patterns](https://unsplash.com/photos/pCcGpVsOHoo) | Daniel Olah | November 7, 2018 | Unsplash License | resized, WebP |
+| Galaxy | `galaxy-768.webp`, `galaxy-1280.webp` | [A night sky filled with lots of stars](https://unsplash.com/photos/W6EsQWhEc94) | Jose G. Ortega Castro | March 12, 2022 | Unsplash License | resized, WebP |
+| Heat Lightning | `heat-lightning-768.webp`, `heat-lightning-1280.webp` | [Lightning strike at night](https://unsplash.com/photos/uu-Jw5SunYI) | Max LaRochelle | October 22, 2017 | Unsplash License | resized, WebP |
+| Ion Storm | `ion-storm-768.webp`, `ion-storm-1280.webp` | [Clouds with thunder digital wallpaper](https://unsplash.com/photos/L4-16dmZ-1c) | Felix Mittermeier | September 17, 2018 | Unsplash License | resized, WebP |
+| Stained Oculus | `oculus-768.webp`, `oculus-1280.webp` | [Unsplash photo 2_Zm7XxRzYk](https://unsplash.com/photos/2_Zm7XxRzYk) | Adam Gonzales | February 20, 2020 | Unsplash License | resized, WebP |
+
+Titles, authors and dates are as the Unsplash pages showed them on November 11,
+2026. The comparison was by eye at small size; a crop or color change smaller
+than that would show is not recorded.
+
+## Not confirmed
+
+Treat these as **unconfirmed**: no author and no license is recorded, and the
+MIT license does not cover them. Do not add a license here without the source
+page in hand.
+
+| Subject | Files | What it shows | Search result | Status |
+|---|---|---|---|---|
+| Stratosphere | `stratosphere-1024.webp`, `stratosphere-2048.webp` | Cloud deck from above under a blue sky with cirrus, 2:1 | Closest is [Above-cloud photo of blue skies](https://unsplash.com/photos/yQorCngxzwI), Taylor Van Riper, Unsplash License, a portrait photo. The file here is a 2:1 panorama, so it is either a reworked version or a different image. | probable, not confirmed |
+| Gilded Ribbon | `gilded-ribbon-768.webp`, `gilded-ribbon-1280.webp` | Abstract bronze and violet ribbon curves on black, 16:9; looks like a render | The same image appears on several unrelated business sites, which suggests a stock library. No library page found. | unconfirmed |
+| Amber Cells | `amber-cells-1024.webp`, `amber-cells-2048.webp` | Macro of amber oil drops on water, 2:1 | Only similar stock photos of oil drops; no copy of this image | unconfirmed |
+| Verdant Canopy | `canopy-1024.webp`, `canopy-2048.webp` | Misty old-growth conifer forest with ferns, 2:1 equirectangular panorama | Only similar forest photos; no copy of this image | unconfirmed |
+| Deco Lacquer | `deco-1024.webp`, `deco-2048.webp` | Black lacquer wall panels with brass fan and step inlay, 2:1 | Only similar interiors; no copy of this image | unconfirmed |
+| Portoro Marble | `portoro-1024.webp`, `portoro-2048.webp` | Black marble with gold and ivory veins, 2:1 | Only similar marble textures; no copy of this image | unconfirmed |
+
+Finding no copy anywhere fits an image that was made for this project, but the
+search cannot show that.
 
 ## Stained Oculus
 
-The subject is identified; the photograph is not. Commons holds several
-photographs of this ceiling, and each was compared with `oculus-1280.webp`,
-the two closest also in rotated views. None is the same exposure:
-
-- [The 'Glory Window' in the Chapel of Thanksgiving in Dallas, Texas.png](https://commons.wikimedia.org/wiki/File:The_%27Glory_Window%27_in_the_Chapel_of_Thanksgiving_in_Dallas,_Texas.png),
-  IcedCowboyCoffee, CC0. Closest in lighting, different framing and angle.
-- [Inside the Thanksgiving Chapel (48852983577).jpg](https://commons.wikimedia.org/wiki/File:Inside_the_Thanksgiving_Chapel_(48852983577).jpg),
-  Shiva Shenoy, CC BY 2.0. Different framing and angle.
-- Six Library of Congress photographs (LCCN2015630401 to LCCN2015630405 and
-  LCCN2014632991) and one Flickr import, all different.
-
-A second question applies to any photograph of this ceiling. Commons files it
-under "Stained-glass windows of chapel of Thanksgiving (Dallas) by Gabriel
-Loire": the window is a 1976 artwork by Gabriel Loire, in the United States.
-The two file pages linked above state a license for the photograph only and
-say nothing about the window itself. That question is open whichever photograph this
-turns out to be.
+The photograph shows the spiral stained-glass ceiling of the Chapel of
+Thanksgiving, Thanks-Giving Square, Dallas. The window is a 1976 artwork by
+Gabriel Loire, in the United States. The Unsplash License covers the
+photograph and says nothing about the window itself. That question is open.
 
 ## Earlier images
 
