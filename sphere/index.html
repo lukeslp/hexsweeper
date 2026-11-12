@@ -983,7 +983,7 @@ const sphereChrome = initQuietChrome(sphereGame);
 (function () {
   const grid = document.getElementById("help-theme-grid");
   if (!grid || !window.SphereSweeper) return;
-  const ROSTER = ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"];
+  const ROSTER = ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"];
   const themes = SphereSweeper.THEMES;
   function swatchFor(t) {
     if (t.reflectionSurface) return "linear-gradient(145deg, " + (t.fallbackBgGlow || "#666") + ", " + (t.fallbackBg || "#000") + ")";

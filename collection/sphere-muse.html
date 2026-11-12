@@ -2585,23 +2585,6 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     label: "rgba(255,255,255,0.85)",
     labelStroke: "rgba(0,0,0,0.85)",
   });
-  const THEME_GILDED_RIBBON = reflectionTheme({
-    id: "gilded-ribbon",
-    name: "Gilded Ribbon",
-    material: "gilded-ribbon",
-    warn: { count: "numerals", relief: "extruded", seams: false },
-    accent: "#dfa35f",
-    fallbackBg: "#080510",
-    fallbackBgGlow: "#4d3449",
-    fallbackCore: "#020103",
-    coveredEdge: "rgba(223,163,95,0.24)",
-    pentagonEdge: "rgba(240,200,140,0.32)",
-    hoverRing: "#f4cf9a",
-    activeRing: "#dfa35f",
-    revealGlow: "#dfa35f",
-    text: { 1: "#fff4e4", 2: "#f4cf9a", 3: "#dfa35f", 4: "#e0b8ff", 5: "#ff9f8f", 6: "#ff7180" },
-    label: "#fff4e4",
-  });
   const THEME_HEAT_LIGHTNING = reflectionTheme({
     id: "heat-lightning",
     name: "Heat Lightning",
@@ -2636,7 +2619,6 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     THEME_ION_STORM,
     THEME_AURORA,
     THEME_GALAXY,
-    THEME_GILDED_RIBBON,
     THEME_HEAT_LIGHTNING,
   ].filter((t) => {
     // Native app builds ship without the globe-map themes. Their daymaps are
@@ -2980,8 +2962,6 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M6.5 13.5c1.5-3 3-3 4.5 0s3 3 4.5 0" opacity="0.9"></path><path d="M7.5 9.5c1.2-2 2.4-2 3.6 0s2.4 2 3.6 0" opacity="0.5"></path></svg>',
     galaxy:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 12c-3-2.5-1.5-6 2-6.2" opacity="0.9"></path><path d="M12 12c3 2.5 1.5 6-2 6.2" opacity="0.9"></path><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle></svg>',
-    "gilded-ribbon":
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M7 15c2-6 4-6 6 0s4 6 4-1" opacity="0.9"></path></svg>',
     "heat-lightning":
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12.5 6.5 9 12h3l-1.5 5.5" opacity="0.95"></path><path d="M15.5 9.5l-1.6 2.6h1.8l-1.2 2.4" opacity="0.5"></path></svg>',
   };
@@ -3699,7 +3679,7 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       if (themeBtn) {
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm, Aurora, Galaxy, Heat Lightning.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -6253,7 +6233,7 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       const T = state.theme;
       if (!T || !T.reflectionSurface) return null;
       // Per-face cores: view-locked metal decals (Mercury's liquid metal is
-      // the reference; Ion Storm cobalt, Gilded Ribbon gold) and two light
+      // the reference; Ion Storm cobalt) and two light
       // surfaces (Stratosphere porcelain, Heat Lightning ivory). Galaxy's
       // cleared faces are holes onto the black hole painted once per frame
       // by drawInteriorEffect; Aurora clears to a plain well.
@@ -6268,15 +6248,14 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       return state.reduceMotion ? 0 : now * 0.001;
     }
     /** Galaxy: indigo dust with a fixed star field that twinkles. */
-    // Mercury (liquid metal), Galaxy (black hole), and the three dark metals
-    // (Ion Storm cobalt, Gilded Ribbon gold, Heat Lightning copper) clear to a
+    // Mercury (liquid metal), Galaxy (black hole), and the two dark metals
+    // (Ion Storm cobalt, Heat Lightning copper) clear to a
     // continuous interior with depth and no seams. Stratosphere and Aurora
     // clear to mono wells with depth and seams, on the Light/Dark model.
     const CORE_PROFILES = {
       mercury: "metal",
       galaxy: "blackhole",
       "ion-storm": "cobalt",
-      "gilded-ribbon": "gold",
       "heat-lightning": "copper",
     };
     // Whole-sphere effects seen through the cleared faces (one paint per frame).
@@ -7269,8 +7248,6 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       "ion-storm": { stops: ["#2c1150", "#7a3fbf", "#f0d8ff", "#9a5be0", "#1a0a33"], stroke: "#e2c4f5" },
       aurora: { stops: ["#083b3a", "#1f8a7c", "#dcfff6", "#38b39a", "#052625"], stroke: "#b9f0ee" },
       galaxy: { stops: ["#4a2033", "#b0606f", "#ffe1e4", "#c47b88", "#2a1220"], stroke: "#f0cdd0" },
-      // Gold flags vanished on the gold ribbon; lacquer red reads against it.
-      "gilded-ribbon": { stops: ["#3a0508", "#a3151c", "#ffb3a7", "#c8202a", "#2b0407"], stroke: "#ffd0c4" },
       // Ember flags vanished in the heat; cold steel-blue reads against it.
       "heat-lightning": { stops: ["#0c2a4a", "#2f6fa8", "#e6f4ff", "#4a8fd0", "#071a30"], stroke: "#cfe6ff" },
     };
@@ -8518,12 +8495,13 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       swatch: "conic-gradient(#111416 0 25%, #d8d4c9 0 50%, #202326 0 75%, #777a77 0)",
     },
     {
-      id: "canopy",
-      label: "Verdant Canopy",
-      shortLabel: "Canopy",
+      // Removed 2026-11-11: no source could be confirmed for its image.
+      // The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired canopy slot",
+      shortLabel: "Retired",
       fallback: ["#07100b", "#34563a", "#9ab18d", "#101a13"],
-      swatch: "radial-gradient(circle at 62% 24%, #b9c99e 0 8%, #34563a 35%, #07100b 76%)",
-      texture: { desktop: "assets/reflections/canopy-2048.webp", mobile: "assets/reflections/canopy-1024.webp", speed: 0.00025, exposure: 0.74, saturation: 0.88, backdrop: 0.46, mapping: "environment", frame: "ambient", reflectionStrength: 0.24, roughness: 0.12, motion: 6, motionAmount: 0.018, motionRate: 0.055 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       retired: true,
@@ -8542,20 +8520,22 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       swatch: "linear-gradient(#111, #050505)",
     },
     {
-      id: "portoro",
-      label: "Portoro Marble",
-      shortLabel: "Portoro",
+      // Removed 2026-11-11: no source could be confirmed for its image.
+      // The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired marble slot",
+      shortLabel: "Retired",
       fallback: ["#050403", "#604c2c", "#d4b26f", "#15110a"],
-      swatch: "linear-gradient(118deg, #030303 0 34%, #ba9656 35% 38%, #f0dfb2 39%, #090807 41% 68%, #745b35 69% 72%, #020202 73%)",
-      texture: { desktop: "assets/reflections/portoro-2048.webp", mobile: "assets/reflections/portoro-1024.webp", speed: 0.0005, exposure: 0.82, saturation: 0.76, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.90, reflectionStrength: 0.30, roughness: 0.08, gamma: 0.82 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
-      id: "deco",
-      label: "Deco Lacquer",
-      shortLabel: "Deco",
+      // Removed 2026-11-11: no source could be confirmed for its image.
+      // The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired deco slot",
+      shortLabel: "Retired",
       fallback: ["#030303", "#5b492d", "#c4a26b", "#100e0b"],
-      swatch: "repeating-conic-gradient(from 315deg at 50% 100%, #080808 0 7deg, #b28d55 8deg 9deg, #080808 10deg 16deg)",
-      texture: { desktop: "assets/reflections/deco-2048.webp", mobile: "assets/reflections/deco-1024.webp", speed: 0.0009, exposure: 0.84, saturation: 0.74, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.88, reflectionStrength: 0.28, roughness: 0.10, gamma: 0.84 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       id: "oculus",
@@ -8581,12 +8561,13 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       swatch: "linear-gradient(#111, #050505)",
     },
     {
-      id: "gilded-ribbon",
-      label: "Gilded Ribbon",
-      shortLabel: "Ribbon",
+      // Removed 2026-11-11: no source could be confirmed for its image.
+      // The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired ribbon slot",
+      shortLabel: "Retired",
       fallback: ["#020103", "#4d3449", "#dfa35f", "#080510"],
-      swatch: "repeating-radial-gradient(ellipse at 72% 58%, #060407 0 8px, #c27d38 9px 11px, #16101c 12px 19px, #8c7bb5 20px 21px)",
-      texture: { desktop: "assets/reflections/gilded-ribbon-1280.webp", mobile: "assets/reflections/gilded-ribbon-768.webp", speed: 0.00020, exposure: 0.90, saturation: 0.94, backdrop: 0.44, mapping: "surface", frame: "lag", surfaceMix: 0.90, reflectionStrength: 0.34, roughness: 0.07, gamma: 0.78, motion: 7, motionAmount: 0.028, motionRate: 0.060 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       id: "ion-storm",
@@ -8629,12 +8610,13 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
       texture: { desktop: "assets/reflections/chromatic-ink-1280.webp", mobile: "assets/reflections/chromatic-ink-768.webp", speed: 0.00015, exposure: 0.82, saturation: 1.08, backdrop: 0.38, mapping: "surface", frame: "shell", surfaceMix: 0.94, reflectionStrength: 0.24, roughness: 0.12, motion: 2, motionAmount: 0.22, motionRate: 0.075, pulse: 0.0, scaleX: 0.86, scaleY: 0.92 },
     },
     {
-      id: "amber-cells",
-      label: "Amber Cells",
-      shortLabel: "Cells",
+      // Removed 2026-11-11: no source could be confirmed for its image.
+      // The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired cells slot",
+      shortLabel: "Retired",
       fallback: ["#1c0b02", "#95500e", "#f5bd4e", "#40200a"],
-      swatch: "radial-gradient(circle at 28% 32%, #f4bd56 0 16%, #9b5417 17% 21%, transparent 22%), radial-gradient(circle at 68% 61%, #d98724 0 25%, #2b1205 27% 100%)",
-      texture: { desktop: "assets/reflections/amber-cells-2048.webp", mobile: "assets/reflections/amber-cells-1024.webp", speed: -0.00008, exposure: 0.84, saturation: 0.90, backdrop: 0.44, mapping: "surface", frame: "shell", surfaceMix: 0.92, reflectionStrength: 0.28, roughness: 0.12, seamSafe: false, seamBlend: 0.070, motion: 3, motionAmount: 0.038, motionRate: 0.22, pulse: 0.0 },
+      swatch: "linear-gradient(#111, #050505)",
     },
   ];
   const MATERIAL_INDEX = new Map(
@@ -10419,7 +10401,7 @@ const sphereChrome = initQuietChrome(sphereGame);
 (function () {
   const grid = document.getElementById("help-theme-grid");
   if (!grid || !window.SphereSweeper) return;
-  const ROSTER = ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"];
+  const ROSTER = ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"];
   const themes = SphereSweeper.THEMES;
   function swatchFor(t) {
     if (t.reflectionSurface) return "linear-gradient(145deg, " + (t.fallbackBgGlow || "#666") + ", " + (t.fallbackBg || "#000") + ")";

@@ -21,6 +21,21 @@ licensed. These packages are installed by pnpm, Swift Package Manager and
 Gradle at build time and are not checked in. Source:
 <https://github.com/ionic-team/capacitor>.
 
+## Reflection photographs
+
+The sealed game payload (`www/index.html`) embeds five reflection images as
+inline WebP data, taken from `sphere/assets/reflections/` in the game source.
+
+Three are photographs from Unsplash, used under the
+[Unsplash License](https://unsplash.com/license) and not covered by the MIT
+license: `galaxy-768.webp` (Jose G. Ortega Castro), `heat-lightning-768.webp`
+(Max LaRochelle) and `ion-storm-768.webp` (Felix Mittermeier).
+
+No source is confirmed for `gilded-ribbon-768.webp` or
+`stratosphere-1024.webp`, so neither is credited here and the MIT license does
+not cover them. Source links and the search record are in
+[the reflection source notes](../sphere/assets/reflections/SOURCES.md).
+
 ## Classic Minesweeper screenshot
 
 `www/assets/classic-minesweeper.png` is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown

@@ -27,6 +27,22 @@ and modification history are in
 [sphere/assets/textures/README.md](sphere/assets/textures/README.md) and
 [sphere/assets/textures/sources.json](sphere/assets/textures/sources.json).
 
+## Reflection photographs
+
+The WebP files in `sphere/assets/reflections/` (two sizes each of seven
+images) are the environment maps for the sphere's reflection materials. Some
+generated pages embed them as inline data.
+
+Six are photographs from Unsplash, used under the
+[Unsplash License](https://unsplash.com/license) and not covered by the MIT
+license: `amber-tempest` (Johannes Plenio), `chromatic-ink` (Daniel Olah),
+`galaxy` (Jose G. Ortega Castro), `heat-lightning` (Max LaRochelle),
+`ion-storm` (Felix Mittermeier) and `oculus` (Adam Gonzales).
+
+No source is confirmed for `stratosphere`, so it is not credited here and the
+MIT license does not cover it. Source links and the search record are in
+[sphere/assets/reflections/SOURCES.md](sphere/assets/reflections/SOURCES.md).
+
 ## Classic Minesweeper screenshot
 
 `sphere/assets/classic-minesweeper.png` (also under `sphere-ux/assets/`) is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown

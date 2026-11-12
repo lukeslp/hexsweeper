@@ -2881,8 +2881,7 @@
     function revealedCoreProfile(cell) {
       if (!cell || !cell.revealed || cell.flagged || cell.isMine) return null;
       const material = document.body.dataset.reflectionMaterial || "";
-      if (material === "amber-cells") return "microcells";
-      if (material === "mercury" || material === "portoro") return "metal";
+      if (material === "mercury") return "metal";
       return null;
     }
 

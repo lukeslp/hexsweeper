@@ -60,10 +60,10 @@ expect(appRoot.includes('id="help-theme-grid"') && appRoot.includes('id="help-si
 expect(appRoot.includes("HEXSWEEPER_REFLECTION_TEXTURES = (function(){") && appRoot.includes("data:image/webp;base64,"), "app root does not seal the reflection textures");
 expect(!appRoot.includes("HEXSWEEPER_REFLECTION_TEXTURE_BASE = "), "app root still assigns a texture URL base");
 expect(rootPage.includes('HEXSWEEPER_REFLECTION_TEXTURE_BASE = "sphere/"'), "web root does not point reflection textures at sphere/");
-for (const id of ["stratosphere", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"]) {
+for (const id of ["stratosphere", "ion-storm", "aurora", "galaxy", "heat-lightning"]) {
   expect(rootPage.includes(`id: "${id}"`), `root Sphere is missing the ${id} theme`);
 }
-for (const id of ["stratosphere", "ion-storm", "galaxy", "gilded-ribbon", "heat-lightning"]) {
+for (const id of ["stratosphere", "ion-storm", "galaxy", "heat-lightning"]) {
   expect(appRoot.includes(`"${id}":{desktop:t`), `app root does not seal the ${id} texture`);
 }
 expect(existsSync(join(root, "sphere/assets/reflections/stratosphere-1024.webp")) && existsSync(join(root, "sphere/assets/reflections/ion-storm-768.webp")), "reflection textures are not under sphere/assets/reflections");

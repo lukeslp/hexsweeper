@@ -516,23 +516,6 @@
     label: "rgba(255,255,255,0.85)",
     labelStroke: "rgba(0,0,0,0.85)",
   });
-  const THEME_GILDED_RIBBON = reflectionTheme({
-    id: "gilded-ribbon",
-    name: "Gilded Ribbon",
-    material: "gilded-ribbon",
-    warn: { count: "numerals", relief: "extruded", seams: false },
-    accent: "#dfa35f",
-    fallbackBg: "#080510",
-    fallbackBgGlow: "#4d3449",
-    fallbackCore: "#020103",
-    coveredEdge: "rgba(223,163,95,0.24)",
-    pentagonEdge: "rgba(240,200,140,0.32)",
-    hoverRing: "#f4cf9a",
-    activeRing: "#dfa35f",
-    revealGlow: "#dfa35f",
-    text: { 1: "#fff4e4", 2: "#f4cf9a", 3: "#dfa35f", 4: "#e0b8ff", 5: "#ff9f8f", 6: "#ff7180" },
-    label: "#fff4e4",
-  });
   const THEME_HEAT_LIGHTNING = reflectionTheme({
     id: "heat-lightning",
     name: "Heat Lightning",
@@ -567,7 +550,6 @@
     THEME_ION_STORM,
     THEME_AURORA,
     THEME_GALAXY,
-    THEME_GILDED_RIBBON,
     THEME_HEAT_LIGHTNING,
   ].filter((t) => {
     // Native app builds ship without the globe-map themes. Their daymaps are
@@ -911,8 +893,6 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M6.5 13.5c1.5-3 3-3 4.5 0s3 3 4.5 0" opacity="0.9"></path><path d="M7.5 9.5c1.2-2 2.4-2 3.6 0s2.4 2 3.6 0" opacity="0.5"></path></svg>',
     galaxy:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 12c-3-2.5-1.5-6 2-6.2" opacity="0.9"></path><path d="M12 12c3 2.5 1.5 6-2 6.2" opacity="0.9"></path><circle cx="12" cy="12" r="1.2" fill="currentColor"></circle></svg>',
-    "gilded-ribbon":
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M7 15c2-6 4-6 6 0s4 6 4-1" opacity="0.9"></path></svg>',
     "heat-lightning":
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12.5 6.5 9 12h3l-1.5 5.5" opacity="0.95"></path><path d="M15.5 9.5l-1.6 2.6h1.8l-1.2 2.4" opacity="0.5"></path></svg>',
   };
@@ -1630,7 +1610,7 @@
       if (themeBtn) {
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm, Aurora, Galaxy, Gilded Ribbon, Heat Lightning.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm, Aurora, Galaxy, Heat Lightning.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -4184,7 +4164,7 @@
       const T = state.theme;
       if (!T || !T.reflectionSurface) return null;
       // Per-face cores: view-locked metal decals (Mercury's liquid metal is
-      // the reference; Ion Storm cobalt, Gilded Ribbon gold) and two light
+      // the reference; Ion Storm cobalt) and two light
       // surfaces (Stratosphere porcelain, Heat Lightning ivory). Galaxy's
       // cleared faces are holes onto the black hole painted once per frame
       // by drawInteriorEffect; Aurora clears to a plain well.
@@ -4199,15 +4179,14 @@
       return state.reduceMotion ? 0 : now * 0.001;
     }
     /** Galaxy: indigo dust with a fixed star field that twinkles. */
-    // Mercury (liquid metal), Galaxy (black hole), and the three dark metals
-    // (Ion Storm cobalt, Gilded Ribbon gold, Heat Lightning copper) clear to a
+    // Mercury (liquid metal), Galaxy (black hole), and the two dark metals
+    // (Ion Storm cobalt, Heat Lightning copper) clear to a
     // continuous interior with depth and no seams. Stratosphere and Aurora
     // clear to mono wells with depth and seams, on the Light/Dark model.
     const CORE_PROFILES = {
       mercury: "metal",
       galaxy: "blackhole",
       "ion-storm": "cobalt",
-      "gilded-ribbon": "gold",
       "heat-lightning": "copper",
     };
     // Whole-sphere effects seen through the cleared faces (one paint per frame).
@@ -5200,8 +5179,6 @@
       "ion-storm": { stops: ["#2c1150", "#7a3fbf", "#f0d8ff", "#9a5be0", "#1a0a33"], stroke: "#e2c4f5" },
       aurora: { stops: ["#083b3a", "#1f8a7c", "#dcfff6", "#38b39a", "#052625"], stroke: "#b9f0ee" },
       galaxy: { stops: ["#4a2033", "#b0606f", "#ffe1e4", "#c47b88", "#2a1220"], stroke: "#f0cdd0" },
-      // Gold flags vanished on the gold ribbon; lacquer red reads against it.
-      "gilded-ribbon": { stops: ["#3a0508", "#a3151c", "#ffb3a7", "#c8202a", "#2b0407"], stroke: "#ffd0c4" },
       // Ember flags vanished in the heat; cold steel-blue reads against it.
       "heat-lightning": { stops: ["#0c2a4a", "#2f6fa8", "#e6f4ff", "#4a8fd0", "#071a30"], stroke: "#cfe6ff" },
     };
