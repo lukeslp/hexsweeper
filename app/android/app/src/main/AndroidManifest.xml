@@ -14,8 +14,14 @@
         android:required="true"
         tools:ignore="UnnecessaryRequiredFeature" />
 
+    <!-- Backup is off on purpose. The privacy policy says the run, best times
+         and settings stay on the device and go when the app is deleted; a copy
+         in the owner's cloud backup or on their next phone would outlive that.
+         data_extraction_rules.xml says the same for Android 12 and later. -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:appCategory="game"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
