@@ -158,16 +158,21 @@ try {
   await send("Page.reload", { ignoreCache: true });
   await waitExpression('document.readyState === "complete" && !!window.HEXSWEEPER_SPHERE_GAME', "root Sphere did not reload");
   await delay(400);
-  // First launch: the tutorial sheet, not the settings sheet; Play dismisses and marks the key.
-  await waitExpression('!document.getElementById("tutorial-overlay").hidden', "first launch did not show the tutorial");
-  assert.equal(await evaluate('document.getElementById("help-overlay").hidden'), true, "settings sheet opened on first launch instead of the tutorial");
+  // First launch: nothing opens by itself. The tutorial is behind ? ("Show the tutorial"); Play dismisses and marks the key.
+  assert.equal(await evaluate('document.getElementById("tutorial-overlay").hidden'), true, "the tutorial opened by itself on first launch");
+  assert.equal(await evaluate('document.getElementById("help-overlay").hidden'), true, "the settings sheet opened by itself on first launch");
+  await evaluate('document.getElementById("qc-help").click()');
+  await waitExpression('!document.getElementById("help-overlay").hidden', "help did not open for the tutorial");
+  await evaluate('document.getElementById("help-tutorial-btn").click()');
+  await waitExpression('!document.getElementById("tutorial-overlay").hidden', "Show the tutorial did not open the tutorial");
+  assert.doesNotMatch(await evaluate('document.getElementById("tutorial-panel").innerText'), /\u2014/, "tutorial copy has a long dash");
   await evaluate('document.getElementById("tutorial-play-btn").click()');
   await waitExpression('document.getElementById("tutorial-overlay").hidden', "tutorial did not dismiss");
   assert.equal(await evaluate('localStorage.getItem("hexsweeper-sphere-welcome-v1")'), "1", "tutorial did not mark the welcome key");
   assert.deepEqual(
     await evaluate('window.HEXSWEEPER_SPHERE_GAME.getInvertDrag()'),
-    { x: true, y: false },
-    "v4 drag preference did not reset to the mirrored-X v5 default",
+    { x: false, y: false },
+    "v4 drag preference did not reset to the follow-the-finger v6 default",
   );
   assert.equal(
     await evaluate('localStorage.getItem("hexsweeper-sphere-invert-v4")'),
@@ -211,7 +216,23 @@ try {
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /bottom left/i, "help copy does not point at the bottom bar");
   assert.doesNotMatch(help.text, /\bdig\b/i, "help copy still says dig");
-  assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
+  assert.doesNotMatch(help.text, /\u2014/, "help copy has a long dash");
+  // The bundle's own image and licenses page: nothing third-party in Help, credits one tap away.
+  const bundled = await evaluate(`(async () => {
+    const img = document.querySelector("#help-history-btn img");
+    if (img.decode) { try { await img.decode(); } catch (_) {} }
+    const link = document.querySelector('.menu-links a[href="notices.html"]');
+    const notices = await fetch("notices.html").then(r => r.ok ? r.text() : "");
+    return { src: img.getAttribute("src"), width: img.naturalWidth, link: link ? link.textContent.trim() : "",
+      back: notices.includes('href="index.html"'), ofl: notices.includes("SIL OPEN FONT LICENSE"), apache: notices.includes("Apache License"),
+      placeholders: /__[A-Z0-9_]+__/.test(notices), old: await fetch("assets/classic-minesweeper.png").then(r => r.ok, () => false) };
+  })()`);
+  assert.equal(bundled.src, "assets/classic-board.png", "Help image is not the project's Classic board");
+  assert.ok(bundled.width > 0, "Help image did not load from the bundle");
+  assert.equal(bundled.old, false, "the Windows Minesweeper screenshot is still in the bundle");
+  assert.equal(bundled.link, "Licenses", "the sheet has no Licenses link");
+  assert.ok(bundled.back && bundled.ofl && bundled.apache && !bundled.placeholders, `licenses page is incomplete: ${JSON.stringify(bundled)}`);
+  assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
   assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);
   assert.equal(await evaluate('!!document.getElementById("help-warn-grid")'), false, "Warnings group is still on the sheet (themes own it now)");
   assert.ok(help.invert && help.effects, "invert / effects pills missing from the sheet");
