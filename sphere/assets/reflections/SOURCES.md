@@ -1,22 +1,20 @@
 # Reflection photograph sources
 
-The twelve images in this folder are the environment maps for the sphere's
-reflection materials. They were added between August 11 and 18, 2026 without a
-record of where each one came from.
+The images in this folder are the environment maps for the sphere's reflection
+materials. They were added between August 11 and 18, 2026 without a record of
+where each one came from.
 
-On November 11, 2026 each image was run through a reverse image search and the
-candidates were opened and compared by eye with the file here. Six are
-photographs published on Unsplash under the
+On November 11, 2026 each of the twelve images then here was run through a
+reverse image search and the candidates were opened and compared by eye. Six
+are photographs published on Unsplash under the
 [Unsplash License](https://unsplash.com/license), which allows free use,
 including commercial use and modification, and asks for no credit. It is not an
 open-source license: it forbids selling unaltered copies and compiling the
 photos into a competing image service. The repository's MIT license does not
-cover these six; they stay under the Unsplash License. One more has a probable
-Unsplash source, and five have none.
+cover these six; they stay under the Unsplash License.
 
-An earlier keyword search of Wikimedia Commons the same day matched none of the
-twelve. The tracked files carry no embedded metadata, and the repository
-history holds no original file names, captions or links.
+Five had no source and were removed the same day, with their materials. One,
+Stratosphere, has a probable source and is still here.
 
 ## Confirmed
 
@@ -35,21 +33,19 @@ than that would show is not recorded.
 
 ## Not confirmed
 
-Treat these as **unconfirmed**: no author and no license is recorded, and the
-MIT license does not cover them. Do not add a license here without the source
-page in hand.
+Treat this one as **unconfirmed**: no author and no license is recorded, and
+the MIT license does not cover it.
 
 | Subject | Files | What it shows | Search result | Status |
 |---|---|---|---|---|
 | Stratosphere | `stratosphere-1024.webp`, `stratosphere-2048.webp` | Cloud deck from above under a blue sky with cirrus, 2:1 | Closest is [Above-cloud photo of blue skies](https://unsplash.com/photos/yQorCngxzwI), Taylor Van Riper, Unsplash License, a portrait photo. The file here is a 2:1 panorama, so it is either a reworked version or a different image. | probable, not confirmed |
-| Gilded Ribbon | `gilded-ribbon-768.webp`, `gilded-ribbon-1280.webp` | Abstract bronze and violet ribbon curves on black, 16:9; looks like a render | The same image appears on several unrelated business sites, which suggests a stock library. No library page found. | unconfirmed |
-| Amber Cells | `amber-cells-1024.webp`, `amber-cells-2048.webp` | Macro of amber oil drops on water, 2:1 | Only similar stock photos of oil drops; no copy of this image | unconfirmed |
-| Verdant Canopy | `canopy-1024.webp`, `canopy-2048.webp` | Misty old-growth conifer forest with ferns, 2:1 equirectangular panorama | Only similar forest photos; no copy of this image | unconfirmed |
-| Deco Lacquer | `deco-1024.webp`, `deco-2048.webp` | Black lacquer wall panels with brass fan and step inlay, 2:1 | Only similar interiors; no copy of this image | unconfirmed |
-| Portoro Marble | `portoro-1024.webp`, `portoro-2048.webp` | Black marble with gold and ivory veins, 2:1 | Only similar marble textures; no copy of this image | unconfirmed |
 
-Finding no copy anywhere fits an image that was made for this project, but the
-search cannot show that.
+## Removed
+
+Amber Cells, Verdant Canopy, Deco Lacquer, Gilded Ribbon and Portoro Marble
+were removed on November 11, 2026. The search found Gilded Ribbon on several
+unrelated business sites with no library page, and no copy of the other four
+anywhere. Their files remain in the history before that date.
 
 ## Stained Oculus
 
@@ -60,11 +56,10 @@ photograph and says nothing about the window itself. That question is open.
 
 ## Earlier images
 
-The history also holds five images that were removed in August 2026 and are
-not in the current tree: `paisley`, `salon`, `night-cabin`, and the first,
-smaller versions of `amber-cells` and `stratosphere`
-(under `sphere-reflection/assets/reflections/`). Their sources are not
-recorded either.
+The history also holds five images that were removed in August 2026:
+`paisley`, `salon`, `night-cabin`, and the first, smaller versions of
+`amber-cells` and `stratosphere` (under `sphere-reflection/assets/reflections/`).
+Their sources are not recorded either.
 
 ## Confirming a source
 

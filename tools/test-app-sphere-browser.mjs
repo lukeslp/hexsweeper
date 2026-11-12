@@ -219,7 +219,7 @@ try {
   assert.equal(help.playParagraphs, 0, "Play tab grew paragraphs again");
   assert.equal(help.tooltips, 0, `${help.tooltips} title= tooltips in the page`);
   assert.doesNotMatch(help.text, /\bdig\b/i, "help copy still says dig");
-  assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "gilded-ribbon", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
+  assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
   assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);
   assert.equal(await evaluate('!!document.getElementById("help-warn-grid")'), false, "Warnings group is still on the sheet (themes own it now)");
   assert.ok(help.invert && help.effects, "invert / effects pills missing from the sheet");
