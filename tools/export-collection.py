@@ -1525,6 +1525,41 @@ APP_SPLASH_HIDE = """<script>
 """
 
 
+# The Android shell keeps the page clear of a camera cutout, which leaves a
+# strip of the native window beside it. Each page tells the shell its
+# background color so the strip matches the theme. Without the HexBackdrop
+# plugin (iOS, a browser) this does nothing.
+APP_BACKDROP = """<script>
+/* app: tell the native shell the page background, now and when the theme changes */
+(function () {
+  var last = "";
+  function report() {
+    var p = window.Capacitor && window.Capacitor.Plugins;
+    if (!p || !p.HexBackdrop || !document.body) return;
+    var color = getComputedStyle(document.body).backgroundColor;
+    if (!color || color === last) return;
+    last = color;
+    try {
+      var sent = p.HexBackdrop.setColor({ color: color });
+      if (sent && sent.catch) sent.catch(function () {});
+    } catch (_) {}
+  }
+  function soon() { report(); setTimeout(report, 450); }
+  var watch = new MutationObserver(soon);
+  var opts = { attributes: true, attributeFilter: ["style", "class", "data-sphere-theme", "data-sphere-chrome"] };
+  watch.observe(document.documentElement, opts);
+  watch.observe(document.body, opts);
+  window.addEventListener("pageshow", soon);
+  if (window.matchMedia) {
+    var scheme = window.matchMedia("(prefers-color-scheme: dark)");
+    if (scheme.addEventListener) scheme.addEventListener("change", soon);
+  }
+  soon();
+})();
+</script>
+"""
+
+
 def appify(markup: str, *, lock_zoom: bool = True, label: str = "app page") -> str:
     """Apply the transforms every page in the native bundle needs.
 
@@ -1571,7 +1606,9 @@ def appify(markup: str, *, lock_zoom: bool = True, label: str = "app page") -> s
         r'<a href="\1" target="_blank"',
         markup,
     )
-    markup = markup.replace("</body>", f"{APP_SPLASH_HIDE}</body>", 1)
+    markup = markup.replace("</body>", f"{APP_BACKDROP}{APP_SPLASH_HIDE}</body>", 1)
+    if APP_BACKDROP not in markup:
+        raise SystemExit(f"appify({label}): backdrop report not added")
 
     remote = re.findall(
         r'(?:src|href)="(https?://[^"]+\.(?:png|jpe?g|gif|webp|svg|css|js|woff2?))"', markup
