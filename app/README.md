@@ -135,7 +135,7 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `f8ba34e`, a bounded maintenance line on the
+The current payload pins `1a4d987`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
 
@@ -150,6 +150,7 @@ straight to the board). It adds, and nothing else:
   the strip beside a camera cutout to match;
 - plain punctuation in Help and the tutorial, and a sheet that does not clip
   at large system text.
+- the share card has a solid background on the photo themes.
 
 This payload update does not create or upload an iOS or Android release. See
 [release notes](docs/RELEASE.md) for the distinction between payload checks

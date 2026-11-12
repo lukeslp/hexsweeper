@@ -5734,7 +5734,12 @@ window.HEXSWEEPER_WHEEL_HREF = "wheel.html";
       const octx = out.getContext("2d");
       const T = state.theme;
       const dark = T.id === "dark" || T.pureCovered;
-      const bg = T.bg || (dark ? "#000000" : "#ffffff");
+      // Reflection themes declare a see-through bg (the WebGL scene shows
+      // behind the board). A card needs a solid one, or the headline lands
+      // white on whatever the receiving app paints behind the picture.
+      const seeThrough =
+        !T.bg || T.bg === "transparent" || /^rgba\([^)]*,\s*0(\.0+)?\s*\)$/.test(String(T.bg).trim());
+      const bg = seeThrough ? T.fallbackBg || (dark ? "#000000" : "#ffffff") : T.bg;
       /*
        * Contrast against the colour actually painted, not the theme's notion
        * of "dark". `dark` is true for any pureCovered theme, several of which
