@@ -874,7 +874,7 @@ body.help-open { overflow: hidden; }
       <button type="button" role="tab" class="help-tab help-desk-only" id="help-tab-keys" aria-controls="help-panel-keys" aria-selected="false" data-tab="keys" tabindex="-1">Keys</button>
     </div>
     <section class="help-tabpanel" role="tabpanel" id="help-panel-play" aria-labelledby="help-tab-play" data-tab="play">
-    <p class="help-lede">Hexsweeper on a closed sphere — hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Clear a face; place a flag where you think a mine is. Your first clear is always safe.</p>
+    <p class="help-lede">Hexsweeper on a closed sphere: hex faces, six neighbors (classic Minesweeper used eight on a square grid).<br>Clear a face; place a flag where you think a mine is. Your first clear is always safe.</p>
     <ul class="help-controls" aria-label="Controls">
       <li><span class="act">Tap</span><span>Clear a face</span></li>
       <li><span class="act">Hold<span class="help-desk-only"> / ⌃-click</span></span><span>Place a flag</span></li>
@@ -885,8 +885,8 @@ body.help-open { overflow: hidden; }
     </ul>
     <div class="help-body">
       <p>Clear every safe face. Numbers count mines among the six touching neighbors. Flags mark where you think a mine is.</p>
-      <p>Once a number has as many flags around it as it says, double-tap the number to clear its remaining neighbors in one go. It goes by your flags, not by the board — if one is in the wrong place, that shortcut finds the mine.</p>
-      <p>Undo, New sphere and Flag mode sit at the bottom left — the flag turns red while armed. Everything else is on this sheet — Themes, Board (size and your best times) and Settings (drag inversion, effects) are the tabs above; each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial</button></p>
+      <p>Once a number has as many flags around it as it says, double-tap the number to clear its remaining neighbors in one go. It goes by your flags, not by the board. If one is in the wrong place, that shortcut finds the mine.</p>
+      <p>Undo, New sphere and Flag mode sit at the bottom left. The flag turns red while armed. Everything else is on this sheet: Themes, Board (size and your best times) and Settings (drag inversion, effects) are the tabs above; each theme brings its own depth, seams and marks. Progress autosaves; New sphere and a size change start over. <button type="button" class="help-link" id="help-tutorial-btn">Show the tutorial</button></p>
     </div>
     <p class="help-keys"><kbd>T</kbd> theme · <kbd>S</kbd>/<kbd>M</kbd>/<kbd>L</kbd> size · <kbd>F</kbd> flag · <kbd>N</kbd> counts · <kbd>R</kbd> reset · <kbd>?</kbd> help</p>
     <div class="help-history-row">
@@ -935,7 +935,7 @@ body.help-open { overflow: hidden; }
       <li><span class="act"><kbd>L</kbd></span><span>Large board</span></li>
     </ul>
     <div class="help-body">
-      <p>Shortcuts work whether this sheet is open or closed — the only exception is while you are typing in a field. XS and XL boards have no shortcut; pick them from the Board tab.</p>
+      <p>Shortcuts work whether this sheet is open or closed. The only exception is while you are typing in a field. XS and XL boards have no shortcut; pick them from the Board tab.</p>
       <p>This tab appears wherever a keyboard plausibly does, so a tablet with one attached gets it too.</p>
     </div>
     </section>
@@ -951,10 +951,10 @@ body.help-open { overflow: hidden; }
 <div id="tutorial-overlay" class="help-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" hidden>
   <div class="help-panel is-tutorial" id="tutorial-panel" tabindex="-1">
     <h2 id="tutorial-title">Hexsweeper 3D</h2>
-    <p class="help-lede">Minesweeper on a sphere. Six neighbors per face — numbers count up to six.</p>
+    <p class="help-lede">Minesweeper on a sphere. Six neighbors per face, so numbers count up to six.</p>
     <ul class="help-controls tutorial-steps" aria-label="How to play">
       <li><span class="act">Tap</span><span>Clear a face. Your first clear is always safe.</span></li>
-      <li><span class="act">Hold</span><span>Place a flag where you think a mine is — or arm flag mode at the bottom.</span></li>
+      <li><span class="act">Hold</span><span>Place a flag where you think a mine is, or arm flag mode at the bottom.</span></li>
       <li><span class="act">Drag</span><span>Spin the sphere. Pinch to zoom.</span></li>
     </ul>
     <p class="help-body">Clear every safe face. Undo, New sphere and Flag live at the bottom; themes, sizes and everything else are behind <b>?</b>.</p>
