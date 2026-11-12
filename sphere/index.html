@@ -775,6 +775,13 @@ body.help-open { overflow: hidden; }
   outline: 2px solid var(--text-main); outline-offset: 2px;
 }
 .lightbox-close:focus-visible { outline-color: #fff; }
+/* Large system text: the tabs wrap, and a theme whose name is wider than a
+   third of the sheet takes the room it needs, instead of "Settings" and
+   "Stratosphere" being cut off at the sheet's edge. At ordinary text sizes
+   this lays out exactly as the three-column grid did. */
+.help-tabs { flex-wrap: wrap; }
+.help-theme-grid { display: flex; flex-wrap: wrap; }
+.help-theme { flex: 0 1 calc((100% - 12px) / 3); min-width: min-content; }
 @media (max-width: 360px) {
   .help-overlay { padding: 12px; }
   .help-panel { padding-inline: 12px; max-height: calc(100dvh - 24px); }
