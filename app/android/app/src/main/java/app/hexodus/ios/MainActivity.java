@@ -28,6 +28,8 @@ public class MainActivity extends BridgeActivity {
         restoreUiSessionPending = savedInstanceState != null;
         // The game's Share button calls this plugin by name.
         registerPlugin(HexSharePlugin.class);
+        // The page reports its background so the cutout strip can match it.
+        registerPlugin(HexBackdropPlugin.class);
         // Samsung can recreate an Activity with a WebView during display transfer,
         // even when its configuration changes are handled. Replay only the game's
         // bounded panel projection after its own scripts have initialized.
@@ -55,6 +57,11 @@ public class MainActivity extends BridgeActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
         keepScreenImmersive();
+    }
+
+    /** Color of the strip the game leaves clear beside a camera cutout. */
+    void setBackdropColor(int color) {
+        if (gameViewport != null) gameViewport.setBackgroundColor(color);
     }
 
     private void bootstrapUiSession(WebView webView, int generation, int attempt) {
