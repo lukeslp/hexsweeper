@@ -26,6 +26,8 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         restoreUiSessionPending = savedInstanceState != null;
+        // The game's Share button calls this plugin by name.
+        registerPlugin(HexSharePlugin.class);
         // Samsung can recreate an Activity with a WebView during display transfer,
         // even when its configuration changes are handled. Replay only the game's
         // bounded panel projection after its own scripts have initialized.
