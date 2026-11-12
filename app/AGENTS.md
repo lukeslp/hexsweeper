@@ -4,7 +4,8 @@ Capacitor shell around hexsweeper's sphere game on iOS and Android. The app open
 straight into the sphere; a quiet bar (Undo · New sphere · Flag · ?) is the
 only fixed chrome and the ? sheet holds theme, size, best times, invert,
 effects and the tutorial. `www/wheel.html` is the hidden Water Wheel, reached
-by holding the mine count. Infinite and Classic are web-only. Read `README.md` first; it
+by holding the mine count. `www/notices.html` is the licenses page behind the
+sheet's Licenses link; keep it in step with `THIRD-PARTY-NOTICES.md`. Infinite and Classic are web-only. Read `README.md` first; it
 explains why the bundle id says `hexodus` and why the build number starts at 7.
 
 ## Entry policy
