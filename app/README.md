@@ -13,7 +13,7 @@ tutorial**. The fixed chrome is a quiet bar:
 (red while armed) bottom left, **?** bottom right, and a small mines-left ·
 seconds readout at the top. Everything else lives behind **?**, on four tabs
 (Play · Themes · Board · Settings): theme (Light · Dark · Stratosphere ·
-Mercury · Ion Storm · Aurora · Galaxy · Gilded Ribbon · Heat Lightning), board
+Mercury · Ion Storm · Aurora · Galaxy · Heat Lightning), board
 size with your best time per size, drag inversion, effects and the tutorial.
 Hold the mine count and water rises through it. Keep holding, or tap the
 little wave button on the sheet's Board tab, and you drop into the **Water Wheel**, a hidden second sphere
@@ -51,6 +51,16 @@ completed; TalkBack remains skipped/off. The native restoration receipt records
 these separate scopes.
 This candidate has not been publicly released.
 
+## Android 1.0.10 (35) candidate, November 12, 2026
+
+Prepared for a first Google Play release; not released, and not signed in this
+repository. It is the 1.0.9 (34) candidate plus: a working Share button, the
+cutout strip matched to the theme, system Back that closes sheets before it
+leaves the app, backup turned off, eight themes, the project's own Help image,
+a Licenses page, and a sheet that holds up at large system text. Checked on
+phone and tablet emulators only. 34 was installed on a test phone, so this
+candidate takes the next code.
+
 ## The names do not match, on purpose
 
 | Thing | Value |
@@ -84,6 +94,7 @@ App Store Connect app and abandoning this one.
 | `scripts/android-build.sh` | JDK-21 Gradle wrapper for APK/AAB builds |
 | `app-store/` | Store listing copy and screenshots |
 | `licenses/`, `THIRD-PARTY-NOTICES.md` | Notices for bundled third-party material |
+| `www/notices.html` | The same notices as a page inside the app (**?**, then **Licenses**) |
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
 the sealed Sphere game: one self-contained file with fonts, CSS, and all JS
@@ -94,6 +105,14 @@ native plugin,
 `HexShare` (in `AppDelegate.swift`, registered by `HexBridgeViewController`),
 presents the finished-board card as a `UIImage` in the iOS share sheet so
 image-capable apps appear; the web build's Web Share path is the fallback.
+Android has the same plugin name (`HexSharePlugin.java`): it writes the card to
+the app's cache folder and opens the system share sheet through the app's
+FileProvider. A second Android plugin, `HexBackdrop`, takes the page's
+background color for the strip beside a camera cutout. System Back closes an
+open sheet, returns from the Licenses page or the Water Wheel to the board,
+and leaves the app only from the bare board. Android backup is off
+(`allowBackup="false"` and `data_extraction_rules.xml`), so the run, best
+times and settings exist only on the device.
 `capacitor.config` is
 `.js` because `@capacitor/cli` requires a full `typescript` install purely to
 read a `.ts` config, which is not worth a toolchain in a repo with no TS source.
@@ -116,14 +135,25 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `c91cd20`: the bounded focus and Help-restoration updates
-(`f7d7546`) over `d0082f7` (October 7, 2026), with one change. The app now
-opens straight to the board, and the tutorial is reached from **?**. Sphere's settings
-use flat theme swatches, compact board-size choices, and icon-led settings
-rows. Game behavior is unchanged. The
-menu system remains an open design item in this repository. This payload update does not create
-or upload an iOS/Android release. See [release notes](docs/RELEASE.md) for the
-distinction between payload checks and published builds.
+The current payload pins `f8ba34e`, a bounded maintenance line on the
+`c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
+straight to the board). It adds, and nothing else:
+
+- the reflection materials with no known source are gone, so the Themes tab
+  shows eight themes (the change main took in #13);
+- the gesture fixes main took in #15;
+- Help shows the project's own Classic board, not the Windows Minesweeper
+  screenshot. The web keeps the screenshot. This is one source commit
+  (`2a778c5`) so it can be reverted by itself;
+- a Licenses page (`www/notices.html`) linked from the foot of the sheet;
+- each page reports its background color to the Android shell, which paints
+  the strip beside a camera cutout to match;
+- plain punctuation in Help and the tutorial, and a sheet that does not clip
+  at large system text.
+
+This payload update does not create or upload an iOS or Android release. See
+[release notes](docs/RELEASE.md) for the distinction between payload checks
+and published builds.
 
 ## Verify
 
@@ -168,10 +198,10 @@ relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
 back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
 network. Their texture provenance is recorded in this repository's
 [`sphere/assets/textures/README.md`](../sphere/assets/textures/README.md).
-The fourteen offline themes
+The thirteen offline themes
 (Light, Shell, Dark, Ink, Float, Card, Glow, Mercury, Stratosphere, Ion Storm,
-Aurora, Galaxy, Gilded Ribbon, Heat Lightning) ship in the payload, and the
-Themes tab exposes nine of them; the web build keeps all sixteen. Mercury's mirrored body is a WebGL2 shader
+Aurora, Galaxy, Heat Lightning) ship in the payload, and the
+Themes tab exposes eight of them; the web build keeps all sixteen. Mercury's mirrored body is a WebGL2 shader
 with no texture asset; the textured materials carry their small
 files sealed as data URIs (about 310KB together). Without WebGL each falls back to a
 plain field in its own palette.
