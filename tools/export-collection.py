@@ -234,69 +234,6 @@ EXPERIMENTS = [
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
-        "id": "sphere-reflection-canopy",
-        "title": "Obsidian Mirror · Verdant Canopy",
-        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Verdant Canopy",
-        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting a misted old-growth forest canopy.",
-        "tag": "Material study · photographic",
-        "blurb": "Moss, mist, and filtered canopy light move at different depths, turning one continuous old-growth reflection into a quiet parallax field.",
-        "filter": "sphere reflection mirror verdant canopy forest moss mist photographic texture material hexsweeper experiment",
-        "swatch": ("#07100b", "#34563a", "#9ab18d", "#e5222a"),
-        "file": "sphere-reflection-canopy.html",
-        "href": "sphere-reflection-canopy.html",
-        "liveHref": "../sphere-reflection/?material=canopy",
-        "source": "sphere-reflection",
-        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
-        "boot": "initHexBloom",
-        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
-        "welcomeKey": "hexsweeper-reflection-welcome-v1",
-        "reflectionMaterial": "canopy",
-        "ogImage": f"{OG}/sphere-og.png",
-    },
-    {
-        "id": "sphere-reflection-portoro",
-        "title": "Obsidian Mirror · Portoro Marble",
-        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Portoro Marble",
-        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting black Portoro marble with broad champagne veins.",
-        "tag": "Material study · stone",
-        "blurb": "Broad champagne and ivory veins travel through polished black stone, kept coarse enough not to impersonate seams.",
-        "filter": "sphere reflection mirror portoro black marble stone champagne ivory vein texture material hexsweeper experiment",
-        "swatch": ("#050403", "#604c2c", "#d4b26f", "#e5222a"),
-        "file": "sphere-reflection-portoro.html",
-        "href": "sphere-reflection-portoro.html",
-        "liveHref": "../sphere-reflection/?material=portoro",
-        "source": "sphere-reflection",
-        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
-        "boot": "initHexBloom",
-        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
-        "welcomeKey": "hexsweeper-reflection-welcome-v1",
-        "reflectionMaterial": "portoro",
-        "ogImage": f"{OG}/sphere-og.png",
-    },
-    {
-        "id": "sphere-reflection-deco",
-        "title": "Obsidian Mirror · Deco Lacquer",
-        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Deco Lacquer",
-        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting black lacquer and restrained aged-brass Deco inlay.",
-        "tag": "Material study · decorative",
-        "blurb": "Sparse fan and step geometry in aged brass moves over piano-black lacquer like a formal night interior.",
-        "filter": "sphere reflection mirror deco lacquer brass fan step classy decorative texture material hexsweeper experiment",
-        "swatch": ("#030303", "#5b492d", "#c4a26b", "#e5222a"),
-        "file": "sphere-reflection-deco.html",
-        "href": "sphere-reflection-deco.html",
-        "liveHref": "../sphere-reflection/?material=deco",
-        "source": "sphere-reflection",
-        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
-        "boot": "initHexBloom",
-        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
-        "welcomeKey": "hexsweeper-reflection-welcome-v1",
-        "reflectionMaterial": "deco",
-        "ogImage": f"{OG}/sphere-og.png",
-    },
-    {
         "id": "sphere-reflection-oculus",
         "title": "Obsidian Mirror · Stained Oculus",
         "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Stained Oculus",
@@ -336,27 +273,6 @@ EXPERIMENTS = [
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
         "reflectionMaterial": "galaxy",
-        "ogImage": f"{OG}/sphere-og.png",
-    },
-    {
-        "id": "sphere-reflection-gilded-ribbon",
-        "title": "Obsidian Mirror · Gilded Ribbon",
-        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Gilded Ribbon",
-        "ogDescription": "A playable mirrored Hexsweeper sphere reflecting nested bronze and violet ribbons.",
-        "tag": "Material study · abstract",
-        "blurb": "Nested bronze, champagne, and violet ribbons flex across their long axis, then settle a fraction behind the sphere.",
-        "filter": "sphere reflection mirror gilded ribbon bronze violet champagne abstract photographic texture material hexsweeper experiment",
-        "swatch": ("#020103", "#4d3449", "#dfa35f", "#e5222a"),
-        "file": "sphere-reflection-gilded-ribbon.html",
-        "href": "sphere-reflection-gilded-ribbon.html",
-        "liveHref": "../sphere-reflection/?material=gilded-ribbon",
-        "source": "sphere-reflection",
-        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
-        "boot": "initHexBloom",
-        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
-        "welcomeKey": "hexsweeper-reflection-welcome-v1",
-        "reflectionMaterial": "gilded-ribbon",
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
@@ -462,27 +378,6 @@ EXPERIMENTS = [
         "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
         "welcomeKey": "hexsweeper-reflection-welcome-v1",
         "reflectionMaterial": "chromatic-ink",
-        "ogImage": f"{OG}/sphere-og.png",
-    },
-    {
-        "id": "sphere-reflection-amber-cells",
-        "title": "Obsidian Mirror · Amber Cells",
-        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Amber Cells",
-        "ogDescription": "A playable mirrored Hexsweeper sphere refracting a field of warm amber oil cells.",
-        "tag": "Material study · fluid refraction",
-        "blurb": "Macro oil cells wobble and refract at a glacial pace, turning the shell into warm liquid amber.",
-        "filter": "sphere reflection mirror amber oil cells bubbles fluid refraction animated photographic texture material hexsweeper experiment",
-        "swatch": ("#1c0b02", "#95500e", "#f5bd4e", "#e5222a"),
-        "file": "sphere-reflection-amber-cells.html",
-        "href": "sphere-reflection-amber-cells.html",
-        "liveHref": "../sphere-reflection/?material=amber-cells",
-        "source": "sphere-reflection",
-        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
-        "boot": "initHexBloom",
-        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
-        "welcomeKey": "hexsweeper-reflection-welcome-v1",
-        "reflectionMaterial": "amber-cells",
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
@@ -824,18 +719,6 @@ EXPERIMENTS = [
 DEFAULT_LAB_SWATCH = ("#080a0f", "#7eb8ff", "#34d399", "#fbbf24")
 
 REFLECTION_TEXTURES = {
-    "canopy": {
-        "desktop": "sphere/assets/reflections/canopy-2048.webp",
-        "mobile": "sphere/assets/reflections/canopy-1024.webp",
-    },
-    "portoro": {
-        "desktop": "sphere/assets/reflections/portoro-2048.webp",
-        "mobile": "sphere/assets/reflections/portoro-1024.webp",
-    },
-    "deco": {
-        "desktop": "sphere/assets/reflections/deco-2048.webp",
-        "mobile": "sphere/assets/reflections/deco-1024.webp",
-    },
     "oculus": {
         "desktop": "sphere/assets/reflections/oculus-1280.webp",
         "mobile": "sphere/assets/reflections/oculus-768.webp",
@@ -843,10 +726,6 @@ REFLECTION_TEXTURES = {
     "galaxy": {
         "desktop": "sphere/assets/reflections/galaxy-1280.webp",
         "mobile": "sphere/assets/reflections/galaxy-768.webp",
-    },
-    "gilded-ribbon": {
-        "desktop": "sphere/assets/reflections/gilded-ribbon-1280.webp",
-        "mobile": "sphere/assets/reflections/gilded-ribbon-768.webp",
     },
     "ion-storm": {
         "desktop": "sphere/assets/reflections/ion-storm-1280.webp",
@@ -867,10 +746,6 @@ REFLECTION_TEXTURES = {
     "chromatic-ink": {
         "desktop": "sphere/assets/reflections/chromatic-ink-1280.webp",
         "mobile": "sphere/assets/reflections/chromatic-ink-768.webp",
-    },
-    "amber-cells": {
-        "desktop": "sphere/assets/reflections/amber-cells-2048.webp",
-        "mobile": "sphere/assets/reflections/amber-cells-1024.webp",
     },
 }
 
@@ -914,7 +789,7 @@ def reflection_texture_boot(only: set[str] | None = None, *, mobile_only: bool =
 
 # Reflection materials shipped as canonical sphere themes (sphere.js THEMES).
 # The app seals their textures; the web root points at sphere/assets/.
-SPHERE_APP_MATERIALS = {"stratosphere", "ion-storm", "galaxy", "gilded-ribbon", "heat-lightning"}
+SPHERE_APP_MATERIALS = {"stratosphere", "ion-storm", "galaxy", "heat-lightning"}
 
 
 def reflection_registry_errors() -> list[str]:
