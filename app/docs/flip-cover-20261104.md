@@ -4,7 +4,7 @@ This records the initial 1.0.7 (32) viewport candidate. The later
 [1.0.8 (33) quiet-focus follow-up](flip-cover-quiet-checks-20261104.md) records the
 generated payload update, exact source pin and current accessibility limits.
 
-Development source: `lukeslp/hexsweeper-app`, isolated branch
+Development source: `lukeslp/hexsweeper-app` (since merged into lukeslp/hexsweeper; the app is under app/), isolated branch
 `codex/flip-cover-20261104`, based on canonical `origin/main` at `ae38970`.
 Work was performed in a separate checkout; the original checkout was not edited.
 The sealed game remains the `d0082f7` source snapshot recorded in `WWW_SOURCE.txt`;

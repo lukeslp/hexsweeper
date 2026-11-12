@@ -8,6 +8,8 @@
 [![F-Droid repository](https://img.shields.io/badge/F--Droid-LocalType_releases_repo-1976D2)](https://dr.eamer.dev/downloads/fdroid/)
 [![Pebble Appstore](https://img.shields.io/badge/Pebble-Appstore-FF4700)](https://apps.repebble.com/94e4d9abfb8e44488f419862)
 
+The Pebble watch source is on the `pebble/all-watches` branch.
+
 A hexagonal minesweeper in three shapes: an endless plate, a fixed classic
 board, and a closed 3D sphere. The web root opens Sphere immediately; the
 separate Games page offers all three boards and a centered Resume. The native
@@ -34,7 +36,7 @@ checkout; a local commit or push alone does not establish deployed bytes. The ge
 routes (`index.html`, `launcher.html`, `infinite.html`, `bounded.html`, and the
 `collection/` one-pagers) are committed; run the exporter after changing their
 sources and CI checks that they match. IBM Plex is self-hosted under `fonts/`
-under the SIL Open Font License 1.1. No font CDN is used.
+under the SIL Open Font License 1.1. The production pages use no font CDN; the dormant `lab.html` loads its fonts from Google Fonts.
 
 ## Boards (production)
 
@@ -52,8 +54,8 @@ rail. These web controls use the [shared Minimal frame](docs/control-layout-2026
 square 48px targets, 24px glyphs and visible keyboard focus. Infinite uses the
 same New board/Flag/? placement; Classic puts Reset above and Menu last. The
 sealed native payload keeps its existing control arrangement.
-The three-hex games menu — Infinite, Classic, Sphere, with
-the newest run in the center Resume tile — lives at `launcher.html`, which is
+The three-hex games menu (Infinite, Classic, Sphere, with
+the newest run in the center Resume tile) lives at `launcher.html`, which is
 **unlinked and noindex** since 2026-10-07: it stays served only so old links
 resolve. Every web game stands alone, with no Games pill; the sphere's Help
 sheet ends "Also Infinite · Classic". `infinite.html` also sets `stillPlane`
@@ -79,9 +81,9 @@ distinct materials and mechanics:
 
 | Theme | Board | Feel |
 |------|--------|------|
-| **Light** | Infinite | Porcelain chalk desk — bright raised covers, graphite wells (seam-only LOD when zoomed out; full extrusion when zoomed in) |
-| **Dark** | Infinite | Night-iron plate — cold steel bevels, deep wells (same infinite run as Light; same zoom LOD) |
-| **Fire** | Finite | Magma shaft / hell-mine well — dense viewport-filling honeycomb; drag tilts the pit (camera locked); hold to flag |
+| **Light** | Infinite | Porcelain chalk desk: bright raised covers, graphite wells (seam-only LOD when zoomed out; full extrusion when zoomed in) |
+| **Dark** | Infinite | Night-iron plate: cold steel bevels, deep wells (same infinite run as Light; same zoom LOD) |
+| **Fire** | Finite | Magma shaft / hell-mine well: dense viewport-filling honeycomb; drag tilts the pit (camera locked); hold to flag |
 | **Plague** | Finite | Soil hive bed + living mycelial underlay + green specimen tiles + hyphal mat (seam-only LOD at extreme zoom-out) |
 | **Escape** | Infinite | Opens on a patch then pulls wide; dig/flag/chord toward an offscreen finish (edge cue); rift heartbeats and reaches toward your digs |
 
@@ -93,7 +95,7 @@ Infinite has its own `infinite-og.png`: a seeded endless Dark board with red fla
 
 OG cards: `assets/social/<card>-og.png` for production themes (`home`, `light`, `dark`, `fire`, `plague`, `escape`), lab skins (`skin-<id>`), and `sphere`. Social **title** and **description** live in `tools/export-collection.py` (`ogTitle` / `ogDescription` on `THEMES`), `skins.json` (per lab skin), and `sphere/index.html`; `tools/og-card.html` mirrors them for PNG captions. Example plate title: *Neumorphic Hexagonal Minesweeper*. Older Fire studies stay as `fire-og-alt.png`, `fire-og-bloom.png`. Rebuild PNGs with `tools/shoot-og-cards.sh` (reads card keys from `tools/og-card.html`, shoots headless at 2×, downscales to 1200×630). Requires Chromium + Pillow on Drummer; set `BASE=` to override the live URL. Cycle flat-game themes with the theme control or `T`. Deep-link `play.html?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`); add `&deal=1` to open a starting patch. Legacy root query links forward to the same route. Preference key: `hexsweeper-mode-v3`.
 
-First visit opens the board immediately; instructions are available through Help. On `infinite.html` the Menu and Help are one sheet, the same component as Sphere's (tabs Play · Look · Settings behind one Help and settings button; Play is one line plus Tap / Hold / Drag rows and the score, Look is Light / Dark, Settings holds Flag mode, Effects and run export/import). The page has no `title=` tooltips, and a first visit gets one quiet cue above the bar instead of any card. Both sheets keep one height across their tabs. Chrome: lower-right **Appearance (sun/moon) · Reset · Menu** as matching icons — Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
+First visit opens the board immediately; instructions are available through Help. On `infinite.html` the Menu and Help are one sheet, the same component as Sphere's (tabs Play · Look · Settings behind one Help and settings button; Play is one line plus Tap / Hold / Drag rows and the score, Look is Light / Dark, Settings holds Flag mode, Effects and run export/import). The page has no `title=` tooltips, and a first visit gets one quiet cue above the bar instead of any card. Both sheets keep one height across their tabs. Chrome: lower-right **Appearance (sun/moon) · Reset · Menu** as matching icons; Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber · Data Poems) live in Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
 
 Fresh runs (cold load or Reset) share one `startFreshRun` path after theme chrome is applied, so Escape intro zoom and plate framing match between first paint and restart.
 
@@ -101,12 +103,12 @@ Fresh runs (cold load or Reset) share one `startFreshRun` path after theme chrom
 
 | Action | How |
 |--------|-----|
-| Dig | Click / tap — empty floods open outward in rings |
+| Dig | Click / tap: empty floods open outward in rings |
 | Flag | Right-click, Ctrl/⌘-click, long-hold, or Menu → Flag (`F`) |
 | Pan / tilt | Infinite: drag pans (view stays put on dig/flood). Fire: drag tilts the pit (hold flags). Space/middle-drag pans anywhere |
 | Zoom | Scroll · pinch · `+` / `−` (persists as `hexsweeper-zoom-v1`) |
 | Chord | Click a revealed number whose neighbor flags match the count |
-| Restart / size | `R`, Restart, or S·M·L (finite only) — each clears that lane’s autosave |
+| Restart / size | `R`, Restart, or S·M·L (finite only); each clears that lane’s autosave |
 | Export / Import | Menu → Export / Import (infinite Light/Dark/Escape JSON) |
 
 Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Light/Dark, `hexsweeper-endless-escape-v1` for Escape).
@@ -115,10 +117,10 @@ Infinite runs autosave to `localStorage` (`hexsweeper-endless-plate-v1` for Ligh
 
 Flat-game choices are composed in `play.html` from four declarative axes:
 
-- **Mode profile** — finite/endless topology, camera behavior, rules, and autosave lane.
-- **Material** — the existing Canvas renderer/material record and its color tokens.
-- **Cosmetic effects profile** — ambient, reveal, and flag particles. These channels can be enabled independently without changing the board or save lane.
-- **Endgame profile** — mandatory semantic win/loss feedback. Infinite Light/Dark and Fire use the shared detonation; Plague uses infection; Escape uses the rift catch.
+- **Mode profile**: finite/endless topology, camera behavior, rules, and autosave lane.
+- **Material**: the existing Canvas renderer/material record and its color tokens.
+- **Cosmetic effects profile**: ambient, reveal, and flag particles. These channels can be enabled independently without changing the board or save lane.
+- **Endgame profile**: mandatory semantic win/loss feedback. Infinite Light/Dark and Fire use the shared detonation; Plague uses infection; Escape uses the rift catch.
 
 Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion carries normal digs, while the full shared bomb detonation remains intact. **Effects: Reduced** selects the detonation's calm, non-shaking path; it never removes loss feedback. This profile seam is the supported path for promoting collection materials or effects into future skins. Material changes must not restart a run, alter rules, or change persistence lanes.
 
@@ -142,15 +144,15 @@ Light and Dark deliberately use the `quiet-plate` cosmetic profile: tile motion 
 | `glitch-sphere/` | **Experimental** moving-hazard route on the shared Sphere engine |
 | `monkey-grid/` | **Experimental** flat Catch the Monkey route-blocking game |
 | `monkey-sphere/` | **Experimental** spherical Catch the Monkey portal chase |
-| `choices.html` | Curated hub: production, sphere, lab links — not in theme switcher |
+| `choices.html` | Curated hub: production, sphere, lab links, not in theme switcher |
 | `choices/lab/` | Generated redirects to `collection/skin-*.html` |
 | `tools/export-choices-lab.py` | Regenerates `choices/lab/*.html` redirect stubs |
 | `classic.html` | Lab baseline neumorph skin |
-| `lab.html` + `skins.json` + `skins/` | Dormant visual lab — not linked from production |
+| `lab.html` + `skins.json` + `skins/` | Dormant visual lab, not linked from production |
 
 ## Collection (one-pagers)
 
-Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML** lives on the [collection desk](collection/) only — playable pens are game-only (Reset/Menu).
+Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML** lives on the [collection desk](collection/) only; playable pens are game-only (Reset/Menu).
 
 | File | Theme |
 |------|--------|
@@ -160,11 +162,11 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/theme-plague.html` | Plague · Finite |
 | `collection/theme-escape.html` | Escape · Infinite |
 | `collection/skin-*.html` | Ten lab skins from `skins.json` (game-only exports; each has OG meta) |
-| `collection/sphere.html` | Hexsweeper 3D — self-contained sphere one-pager (CodePen-ready) |
-| `collection/water-wheel.html` | Water Wheel — self-contained dousing-game one-pager |
-| `build/app/wheel.html` | The Water Wheel sealed for the native app (app-flagged: globe themes dropped; help on demand; Sphere pill home) — reached by holding the mine count on the sphere or the wave button on the sheet's Board tab. The wheel **floats**: a spring–damper bob and sway forced by a two-frequency swell, churned down by spinning, hopped by a quench, slammed by a detonation (`BOB`/`tickBob` in `wheel/sphere.js`; the waterline stays anchored to the frame) |
-| `collection/polyhedron.html` | Dodecahedron campaign — 12 connected panels with 19/37/61 cells per panel |
-| `collection/sphere-reflection*.html` | Obsidian Mirror studies — five procedural environments plus fifteen image-backed surfaces, including animated storm, cloud, ink, and oil-cell plates |
+| `collection/sphere.html` | Hexsweeper 3D: self-contained sphere one-pager (CodePen-ready) |
+| `collection/water-wheel.html` | Water Wheel: self-contained dousing-game one-pager |
+| `build/app/wheel.html` | The Water Wheel sealed for the native app (app-flagged: globe themes dropped; help on demand; Sphere pill home), reached by holding the mine count on the sphere or the wave button on the sheet's Board tab. The wheel **floats**: a spring–damper bob and sway forced by a two-frequency swell, churned down by spinning, hopped by a quench, slammed by a detonation (`BOB`/`tickBob` in `wheel/sphere.js`; the waterline stays anchored to the frame) |
+| `collection/polyhedron.html` | Dodecahedron campaign: 12 connected panels with 19/37/61 cells per panel |
+| `collection/sphere-reflection*.html` | Obsidian Mirror studies: five procedural environments plus fifteen image-backed surfaces, including animated storm, cloud, ink, and oil-cell plates |
 | `collection/sphere-kimi.html` | Visual take: Moon Ink Orrery |
 | `collection/sphere-claude.html` | Visual take: Amber Codex |
 | `collection/sphere-muse.html` | Visual take: Starlit Void |
@@ -182,7 +184,7 @@ Self-contained files for paste into CodePen (or anywhere HTML runs). **Copy HTML
 | `collection/catch-monkey-orbit.html` | Game study: spherical route-blocking chase toward three portals |
 | `sphere/takes/*.json` | Model design specs for the three takes |
 | `sphere/assets/textures/` | Responsive Earth 4K/2K gloss maps and Moon 2K daymap (`?theme=earth\|moon`) |
-| `collection/index.html` | Desk tile grid — sphere + takes under Experiments (Open + Copy HTML) |
+| `collection/index.html` | Desk tile grid: sphere + takes under Experiments (Open + Copy HTML) |
 
 Regenerate after production or lab skin changes:
 
@@ -227,7 +229,7 @@ existing autosave; fresh native cold starts clear the old UI snapshot.
 [The protocol and its limits](docs/native-ui-session-20261105.md) include
 real-export quiet reload checks in `tools/test-native-ui-session.mjs`.
 
-The launcher is three hexes — **Infinite**, **Classic**, and **Sphere** — with an
+The launcher is three hexes (**Infinite**, **Classic**, and **Sphere**) with an
 empty seat in the middle. Tapping a mode opens that game at once with its
 last-used settings (Infinite theme from `hexsweeper-mode-v3`, Classic size from
 `hexsweeper-classic-size-v1`, Sphere theme from `hexsweeper-sphere-theme-v6`);
@@ -267,7 +269,7 @@ Also exported: `Hexsweeper.DEFAULT_THEME`, `DEFAULT_CONFIG`, `SQRT3`.
 
 ## Sphere
 
-Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.dev/games/hexsweeper/sphere/
+Closed Goldberg sphere minesweeper at [`sphere/`](sphere/): https://dr.eamer.dev/games/hexsweeper/sphere/
 
 - Canvas 2D projection of vendored hexasphere math (no Three.js)
 - Dig / flag / flood over geodesic `neighborIndices`; first dig safe; win/lose
@@ -277,14 +279,14 @@ Closed Goldberg sphere minesweeper at [`sphere/`](sphere/) — https://dr.eamer.
 - Minimal help: short lede, color history tile → [CoolmathGames history](https://www.coolmathgames.com/blog/the-history-of-minesweeper) + lightbox
 - Densities: **XS** = 162 · **S** = 362 · **M** = 1002 · **L** = 1442 · **XL** = 2252 (~17% mines; size button cycles XS→XL)
 - Flood expand: BFS ring stagger + brief flash/pop (logic opens immediately; paint catch-up; RM-safe)
-- **Chrome:** `sphere/quiet-chrome.js` — no menu. A small top readout (mines left · seconds) and a bottom bar of bare glyphs: **Undo · New sphere · Flag** (red while armed) on the left, **?** on the right; 52×56 targets on touch. Everything else lives in the ? sheet, which is the settings sheet: gesture table, **Theme** grid (nine swatches), **Board size** (XS–XL, starts a new sphere), Invert and Effects rows, Done. **Themes own the warning treatment** (`theme.warn` = count paint · relief · seams): on the Light/Dark model, Light, Dark, Aurora and Stratosphere are numbers · depth · seams; Mercury, Galaxy, Ion Storm, Gilded Ribbon and Heat Lightning have continuous interiors and drop the seams (Galaxy's counts are the line-based nested rings in soft white). **Interiors**: Mercury's per-face liquid-metal decal (`CORE_PROFILES` → `drawMetalCore(proj, now, "metal")`, view-locked band + a gleam that lags the rotation), recoloured for Ion Storm (cobalt), Gilded Ribbon (gold) and Heat Lightning (copper) since 2026-09-01, and Galaxy's whole-sphere **black hole** (`INTERIOR_EFFECTS` → `drawInteriorEffect` → `drawBlackHole`: star field pushed outward by the mass, a Keplerian accretion disc with the approaching side Doppler-bright and the far side lensed over the top and under the bottom, a breathing photon ring, the horizon at 0.16 R, a star spiralling in every ~6.5 s — painted once per frame through the union of squarely-facing cleared faces, z > 0.22, after clipping to the sphere's disc, digits repainted on top). Aurora and Stratosphere clear to **mono wells** — a single flat colour with depth and seams, exactly like Light/Dark (Stratosphere's are white with dark digits and light cliff walls; Aurora's dark). The remaining palettes (`METAL_PALETTES` verdigris/light/ivory) and painters (`drawAuroraCurtains`, `drawPlasmaFilaments`, `drawSkyClouds`, `drawLightningBolts`) remain in the file unmapped — one `CORE_PROFILES`/`INTERIOR_EFFECTS` entry brings any back. `interiorEffectLive` keeps the frame loop running while an effect is visible; reduced motion freezes the hole and drops the flashes and bolts. Each effect is one `INTERIOR_EFFECTS` entry and one commit, so any of them can be reverted alone. Every mirror material has its own flag sheen (`FLAG_SHEENS`; Stratosphere and Gilded Ribbon lacquer red, Heat Lightning steel blue); reflection themes skip the raised hover/press pass but keep the pressed face in the normal pass so a long-press flag paints during the hold. The hex-bloom flower and the on-sphere face menu (`getMenuPatch` / `focusPatch` / rotate-only mode) remain in the engine and `hex-bloom.js` for the flux/glitch variants and the studio, but the canonical sphere no longer mounts them. Legacy dev-chrome HUD pills remain for `sphere/dev/`.
-- **Themes:** Light · Shell · Dark · Ink · **Float** (Light + contact shadow) · **Card** (Ink + contact shadow) · **Glow** (luminous dig centers) · **Earth** / **Moon** (globe-map daymaps, `?theme=earth|moon`) · **Mercury** (the reflection studio's Smoked Mercury material as a theme: WebGL mirrored body from `sphere/mirror-material.js`, etched crust, liquid-metal wells, gilded flags; procedural, so it also ships offline in the app; falls back to a plain metal field without WebGL) · **Stratosphere** (light chrome: a sky environment map drifting across the mirror, glass wells) · **Ion Storm** (dark: a hybrid-mapped storm cloud on a lagging frame — the reflection carries inertia and trails the rotation, with a slow pulse) · **Aurora** (procedural curtains, no texture) · **Galaxy** (environment-mapped dust) · **Gilded Ribbon** (surface ribbon on a lagging frame) · **Heat Lightning** (hybrid, pulsing). Every material has a themed interior (see Chrome above) and a themed **flag sheen** in its own metal or light (`FLAG_SHEENS`). Vocabulary: faces are **cleared** (not dug); flags mark where you think a mine is. The textured ones are texture-backed — `sphere/assets/reflections/*.webp` on the web (pages outside `sphere/` set `HEXSWEEPER_REFLECTION_TEXTURE_BASE`), sealed as data URIs (1024 files, ~300KB) in the app; wells opposite the shell — `hexsweeper-sphere-theme-v6`
+- **Chrome:** `sphere/quiet-chrome.js`: no menu. A small top readout (mines left · seconds) and a bottom bar of bare glyphs: **Undo · New sphere · Flag** (red while armed) on the left, **?** on the right; 52×56 targets on touch. Everything else lives in the ? sheet, which is the settings sheet: gesture table, **Theme** grid (nine swatches), **Board size** (XS–XL, starts a new sphere), Invert and Effects rows, Done. **Themes own the warning treatment** (`theme.warn` = count paint · relief · seams): on the Light/Dark model, Light, Dark, Aurora and Stratosphere are numbers · depth · seams; Mercury, Galaxy, Ion Storm, Gilded Ribbon and Heat Lightning have continuous interiors and drop the seams (Galaxy's counts are the line-based nested rings in soft white). **Interiors**: Mercury's per-face liquid-metal decal (`CORE_PROFILES` → `drawMetalCore(proj, now, "metal")`, view-locked band + a gleam that lags the rotation), recolored for Ion Storm (cobalt), Gilded Ribbon (gold) and Heat Lightning (copper) since 2026-09-01, and Galaxy's whole-sphere **black hole** (`INTERIOR_EFFECTS` → `drawInteriorEffect` → `drawBlackHole`: star field pushed outward by the mass, a Keplerian accretion disc with the approaching side Doppler-bright and the far side lensed over the top and under the bottom, a breathing photon ring, the horizon at 0.16 R, a star spiraling in every ~6.5 s, painted once per frame through the union of squarely-facing cleared faces, z > 0.22, after clipping to the sphere's disc, digits repainted on top). Aurora and Stratosphere clear to **mono wells**: a single flat color with depth and seams, exactly like Light/Dark (Stratosphere's are white with dark digits and light cliff walls; Aurora's dark). The remaining palettes (`METAL_PALETTES` verdigris/light/ivory) and painters (`drawAuroraCurtains`, `drawPlasmaFilaments`, `drawSkyClouds`, `drawLightningBolts`) remain in the file unmapped; one `CORE_PROFILES`/`INTERIOR_EFFECTS` entry brings any back. `interiorEffectLive` keeps the frame loop running while an effect is visible; reduced motion freezes the hole and drops the flashes and bolts. Each effect is one `INTERIOR_EFFECTS` entry and one commit, so any of them can be reverted alone. Every mirror material has its own flag sheen (`FLAG_SHEENS`; Stratosphere and Gilded Ribbon lacquer red, Heat Lightning steel blue); reflection themes skip the raised hover/press pass but keep the pressed face in the normal pass so a long-press flag paints during the hold. The hex-bloom flower and the on-sphere face menu (`getMenuPatch` / `focusPatch` / rotate-only mode) remain in the engine and `hex-bloom.js` for the flux/glitch variants and the studio, but the canonical sphere no longer mounts them. Legacy dev-chrome HUD pills remain for `sphere/dev/`.
+- **Themes:** Light · Shell · Dark · Ink · **Float** (Light + contact shadow) · **Card** (Ink + contact shadow) · **Glow** (luminous dig centers) · **Earth** / **Moon** (globe-map daymaps, `?theme=earth|moon`) · **Mercury** (the reflection studio's Smoked Mercury material as a theme: WebGL mirrored body from `sphere/mirror-material.js`, etched crust, liquid-metal wells, gilded flags; procedural, so it also ships offline in the app; falls back to a plain metal field without WebGL) · **Stratosphere** (light chrome: a sky environment map drifting across the mirror, glass wells) · **Ion Storm** (dark: a hybrid-mapped storm cloud on a lagging frame: the reflection carries inertia and trails the rotation, with a slow pulse) · **Aurora** (procedural curtains, no texture) · **Galaxy** (environment-mapped dust) · **Gilded Ribbon** (surface ribbon on a lagging frame) · **Heat Lightning** (hybrid, pulsing). Every material has a themed interior (see Chrome above) and a themed **flag sheen** in its own metal or light (`FLAG_SHEENS`). Vocabulary: faces are **cleared** (not dug); flags mark where you think a mine is. The textured ones are texture-backed: `sphere/assets/reflections/*.webp` on the web (pages outside `sphere/` set `HEXSWEEPER_REFLECTION_TEXTURE_BASE`), sealed as data URIs (1024 files, ~300KB) in the app; wells opposite the shell; stored under `hexsweeper-sphere-theme-v6`
 - **Controls:** the quiet bar and ? sheet are the production controls. Themes, inversion and effects apply live without replacing the run; a different board size starts over. Share image is available on the endgame banner. The old Customize panel is retained for development surfaces.
-- **Rotation:** `resize()` records the CSS size it measured; `syncCanvasSize()` runs at the top of every frame and rebuilds the backing store whenever the bitmap stops matching its element, and `resizeSoon()` re-measures over the next two frames plus 250 ms after `resize` / `orientationchange` / `visualViewport.resize`. iOS drops or mis-times the orientation resize — one event arrives with the old layout, none follows, and the board stays stretched forever. The mirror canvas carries the same guard. Contract covers portrait → landscape → portrait plus a deliberately corrupted bitmap.
+- **Rotation:** `resize()` records the CSS size it measured; `syncCanvasSize()` runs at the top of every frame and rebuilds the backing store whenever the bitmap stops matching its element, and `resizeSoon()` re-measures over the next two frames plus 250 ms after `resize` / `orientationchange` / `visualViewport.resize`. iOS drops or mis-times the orientation resize: one event arrives with the old layout, none follows, and the board stays stretched forever. The mirror canvas carries the same guard. Contract covers portrait → landscape → portrait plus a deliberately corrupted bitmap.
 - **Drag:** both axes follow the finger with Invert off, including horizontal motion after tumbling past a pole. Rotation is `0.9 / state.scale` rad per px so tracking stays consistent across zoom and screen sizes. Settings cycles Invert off / X / Y / X+Y. Sphere and Wheel use v6 inversion preference keys and drop older values; v5 had the opposite horizontal default.
 - **Android rendering:** Sphere and Wheel cap their Canvas 2D backing stores at 1.1×, cache rotation terms, cull the far hemisphere before projecting boundaries, and reuse projected geometry for recessed faces. On boards of 642 faces or more, direct and ambient rotation use a compact front-hemisphere projection; direct drags also stop hit-testing once the gesture becomes a drag. Moving frames temporarily drop labels, glows and depth skirts, while Light and Dark batch same-style faces into compound paths instead of filling and stroking every tile separately. The complete detailed frame returns whenever motion stops, then the static canvas parks until input, resize, or another animation makes it dirty. Reflection themes keep their selected image plate and palette through a lighter Android shader at a 25 fps material budget; web and Apple builds retain the full atmospheric shader.
-- **Settings sheet (?):** touch-sized (360px wide, 44pt controls, keyboard hints hidden on touch) and **tabbed — Play · Themes · Board · Settings** (`role=tablist`, arrow keys, last tab remembered in `hexsweeper-sphere-sheet-tab-v1`): Play holds one line of what to do and three gesture rows; Themes the nine-swatch grid; Board the size choices with best times; Settings the Invert/Effects rows (both drag axes follow the finger by default; the invert pref lives under `hexsweeper-sphere-invert-v6`, older keys are dropped on load); title, ×, Done and credits stay fixed — every choice applies live and reads pressed. **Best times** live under the size choices: `hexsweeper-sphere-best-v1` keeps the fastest clear per board size (canonical sphere only; a run revived by Undo still counts), and the win banner reads *First clear at this size*, *New best (was …)* or *Best …*. **A hidden second sphere:** hold the mine count in the top readout — water rises through it, and holding through the fill drops into the Water Wheel (`HEXSWEEPER_WHEEL_HREF`, set per surface by the exporter: `wheel/` at the web root, `wheel.html` in the app, the live URL from a pen); a visually hidden button gives screen-reader users the same door, and the sheet's Board tab carries a small sinking-hex-under-waves button (`#help-wheel-btn`, icon only — no hint sentence) that opens it too. The Wheel gets a Sphere pill home. **Every entry**, native or browser, opens the board immediately; a first visit gets one quiet status cue above the bar, and ? holds the help. **End-of-game banner** is a labelled card in the same grammar — Share · Undo · New sphere. **Share** hands the card to the native `HexShare` plugin as an image when running in the app (full iOS share roster), else Web Share with a File, else download.
-- **Endgame FX:** lose — graph-distance mine cascade + particle burst + shock ring; win — clearance pulse + confetti-lite (`prefers-reduced-motion`: instant states)
+- **Settings sheet (?):** touch-sized (360px wide, 44pt controls, keyboard hints hidden on touch) and **tabbed: Play · Themes · Board · Settings** (`role=tablist`, arrow keys, last tab remembered in `hexsweeper-sphere-sheet-tab-v1`): Play holds one line of what to do and three gesture rows; Themes the nine-swatch grid; Board the size choices with best times; Settings the Invert/Effects rows (both drag axes follow the finger by default; the invert pref lives under `hexsweeper-sphere-invert-v6`, older keys are dropped on load); title, ×, Done and credits stay fixed; every choice applies live and reads pressed. **Best times** live under the size choices: `hexsweeper-sphere-best-v1` keeps the fastest clear per board size (canonical sphere only; a run revived by Undo still counts), and the win banner reads *First clear at this size*, *New best (was …)* or *Best …*. **A hidden second sphere:** hold the mine count in the top readout: water rises through it, and holding through the fill drops into the Water Wheel (`HEXSWEEPER_WHEEL_HREF`, set per surface by the exporter: `wheel/` at the web root, `wheel.html` in the app, the live URL from a pen); a visually hidden button gives screen-reader users the same door, and the sheet's Board tab carries a small sinking-hex-under-waves button (`#help-wheel-btn`, icon only, no hint sentence) that opens it too. The Wheel gets a Sphere pill home. **Every entry**, native or browser, opens the board immediately; a first visit gets one quiet status cue above the bar, and ? holds the help. **End-of-game banner** is a labeled card in the same grammar: Share · Undo · New sphere. **Share** hands the card to the native `HexShare` plugin as an image when running in the app (full iOS share roster), else Web Share with a File, else download.
+- **Endgame FX:** lose: graph-distance mine cascade + particle burst + shock ring; win: clearance pulse + confetti-lite (`prefers-reduced-motion`: instant states)
 
 Smoke: `node sphere/test-neighbors.js` (neighbor symmetry + flood closure at
 subdivisions 6, 10, 12) and `node wheel/test-effects.js` (profile/event
@@ -302,7 +304,7 @@ their aliases). `?theme=` and `?deal=` otherwise belong to Sphere now.
 
 ## Flux Sphere (experimental)
 
-[`flux-sphere/`](flux-sphere/) — https://dr.eamer.dev/games/hexsweeper/flux-sphere/
+[`flux-sphere/`](flux-sphere/): https://dr.eamer.dev/games/hexsweeper/flux-sphere/
 
 Flux Sphere turns the archived “Dig one, reveal both” study into a complete
 variant on the canonical Sphere engine. After the first dig, every covered face
@@ -333,7 +335,7 @@ persistence, keyboard, and completion coverage, and
 
 ## Glitch Sphere (experimental)
 
-[`glitch-sphere/`](glitch-sphere/) — https://dr.eamer.dev/games/hexsweeper/glitch-sphere/
+[`glitch-sphere/`](glitch-sphere/): https://dr.eamer.dev/games/hexsweeper/glitch-sphere/
 
 Glitch Sphere reuses the canonical Sphere geometry, renderer, controls, themes,
 and assets. After the first safe dig and its flood resolve, a moving Glitch
@@ -378,12 +380,12 @@ reduced motion, forced-color fallbacks, and route-specific screenshot cards.
 
 ## Obsidian Mirror (experimental)
 
-[`sphere-reflection/`](sphere-reflection/) — https://dr.eamer.dev/games/hexsweeper/sphere-reflection/
+[`sphere-reflection/`](sphere-reflection/): https://dr.eamer.dev/games/hexsweeper/sphere-reflection/
 
 - Original sphere gameplay and center-bloom controls, isolated from the native app payload.
 - Pointer-inert WebGL2 reflection beneath the authoritative Canvas 2D mesh.
 - Sixteen curated environments share one renderer and one game state: `?material=stormglass|mercury|aurora|atrium|canopy|portoro|deco|oculus|galaxy|gilded-ribbon|ion-storm|amber-tempest|heat-lightning|stratosphere|chromatic-ink|amber-cells`. Press **M** to cycle or choose one in Help. Retired registry slots remain internal so older saved selections do not renumber newer materials.
-- The twelve image-backed environments use responsive, same-origin desktop/mobile WebP plates under `sphere-reflection/assets/reflections/`; collection one-pagers embed both sizes so every surface remains self-contained. Each plate declares `environment`, `surface`, or `hybrid` mapping: surface imagery follows the rotating globe while Fresnel and studio reflections remain world-locked. Select plates opt into distinct weather drift, torsion, parallax, ink advection, or oil-cell refraction; reduced-motion mode freezes ambient material animation without breaking surface attachment during direct rotation.
+- The twelve image-backed environments use responsive, same-origin desktop/mobile WebP plates under `sphere/assets/reflections/`; collection one-pagers embed both sizes so every surface remains self-contained. Each plate declares `environment`, `surface`, or `hybrid` mapping: surface imagery follows the rotating globe while Fresnel and studio reflections remain world-locked. Select plates opt into distinct weather drift, torsion, parallax, ink advection, or oil-cell refraction; reduced-motion mode freezes ambient material animation without breaking surface attachment during direct rotation.
 - Selected materials expose a seamless inner layer through cleared faces: Amber Cells reveals a visibly drifting, breathing cell swarm; Mercury and Portoro reveal delayed liquid metal. Earth instead keeps standard readable wells beneath a responsive 4K/2K faceted map with ocean sheen and a restrained atmospheric rim.
 - Trackpad Ctrl-click and right-click both flag a sphere face; Mercury flags use warm gilded metal so they remain distinct from its cool liquid shell.
 - Covered faces retain the continuous mirror; cleared faces become matte wells; flags stay scarlet.
@@ -398,12 +400,12 @@ The material study credits Matthias Hurrle (`@atzedent`) for the supplied reflec
 
 [`wheel/`](wheel/) is the gameplay cut of the former water-theme experiment.
 Clicking a mine starts a short fuse; rotate that face beneath the fixed, wavy
-waterline before it runs out. **The sea does not defuse the mine — it contains
+waterline before it runs out. **The sea does not defuse the mine; it contains
 it.** Holding the armed face under (`drownArmedMine`, after `DROWN_DWELL_MS`)
 detonates it down there, and so does a fuse that simply expires below the
 waterline; both route through the same `drownedBlast` in
 [`wheel/sphere.js`](wheel/sphere.js). Only a fuse that runs out *above* the
-waterline still ends the run. There is no longer a silent quench — the old
+waterline still ends the run. There is no longer a silent quench; the old
 `quench` effect channel is kept in `effects.js` for profile compatibility but
 the game no longer emits it.
 
@@ -413,19 +415,19 @@ rescue; because a doused mine counts as accounted, every number it was touching
 that was one short is satisfied the instant the sea takes it, and each of those
 fires a full chord. The order *is* the mechanic. Drowned mines stay inert
 across refresh, while ordinary flags wash off without revealing whether they
-were correct. Satisfaction is re-read per neighbour
+were correct. Satisfaction is re-read per neighbor
 rather than snapshotted, so a number whose targets an earlier chord already
-took simply does not fire — no face opens twice, no count goes stale mid-blast.
+took simply does not fire: no face opens twice, no count goes stale mid-blast.
 It is not a free pass: the chords trust the flags, not the board, so an
 unflagged face that turns out to be a mine is uncovered and armed where it
 stands, and only one may light across the whole blast. Undo rewinds the dig
-that armed the mine, blast and all — `drownedBlast` deliberately takes no
+that armed the mine, blast and all; `drownedBlast` deliberately takes no
 snapshot of its own, since at that point the mine is already `revealed`.
 Above the waterline the fuse still ends the run.
 
-The chord rule lives in two shared halves — `chordTargets()` (is this face
+The chord rule lives in two shared halves: `chordTargets()` (is this face
 satisfied, and what would it open) and `chordClear()` (open them, cascade
-zeros, hand back the first mine without arming it) — so the tap chord and the
+zeros, hand back the first mine without arming it), so the tap chord and the
 drowned blast cannot drift apart. The
 water renderer uses the existing Canvas 2D/offscreen-buffer path and keeps
 refraction concentrated near the surface so the rescue face remains readable.
@@ -439,14 +441,14 @@ real-face arrangement selected and styled below the waterline
 (`?menu=underwater`). A short tap outside the sphere exposes the menu in all
 three; the face variants use a temporary camera zoom and restore the player's
 exact saved zoom when closed. The Wheel is an easter egg and opens straight
-into the game — the illustrated Dig / Menu / Quench tour was removed in
+into the game; the illustrated Dig / Menu / Quench tour was removed in
 `4c04cab`; the on-canvas alert line carries the rules as they come up. Help
 sits in the bloom's lower-right corner seat, as on the other spheres: one line
 on quenching an armed mine, then Tap / Hold / Drag. Nothing opens it uninvited.
 
 ## Dodecahedron campaign (experimental)
 
-Playable low-poly campaign at [`polyhedron/`](polyhedron/) — `https://dr.eamer.dev/games/hexsweeper/polyhedron/`
+Playable low-poly campaign at [`polyhedron/`](polyhedron/): `https://dr.eamer.dev/games/hexsweeper/polyhedron/`
 
 - Twelve pentagonal macro-panels follow the exact dodecahedron graph: one start, five adjacent, five distance-two, one opposite.
 - Every panel is fully tessellated by a bounded hex-lattice Voronoi field; P19, P37, and P61 set cells per panel without changing the outer solid.
@@ -458,7 +460,7 @@ Smoke: `node polyhedron/test-campaign.js` (coverage, planarity, adjacency, 1/5/5
 
 ## Choices hub
 
-[`choices.html`](choices.html) — https://dr.eamer.dev/games/hexsweeper/choices.html
+[`choices.html`](choices.html): https://dr.eamer.dev/games/hexsweeper/choices.html
 
 Curated entry for the three-board production launcher, the complete
 experimental game routes, and ten lab skins (play via `choices/lab/` redirects

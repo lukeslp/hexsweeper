@@ -17,8 +17,8 @@ and has no D-pad model.
 `supports-screens` covers small, normal, large, and xlarge. minSdk 24 excludes
 Fire OS 5 devices (API 22); Amazon filters those out automatically.
 
-Google Play Services is **not** linked. The `com.google.gms.google-services`
-plugin only applies when `app/google-services.json` exists, and it does not, so
+Google Play Services is **not** linked. The build does not reference the
+`com.google.gms.google-services` plugin and there is no `google-services.json`, so
 the APK carries no Play dependency — which is what makes it safe on Fire OS.
 
 Track state: **submitted to Amazon; under review**. Amazon accepted the
@@ -57,7 +57,7 @@ Consequences:
 
 - Anyone with a sideloaded test build installed **cannot update in place**.
   They have to uninstall first. Say so on the download page when 26 goes up.
-- There is no Play App Signing enrolment, so this key *is* the signature the
+- There is no Play App Signing enrollment, so this key *is* the signature the
   device checks. It cannot be rotated later without the same break.
 - The key and its passwords are kept outside this repository, with a
   verified backup. Losing it means the same break.
@@ -128,7 +128,7 @@ signed build.
 - Horizontal drag follows the finger by default after the versioned preference
   migration. The Invert X control still lets a player choose the old direction.
 - Tutorial card opens from **?** (Show the tutorial) and dismisses via **Play**.
-- Tap cleared a region with correct flood-fill and 1/2/3 neighbour counts;
+- Tap cleared a region with correct flood-fill and 1/2/3 neighbor counts;
   the timer started on that first clear; drag spun the sphere; Undo enabled
   itself after the first move.
 - The **?** sheet opens and all four tabs (Play · Themes · Board · Settings)
@@ -205,7 +205,7 @@ on the KFRASWI tablet:
 | File | Size | Shows |
 |---|---|---|
 | `01_sphere-light-1280x800.png` | 1280×800 | fresh sphere, Light theme |
-| `02_cleared-light-1280x800.png` | 1280×800 | flood-fill clear with neighbour counts |
+| `02_cleared-light-1280x800.png` | 1280×800 | flood-fill clear with neighbor counts |
 | `03_heat-lightning-1280x800.png` | 1280×800 | Heat Lightning theme, mid-game |
 | `04_portrait-800x1280.png` | 800×1280 | portrait reflow |
 | `05_stratosphere-1280x800.png` | 1280×800 | candidate 29, XL Stratosphere theme |

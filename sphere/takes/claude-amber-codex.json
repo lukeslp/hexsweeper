@@ -23,6 +23,5 @@
   },
   "mechanicTwist": "When a flood-fill clears a region, each newly revealed cell lights up in a brief amber pulse radiating outward from the origin dig \u2014 purely cosmetic.",
   "helpLede": "Dig to reveal a hex face; flag to mark a suspected mine. Flood-fill clears contiguous safe regions automatically.",
-  "hudNote": "Every safe cell is a folio turned.",
-  "provider": "claude via dreamer (anthropic) \u2014 local claude OAuth expired"
+  "hudNote": "Every safe cell is a folio turned."
 }
