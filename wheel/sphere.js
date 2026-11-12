@@ -5128,8 +5128,31 @@
 
     function canvasPoint(e) {
       const rect = canvas.getBoundingClientRect();
-      const t = e.touches && e.touches[0] ? e.touches[0] : e;
+      const own = ownTouches(e);
+      const t = own && own[0] ? own[0] : e;
       return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+
+    /**
+     * Fingers that started on the canvas. `touches` also lists fingers resting
+     * on the chrome (a thumb on the bar), which used to count as a pinch
+     * partner and as the pressed point.
+     */
+    function ownTouches(e) {
+      return e.targetTouches || e.touches || null;
+    }
+
+    /** Drop the gesture in progress without acting on it. */
+    function cancelGesture() {
+      clearTimeout(longPressTimer);
+      pinching = false;
+      pinchStartDist = 0;
+      touchMoved = false;
+      state.dragging = false;
+      state.dragStart = null;
+      state.pressed = -1;
+      state.hovered = -1;
+      scheduleFrame();
     }
 
     let longPressTimer = null;
@@ -5147,7 +5170,8 @@
       if (e.type === "touchstart") {
         e.preventDefault();
       }
-      if (e.type === "touchstart" && e.touches && e.touches.length >= 2) {
+      const downTouches = e.type === "touchstart" ? ownTouches(e) : null;
+      if (downTouches && downTouches.length >= 2) {
         if (state.menuRotateOnly) {
           touchMoved = true;
           state.dragging = false;
@@ -5161,7 +5185,7 @@
         state.dragging = false;
         state.dragStart = null;
         state.pressed = -1;
-        pinchStartDist = touchDistance(e.touches);
+        pinchStartDist = touchDistance(downTouches);
         pinchStartZoom = state.zoomFactor;
         return;
       }
@@ -5197,21 +5221,28 @@
     }
 
     function onPointerMove(e) {
-      if (e.type === "touchmove" && e.touches && e.touches.length >= 2) {
+      const moveTouches = e.type === "touchmove" ? ownTouches(e) : null;
+      if (moveTouches && moveTouches.length >= 2) {
         e.preventDefault();
         if (state.menuRotateOnly) return;
         if (!pinching) {
           pinching = true;
-          pinchStartDist = touchDistance(e.touches);
+          pinchStartDist = touchDistance(moveTouches);
           pinchStartZoom = state.zoomFactor;
           clearTimeout(longPressTimer);
           state.pressed = -1;
         }
-        const dist = touchDistance(e.touches);
+        const dist = touchDistance(moveTouches);
         if (pinchStartDist > 0) {
           setZoomFactor(pinchStartZoom * (dist / pinchStartDist));
         }
         return;
+      }
+      // The button came up where no mouseup could reach us (another window,
+      // a frame, the system). Without this the sphere keeps following the
+      // pointer with nothing held.
+      if (e.type === "mousemove" && state.dragging && e.buttons === 0) {
+        cancelGesture();
       }
       const p = canvasPoint(e);
       if (state.dragging && state.dragStart) {
@@ -5250,7 +5281,8 @@
     function onPointerUp(e) {
       clearTimeout(longPressTimer);
       if (pinching) {
-        if (e.touches && e.touches.length >= 2) return;
+        const left = ownTouches(e);
+        if (left && left.length >= 2) return;
         pinching = false;
         pinchStartDist = 0;
         state.dragging = false;
@@ -5303,6 +5335,8 @@
       state.dragging = false;
       state.dragStart = null;
       state.pressed = -1;
+      // A finger leaves nothing hovering; the last touched face stayed lit.
+      if (e.type === "touchend") state.hovered = -1;
       touchMoved = false;
       schedulePersist();
     }
@@ -5314,6 +5348,10 @@
       onPointerMove(event);
     });
     window.addEventListener("mouseup", onPointerUp);
+    // The system took the touch (a call, an edge swipe, palm rejection): the
+    // hold timer must not flag or dig after it, and the drag must end.
+    canvas.addEventListener("touchcancel", cancelGesture);
+    window.addEventListener("blur", cancelGesture);
     canvas.addEventListener("touchstart", onPointerDown, { passive: false });
     canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
