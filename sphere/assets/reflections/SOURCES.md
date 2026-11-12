@@ -42,6 +42,10 @@ the MIT license does not cover it.
 
 ## Removed
 
+Stratosphere was removed from this source line (the native app's payload) on
+November 12, 2026 at the owner's instruction: its source was never confirmed.
+A player who had it selected gets the default theme.
+
 Amber Cells, Verdant Canopy, Deco Lacquer, Gilded Ribbon and Portoro Marble
 were removed on November 11, 2026. The search found Gilded Ribbon on several
 unrelated business sites with no library page, and no copy of the other four

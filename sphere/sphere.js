@@ -426,33 +426,6 @@
   function reflectionTheme(overrides) {
     return Object.assign({}, THEME_MERCURY, overrides);
   }
-  const THEME_STRATOSPHERE = reflectionTheme({
-    id: "stratosphere",
-    name: "Stratosphere",
-    chrome: "light",
-    material: "stratosphere",
-    warn: { count: "numerals", relief: "extruded", seams: true },
-    accent: "#1d6fa9",
-    fallbackBg: "#e7f2fa",
-    fallbackBgGlow: "#ffffff",
-    fallbackCore: "#74b5df",
-    hoverRing: "#1d6fa9",
-    activeRing: "#0f4f80",
-    flagEdge: "#ffd6d8",
-    // Mono wells, white: the sky theme clears to porcelain, not to a dark pit.
-    tierNumbered: "#f4f8fb",
-    tierEmpty: "#ffffff",
-    revealed: "#f4f8fb",
-    revealedEmpty: "#ffffff",
-    revealedEdge: "rgba(11,37,64,0.22)",
-    revealedEmptyEdge: "rgba(11,37,64,0.14)",
-    valleyGroove: "rgba(11,37,64,0.16)",
-    valleyGrooveDeep: "rgba(11,37,64,0.32)",
-    // Wells open onto bright sky glass, so numbers go dark on a light stroke.
-    text: { 1: "#0b2540", 2: "#123c66", 3: "#1d5a8f", 4: "#7a2d10", 5: "#8f1d1d", 6: "#5a0f2c" },
-    label: "#0b2540",
-    labelStroke: "rgba(255,255,255,0.85)",
-  });
   const THEME_ION_STORM = reflectionTheme({
     id: "ion-storm",
     name: "Ion Storm",
@@ -546,7 +519,6 @@
     THEME_LIGHT,
     THEME_DARK,
     THEME_MERCURY,
-    THEME_STRATOSPHERE,
     THEME_ION_STORM,
     THEME_AURORA,
     THEME_GALAXY,
@@ -885,8 +857,6 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.35"></circle><circle cx="12" cy="12" r="7"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path></svg>',
     mercury:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M7.5 9.5a5 5 0 0 1 6-2.5" opacity="0.9"></path><path d="M9 15.5c1.8 1.6 4.4 1.4 6-.4" opacity="0.5"></path></svg>',
-    stratosphere:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M6 12.5h4a2 2 0 0 0 0-4 3 3 0 0 0-5.6 1" opacity="0.9"></path><path d="M11 16h6a1.6 1.6 0 0 0 0-3.2 2.4 2.4 0 0 0-4.5-.6" opacity="0.7"></path></svg>',
     "ion-storm":
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M13.2 7.5 9.8 12.4h3.4l-2.2 4.1" opacity="0.95"></path><path d="M6.5 10.5c1.4-1.2 3-1 4-.2" opacity="0.5"></path></svg>',
     aurora:
@@ -1611,7 +1581,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Stratosphere, Ion Storm, Aurora, Galaxy, Heat Lightning.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Ion Storm, Aurora, Galaxy, Heat Lightning.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }
@@ -5184,7 +5154,6 @@
     const FLAG_SHEENS = {
       mercury: { stops: ["#3f2705", "#8c5a0d", "#f4d77a", "#b67a17", "#4b2b04"], stroke: "#ffe7a0" },
       // Red on the sky glass — the one warm mark on a cold theme.
-      stratosphere: { stops: ["#5a0a0e", "#c81e26", "#ffb3a7", "#e0303a", "#3a0508"], stroke: "#ffd6cf" },
       "ion-storm": { stops: ["#2c1150", "#7a3fbf", "#f0d8ff", "#9a5be0", "#1a0a33"], stroke: "#e2c4f5" },
       aurora: { stops: ["#083b3a", "#1f8a7c", "#dcfff6", "#38b39a", "#052625"], stroke: "#b9f0ee" },
       galaxy: { stops: ["#4a2033", "#b0606f", "#ffe1e4", "#c47b88", "#2a1220"], stroke: "#f0cdd0" },

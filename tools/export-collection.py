@@ -340,27 +340,6 @@ EXPERIMENTS = [
         "ogImage": f"{OG}/sphere-og.png",
     },
     {
-        "id": "sphere-reflection-stratosphere",
-        "title": "Obsidian Mirror · Stratosphere",
-        "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Stratosphere",
-        "ogDescription": "A playable mirrored Hexsweeper sphere floating above a luminous white cloud deck.",
-        "tag": "Material study · cloudscape",
-        "blurb": "A high blue sky and bright cloud sea move almost imperceptibly, giving the sphere an airy porcelain character.",
-        "filter": "sphere reflection mirror stratosphere cloud deck blue sky bright animated cloudscape photographic texture material hexsweeper experiment",
-        "swatch": ("#e7f2fa", "#74b5df", "#ffffff", "#e5222a"),
-        "file": "sphere-reflection-stratosphere.html",
-        "href": "sphere-reflection-stratosphere.html",
-        "liveHref": "../sphere-reflection/?material=stratosphere",
-        "source": "sphere-reflection",
-        "css": ["../sphere/dev-chrome.css", "../sphere/hex-bloom.css"],
-        "scripts": ["../sphere/hexasphere.js", "sphere.js", "../sphere/mirror-material.js", "../sphere/hex-bloom.js"],
-        "boot": "initHexBloom",
-        "stack": "Vanilla HTML, CSS, and JavaScript; Canvas 2D + WebGL2; no frameworks.",
-        "welcomeKey": "hexsweeper-reflection-welcome-v1",
-        "reflectionMaterial": "stratosphere",
-        "ogImage": f"{OG}/sphere-og.png",
-    },
-    {
         "id": "sphere-reflection-chromatic-ink",
         "title": "Obsidian Mirror · Chromatic Ink",
         "ogTitle": "Hexsweeper 3D — Obsidian Mirror · Chromatic Ink",
@@ -740,10 +719,6 @@ REFLECTION_TEXTURES = {
         "desktop": "sphere/assets/reflections/heat-lightning-1280.webp",
         "mobile": "sphere/assets/reflections/heat-lightning-768.webp",
     },
-    "stratosphere": {
-        "desktop": "sphere/assets/reflections/stratosphere-2048.webp",
-        "mobile": "sphere/assets/reflections/stratosphere-1024.webp",
-    },
     "chromatic-ink": {
         "desktop": "sphere/assets/reflections/chromatic-ink-1280.webp",
         "mobile": "sphere/assets/reflections/chromatic-ink-768.webp",
@@ -790,7 +765,7 @@ def reflection_texture_boot(only: set[str] | None = None, *, mobile_only: bool =
 
 # Reflection materials shipped as canonical sphere themes (sphere.js THEMES).
 # The app seals their textures; the web root points at sphere/assets/.
-SPHERE_APP_MATERIALS = {"stratosphere", "ion-storm", "galaxy", "heat-lightning"}
+SPHERE_APP_MATERIALS = {"ion-storm", "galaxy", "heat-lightning"}
 
 
 def reflection_registry_errors() -> list[str]:

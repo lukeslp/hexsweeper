@@ -208,12 +208,13 @@
       texture: { desktop: "assets/reflections/heat-lightning-1280.webp", mobile: "assets/reflections/heat-lightning-768.webp", speed: 0.00025, exposure: 0.96, saturation: 0.98, backdrop: 0.46, mapping: "hybrid", frame: "lag", surfaceMix: 0.66, reflectionStrength: 0.36, roughness: 0.08, motion: 1, motionAmount: 0.026, motionRate: 0.090, pulse: 0.07, offsetY: 0.02 },
     },
     {
-      id: "stratosphere",
-      label: "Stratosphere",
-      shortLabel: "Sky",
+      // Removed 2026-11-12: no source could be confirmed for its image.
+      // The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired sky slot",
+      shortLabel: "Retired",
       fallback: ["#e7f2fa", "#74b5df", "#ffffff", "#1d6fa9"],
-      swatch: "linear-gradient(180deg, #137ec2 0%, #77c1ec 42%, #ffffff 63%, #dbeef8 100%)",
-      texture: { desktop: "assets/reflections/stratosphere-2048.webp", mobile: "assets/reflections/stratosphere-1024.webp", speed: 0.00012, exposure: 0.86, saturation: 0.82, backdrop: 0.50, mapping: "environment", frame: "ambient", reflectionStrength: 0.20, roughness: 0.16, seamSafe: false, seamBlend: 0.055, motion: 10, motionAmount: 0.014, motionRate: 0.035, pulse: 0.0 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       id: "chromatic-ink",

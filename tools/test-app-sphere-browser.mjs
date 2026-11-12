@@ -233,7 +233,7 @@ try {
   assert.ok(bundled.noted, "the licenses page does not say the screenshot is not project artwork");
   assert.equal(bundled.link, "Licenses", "the sheet has no Licenses link");
   assert.ok(bundled.back && bundled.ofl && bundled.apache && !bundled.placeholders, `licenses page is incomplete: ${JSON.stringify(bundled)}`);
-  assert.deepEqual(help.themes, ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
+  assert.deepEqual(help.themes, ["light", "dark", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
   assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);
   assert.equal(await evaluate('!!document.getElementById("help-warn-grid")'), false, "Warnings group is still on the sheet (themes own it now)");
   assert.ok(help.invert && help.effects, "invert / effects pills missing from the sheet");
@@ -262,8 +262,9 @@ try {
   assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Mercury did not set depth + no seams");
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
   assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Galaxy did not set depth + no seams");
-  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=stratosphere]").click()');
-  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/true", "Stratosphere did not set depth + seams");
+  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=aurora]").click()');
+  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/true", "Aurora did not set depth + seams");
+  assert.equal(await evaluate('SphereSweeper.THEMES.some(t => t.id === "stratosphere" || t.id === "gilded-ribbon")'), false, "a theme with no known image source is back in the payload");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=easy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().difficulty'), "easy", "size pill did not start a Small sphere");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium]").click()');
@@ -396,9 +397,6 @@ try {
     return { chrome: document.body.dataset.sphereChrome };
   })()`, "Ion Storm did not switch the renderer");
   assert.equal(storm.chrome, "dark", "Ion Storm did not switch chrome to dark");
-  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "stratosphere")); void 0;');
-  const strato = await waitExpression(`(() => document.body.dataset.reflectionMaterial === "stratosphere" ? { chrome: document.body.dataset.sphereChrome } : null)()`, "Stratosphere did not switch the renderer");
-  assert.equal(strato.chrome, "light", "Stratosphere did not switch chrome to light");
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "mercury")); void 0;');
   const mercury = await waitExpression(`(() => {
     const c = document.getElementById("reflectionCanvas");

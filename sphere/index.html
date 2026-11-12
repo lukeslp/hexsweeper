@@ -777,7 +777,7 @@ body.help-open { overflow: hidden; }
 .lightbox-close:focus-visible { outline-color: #fff; }
 /* Large system text: the tabs wrap, and a theme whose name is wider than a
    third of the sheet takes the room it needs, instead of "Settings" and
-   "Stratosphere" being cut off at the sheet's edge. At ordinary text sizes
+   "Heat Lightning" being cut off at the sheet's edge. At ordinary text sizes
    this lays out exactly as the three-column grid did. */
 .help-tabs { flex-wrap: wrap; }
 .help-theme-grid { display: flex; flex-wrap: wrap; }
@@ -1037,7 +1037,7 @@ const sphereChrome = initQuietChrome(sphereGame);
 (function () {
   const grid = document.getElementById("help-theme-grid");
   if (!grid || !window.SphereSweeper) return;
-  const ROSTER = ["light", "dark", "stratosphere", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"];
+  const ROSTER = ["light", "dark", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"];
   const themes = SphereSweeper.THEMES;
   function swatchFor(t) {
     if (t.reflectionSurface) return "linear-gradient(145deg, " + (t.fallbackBgGlow || "#666") + ", " + (t.fallbackBg || "#000") + ")";

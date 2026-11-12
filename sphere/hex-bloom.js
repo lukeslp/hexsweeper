@@ -158,7 +158,6 @@
   const FACE_SHORT_THEME = {
     light: "Light",
     dark: "Dark",
-    stratosphere: "Sky",
     mercury: "Mercury",
     "ion-storm": "Storm",
     aurora: "Aurora",
@@ -1204,7 +1203,6 @@
     const FLOWER_THEMES = [
       "light",
       "dark",
-      "stratosphere",
       "mercury",
       "ion-storm",
       "aurora",
@@ -1424,7 +1422,7 @@
             aria: () =>
               "Theme: " +
               currentThemeLabel() +
-              ". Activate to cycle Light, Dark, and the reflection materials: Stratosphere, Mercury, Ion Storm, Aurora, Galaxy, Heat Lightning.",
+              ". Activate to cycle Light, Dark, and the reflection materials: Mercury, Ion Storm, Aurora, Galaxy, Heat Lightning.",
             cycle: cycleFlowerTheme,
           },
           {
