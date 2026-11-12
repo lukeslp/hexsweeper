@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import html
 import json
 import mimetypes
 import re
@@ -1719,6 +1720,19 @@ def export_sphere_app(exp: dict) -> str:
     if "HEXSWEEPER_SPHERE_APP" not in markup:
         raise SystemExit("export_sphere_app: app flag not injected")
 
+    # The bundle carries its own licenses page (notices.html, written by
+    # write_app_build). The web has no such page, so the link is added here.
+    markup, linked = re.subn(
+        r'(<nav class="menu-links" aria-label="Elsewhere">.*?)(\n\s*</nav>)',
+        r'\1\n      <span class="menu-links-sep" aria-hidden="true">·</span>'
+        r'\n      <a href="notices.html">Licenses</a>\2',
+        markup,
+        count=1,
+        flags=re.S,
+    )
+    if linked != 1:
+        raise SystemExit("export_sphere_app: Licenses link not added")
+
     # appify's guard checks src/href only. GLOBE_TEX_BASE still appears as a
     # string constant in the inlined sphere.js, but it is unreachable here:
     # globeUrl is only called for themes carrying `globeMap`, and the THEMES
@@ -1955,13 +1969,36 @@ def export_web_launcher() -> str:
     )
 
 
+def export_notices_app() -> str:
+    """The app's licenses page: tools/app-notices.html with the license texts filled in."""
+    markup = (ROOT / "tools" / "app-notices.html").read_text(encoding="utf-8")
+    texts = {
+        "__HEXSWEEPER_MIT__": ROOT / "LICENSE",
+        "__IBM_PLEX_OFL__": ROOT / "fonts" / "OFL.txt",
+        "__CAPACITOR_MIT__": ROOT / "tools" / "app-licenses" / "Capacitor-MIT.txt",
+        "__APACHE_2__": ROOT / "tools" / "app-licenses" / "Apache-2.0.txt",
+    }
+    for token, path in texts.items():
+        if markup.count(token) != 1:
+            raise SystemExit(f"export_notices_app: {token} must appear once in the template")
+        markup = markup.replace(token, html.escape(path.read_text(encoding="utf-8").strip(), quote=False))
+    # Same seal as the game pages, without the zoom lock: this is a document.
+    markup = appify(markup, lock_zoom=False, label="notices")
+    # appify adds the launch-screen script for pages that boot the app; this
+    # page is only ever reached from the game, after the launch screen is gone.
+    markup = markup.replace(APP_SPLASH_HIDE, "", 1)
+    if 'href="index.html"' not in markup:
+        raise SystemExit("export_notices_app: no way back to the game")
+    return markup
+
+
 # Native Capacitor webDir: the app is Sphere and nothing else — index.html
 # plus the help lightbox image. The launcher and the flat games are web-only.
 def write_app_build() -> list[Path]:
     """Stage the offline app payload under build/app/ and report what it wrote."""
-    stale_games = APP_BUILD / "games"
-    if stale_games.exists():
-        shutil.rmtree(stale_games)
+    # Start empty: a file left by an earlier export would ride into the app.
+    if APP_BUILD.exists():
+        shutil.rmtree(APP_BUILD)
     (APP_BUILD / "assets").mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
 
@@ -1979,6 +2016,12 @@ def write_app_build() -> list[Path]:
     history = APP_BUILD / "assets" / "classic-board.png"
     history.write_bytes((ROOT / "sphere" / "assets" / "classic-board.png").read_bytes())
     written.append(history)
+
+    # Licenses and credits for everything the bundle carries, linked from the
+    # foot of the sheet.
+    notices = APP_BUILD / "notices.html"
+    notices.write_text(export_notices_app(), encoding="utf-8")
+    written.append(notices)
 
     return written
 
