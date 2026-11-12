@@ -1,7 +1,7 @@
 # Device verification
 
 Run on real hardware before any TestFlight, App Store, or Play release. Simulators
-do not reproduce touch precision, thermal behaviour, or true safe-area geometry.
+do not reproduce touch precision, thermal behavior, or true safe-area geometry.
 
 Record one row per device. Attach to the build notes.
 
@@ -35,14 +35,14 @@ and any network dependency is a defect.
 | 2b | Best times | Win an XS sphere: banner reads *First clear at this size*; ? shows *Best …* under XS; a slower win keeps the old best | |
 | 2c | Water Wheel | Hold the mine count at the top (water rises through it) **or** tap the wave button on the sheet's Board tab → the Water Wheel opens without an automatic tutorial, with its help available on demand and a Sphere pill top-left clear of the status bar; the wheel bobs on the water, dips when spun, hops on a quench, slams on a detonation, and taps land on the intended face; Sphere returns to the resumed run | |
 | 3 | Settings sheet | ? opens wide enough to read (≥340 pt on a phone), no keyboard hints; Theme grid (nine, Themes tab), Board size (XS–XL, new sphere on change, Board tab), Invert, Effects (Settings tab) all apply live and read pressed; no Warnings group (themes own depth/seams/marks: Light/Dark depth+seams, mirror materials depth, no seams except Aurora); Done ≥ 44 pt; "Show the tutorial again" reopens the tutorial; closes with × / Done / outside tap and never blocks the board afterwards | |
-| 6 | Sphere render | Sphere is centred and fully visible; no clipping at any edge | |
-| 7 | Sphere dig | Single tap reveals the intended tile — not a neighbour | |
+| 6 | Sphere render | Sphere is centered and fully visible; no clipping at any edge | |
+| 7 | Sphere dig | Single tap reveals the intended tile — not a neighbor | |
 | 8 | Sphere flag | Long-press flags; flag stands proud of the shell | |
-| 9 | Sphere chord | Double-tapping a satisfied number opens its neighbours; works in flag mode too | |
+| 9 | Sphere chord | Double-tapping a satisfied number opens its neighbors; works in flag mode too | |
 | 10 | Sphere camera | With Settings → Invert off, one-finger drag tumbles freely: the face under the finger follows down/right motion on both axes, including after crossing a pole; inversion choices reverse the selected axes; pinch zooms; no accidental digs while dragging | |
 | 11 | Sphere flood | Clearing an empty region animates outward and settles correctly | |
 | 12 | Sphere sizes | XS through XL all render; **note the smallest size you can still tap reliably** | |
-| 13 | Sphere themes | All nine Themes-tab choices apply live; no theme shows a missing texture or unexplained flat grey | |
+| 13 | Sphere themes | All nine Themes-tab choices apply live; no theme shows a missing texture or unexplained flat gray | |
 | 14 | Settings live preview | Themes and inversion/effects apply without replacing the current run; selecting a different Board size starts a new sphere; the selected controls stay synchronized when the sheet reopens | |
 | 15 | Share card | Produces an image; content matches the current board | |
 | 16 | Safe areas | Game chrome and tutorial/settings sheets clear the notch/Dynamic Island and home indicator in both orientations | |
@@ -50,9 +50,9 @@ and any network dependency is a defect.
 | 18 | Backgrounding | Background 30s and return; no blank WebView, no reset | |
 | 19 | Reduced Motion | With the OS setting or Effects reduced, ambient motion settles and endgame feedback stays clear without the full shaking/particle treatment | |
 | 20 | Outbound links | Credits open in the system browser and return cleanly; the game is never replaced in-place | |
-| 20a | Share | On game end, Share opens the iOS share sheet with the card **as an image** — Messages, Instagram, Bluesky, Photos appear (not a Files-only sheet); cancelling returns cleanly; the banner reads Share · Undo · New sphere | |
+| 20a | Share | On game end, Share opens the iOS share sheet with the card **as an image** — Messages, Instagram, Bluesky, Photos appear (not a Files-only sheet); canceling returns cleanly; the banner reads Share · Undo · New sphere | |
 | 21 | Rotation | Portrait ↔ landscape reflows without losing the run or hiding the quiet bar or the open sheet; **the sphere stays round in both, and returning to portrait looks exactly as it did before the trip** (build 59 stayed stretched); repeat with the sheet open and while a run is in progress | |
-| 22 | Android Back | System Back closes the sheet when open, returns from the Water Wheel to the sphere, otherwise exits or follows documented platform behaviour without losing the run | |
+| 22 | Android Back | System Back closes the sheet when open, returns from the Water Wheel to the sphere, otherwise exits or follows documented platform behavior without losing the run | |
 | 23 | Android system bars | Content clears status/navigation/gesture insets in both orientations | |
 
 ## iPad gates
@@ -64,7 +64,7 @@ and Apple reviews it as one. These gates were missing entirely until
 | # | Check | Pass criteria | Result |
 |---|---|---|---|
 | 22 | iPad launch | Launch screen and sphere fill the display; no letterboxing or phone-sized layout stranded in a corner | |
-| 23 | iPad sphere | Sphere scales to the larger canvas rather than staying phone-sized; still centred and unclipped | |
+| 23 | iPad sphere | Sphere scales to the larger canvas rather than staying phone-sized; still centered and unclipped | |
 | 24 | Split View / Slide Over | Resizing does not break the canvas or lose the run | |
 | 25 | iPad rotation | All four orientations reflow (iPad allows upside-down, unlike iPhone) | |
 | 26 | Pointer / trackpad | If a Magic Keyboard or mouse is attached, hover and click behave sanely | |

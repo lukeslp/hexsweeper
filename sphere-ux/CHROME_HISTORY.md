@@ -7,7 +7,7 @@ These iterations are kept on purpose: each is a valid chrome idea; not every one
 |---------------|------|--------|
 | Early | Gear + settings stack (dev-chrome) | Live sphere still uses a form of this |
 | Polar fan bloom | Loose arc of hexes from bottom seed | Superseded by axial grid |
-| clex axial ring | Full 6-neighbour honeycomb mid-screen | Great for center-stage menus; clipped at bottom |
+| clex axial ring | Full 6-neighbor honeycomb mid-screen | Great for center-stage menus; clipped at bottom |
 | Nested Look pile-up | Axes + packs + counts + reset + help in one fan | Too dense (see CleanShot 18.54.13) |
 | Cycle primaries | Dig / Size / Invert / Flush / Seams flip on click | **Keep** — low friction |
 | Classic axes + World packs | Bg/Shell/Dug + Earth/Moon/Glow under Look | **Keep** — appearance model |
@@ -31,7 +31,7 @@ These iterations are kept on purpose: each is a valid chrome idea; not every one
 
 ## External reviews (summaries)
 
-- **Codex Sol / Claude Opus:** three-tile dock preferred; depth ≤ 2; Dig/Restart outside “settings”; Earth/Moon as World presets under Look (not Help easter eggs only).
+- **Two design passes:** three-tile dock preferred; depth ≤ 2; Dig/Restart outside “settings”; Earth/Moon as World presets under Look (not Help easter eggs only).
 
 ## Regenerate collection one-pagers
 

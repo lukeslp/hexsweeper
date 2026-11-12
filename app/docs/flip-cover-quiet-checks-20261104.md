@@ -16,7 +16,7 @@ No gameplay, tutorial, save schema, permissions or app identity was removed.
 ## Source provenance
 
 `WWW_SOURCE.txt` pins `ca710f79cce96848327a4b8a4a3bec398d586d45` from
-`lukeslp/hexsweeper-private-history`, maintained on
+`lukeslp/hexsweeper-private-history` (since merged into lukeslp/hexsweeper; the app is under app/), maintained on
 `codex/hexsweeper-talkback-20261104`. This deliberately applies the bounded focus
 fix to the previously shipped `d0082f7` payload baseline; it preserves that
 baseline's native first-launch tutorial and history UI. The exported game is

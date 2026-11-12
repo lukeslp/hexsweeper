@@ -21,10 +21,10 @@ do not implement it by patching `www/`.
 
 **`www/` is generated. Never edit it by hand.** It is generated from
 the game source at the repository root via `python3 tools/export-collection.py --app`. Editing it
-here desynchronises the app from the game with no way to tell which is right,
+here desynchronizes the app from the game with no way to tell which is right,
 and `scripts/smoke.sh` will fail on the checksums in `WWW_SOURCE.txt`.
 
-Sphere behaviour, themes, chrome, and gameplay bugs are fixed **in the game
+Sphere behavior, themes, chrome, and gameplay bugs are fixed **in the game
 source at the repository root**, then re-vendored. Nothing about the game is
 authored in this folder.
 

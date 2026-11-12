@@ -18,7 +18,9 @@ Source: <https://github.com/IBM/plex>.
 ## Earth and Moon daymaps
 
 `sphere/assets/textures/earth_daymap_2k.jpg` and
-`sphere/assets/textures/moon_2k.jpg` are credited to Solar System Scope / INOVE
+`sphere/assets/textures/moon_2k.jpg`, and their byte-identical copies
+`sphere-ux/assets/textures/earth_daymap_2k.jpg` and
+`sphere-ux/assets/textures/moon_2k.jpg`, are credited to Solar System Scope / INOVE
 (<https://www.solarsystemscope.com/textures/>) under CC BY 4.0
 (<https://creativecommons.org/licenses/by/4.0/>). The source chain, checksums
 and modification history are in

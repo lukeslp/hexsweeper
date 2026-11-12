@@ -35,7 +35,7 @@ The engine currently preserves these independent channels:
   The underwater branch is now also the *survivable* one, and the common one:
   both a deliberate drowning (`drownArmedMine`) and a fuse expiring below the
   waterline route through `drownedBlast`, which spends the mine and chords its
-  satisfied neighbours rather than ending the run. The effect layer is still
+  satisfied neighbors rather than ending the run. The effect layer is still
   visual-only — it neither decides nor learns the outcome.
 - `win` — broad settling ripples across the waterline.
 

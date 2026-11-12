@@ -115,7 +115,7 @@ Done (updated 2026-08-11, through the App Store Connect API):
 - [x] Support + marketing URLs → the live web game
 - [x] Privacy policy → `privacy.html`, added to the hexsweeper repo and
       deployed to the web server
-- [x] Age rating — every content question NONE, every behaviour flag false
+- [x] Age rating — every content question NONE, every behavior flag false
 - [x] Screenshots — replaced 2026-08-18 with six 6.9" iPhone (1320×2868) and
       six 13" iPad (2064×2752) captures of the sealed sphere, captioned;
       the old picker-era device captures are gone from ASC
@@ -153,21 +153,21 @@ Done (updated 2026-08-11, through the App Store Connect API):
       Screenshot 03 regenerated to match. ASC has no What's New on a first
       version; release notes stay drafted in app-store/metadata
 - [x] Build 47 uploaded and attached to 1.0 on 2026-08-18: the menu is seated
-      on the sphere's own faces (Face Takeover, productionised — labelled,
+      on the sphere's own faces (Face Takeover, productionized — labeled,
       finger-sized, board rotatable while open); vendored from hexsweeper
       `8a8e925`. Screenshot 03 recaptioned "The menu lives on the sphere"
 - [x] Build 48 uploaded and attached to 1.0 on 2026-08-18: legible labels on
       the face-menu tiles and a nine-swatch Theme grid in the Help sheet
       (vendored from hexsweeper `008e18b`)
 - [x] Build 49 uploaded and attached to 1.0 on 2026-08-18: the sphere zooms
-      in when the menu opens (real faces at finger size, labelled) and Theme
+      in when the menu opens (real faces at finger size, labeled) and Theme
       fans nine swatch faces across the surrounding ring; zoom restores on
       close (vendored from hexsweeper `184058d`)
 - [x] Build 50 uploaded and attached to 1.0 on 2026-08-18: the hex menu is
       gone — quiet bar (Undo · New sphere · Flag · ?) plus the ? settings
       sheet (theme, size, warnings, invert, effects, tutorial relaunch);
       themed dig cores and flag sheens on every material; first-launch
-      tutorial; end-of-game banner as a labelled card; Share hands the card
+      tutorial; end-of-game banner as a labeled card; Share hands the card
       to the native HexShare plugin as an image (vendored from hexsweeper
       `ac4b869`)
 - [x] Build 51 uploaded and attached to 1.0 on 2026-08-18: interiors turn
@@ -248,7 +248,7 @@ Done (updated 2026-08-11, through the App Store Connect API):
       Connect has no such field for a first release.
 - [x] Build 62 uploaded and attached to 1.0 on 2026-08-19: chording on the
       sphere — double-tap a number whose flags are all placed and the rest of
-      its neighbours clear at once. Matches the flat game: it goes by the
+      its neighbors clear at once. Matches the flat game: it goes by the
       flags, not the board, so a misplaced one detonates and the mine that
       blows becomes the detonator. Zeros cascade through the flood, and the
       whole chord is one undo step. Help sheet documents it under Play
@@ -297,11 +297,11 @@ Done (updated 2026-08-11, through the App Store Connect API):
       frame (`scratch: earth-dark-a-third`). Promotional text refreshed for
       1.0.1. Android versionCode 23, unpublished.
 - [x] Build 68 (1.0.1) uploaded 2026-09-02 and attached to 1.0.1 in place of
-      67: icon is a centred 78% crop of the Heat Lightning board (copper metal
+      67: icon is a centered 78% crop of the Heat Lightning board (copper metal
       core, blue flag) — the mono earthrise reads too austere. Android
       versionCode 24, unpublished.
 - [x] Build 69 (1.0.1) uploaded 2026-09-02 and attached to 1.0.1 in place of
-      68: icon is the Dark board with its centre on the bottom-right corner of
+      68: icon is the Dark board with its center on the bottom-right corner of
       the frame (radius 1.08× the icon), limb arcing across the top-left with
       the red flag pair on the edge (`scratch: corner-dark-a-br-108`). Android
       versionCode 25, unpublished.

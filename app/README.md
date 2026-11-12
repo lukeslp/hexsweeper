@@ -1,6 +1,6 @@
 # Hexsweeper (iOS + Android)
 
-Native Capacitor shell for **Hexsweeper 3D** — hex minesweeper on a closed
+Native Capacitor shell for **Hexsweeper 3D**: hex minesweeper on a closed
 sphere. The game is the Canvas/vanilla-JS build at the root of this
 repository (`sphere/`); this folder wraps it for iOS and Android as a sealed
 offline payload.
@@ -11,12 +11,12 @@ The short tutorial (Tap, Hold, Drag) is behind **?**, under **Show the
 tutorial**. The fixed chrome is a quiet bar:
 **Undo · New sphere · Flag**
 (red while armed) bottom left, **?** bottom right, and a small mines-left ·
-seconds readout at the top. Everything else — theme (Light · Dark ·
-Stratosphere · Mercury · Ion Storm · Aurora · Galaxy · Gilded Ribbon · Heat
-Lightning), board size with your best time per size, drag inversion, effects,
-the tutorial — lives behind **?**, on four tabs (Play · Themes · Board · Settings). Hold the mine count and water rises through
-it — keep holding, or tap the little wave button on the sheet's Board tab —
-and you drop into the **Water Wheel**, a hidden second sphere
+seconds readout at the top. Everything else lives behind **?**, on four tabs
+(Play · Themes · Board · Settings): theme (Light · Dark · Stratosphere ·
+Mercury · Ion Storm · Aurora · Galaxy · Gilded Ribbon · Heat Lightning), board
+size with your best time per size, drag inversion, effects and the tutorial.
+Hold the mine count and water rises through it. Keep holding, or tap the
+little wave button on the sheet's Board tab, and you drop into the **Water Wheel**, a hidden second sphere
 (`www/wheel.html`) where armed mines have to be spun beneath the waterline;
 its Sphere pill brings you back and the run resumes. Infinite and Classic are
 web-only; they are not in this binary.
@@ -36,9 +36,8 @@ The web game opens the board immediately, including on a first visit or when
 browser storage is blocked. Instructions are optional: **? → Play**, then
 **Show the tutorial** for the short intro. Web and native use the same
 Play · Themes · Board · Settings sheet; a Keys tab appears for keyboard users.
-The native first-launch intro is the intended entry difference.
 
-## Flip cover testing — November 4, 2026
+## Flip cover testing, November 4, 2026
 
 The local Android 1.0.9 (34) candidate retains the safe native cover viewport,
 dialog focus fixes and bounded Help restoration after native WebView recreation.
@@ -67,7 +66,7 @@ roguelike with an on-device LLM antagonist that was built here and abandoned;
 its App Store Connect record was separately named "Hivescape" and holds builds
 1–6, none ever submitted. Reusing the id keeps that record rather than opening a
 fresh one, since its metadata had to be rewritten either way. **`CURRENT_PROJECT_VERSION`
-therefore starts at 7** — anything ≤6 is rejected as a duplicate build number.
+therefore starts at 7**: anything ≤6 is rejected as a duplicate build number.
 
 Do not "fix" the bundle id to match the product name. Changing it means a new
 App Store Connect app and abandoning this one.
@@ -76,9 +75,9 @@ App Store Connect app and abandoning this one.
 
 | Path | Role |
 |---|---|
-| `www/` | The game. Vendored payload — **do not hand-edit** |
+| `www/` | The game. Vendored payload: **do not hand-edit** |
 | `WWW_SOURCE.txt` | Which hexsweeper commit `www/` came from, plus checksums |
-| `capacitor.config.js` | Capacitor config (`.js`, not `.ts` — see below) |
+| `capacitor.config.js` | Capacitor config (`.js`, not `.ts`; see below) |
 | `ios/` | Xcode project, automatic signing (set your own `DEVELOPMENT_TEAM` to build for a device) |
 | `android/` | Generated Capacitor Android project, API 24–36 |
 | `scripts/smoke.sh` | Payload integrity + cap sync gates |
@@ -87,7 +86,7 @@ App Store Connect app and abandoning this one.
 | `licenses/`, `THIRD-PARTY-NOTICES.md` | Notices for bundled third-party material |
 
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
-the sealed Sphere game — one self-contained file with fonts, CSS, and all JS
+the sealed Sphere game: one self-contained file with fonts, CSS, and all JS
 (engine, WebGL material renderer, quiet chrome) inlined. `www/wheel.html` is
 the sealed Water Wheel, and the help sheet's history image is under
 `www/assets/`. The Wheel's Sphere pill returns to the saved sphere. One local
@@ -122,7 +121,7 @@ The current payload pins `c91cd20`: the bounded focus and Help-restoration updat
 opens straight to the board, and the tutorial is reached from **?**. Sphere's settings
 use flat theme swatches, compact board-size choices, and icon-led settings
 rows. Game behavior is unchanged. The
-menu system remains an open design item in the source repository. This payload update does not create
+menu system remains an open design item in this repository. This payload update does not create
 or upload an iOS/Android release. See [release notes](docs/RELEASE.md) for the
 distinction between payload checks and published builds.
 
@@ -131,7 +130,7 @@ distinction between payload checks and published builds.
 ```bash
 pnpm install
 pnpm smoke                                          # integrity + cap sync
-scripts/smoke.sh --with-source ../hexsweeper        # + matches source
+scripts/smoke.sh --with-source ..                   # + matches source
 pnpm cap:open:ios                                   # Xcode
 pnpm cap:open:android                               # Android Studio
 pnpm android:build:debug                            # debug APK
@@ -156,23 +155,24 @@ uses the Fire-tuned path for both direct and ambient XL rotation. See
 was accepted for review at 08:54 AM PDT. That historical receipt does not
 establish the current Amazon review state.
 
-The direct download moved to signed `1.0.5 (30)` on October 2, 2026. It carries
-web payload `7ece656`, so dragging the sphere follows the finger on both axes,
-as on iPhone. The recorded Amazon submission uses `1.0.4 (29)`.
+The direct download page serves signed `1.0.6 (31)`, dated November 3, 2026.
+The download moved to `1.0.5 (30)` on October 2, 2026 with web payload
+`7ece656`, so dragging the sphere follows the finger on both axes, as on
+iPhone. The recorded Amazon submission uses `1.0.4 (29)`.
 
 ## Not in this build
 
 **Earth and Moon globe themes are excluded.** They are the only themes that
-fetch anything at runtime — `globeUrl()` in `sphere.js` only resolves textures
+fetch anything at runtime: `globeUrl()` in `sphere.js` only resolves textures
 relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
 back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
-network. Their texture provenance is recorded in the source repository's
+network. Their texture provenance is recorded in this repository's
 [`sphere/assets/textures/README.md`](../sphere/assets/textures/README.md).
 The fourteen offline themes
 (Light, Shell, Dark, Ink, Float, Card, Glow, Mercury, Stratosphere, Ion Storm,
-Aurora, Galaxy, Gilded Ribbon, Heat Lightning) ship; the web build keeps all
-sixteen. Mercury's mirrored body is a WebGL2 shader
-with no texture asset; The textured materials carry their small
+Aurora, Galaxy, Gilded Ribbon, Heat Lightning) ship in the payload, and the
+Themes tab exposes nine of them; the web build keeps all sixteen. Mercury's mirrored body is a WebGL2 shader
+with no texture asset; the textured materials carry their small
 files sealed as data URIs (about 310KB together). Without WebGL each falls back to a
 plain field in its own palette.
 
