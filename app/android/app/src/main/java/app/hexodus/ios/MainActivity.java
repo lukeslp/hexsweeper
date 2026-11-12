@@ -13,6 +13,8 @@ import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.webkit.WebView;
 
+import androidx.activity.OnBackPressedCallback;
+
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
 
@@ -57,6 +59,51 @@ public class MainActivity extends BridgeActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
         keepScreenImmersive();
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBack(this);
+            }
+        });
+    }
+
+    // Closes whichever of the game's own sheets is on top and says whether one was.
+    private static final String CLOSE_TOP_SHEET_JS =
+        "(function(){var s=[['history-lightbox','lightbox-close-btn'],['tutorial-overlay','tutorial-play-btn']," +
+        "['help-overlay','help-close-btn']];for(var i=0;i<s.length;i++){var e=document.getElementById(s[i][0])," +
+        "b=document.getElementById(s[i][1]);if(e&&b&&!e.hidden){b.click();return true;}}return false;})()";
+
+    /**
+     * System Back steps out of what is open before it leaves the app: a sheet on
+     * the board closes, and the Licenses page or the Water Wheel returns to the
+     * board. With nothing open it leaves the app, as it always has.
+     */
+    private void handleBack(OnBackPressedCallback callback) {
+        WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+        if (webView == null) {
+            leaveApp(callback);
+            return;
+        }
+        if (!isBoardPage(webView.getUrl())) {
+            if (webView.canGoBack()) webView.goBack();
+            else leaveApp(callback);
+            return;
+        }
+        webView.evaluateJavascript(CLOSE_TOP_SHEET_JS, result -> {
+            if (!"true".equals(result) && !isFinishing() && !isDestroyed()) leaveApp(callback);
+        });
+    }
+
+    private void leaveApp(OnBackPressedCallback callback) {
+        callback.setEnabled(false);
+        getOnBackPressedDispatcher().onBackPressed();
+        callback.setEnabled(true);
+    }
+
+    private static boolean isBoardPage(String url) {
+        if (url == null) return true;
+        String path = Uri.parse(url).getPath();
+        return path == null || path.isEmpty() || "/".equals(path) || "/index.html".equals(path);
     }
 
     /** Color of the strip the game leaves clear beside a camera cutout. */
