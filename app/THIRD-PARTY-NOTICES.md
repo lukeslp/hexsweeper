@@ -33,17 +33,15 @@ Version 2.0. Gradle fetches them at build time; none is checked in.
 
 ## Reflection photographs
 
-The sealed game payload (`www/index.html`) embeds four reflection images as
+The sealed game payload (`www/index.html`) embeds three reflection images as
 inline WebP data, taken from `sphere/assets/reflections/` in the game source.
-
-Three are photographs from Unsplash, used under the
+All three are photographs from Unsplash, used under the
 [Unsplash License](https://unsplash.com/license) and not covered by the MIT
 license: `galaxy-768.webp` (Jose G. Ortega Castro), `heat-lightning-768.webp`
 (Max LaRochelle) and `ion-storm-768.webp` (Felix Mittermeier).
 
-No source is confirmed for `stratosphere-1024.webp`, so it is not credited
-here and the MIT license does not cover it. Gilded Ribbon, which also had no
-source, left the payload in 1.0.10. Source links and the search record are in
+Gilded Ribbon and Stratosphere, whose images had no confirmed source, left
+the payload in 1.0.10. Source links and the search record are in
 [the reflection source notes](../sphere/assets/reflections/SOURCES.md).
 
 ## Classic Minesweeper screenshot
