@@ -7,8 +7,15 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TASK="${1:-assembleDebug}"
 
+GRADLE_ARGS=()
 case "$TASK" in
     assembleDebug|bundleRelease) ;;
+    bundlePlayRelease)
+        # Google Play bundle: the application id comes from
+        # hexsweeperPlayApplicationId in android/gradle.properties.
+        TASK=bundleRelease
+        GRADLE_ARGS=(-Pplay)
+        ;;
     *)
         printf 'android-build: unsupported task %s\n' "$TASK" >&2
         exit 2
@@ -25,4 +32,4 @@ fi
 
 cd "$REPO_ROOT"
 pnpm exec cap sync android
-exec ./android/gradlew --project-dir android "$TASK"
+exec ./android/gradlew --project-dir android ${GRADLE_ARGS[@]+"${GRADLE_ARGS[@]}"} "$TASK"

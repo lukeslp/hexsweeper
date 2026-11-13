@@ -10,6 +10,7 @@
     "cap:open:android": "npx cap open android",
     "android:build:debug": "scripts/android-build.sh assembleDebug",
     "android:bundle:release": "scripts/android-build.sh bundleRelease",
+    "android:bundle:play": "scripts/android-build.sh bundlePlayRelease",
     "icons:generate": "python3 scripts/generate-icon.py",
     "icons:generate:android": "python3 scripts/generate-icon.py --android-only",
     "smoke": "scripts/smoke.sh"

@@ -12,8 +12,8 @@ tutorial**. The fixed chrome is a quiet bar:
 **Undo · New sphere · Flag**
 (red while armed) bottom left, **?** bottom right, and a small mines-left ·
 seconds readout at the top. Everything else lives behind **?**, on four tabs
-(Play · Themes · Board · Settings): theme (Light · Dark · Stratosphere ·
-Mercury · Ion Storm · Aurora · Galaxy · Heat Lightning), board
+(Play · Themes · Board · Settings): theme (Light · Dark · Mercury ·
+Ion Storm · Aurora · Galaxy · Heat Lightning), board
 size with your best time per size, drag inversion, effects and the tutorial.
 Hold the mine count and water rises through it. Keep holding, or tap the
 little wave button on the sheet's Board tab, and you drop into the **Water Wheel**, a hidden second sphere
@@ -56,9 +56,20 @@ This candidate has not been publicly released.
 Prepared for a first Google Play release; not released, and not signed in this
 repository. It is the 1.0.9 (34) candidate plus: a working Share button, the
 cutout strip matched to the theme, system Back that closes sheets before it
-leaves the app, backup turned off, eight themes, a Licenses page, and a sheet that holds up at large system text. Checked on
+leaves the app, backup turned off, seven themes, a Licenses page, and a sheet that holds up at large system text. Checked on
 phone and tablet emulators only. 34 was installed on a test phone, so this
 candidate takes the next code.
+
+**The Google Play build has its own application id.** `pnpm android:bundle:play`
+(or `./gradlew -Pplay :app:bundleRelease`) builds with the id in the one
+property `hexsweeperPlayApplicationId` in `android/gradle.properties`. It is
+set to `app.hexodus.hexsweeper`, a placeholder until the owner confirms it:
+a Play application id is permanent after the first upload. Every other build
+keeps `app.hexodus.ios`, so the direct download and Amazon installs keep
+updating. Android treats the two ids as two apps. They install side by side,
+neither updates the other, and a saved board, best times and settings do not
+move between them. The FileProvider authority and the Share plugin follow the
+id; the app has no deep links or asset links to follow it.
 
 ## The names do not match, on purpose
 
@@ -67,7 +78,7 @@ candidate takes the next code.
 | Product / display name | **Hexsweeper** |
 | Repository | `lukeslp/hexsweeper`, in this folder (`app/`) |
 | Game source | the repository root (`sphere/`) |
-| iOS bundle id / Android application id | `app.hexodus.ios` |
+| iOS bundle id / Android application id | `app.hexodus.ios` (the Google Play build: see the 1.0.10 note above) |
 | App Store Connect record | app id `6768871973` |
 
 The bundle id is inherited. It was minted for "Hexodus", an unrelated hex
@@ -134,15 +145,16 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `dcedc23`, a bounded maintenance line on the
+The current payload pins `42a1ae6`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
 Help keeps the classic Minesweeper screenshot, as on the web (a swap to the
 project's own board was tried on this line and reverted at the owner's
 instruction on November 12, 2026).
 
-- the reflection materials with no known source are gone, so the Themes tab
-  shows eight themes (the change main took in #13);
+- the reflection materials with no known source are gone (the change main
+  took in #13), and so is Stratosphere, pulled at the owner's instruction on
+  November 12, 2026. The Themes tab shows seven themes;
 - the gesture fixes main took in #15;
 - a Licenses page (`www/notices.html`) linked from the foot of the sheet;
 - each page reports its background color to the Android shell, which paints
@@ -164,7 +176,8 @@ scripts/smoke.sh --with-source ..                   # + matches source
 pnpm cap:open:ios                                   # Xcode
 pnpm cap:open:android                               # Android Studio
 pnpm android:build:debug                            # debug APK
-pnpm android:bundle:release                         # unsigned release AAB
+pnpm android:bundle:release                         # unsigned release AAB, app.hexodus.ios
+pnpm android:bundle:play                            # unsigned release AAB with the Play application id
 ```
 
 [Capacitor 8](https://capacitorjs.com/docs/android) requires Node 22+, Android
@@ -198,10 +211,10 @@ relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
 back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
 network. Their texture provenance is recorded in this repository's
 [`sphere/assets/textures/README.md`](../sphere/assets/textures/README.md).
-The thirteen offline themes
-(Light, Shell, Dark, Ink, Float, Card, Glow, Mercury, Stratosphere, Ion Storm,
+The twelve offline themes
+(Light, Shell, Dark, Ink, Float, Card, Glow, Mercury, Ion Storm,
 Aurora, Galaxy, Heat Lightning) ship in the payload, and the
-Themes tab exposes eight of them; the web build keeps all sixteen. Mercury's mirrored body is a WebGL2 shader
+Themes tab exposes seven of them; the web build keeps all sixteen. Mercury's mirrored body is a WebGL2 shader
 with no texture asset; the textured materials carry their small
 files sealed as data URIs (about 310KB together). Without WebGL each falls back to a
 plain field in its own palette.

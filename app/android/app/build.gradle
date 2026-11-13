@@ -10,11 +10,30 @@ def signingValues = [
 ].collectEntries { [(it): System.getenv(it)] }
 def hasReleaseSigning = signingValues.values().every { it != null && !it.trim().isEmpty() }
 
+// Application id. The direct download, Amazon and every build made without
+// -Pplay keep the id those installs already have. A Google Play build
+// (-Pplay) takes its id from ONE property, hexsweeperPlayApplicationId in
+// gradle.properties. Android treats the two ids as two different apps: they
+// install side by side, neither updates the other, and saves do not carry
+// over. The namespace (the Java package and R class) is the same for both.
+def directApplicationId = "app.hexodus.ios"
+def playBuild = project.hasProperty('play')
+def hexsweeperApplicationId = directApplicationId
+if (playBuild) {
+    hexsweeperApplicationId = (project.findProperty('hexsweeperPlayApplicationId') ?: '').toString().trim()
+    if (!(hexsweeperApplicationId ==~ /[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+/)) {
+        throw new GradleException("-Pplay needs hexsweeperPlayApplicationId in gradle.properties (got '${hexsweeperApplicationId}')")
+    }
+    if (hexsweeperApplicationId == directApplicationId) {
+        throw new GradleException("The Play application id must differ from the direct build's ${directApplicationId}")
+    }
+}
+
 android {
     namespace = "app.hexodus.ios"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "app.hexodus.ios"
+        applicationId hexsweeperApplicationId
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 35
@@ -43,6 +62,10 @@ android {
             if (hasReleaseSigning) signingConfig signingConfigs.release
         }
     }
+}
+
+tasks.register('printApplicationId') {
+    doLast { println hexsweeperApplicationId }
 }
 
 tasks.register('printVersion') {

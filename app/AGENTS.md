@@ -54,6 +54,15 @@ CI runs `--with-source` against the exact pushed source commit recorded in
 `WWW_SOURCE.txt`, not moving source main. A missing source commit or payload that
 differs from that commit fails the build.
 
+## Application id on Google Play
+
+Builds made with `-Pplay` (`pnpm android:bundle:play`) take their application
+id from `hexsweeperPlayApplicationId` in `android/gradle.properties`. Every
+other build is `app.hexodus.ios`. Do not change either id without the owner:
+the direct id keeps existing installs updating, and the Play id is permanent
+after the first upload. Keep anything keyed to the id reading it from the
+build (`${applicationId}`, `getPackageName()`), never a literal.
+
 ## Build numbers
 
 App Store Connect already holds builds 1–6 under this bundle id from the retired
