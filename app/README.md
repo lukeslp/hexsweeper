@@ -71,6 +71,13 @@ neither updates the other, and a saved board, best times and settings do not
 move between them. The FileProvider authority and the Share plugin follow the
 id; the app has no deep links or asset links to follow it.
 
+## Android 1.0.11 (36), November 13, 2026
+
+1.0.10 (35) plus one change: Android backup carries best times, theme and
+settings to a new phone (see the backup paragraph under Layout). Not
+released and not signed in this repository. Checked on an emulator with the
+local backup transport: back up, uninstall, reinstall, restore.
+
 ## The names do not match, on purpose
 
 | Thing | Value |
@@ -120,9 +127,22 @@ the app's cache folder and opens the system share sheet through the app's
 FileProvider. A second Android plugin, `HexBackdrop`, takes the page's
 background color for the strip beside a camera cutout. System Back closes an
 open sheet, returns from the Licenses page or the Water Wheel to the board,
-and leaves the app only from the bare board. Android backup is off
-(`allowBackup="false"` and `data_extraction_rules.xml`), so the run, best
-times and settings exist only on the device.
+and leaves the app only from the bare board.
+
+Android backup is on from 1.0.11, for one small file. The game keeps
+everything in the WebView's local storage, which a backup cannot take in
+part, so the shell copies six values into `shared_prefs/hexsweeper_backup.xml`
+whenever the board page loads or the app leaves the screen: best times
+(`hexsweeper-sphere-best-v1`), theme (`hexsweeper-sphere-theme-v6`), board
+size (`hexsweeper-sphere-size-v2`), drag inversion
+(`hexsweeper-sphere-invert-v6`), effects (`hexsweeper-effects-v1`) and count
+style (`hexsweeper-sphere-countstyle-v1`). The backup rules
+(`res/xml/data_extraction_rules.xml`, and `full_backup_content.xml` before
+Android 12) include that file and nothing else. The unfinished board, sheet
+state, the tutorial marker, WebView caches and the share picture stay on the
+device. On the first launch of a new install the restored values are written
+into the page where it has none, and the page reloads once. The list of keys
+is `TravelingData.KEYS`; a new setting travels only if it is added there.
 `capacitor.config` is
 `.js` because `@capacitor/cli` requires a full `typescript` install purely to
 read a `.ts` config, which is not worth a toolchain in a repo with no TS source.

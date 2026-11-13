@@ -1,5 +1,6 @@
 package app.hexodus.ios;
 
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
@@ -17,6 +18,14 @@ import androidx.activity.OnBackPressedCallback;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 @SuppressWarnings("deprecation")
 public class MainActivity extends BridgeActivity {
@@ -44,6 +53,7 @@ public class MainActivity extends BridgeActivity {
 
             @Override
             public void onPageLoaded(WebView webView) {
+                syncTravelingData(webView);
                 bootstrapUiSession(webView, uiSessionGeneration, 0);
             }
         });
@@ -137,6 +147,82 @@ public class MainActivity extends BridgeActivity {
                 }
             }
         );
+    }
+
+    @Override
+    public void onPause() {
+        // A best time or a setting changed since the page loaded: refresh the
+        // copy Android backup takes before the app leaves the screen.
+        WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+        if (webView != null && isOwnBoardPage(webView.getUrl())) mirrorTravelingData(webView);
+        super.onPause();
+    }
+
+    /**
+     * Android backup carries one small preferences file (see TravelingData and
+     * res/xml/data_extraction_rules.xml). On the first board load of an install,
+     * a restored copy is written into the page where the page has nothing, and
+     * the page reloads once to pick it up. After that the copy only follows the
+     * page.
+     */
+    private void syncTravelingData(WebView webView) {
+        if (!isOwnBoardPage(webView.getUrl())) return;
+        SharedPreferences device = getSharedPreferences(TravelingData.DEVICE_PREFS, MODE_PRIVATE);
+        if (!device.getBoolean(TravelingData.DEVICE_SEEDED, false)) {
+            device.edit().putBoolean(TravelingData.DEVICE_SEEDED, true).apply();
+            Map<String, String> restored = TravelingData.filter(
+                getSharedPreferences(TravelingData.PREFS, MODE_PRIVATE).getAll());
+            if (!restored.isEmpty()) {
+                webView.evaluateJavascript(TravelingData.seedScript(restored), written -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    boolean wroteSomething;
+                    try {
+                        wroteSomething = written != null && Integer.parseInt(written.trim()) > 0;
+                    } catch (NumberFormatException e) {
+                        wroteSomething = false;
+                    }
+                    if (wroteSomething) webView.reload();
+                    else mirrorTravelingData(webView);
+                });
+                return;
+            }
+        }
+        mirrorTravelingData(webView);
+    }
+
+    private void mirrorTravelingData(WebView webView) {
+        webView.evaluateJavascript(TravelingData.readScript(), result -> {
+            Map<String, Object> page = new HashMap<>();
+            try {
+                Object decoded = new JSONTokener(result == null ? "null" : result).nextValue();
+                if (!(decoded instanceof String)) return;
+                JSONObject values = new JSONObject((String) decoded);
+                for (Iterator<String> keys = values.keys(); keys.hasNext(); ) {
+                    String key = keys.next();
+                    page.put(key, values.optString(key, ""));
+                }
+            } catch (JSONException e) {
+                return;
+            }
+            Map<String, String> traveling = TravelingData.filter(page);
+            // An empty page (storage unreadable, or nothing chosen yet) never erases the copy.
+            if (traveling.isEmpty()) return;
+            SharedPreferences.Editor editor =
+                getSharedPreferences(TravelingData.PREFS, MODE_PRIVATE).edit().clear();
+            for (Map.Entry<String, String> entry : traveling.entrySet()) {
+                editor.putString(entry.getKey(), entry.getValue());
+            }
+            editor.apply();
+        });
+    }
+
+    /** The bundled board page and nothing else: never the Licenses page, the Wheel or a foreign URL. */
+    private static boolean isOwnBoardPage(String url) {
+        if (url == null) return false;
+        Uri uri = Uri.parse(url);
+        return "https".equals(uri.getScheme()) && "localhost".equals(uri.getHost())
+            && uri.getUserInfo() == null && (uri.getPort() == -1 || uri.getPort() == 443)
+            && isBoardPage(url);
     }
 
     @Override
