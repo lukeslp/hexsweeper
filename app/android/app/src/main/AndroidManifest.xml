@@ -14,14 +14,15 @@
         android:required="true"
         tools:ignore="UnnecessaryRequiredFeature" />
 
-    <!-- Backup is off on purpose. The privacy policy says the run, best times
-         and settings stay on the device and go when the app is deleted; a copy
-         in the owner's cloud backup or on their next phone would outlive that.
-         data_extraction_rules.xml says the same for Android 12 and later. -->
+    <!-- Backup is on, for one small file only: best times, theme and settings
+         (res/xml/data_extraction_rules.xml for Android 12 and later,
+         res/xml/full_backup_content.xml before that). It goes to the player's
+         own Google account backup or straight to their next phone. The
+         unfinished board and everything else stay on the device. -->
     <application
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="false"
+        android:fullBackupContent="@xml/full_backup_content"
         android:appCategory="game"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

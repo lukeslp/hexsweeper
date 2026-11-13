@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The game's run, best times and settings stay on this device: no cloud
-     backup and no copy to a new device. Matches android:allowBackup="false". -->
+<!-- Android 12 and later. Backup and device transfer carry ONE file:
+     shared_prefs/hexsweeper_backup.xml, the shell's copy of the best times,
+     theme and settings (see TravelingData.java for the exact keys). Listing an
+     include means nothing else is taken: not the WebView's storage (the
+     unfinished board, sheet state, caches), not the share picture, not the
+     device-only marker in hexsweeper_device.xml. -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="external" path="." />
+        <include domain="sharedpref" path="hexsweeper_backup.xml" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="external" path="." />
+        <include domain="sharedpref" path="hexsweeper_backup.xml" />
     </device-transfer>
 </data-extraction-rules>
