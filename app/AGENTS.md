@@ -4,7 +4,8 @@ Capacitor shell around hexsweeper's sphere game on iOS and Android. The app open
 straight into the sphere; a quiet bar (Undo · New sphere · Flag · ?) is the
 only fixed chrome and the ? sheet holds theme, size, best times, invert,
 effects and the tutorial. `www/wheel.html` is the hidden Water Wheel, reached
-by holding the mine count. Infinite and Classic are web-only. Read `README.md` first; it
+by holding the mine count. `www/notices.html` is the licenses page behind the
+sheet's Licenses link; keep it in step with `THIRD-PARTY-NOTICES.md`. Infinite and Classic are web-only. Read `README.md` first; it
 explains why the bundle id says `hexodus` and why the build number starts at 7.
 
 ## Entry policy
@@ -52,6 +53,15 @@ its preserved baseline and divergence, as in the November 4 quiet-focus follow-u
 CI runs `--with-source` against the exact pushed source commit recorded in
 `WWW_SOURCE.txt`, not moving source main. A missing source commit or payload that
 differs from that commit fails the build.
+
+## Application id on Google Play
+
+Builds made with `-Pplay` (`pnpm android:bundle:play`) take their application
+id from `hexsweeperPlayApplicationId` in `android/gradle.properties`. Every
+other build is `app.hexodus.ios`. Do not change either id without the owner:
+the direct id keeps existing installs updating, and the Play id is permanent
+after the first upload. Keep anything keyed to the id reading it from the
+build (`${applicationId}`, `getPackageName()`), never a literal.
 
 ## Build numbers
 

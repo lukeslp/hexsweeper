@@ -2416,7 +2416,7 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
  * File Purpose: Minimal hexasphere geometry (Goldberg dual of subdivided icosahedron).
  * Primary Functions/Classes: generateHexasphere, floodClosure, vec3 helpers.
  * Inputs: radius, subdivisions (0–12+). Outputs: { tiles, radius, subdivisions }.
- * Notes: Plain-object Vec3 — no Three.js. Ported from Rind hexasphere.ts (Rob Scanlon lineage).
+ * Notes: Plain-object Vec3 — no Three.js.
  * Author: Luke Steuber <luke@lukesteuber.com>
  */
 (function (global) {
@@ -6342,7 +6342,12 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       const octx = out.getContext("2d");
       const T = state.theme;
       const dark = T.id === "dark" || T.pureCovered;
-      const bg = T.bg || (dark ? "#000000" : "#ffffff");
+      // Reflection themes declare a see-through bg (the WebGL scene shows
+      // behind the board). A card needs a solid one, or the headline lands
+      // white on whatever the receiving app paints behind the picture.
+      const seeThrough =
+        !T.bg || T.bg === "transparent" || /^rgba\([^)]*,\s*0(\.0+)?\s*\)$/.test(String(T.bg).trim());
+      const bg = seeThrough ? T.fallbackBg || (dark ? "#000000" : "#ffffff") : T.bg;
       /*
        * Contrast against the colour actually painted, not the theme's notion
        * of "dark". `dark` is true for any pureCovered theme, several of which
@@ -8390,8 +8395,31 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
 
     function canvasPoint(e) {
       const rect = canvas.getBoundingClientRect();
-      const t = e.touches && e.touches[0] ? e.touches[0] : e;
+      const own = ownTouches(e);
+      const t = own && own[0] ? own[0] : e;
       return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+
+    /**
+     * Fingers that started on the canvas. `touches` also lists fingers resting
+     * on the chrome (a thumb on the bar), which used to count as a pinch
+     * partner and as the pressed point.
+     */
+    function ownTouches(e) {
+      return e.targetTouches || e.touches || null;
+    }
+
+    /** Drop the gesture in progress without acting on it. */
+    function cancelGesture() {
+      clearTimeout(longPressTimer);
+      pinching = false;
+      pinchStartDist = 0;
+      touchMoved = false;
+      state.dragging = false;
+      state.dragStart = null;
+      state.pressed = -1;
+      state.hovered = -1;
+      scheduleFrame();
     }
 
     let longPressTimer = null;
@@ -8409,7 +8437,8 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       if (e.type === "touchstart") {
         e.preventDefault();
       }
-      if (e.type === "touchstart" && e.touches && e.touches.length >= 2) {
+      const downTouches = e.type === "touchstart" ? ownTouches(e) : null;
+      if (downTouches && downTouches.length >= 2) {
         if (state.menuRotateOnly) {
           touchMoved = true;
           state.dragging = false;
@@ -8423,7 +8452,7 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
         state.dragging = false;
         state.dragStart = null;
         state.pressed = -1;
-        pinchStartDist = touchDistance(e.touches);
+        pinchStartDist = touchDistance(downTouches);
         pinchStartZoom = state.zoomFactor;
         return;
       }
@@ -8459,21 +8488,28 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
     }
 
     function onPointerMove(e) {
-      if (e.type === "touchmove" && e.touches && e.touches.length >= 2) {
+      const moveTouches = e.type === "touchmove" ? ownTouches(e) : null;
+      if (moveTouches && moveTouches.length >= 2) {
         e.preventDefault();
         if (state.menuRotateOnly) return;
         if (!pinching) {
           pinching = true;
-          pinchStartDist = touchDistance(e.touches);
+          pinchStartDist = touchDistance(moveTouches);
           pinchStartZoom = state.zoomFactor;
           clearTimeout(longPressTimer);
           state.pressed = -1;
         }
-        const dist = touchDistance(e.touches);
+        const dist = touchDistance(moveTouches);
         if (pinchStartDist > 0) {
           setZoomFactor(pinchStartZoom * (dist / pinchStartDist));
         }
         return;
+      }
+      // The button came up where no mouseup could reach us (another window,
+      // a frame, the system). Without this the sphere keeps following the
+      // pointer with nothing held.
+      if (e.type === "mousemove" && state.dragging && e.buttons === 0) {
+        cancelGesture();
       }
       const p = canvasPoint(e);
       if (state.dragging && state.dragStart) {
@@ -8512,7 +8548,8 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
     function onPointerUp(e) {
       clearTimeout(longPressTimer);
       if (pinching) {
-        if (e.touches && e.touches.length >= 2) return;
+        const left = ownTouches(e);
+        if (left && left.length >= 2) return;
         pinching = false;
         pinchStartDist = 0;
         state.dragging = false;
@@ -8565,6 +8602,8 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       state.dragging = false;
       state.dragStart = null;
       state.pressed = -1;
+      // A finger leaves nothing hovering; the last touched face stayed lit.
+      if (e.type === "touchend") state.hovered = -1;
       touchMoved = false;
       schedulePersist();
     }
@@ -8576,6 +8615,10 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
       onPointerMove(event);
     });
     window.addEventListener("mouseup", onPointerUp);
+    // The system took the touch (a call, an edge swipe, palm rejection): the
+    // hold timer must not flag or dig after it, and the drag must end.
+    canvas.addEventListener("touchcancel", cancelGesture);
+    window.addEventListener("blur", cancelGesture);
     canvas.addEventListener("touchstart", onPointerDown, { passive: false });
     canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
@@ -11851,6 +11894,34 @@ document.getElementById("open-menu-a11y")?.addEventListener("click", () => wheel
 </style>
 <a class="app-back" href="index.html">
 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Sphere</a>
+<script>
+/* app: tell the native shell the page background, now and when the theme changes */
+(function () {
+  var last = "";
+  function report() {
+    var p = window.Capacitor && window.Capacitor.Plugins;
+    if (!p || !p.HexBackdrop || !document.body) return;
+    var color = getComputedStyle(document.body).backgroundColor;
+    if (!color || color === last) return;
+    last = color;
+    try {
+      var sent = p.HexBackdrop.setColor({ color: color });
+      if (sent && sent.catch) sent.catch(function () {});
+    } catch (_) {}
+  }
+  function soon() { report(); setTimeout(report, 450); }
+  var watch = new MutationObserver(soon);
+  var opts = { attributes: true, attributeFilter: ["style", "class", "data-sphere-theme", "data-sphere-chrome"] };
+  watch.observe(document.documentElement, opts);
+  watch.observe(document.body, opts);
+  window.addEventListener("pageshow", soon);
+  if (window.matchMedia) {
+    var scheme = window.matchMedia("(prefers-color-scheme: dark)");
+    if (scheme.addEventListener) scheme.addEventListener("change", soon);
+  }
+  soon();
+})();
+</script>
 <script>
 /* app: dismiss the native launch screen after first paint */
 (function () {
