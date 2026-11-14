@@ -11,7 +11,7 @@
 | ASC app id | `6768871973` |
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
-this same record. The checked-in iOS project is `1.0.1 (69)` and Android is
+this same record. The checked-in iOS project is `1.0.2 (70)` and Android is
 `1.0.5 (30)`. Check the store's latest uploaded build before incrementing or
 uploading; checked-in versions do not establish current remote store state.
 (App Store Connect enforces a per-app daily
