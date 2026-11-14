@@ -7932,6 +7932,67 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
     let pinchStartDist = 0;
     let pinchStartZoom = 1;
 
+    /*
+     * Rim taps. Perspective squeezes faces toward the sphere's edge to slivers
+     * a finger cannot hit reliably, so a touch tap on a face foreshortened
+     * past RIM_SQUEEZE (narrowest on-screen width over widest) turns that face
+     * to the front instead of digging or flagging it; the next tap acts on it.
+     * Mouse clicks are precise enough and keep acting directly. Web only by
+     * default: the native payload (HEXSWEEPER_SPHERE_APP) keeps its shipped
+     * input until it opts in with boot({ rimTapTurns: true }).
+     */
+    const RIM_SQUEEZE = 0.5;
+    const rimTapTurns =
+      opts.rimTapTurns !== undefined ? !!opts.rimTapTurns : !global.HEXSWEEPER_SPHERE_APP;
+
+    function faceSqueeze(idx) {
+      const face = getProjected().find((p) => p.index === idx);
+      if (!face || face.boundary.length < 3) return 1;
+      let narrow = Infinity;
+      let wide = 0;
+      for (let step = 0; step < 12; step++) {
+        const a = (step * Math.PI) / 12;
+        const c = Math.cos(a);
+        const s = Math.sin(a);
+        let lo = Infinity;
+        let hi = -Infinity;
+        for (const pt of face.boundary) {
+          const d = pt.x * c + pt.y * s;
+          if (d < lo) lo = d;
+          if (d > hi) hi = d;
+        }
+        narrow = Math.min(narrow, hi - lo);
+        wide = Math.max(wide, hi - lo);
+      }
+      return wide > 0 ? narrow / wide : 1;
+    }
+
+    /** Ease a face to the front along the shorter of the two turns that get it there. */
+    function turnFaceToFront(idx) {
+      const tile = state.tiles[idx];
+      if (!tile) return;
+      stopAmbientSpin();
+      const c = tile.centerPoint;
+      const len = Math.hypot(c.x, c.y, c.z) || 1;
+      const x = c.x / len, y = c.y / len, z = c.z / len;
+      const yaw = Math.atan2(-x, z);
+      const pitch = Math.atan2(y, Math.hypot(x, z));
+      // (yaw + π, π − pitch) reaches the same face with the sphere upside
+      // down; it is the short way round once a drag has tumbled past a pole.
+      const options = [
+        [yaw, pitch],
+        [yaw + Math.PI, Math.PI - pitch],
+      ].map(([ty, tx]) => {
+        const dy = angleDelta(state.rotY, ty);
+        const dx = angleDelta(state.rotX, tx);
+        return { dy, dx, cost: Math.abs(dy) + Math.abs(dx) };
+      });
+      const best = options[0].cost <= options[1].cost ? options[0] : options[1];
+      state.targetRotY = state.rotY + best.dy;
+      state.targetRotX = state.rotX + best.dx;
+      scheduleFrame();
+    }
+
     function onPointerDown(e) {
       stopAmbientSpin();
       // Block iOS/Android long-press selection / callout on the canvas.
@@ -8094,7 +8155,15 @@ window.HEXSWEEPER_WHEEL_HREF = "https://dr.eamer.dev/games/hexsweeper/wheel/";
           const face = state.cells[idx];
           const tapAt = performance.now();
           const again = idx === lastTapIdx && tapAt - lastTapAt < CHORD_TAP_MS;
-          if (again && face && face.revealed) {
+          if (
+            rimTapTurns &&
+            e.type === "touchend" &&
+            faceSqueeze(idx) < RIM_SQUEEZE
+          ) {
+            turnFaceToFront(idx);
+            lastTapIdx = -1;
+            lastTapAt = 0;
+          } else if (again && face && face.revealed) {
             chordAt(idx);
             lastTapIdx = -1;
             lastTapAt = 0;

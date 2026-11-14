@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <!--
   File Purpose: Lab baseline neumorph Hexsweeper skin over core.js.
-  Primary Functions/Classes: Hexsweeper.boot with default theme; lab nav chrome.
+  Primary Functions/Classes: Hexsweeper.boot with default theme; lab nav chrome;
+    end-of-run state (#end-note line + #again-btn disc; a loss dims the board and
+    inverts the hit hex in afterFrame).
   Inputs: core.js, skin-chrome.css, optional ?size=easy|medium|hard. Outputs: Standalone classic board (not production).
 -->
 <html lang="en">
@@ -26,6 +28,32 @@ body {
   height: 100vh; margin: 0; overflow: hidden; user-select: none; touch-action: none;
   color: var(--text-main);
 }
+
+/* End of a run: one short line and a Play again disc. On the public route the
+   control frame takes the disc as its completion control (place, ring, motion);
+   these rules only stand it up on frameless pages such as the lab. */
+:root { --ink: #4a5568; --bg: #e0e5ec; }
+.end-note {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--control-next-bottom, 96px) + 76px);
+  margin: 0; z-index: 55; pointer-events: none; white-space: nowrap;
+  font: 600 1.05rem/1.2 "IBM Plex Sans", system-ui, sans-serif; letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+.end-note:empty { visibility: hidden; }
+.end-note .sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.end-again {
+  position: fixed; left: calc(50% - 32px); bottom: 96px; z-index: 55;
+  width: 64px; height: 64px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: var(--ink); color: var(--bg);
+}
+.end-again[hidden] { display: none; }
+.end-again svg { width: 30px; height: 30px; }
+.end-again:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 
 </style>
 </head>
@@ -58,6 +86,15 @@ body {
     </svg>
   </button>
 </div>
+
+<p id="end-note" class="end-note" role="status" aria-live="polite" aria-atomic="true"></p>
+<button type="button" id="again-btn" class="end-again" aria-label="Play again" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polyline points="23 4 23 10 17 10"></polyline>
+    <polyline points="1 20 1 14 7 14"></polyline>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+  </svg>
+</button>
 
 <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
   <div class="modal-content">
@@ -178,6 +215,55 @@ function readClassicRun() {
   return snapshot;
 }
 
+// End of a run. A loss dims the board and inverts the hex that went off (a
+// dark cell with a light mine, readable without colour); a win leaves the board
+// as it stands. Both say so in one line, read out by screen readers, and show
+// the Play again disc.
+const classicEndNote = document.getElementById("end-note");
+const classicAgain = document.getElementById("again-btn");
+
+function showClassicEnd(win, api) {
+  const seconds = api.state.timeElapsed | 0;
+  classicEndNote.textContent = win ? "Board cleared" : "Mine hit";
+  const spoken = document.createElement("span");
+  spoken.className = "sr-only";
+  spoken.textContent = win
+    ? ` in ${seconds} ${seconds === 1 ? "second" : "seconds"}.`
+    : ". Game over.";
+  classicEndNote.append(spoken);
+  classicAgain.hidden = false;
+}
+
+function hideClassicEnd() {
+  classicEndNote.textContent = "";
+  classicAgain.hidden = true;
+}
+
+function drawClassicEnd(ctx, api) {
+  const state = api.state;
+  const hit = state.detonator;
+  if (!state.isGameOver || state.win || !hit) return;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = "rgba(224, 229, 236, 0.6)";
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.restore();
+  const size = state.cellSize;
+  ctx.save();
+  ctx.fillStyle = "#4a5568";
+  ctx.fill(api.hexPath(hit, size, 0.92));
+  ctx.fillStyle = "#e0e5ec";
+  ctx.beginPath();
+  ctx.arc(hit.x, hit.y, size * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#e0e5ec";
+  ctx.lineWidth = Math.max(1.5, size * 0.07);
+  ctx.beginPath();
+  ctx.arc(hit.x, hit.y, size * 0.54, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
 classicGame = Hexsweeper.boot({
   difficulty: classicSize,
   theme: {
@@ -189,9 +275,22 @@ classicGame = Hexsweeper.boot({
     onReveal: scheduleClassicSave,
     onFlag: scheduleClassicSave,
     onPersistTick: scheduleClassicSave,
-    onGameOver: clearClassicRun,
-    onClearPersist: clearClassicRun
+    onGameOver(win, api) {
+      clearClassicRun();
+      showClassicEnd(win, api);
+    },
+    onReset: hideClassicEnd,
+    afterFrame: drawClassicEnd,
+    onClearPersist() {
+      clearClassicRun();
+      hideClassicEnd();
+    }
   }
+});
+
+classicAgain.addEventListener("click", () => {
+  document.getElementById("reset-btn").click();
+  hideClassicEnd();
 });
 
 if (classicParams.get("resume") === "1") {

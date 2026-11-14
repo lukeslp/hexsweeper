@@ -54,6 +54,13 @@ rail. These web controls use the [shared Minimal frame](docs/control-layout-2026
 square 48px targets, 24px glyphs and visible keyboard focus. Infinite uses the
 same New board/Flag/? placement; Classic puts Reset above and Menu last. The
 sealed native payload keeps its existing control arrangement.
+When a Classic run ends, one line says "Mine hit" or "Board cleared" (a status
+region, so screen readers hear it) above the frame's Play again disc; a loss
+also dims the board and marks the hex that went off as a dark cell with a
+light mine. On the web Sphere, a touch tap on a face that perspective has
+squeezed below half its width near the rim turns that face to the front
+instead of digging or flagging it; mouse clicks act directly, and the native
+payload keeps acting directly until it opts in (`rimTapTurns`).
 The three-hex games menu (Infinite, Classic, Sphere, with
 the newest run in the center Resume tile) lives at `launcher.html`, which is
 **unlinked and noindex** since 2026-10-07: it stays served only so old links

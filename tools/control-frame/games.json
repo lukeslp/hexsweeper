@@ -44,6 +44,9 @@
       "reset-btn",
       "menu-btn"
     ],
+    "completion": [
+      "again-btn"
+    ],
     "sheet": "modal-overlay",
     "anchor": "#diff-selector",
     "anchorRow": ".modal-row",
