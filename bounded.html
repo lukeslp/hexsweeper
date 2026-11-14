@@ -439,6 +439,10 @@ body {
 .end-again[hidden] { display: none; }
 .end-again svg { width: 30px; height: 30px; }
 .end-again:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+/* Play again hands focus to the board (tabindex -1: out of the Tab order).
+   A ring only when the browser would show one, so a tap leaves none. */
+#gameCanvas:focus { outline: none; }
+#gameCanvas:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
 
 </style>
   <link rel="icon" href="/games/hexsweeper/favicon/favicon.ico?v=2" sizes="16x16 32x32 48x48">
@@ -549,7 +553,7 @@ body[data-control-frame] .access-action {min-height:44px;padding:8px;border:0;ba
 <body>
 <div class="fx-layer" id="fx" aria-hidden="true"></div>
 <div class="canvas-container">
-  <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas" tabindex="-1" aria-label="Hexsweeper board"></canvas>
 </div>
 
 <div class="hud-actions" role="toolbar" aria-label="Game controls">
@@ -2984,8 +2988,12 @@ classicGame = Hexsweeper.boot({
   }
 });
 
+// Play again hides its own disc, so it hands focus to the new board first:
+// otherwise a keyboard or switch player is left on <body>. preventScroll keeps
+// the page still; the canvas's :focus-visible rule keeps a tap ring-free.
 classicAgain.addEventListener("click", () => {
   document.getElementById("reset-btn").click();
+  document.getElementById("gameCanvas").focus({ preventScroll: true });
   hideClassicEnd();
 });
 
