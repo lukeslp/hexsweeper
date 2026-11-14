@@ -200,6 +200,12 @@ pnpm android:bundle:release                         # unsigned release AAB, app.
 pnpm android:bundle:play                            # unsigned release AAB with the Play application id
 ```
 
+The iOS shell uses the UIScene life cycle (`ios/App/App/SceneDelegate.swift` and
+`UIApplicationSceneManifest` in `Info.plist`). Keep both: UIKit refuses to
+launch an app built with the iOS 27 SDK without them (Apple TN3187). To check
+a build, launch it on an iOS 27 simulator and confirm the log has no
+"UIScene life cycle is required" line.
+
 [Capacitor 8](https://capacitorjs.com/docs/android) requires Node 22+, Android
 Studio 2025.2.1+, an Android SDK, and API 24 or newer. Local Android builds
 select JDK 21 automatically on macOS.
