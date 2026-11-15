@@ -32,8 +32,8 @@ before treating those browser/source checks as device acceptance.
 ## Archive → TestFlight
 
 ```bash
-KEY=7SW49BDC79
-ISS=69a6de87-19da-47e3-e053-5b8c7c11a4d1
+KEY="$ASC_KEY_ID"        # your App Store Connect API key ID
+ISS="$ASC_ISSUER_ID"     # your App Store Connect issuer ID
 
 cd ios/App
 xcodebuild -project App.xcodeproj -scheme App -configuration Release \
