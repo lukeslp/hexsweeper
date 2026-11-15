@@ -12,24 +12,20 @@
 
 Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
 this same record. The checked-in iOS project is `1.0.2 (70)` and Android is
-`1.0.5 (30)`. Check the store's latest uploaded build before incrementing or
+`1.0.11 (36)`. Check the store's latest uploaded build before incrementing or
 uploading; checked-in versions do not establish current remote store state.
 (App Store Connect enforces a per-app daily
 upload cap — error 90382 after ~15 uploads on 2026-08-18; it cleared within
 the hour.)
 
-## Current payload (2026-10-05)
+## Current payload (2026-11-12)
 
-`WWW_SOURCE.txt` pins canonical game commit `d65b9a2`, re-vendored in native
-commit `07adf02` on October 4. Web entry now opens the board immediately;
-the native app retains its first-launch tutorial and the same ? settings sheet.
-Both surfaces can reopen the tutorial through ? → Play.
+`WWW_SOURCE.txt` pins game commit `42a1ae6`, a maintenance line on the
+October 7 `c91cd20` snapshot. [The README](../README.md#updating-the-games)
+lists what it adds. The app opens straight to the board and keeps its short
+tutorial behind ? → Play (**Show the tutorial**); the web game opens the
+board too and has no tutorial. Both use the same ? settings sheet.
 
-Fresh browser entry checks, blocked-storage regressions, exporter checks,
-payload checksums, cross-repo smoke, and Capacitor iOS/Android sync passed.
-Both repository CI runs passed; the web deployment's served bytes matched
-the committed game. App CI also builds an Android debug APK. No new native
-release or store upload accompanied this payload update.
 Complete `docs/DEVICE_VERIFY.md` against the candidate binary
 before treating those browser/source checks as device acceptance.
 
@@ -75,9 +71,10 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-The checked-in Android identity is `versionCode 30`, `versionName 1.0.5`,
-targeting API 36 with minimum API 24. The October 2 direct-download release
-used payload `7ece656`; the recorded Amazon submission is `1.0.4 (29)`.
+The checked-in Android identity is `versionCode 36`, `versionName 1.0.11`,
+targeting API 36 with minimum API 24. The direct download serves
+`1.0.11 (36)`, dated November 14, 2026; the recorded Amazon submission is
+`1.0.4 (29)`.
 Artifact, certificate, checksum, listing, and physical Fire-tablet evidence
 live in `android/AMAZON-RELEASE.md`. Verify the served APK and store console
 when preparing the next release; the current source payload is newer than

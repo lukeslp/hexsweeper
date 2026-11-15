@@ -40,6 +40,9 @@ og-frames/
 # the live site (this repo root IS the deployed web root).
 build/
 
+# Android store listing images (fastlane layout, read by F-Droid).
+!fastlane/**/*.png
+
 # The native app in app/ tracks its own images (icons, splash screens, store
 # screenshots and the game payload). app/.gitignore decides what to skip there.
 !app/**/*.png

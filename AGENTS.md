@@ -24,9 +24,9 @@ Do not re-expose the skin lab from production chrome.
 
 Every Sphere entry (web root, `sphere/`, pens and the native payload) opens
 the board at once: there is no welcome card and no first-launch tutorial, and
-nothing opens the sheet uninvited, including when storage is blocked. A first
-visit gets one quiet status cue above the bar (the count-style toast) and that
-marks `hexsweeper-sphere-welcome-v1`; `?welcome=1` still previews the sheet.
+nothing opens the sheet uninvited, including when storage is blocked. There is
+no first-visit cue either (Sphere boots with `autoWelcome: false`); `?welcome=1`
+still previews the sheet.
 Help lives behind ? only: the Play tab is one line of what to do plus three
 gesture rows (Tap / Hold / Drag) and, on Sphere, the classic Minesweeper
 history thumb that opens the full screenshot (owner's request, 2026-11-11);
@@ -48,8 +48,8 @@ right rail on landscape phones. The score and Flag mode are not repeated in the
 sheet. Look offers System · Light · Dark: System (the default) follows
 `prefers-color-scheme` live; a Light or Dark pick is kept under
 `hexsweeper-infinite-theme-v1`, and System clears it. T cycles the three. `"minimalHelp": true`
-in its one-pager config turns on a quiet first-visit cue (the theme toast,
-marks `hexsweeper-infinite-welcome-v1`) and keeps runtime titles off
+in its one-pager config wires the sheet, the readout and the system theme,
+shows no first-visit cue, and keeps runtime titles off
 (`Hexsweeper.boot({ tooltips: false })`). play.html, its theme pens and
 Classic keep their own sheets and tooltips.
 
@@ -104,8 +104,9 @@ the hidden second sphere; like the web, it has no first-launch tutorial.
 filter in `sphere.js`): these themes fetch textures over the network. Texture
 provenance and attribution are recorded in [the texture source notes](sphere/assets/textures/README.md);
 Earth gloss is project artwork and the older daymaps carry Solar System Scope
-attribution through Orrery. The engine includes sixteen web themes and
-fourteen offline themes; the production Themes tab exposes nine choices.
+attribution through Orrery. The engine defines sixteen themes; the web
+registers eight and its Themes tab shows those eight. The app payload's
+maintenance line shows seven.
 
 Export from canonical main, after checking the source branch; an older
 feature checkout may not match shipped behavior. After any sphere payload
