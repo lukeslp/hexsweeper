@@ -89,4 +89,20 @@ class HexBridgeViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(HexSharePlugin())
     }
+
+    #if DEBUG
+    // Store-screenshot hook (Debug builds only, absent from Release): launch with
+    // `-HexShot "theme=dark&deal=1"` and the game reloads with that query, so
+    // scripts/capture-duo.sh needs no taps. Logs "HexShot: <query>" when applied.
+    private var hexShotApplied = false
+    override open func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        let args = ProcessInfo.processInfo.arguments
+        guard !hexShotApplied, let i = args.firstIndex(of: "-HexShot"), i + 1 < args.count,
+              let url = URL(string: "capacitor://localhost/index.html?" + args[i + 1]) else { return }
+        hexShotApplied = true
+        NSLog("HexShot: %@", args[i + 1])
+        bridge?.webView?.load(URLRequest(url: url))
+    }
+    #endif
 }
