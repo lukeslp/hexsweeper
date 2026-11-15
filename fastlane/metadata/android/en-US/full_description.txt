@@ -1,0 +1,14 @@
+It's minesweeper on a ball of hexagons, so there are no edges or corners to hide behind. Tap a face to clear it and hold to flag it; the first clear is always safe. Drag to spin the sphere, pinch to zoom.
+
+* Five sizes, from a quick 162 faces to a 2,252-face slog, with your best time kept for each.
+* Undo. One bad tap doesn't have to end the run. Undo, New sphere and Flag sit in a small bar; everything else is behind ?.
+* Seven looks: Light and Dark, plus the live materials Mercury, Ion Storm, Aurora, Galaxy and Heat Lightning.
+* It waits for you. Close the app mid-game and the board is there when you come back.
+* Share a card of your finished board.
+* Something hidden: hold the mine count at the top, and keep holding.
+
+The phone app is the sphere only. The web version at https://dr.eamer.dev/games/hexsweeper/ adds Infinite, an endless plate, and Classic, a fixed board.
+
+No account, no ads, no analytics, no tracking. The app makes no network requests and doesn't ask for internet access: the game, fonts and pictures are all inside. Your board, best times and settings are saved on the device. Android backup can carry best times, theme and settings to a new phone; the unfinished board stays on the device.
+
+Needs Android 7.0 or later on a phone or tablet with a touchscreen.

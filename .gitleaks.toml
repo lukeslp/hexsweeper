@@ -2,6 +2,11 @@
 # Notes: localStorage preference/save lane names are not credentials.
 title = "hexsweeper"
 
+# Keep gitleaks' built-in rules; without this the file would replace them
+# with none and every scan would pass.
+[extend]
+useDefault = true
+
 [allowlist]
 description = "Browser storage keys and collection export mirrors"
 regexes = [

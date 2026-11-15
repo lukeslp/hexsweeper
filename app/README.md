@@ -32,9 +32,9 @@ This repository holds two platforms: the iOS shell under `ios/` and the
 Android shell under `android/`. Build steps for both are under
 [Verify](#verify).
 
-The web game opens the board immediately, including on a first visit or when
-browser storage is blocked. Instructions are optional: **? → Play**, then
-**Show the tutorial** for the short intro. Web and native use the same
+The web game also opens the board immediately, including on a first visit or
+when browser storage is blocked, but it has no tutorial: its Play tab is one
+line plus Tap / Hold / Drag. Web and native use the same
 Play · Themes · Board · Settings sheet; a Keys tab appears for keyboard users.
 
 ## Flip cover testing, November 4, 2026
@@ -74,9 +74,10 @@ id; the app has no deep links or asset links to follow it.
 ## Android 1.0.11 (36), November 13, 2026
 
 1.0.10 (35) plus one change: Android backup carries best times, theme and
-settings to a new phone (see the backup paragraph under Layout). Not
-released and not signed in this repository. Checked on an emulator with the
-local backup transport: back up, uninstall, reinstall, restore.
+settings to a new phone (see the backup paragraph under Layout). It is the
+build on the direct download page, dated November 14, 2026; it is not signed
+in this repository. Checked on an emulator with the local backup transport:
+back up, uninstall, reinstall, restore.
 
 ## The names do not match, on purpose
 
@@ -207,8 +208,11 @@ a build, launch it on an iOS 27 simulator and confirm the log has no
 "UIScene life cycle is required" line.
 
 [Capacitor 8](https://capacitorjs.com/docs/android) requires Node 22+, Android
-Studio 2025.2.1+, an Android SDK, and API 24 or newer. Local Android builds
-select JDK 21 automatically on macOS.
+Studio 2025.2.1+, an Android SDK, and API 24 or newer. Building from the
+command line needs JDK 21 and the Android SDK platform 36 (CI also installs
+build-tools 36.0.0). `scripts/android-build.sh` picks JDK 21 through
+`/usr/libexec/java_home` on macOS; on Linux, or when JDK 21 is not registered
+there (a Homebrew install, for example), set `JAVA_HOME` yourself.
 Generated artifacts live under `android/app/build/outputs/` and remain
 gitignored. The shell requests no sensitive permissions and deliberately omits
 `android.permission.INTERNET`; outbound credits open in the system browser.
@@ -224,25 +228,26 @@ uses the Fire-tuned path for both direct and ambient XL rotation. See
 was accepted for review at 08:54 AM PDT. That historical receipt does not
 establish the current Amazon review state.
 
-The direct download page serves signed `1.0.6 (31)`, dated November 3, 2026.
-The download moved to `1.0.5 (30)` on October 2, 2026 with web payload
+The direct download page serves signed `1.0.11 (36)`, dated November 14,
+2026; before that it served `1.0.6 (31)`, dated November 3. The download moved to `1.0.5 (30)` on October 2, 2026 with web payload
 `7ece656`, so dragging the sphere follows the finger on both axes, as on
 iPhone. The recorded Amazon submission uses `1.0.4 (29)`.
 
 ## Not in this build
 
-**Earth and Moon globe themes are excluded.** They are the only themes that
+**Earth and Moon globe themes are excluded** (the web has shelved them too).
+They are the only themes that
 fetch anything at runtime: `globeUrl()` in `sphere.js` only resolves textures
 relatively under a `/sphere/` path, so inside a `capacitor://` WebView it falls
 back to an absolute `dr.eamer.dev` URL and the theme silently degrades with no
 network. Their texture provenance is recorded in this repository's
 [`sphere/assets/textures/README.md`](../sphere/assets/textures/README.md).
-The twelve offline themes
-(Light, Shell, Dark, Ink, Float, Card, Glow, Mercury, Ion Storm,
-Aurora, Galaxy, Heat Lightning) ship in the payload, and the
-Themes tab exposes seven of them; the web build keeps all sixteen. Mercury's mirrored body is a WebGL2 shader
-with no texture asset; the textured materials carry their small
-files sealed as data URIs (about 310KB together). Without WebGL each falls back to a
+The Themes tab
+exposes seven themes: Light, Dark, Mercury, Ion Storm, Aurora, Galaxy and
+Heat Lightning. The web build registers eight, the same seven plus
+Stratosphere. Mercury's mirrored body is a WebGL2 shader with no texture
+asset; Galaxy, Ion Storm and Heat Lightning carry their 768px images sealed
+as data URIs (about 160KB of base64 together). Without WebGL each falls back to a
 plain field in its own palette.
 
 ## License
