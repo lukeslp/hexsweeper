@@ -214,6 +214,9 @@ instruction on November 12, 2026).
   hidden; and the storage helpers look the store up inside their guard
   (both main's `6506a93`).
 
+`www-fdroid/` pins `9c0779a`: `8c93811` (the F-Droid change: no photo
+themes, no screenshot) plus the same three fixes.
+
 This payload update does not create or upload an iOS or Android release. See
 [release notes](docs/RELEASE.md) for the distinction between payload checks
 and published builds.

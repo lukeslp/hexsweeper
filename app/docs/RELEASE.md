@@ -22,7 +22,8 @@ the hour.)
 
 `WWW_SOURCE.txt` pins game commit `587e097`, a maintenance line on the
 October 7 `c91cd20` snapshot: the November 12 line (`42a1ae6`) plus three
-fixes from the web game of November 16.
+fixes from the web game of November 16. `WWW_SOURCE_FDROID.txt` pins
+`9c0779a`, the F-Droid line (`8c93811`) plus the same three.
 [The README](../README.md#updating-the-games) lists what it adds. The app opens straight to the board and keeps its short
 tutorial behind ? → Play (**Show the tutorial**); the web game opens the
 board too and has no tutorial. Both use the same ? settings sheet.
