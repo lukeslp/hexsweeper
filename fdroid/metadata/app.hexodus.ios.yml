@@ -16,7 +16,7 @@ Binaries: https://github.com/lukeslp/hexsweeper/releases/download/v%v/hexsweeper
 Builds:
   - versionName: 1.0.12
     versionCode: 37
-    commit: 0000000000000000000000000000000000000000
+    commit: 3e3d586f13606b997579e28cfe485ce0618890d1
     subdir: app/android/app
     sudo:
       - apt-get update
@@ -29,7 +29,7 @@ Builds:
       - pnpm install --frozen-lockfile
       - HEXSWEEPER_FDROID=1 pnpm exec cap sync android
 
-AllowedAPKSigningKeys: 0000000000000000000000000000000000000000000000000000000000000000
+AllowedAPKSigningKeys: 404fd13d59f95b59fb9342e20e5953b15603832dda8ca75181c959b41fb5d592
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
