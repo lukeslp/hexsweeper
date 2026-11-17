@@ -9,11 +9,11 @@ The app opens straight into the sphere, which restores its own unfinished run
 without asking. Nothing opens by itself on launch, including the first one.
 The short tutorial (Tap, Hold, Drag) is behind **?**, under **Show the
 tutorial**. The fixed chrome is a quiet bar:
-**Undo · New sphere · Flag**
-(red while armed) bottom left, **?** bottom right, and a small mines-left ·
+**Undo, New sphere, Flag**
+(red while armed) bottom left, **?** bottom right, and a small mines-left,
 seconds readout at the top. Everything else lives behind **?**, on four tabs
-(Play · Themes · Board · Settings): theme (Light · Dark · Mercury ·
-Ion Storm · Aurora · Galaxy · Heat Lightning), board
+(Play, Themes, Board, Settings): theme (Light, Dark, Mercury,
+Ion Storm, Aurora, Galaxy, Heat Lightning), board
 size with your best time per size, drag inversion, effects and the tutorial.
 Hold the mine count and water rises through it. Keep holding, or tap the
 little wave button on the sheet's Board tab, and you drop into the **Water Wheel**, a hidden second sphere
@@ -35,7 +35,7 @@ Android shell under `android/`. Build steps for both are under
 The web game also opens the board immediately, including on a first visit or
 when browser storage is blocked, but it has no tutorial: its Play tab is one
 line plus Tap / Hold / Drag. Web and native use the same
-Play · Themes · Board · Settings sheet; a Keys tab appears for keyboard users.
+Play, Themes, Board, Settings sheet; a Keys tab appears for keyboard users.
 
 ## Flip cover testing, November 4, 2026
 

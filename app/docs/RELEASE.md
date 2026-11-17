@@ -5,17 +5,17 @@
 | Thing | Value |
 |---|---|
 | App Store name | **Hexsweeper 3D** (`Hexsweeper` and `Hexsweep` are both taken) |
-| Home-screen name | **Hexsweeper** (`CFBundleDisplayName` — independent of the listing) |
+| Home-screen name | **Hexsweeper** (`CFBundleDisplayName`; independent of the listing) |
 | iOS bundle id | `app.hexodus.ios` (inherited; do not "fix") |
 | Android application id | `app.hexodus.ios` (shared Capacitor id; unusual but valid) |
 | ASC app id | `6768871973` |
 
-Build numbers start at 7 — builds 1–6 belong to the retired Hivescape app on
+Build numbers start at 7; builds 1–6 belong to the retired Hivescape app on
 this same record. The checked-in iOS project is `1.0.2 (70)` and Android is
 `1.0.11 (36)`. Check the store's latest uploaded build before incrementing or
 uploading; checked-in versions do not establish current remote store state.
 (App Store Connect enforces a per-app daily
-upload cap — error 90382 after ~15 uploads on 2026-08-18; it cleared within
+upload cap; error 90382 after ~15 uploads on 2026-08-18; it cleared within
 the hour.)
 
 ## Current payload (2026-11-12)
@@ -56,7 +56,7 @@ xcrun altool --upload-app -f ~/hexsweeper-build/export/Hexsweeper.ipa -t ios \
 ```
 
 **`uploadSymbols` must be `false` in the export plist.** With it enabled the
-dSYM copy fails and export dies with a bare "Copy failed" — the error names no
+dSYM copy fails and export dies with a bare "Copy failed"; the error names no
 cause, so it costs an hour if you have not seen it before. Crash reports lose
 symbolication as a result; upload dSYMs separately if that matters.
 
@@ -79,7 +79,7 @@ Artifact, certificate, checksum, listing, and physical Fire-tablet evidence
 live in `android/AMAZON-RELEASE.md`. Verify the served APK and store console
 when preparing the next release; the current source payload is newer than
 those recorded binaries. The curated download page
-and `catalog.json` are patched in place, never regenerated — see
+and `catalog.json` are patched in place, never regenerated; see
 the note beside them on the web server; each publish leaves an
 `index.html.bak-before-…` beside the page. The Play release AAB remains
 deliberately unsigned. Create and
@@ -98,22 +98,22 @@ Before Google Play staging:
 
 ## Listing
 
-The record was inherited but turned out to be **empty**, not wrong — every
+The record was inherited but turned out to be **empty**, not wrong; every
 field was null, so this was fill-in rather than cleanup.
 
 Done (updated 2026-08-11, through the App Store Connect API):
 
-- [x] Name **Hexsweeper 3D** — `Hexsweeper`, `Hexsweep`, `Hex Sweeper`,
+- [x] Name **Hexsweeper 3D**: `Hexsweeper`, `Hexsweep`, `Hex Sweeper`,
       `Hex Sweep`, `Hexasweeper`, `Hivesweeper` and `Hexhive` are all taken.
       Every bare form is gone; `Hexsweeper` + any qualifier was free.
 - [x] Subtitle `Minesweeper on a sphere` (was `Hex minesweeper, flat or round`)
-- [x] Description, keywords (94/100), and promotional text — rewritten 2026-08-18
+- [x] Description, keywords (94/100), and promotional text: rewritten 2026-08-18
       for the sphere-only app (nine looks, undo, autosave, offline)
 - [x] Support + marketing URLs → the live web game
 - [x] Privacy policy → `privacy.html`, added to the hexsweeper repo and
       deployed to the web server
-- [x] Age rating — every content question NONE, every behavior flag false
-- [x] Screenshots — replaced 2026-08-18 with six 6.9" iPhone (1320×2868) and
+- [x] Age rating: every content question NONE, every behavior flag false
+- [x] Screenshots: replaced 2026-08-18 with six 6.9" iPhone (1320×2868) and
       six 13" iPad (2064×2752) captures of the sealed sphere, captioned;
       the old picker-era device captures are gone from ASC
 - [x] Build 8 processed, validated, and attached to the 1.0 version. Nothing
@@ -161,7 +161,7 @@ Done (updated 2026-08-11, through the App Store Connect API):
       fans nine swatch faces across the surrounding ring; zoom restores on
       close (vendored from hexsweeper `184058d`)
 - [x] Build 50 uploaded and attached to 1.0 on 2026-08-18: the hex menu is
-      gone — quiet bar (Undo · New sphere · Flag · ?) plus the ? settings
+      gone — quiet bar (Undo, New sphere, Flag, ?) plus the ? settings
       sheet (theme, size, warnings, invert, effects, tutorial relaunch);
       themed dig cores and flag sheens on every material; first-launch
       tutorial; end-of-game banner as a labeled card; Share hands the card
@@ -188,7 +188,7 @@ Done (updated 2026-08-11, through the App Store Connect API):
 - [x] Build 53 uploaded and attached to 1.0 on 2026-08-18: theme rendering
       rolled back to build 50's dig cores (Mercury liquid metal, sky glass,
       plasma, curtains, star field, gold, magma — the reference); the ?
-      sheet is tabbed Play · Themes · Board · Settings (vendored from
+      sheet is tabbed Play, Themes, Board, Settings (vendored from
       hexsweeper `f32a0b2`)
 - [x] Build 54 uploaded and attached to 1.0 on 2026-08-18: only Mercury
       (liquid metal) and Galaxy (star field) keep a dig core; Stratosphere,
@@ -309,14 +309,14 @@ Done (updated 2026-08-11, through the App Store Connect API):
 
 Still owed:
 
-- [ ] **App Privacy nutrition labels — must be done in the ASC web UI.** The
+- [ ] **App Privacy nutrition labels: must be done in the ASC web UI.** The
       API has no endpoint for them (`appPrivacyDetails` → "URL path is not
       valid"). Answer: no data collected, of any kind. Apple gates submission
       on this section, so 1.0 reaching `WAITING_FOR_REVIEW` implies it was
       answered; the API cannot confirm it, so this box stays for a human to
       tick after checking the web UI.
 - [ ] `docs/DEVICE_VERIFY.md` signed on hardware
-- [x] iPad screenshots — done 2026-08-18 (six at 2064×2752, uploaded)
+- [x] iPad screenshots: done 2026-08-18 (six at 2064×2752, uploaded)
 - [x] The ASC device capture `02-sphere.png` (HUD caught mid-render) is gone
       with the old set
 
@@ -324,7 +324,7 @@ Export compliance is already answered: `ITSAppUsesNonExemptEncryption = false`.
 
 ### Screenshot capture
 
-The base iPhone 17 sim is 1206×2868 — **not** an accepted size. Create a Pro
+The base iPhone 17 sim is 1206×2868; **not** an accepted size. Create a Pro
 Max, which is exactly the 6.9" requirement:
 
 ```bash
@@ -341,11 +341,11 @@ PUT each `uploadOperations` chunk, then commit with the file's **MD5** in
 
 Assets staged under `app-store/amazon/`:
 
-- `images/icon-512.png` and `images/icon-114.png` — resized from the App
+- `images/icon-512.png` and `images/icon-114.png`: resized from the App
   Store master icon.
-- `images/feature-1024x500.png` — landscape crop of the Mercury store
+- `images/feature-1024x500.png`: landscape crop of the Mercury store
   capture (real gameplay, no text overlay).
-- `en-US/` — listing copy adapted from the iOS metadata. The plain name
+- `en-US/`: listing copy adapted from the iOS metadata. The plain name
   "Hexsweeper" is expected to be available on Amazon; the "3D" suffix was
   an Apple name-collision workaround only.
 

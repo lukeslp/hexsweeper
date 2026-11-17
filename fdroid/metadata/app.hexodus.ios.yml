@@ -1,0 +1,42 @@
+Categories:
+  - Puzzle Game
+License: MIT
+AuthorName: Luke Steuber
+AuthorWebSite: https://lukesteuber.com/
+WebSite: https://dr.eamer.dev/games/hexsweeper/
+SourceCode: https://github.com/lukeslp/hexsweeper
+IssueTracker: https://github.com/lukeslp/hexsweeper/issues
+
+AutoName: Hexsweeper
+
+RepoType: git
+Repo: https://github.com/lukeslp/hexsweeper.git
+Binaries: https://github.com/lukeslp/hexsweeper/releases/download/v%v/hexsweeper-%v.apk
+
+Builds:
+  - versionName: 1.0.11
+    versionCode: 36
+    commit: 0000000000000000000000000000000000000000
+    subdir: app/android/app
+    sudo:
+      - apt-get update
+      - apt-get install -y npm
+      - npm install -g pnpm@10.18.0
+    gradle:
+      - yes
+    prebuild:
+      - cd ../..
+      - pnpm install --frozen-lockfile
+      - pnpm exec cap sync android
+
+AllowedAPKSigningKeys: 0000000000000000000000000000000000000000000000000000000000000000
+
+AntiFeatures:
+  NonFreeAssets:
+    en-US: Three sphere themes use photographs under the Unsplash License, and
+      the help sheet shows a screenshot of Microsoft Minesweeper.
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9.]+$
+CurrentVersion: 1.0.11
+CurrentVersionCode: 36

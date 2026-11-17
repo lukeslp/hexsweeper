@@ -1,1 +1,1 @@
-Hexagonal minesweeper on a 3D sphere. Offline, no account, no ads.
+Hexagonal minesweeper on a 3D sphere. Offline, no account, no ads

@@ -114,3 +114,10 @@ jobs:
       - name: Android debug build
         working-directory: app
         run: pnpm android:build:debug
+
+      # The unsigned release APK, built the way F-Droid would build it.
+      - name: Android unsigned release build
+        working-directory: app
+        run: |
+          scripts/android-build.sh assembleRelease
+          sha256sum android/app/build/outputs/apk/release/app-release-unsigned.apk
