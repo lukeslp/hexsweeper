@@ -212,7 +212,7 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `587e097`, a bounded maintenance line on the
+The current payload pins `7c851ed`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
 Help keeps the classic Minesweeper screenshot, as on the web (a swap to the
@@ -235,9 +235,17 @@ instruction on November 12, 2026).
   `b4a7423`); the reflection renderer stays parked while its canvas is
   hidden; and the storage helpers look the store up inside their guard
   (both main's `6506a93`).
+- main's `a36e14b`, ported by hand (`7c851ed`): in the reflection themes,
+  faces behind the horizon are no longer painted, so the far side no
+  longer shows through the rim during play or, at the end of a run, as a
+  ring of mines around the silhouette; and on Android the field behind the
+  orb in the photo themes takes the photograph's average color instead of
+  a stretched, low-resolution copy of it.
 
-`www-fdroid/` pins `9c0779a`: `8c93811` (the F-Droid change: no photo
-themes, no screenshot) plus the same three fixes.
+`www-fdroid/` pins `fdb3294`: `8c93811` (the F-Droid change: no photo
+themes, no screenshot) plus the same four fixes. Its themes have no
+photograph, so the Android field change leaves them as they were; it is
+carried so both lines keep one engine.
 
 This payload update does not create or upload an iOS or Android release. See
 [release notes](docs/RELEASE.md) for the distinction between payload checks

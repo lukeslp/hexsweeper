@@ -26,12 +26,13 @@ and upload 71, cancel the review submission of 1.0.2, attach 71 in place of
 70 and submit again. The version has not been approved, so it keeps its
 number.
 
-## Current payload (2026-11-16)
+## Current payload (2026-11-17)
 
-`WWW_SOURCE.txt` pins game commit `587e097`, a maintenance line on the
+`WWW_SOURCE.txt` pins game commit `7c851ed`, a maintenance line on the
 October 7 `c91cd20` snapshot: the November 12 line (`42a1ae6`) plus three
-fixes from the web game of November 16. `WWW_SOURCE_FDROID.txt` pins
-`9c0779a`, the F-Droid line (`8c93811`) plus the same three.
+fixes from the web game of November 16 and main's far-side fix
+(`a36e14b`). `WWW_SOURCE_FDROID.txt` pins `fdb3294`, the F-Droid line
+(`8c93811`) plus the same four.
 [The README](../README.md#updating-the-games) lists what it adds. The app opens straight to the board and keeps its short
 tutorial behind ? → Play (**Show the tutorial**); the web game opens the
 board too and has no tutorial. Both use the same ? settings sheet.
