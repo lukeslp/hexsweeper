@@ -76,9 +76,12 @@ id; the app has no deep links or asset links to follow it.
 The F-Droid build of 1.0.14 (39): the same fixes and shell, from the
 `www-fdroid/` payload (four themes, no history picture). It takes its own
 code because the F-Droid APK and the direct download share an application
-id and signing key. The commit that sets 40 is the one to tag `v1.0.15`;
-build the direct, Play and Amazon files from the commit that sets 39, never
-from this one. Prepared and built unsigned; not tagged, signed or released.
+id and signing key. Rebuilt on November 17, before release, with the
+far-side fix (Mercury and Aurora no longer show the far side through the
+rim). The commit that rebuilt it is the one to tag `v1.0.15` (its message
+says so, and the recipe's 1.0.15 entry names it); build the direct, Play
+and Amazon files from `cc64a42`, never from this line. Prepared and built
+unsigned; not tagged, signed or released.
 
 ## Android 1.0.14 (39), direct, Google Play and Amazon builds, November 16, 2026
 
@@ -87,9 +90,15 @@ the far side of the sphere no longer show through its edge while it turns
 (M, L and XL boards in Light and Dark); the reflection renderer stays
 parked while its canvas is hidden; and when Android reclaims or crashes
 the WebView's renderer, `MainActivity` rebuilds the board from its autosave
-instead of the whole app closing. Prepared and built unsigned; not signed
-or released in this repository. 37 and 38 belong to the F-Droid build, so
-this build takes 39. Do not tag it `v1.0.14`: F-Droid's update check reads
+instead of the whole app closing. Rebuilt on November 17, before release,
+with the far-side fix: in the reflection themes the far side no longer
+shows through the rim (at the end of a run, as a ring of mines), and on
+Android the photo themes' field behind the orb is the photograph's average
+color instead of a stretched copy of it. Build it from `cc64a42`, a short
+line from `f7bdded` (the commit that first set 39) that main merges; main
+itself sets 40. Prepared and built unsigned; not signed or released in this
+repository. 37 and 38 belong to the F-Droid build, so this build takes 39.
+Do not tag `f7bdded` or `cc64a42` `v1.0.14`: F-Droid's update check reads
 `v` tags, and its recipe would build that commit as an F-Droid build with
 the code 39 this build uses.
 
