@@ -15,4 +15,7 @@ regexes = [
 paths = [
   '''collection/theme-.*\.html''',
   '''app/www/.*\.html''',
+  '''app/www-fdroid/.*\.html''',
+  # The F-Droid recipe names the release key's public certificate fingerprint.
+  '''fdroid/metadata/.*\.yml''',
 ]

@@ -77,9 +77,9 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
    never name two different files. The next direct or store build takes 38 or
    higher. F-Droid reads the version from `app/android/app/build.gradle` as
    written.
-3. Tag the release commit `v<version>` and publish a GitHub release with the
-   signed file. The recipe's `commit` and `AllowedAPKSigningKeys` are zeros
-   until then.
+3. Done for 1.0.12: tag `v1.0.12`, with the signed file on its GitHub release.
+   For a later version, tag the release commit `v<version>`, publish the
+   signed file the same way and update the recipe's `commit`.
 4. Put the recipe on a branch of the `fdroiddata` fork and let its pipeline
    run. The recipe has not been run through F-Droid's tools yet. Things the
    first run will settle: whether the scanner accepts the tree pnpm installs,
