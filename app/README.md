@@ -71,6 +71,15 @@ neither updates the other, and a saved board, best times and settings do not
 move between them. The FileProvider authority and the Share plugin follow the
 id; the app has no deep links or asset links to follow it.
 
+## Android 1.0.12 (37), F-Droid build, November 16, 2026
+
+The first build made for F-Droid, from the `www-fdroid/` payload: four themes
+(Light, Dark, Mercury, Aurora) and no history picture in Help. Version 37
+belongs to this build alone; the next direct or store build takes 38 or
+higher. Build steps and what is open are in
+[docs/FDROID.md](../docs/FDROID.md). Not yet in the F-Droid catalog, and not
+run on a phone.
+
 ## Android 1.0.11 (36), November 13, 2026
 
 1.0.10 (35) plus one change: Android backup carries best times, theme and
