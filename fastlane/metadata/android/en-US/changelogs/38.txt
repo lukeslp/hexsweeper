@@ -1,0 +1,1 @@
+The first F-Droid build. It has four themes: Light, Dark, Mercury and Aurora. The three photo themes and the history picture in Help are left out because they are not under an open license. Everything else matches 1.0.11: the board opens at once, the tutorial is under ?, Back closes the sheet first, and your board, best times and settings stay on the device.
