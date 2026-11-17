@@ -585,7 +585,8 @@ MIT; see [LICENSE](LICENSE). Bundled third-party material is listed in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) with its own terms: the IBM
 Plex fonts, the Earth and Moon daymaps, the reflection photographs and the
 classic Minesweeper screenshot. None of these is under the MIT license, and
-the photographs and the screenshot are not under an open license either.
+the photographs and the screenshot are not under an open license either. The
+screenshot is on the web pages only; no app build carries it.
 
 ## Minimal social screenshots
 

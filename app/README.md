@@ -80,7 +80,7 @@ id and signing key. Rebuilt on November 17, before release, with the
 far-side fix (Mercury and Aurora no longer show the far side through the
 rim). The commit that rebuilt it is the one to tag `v1.0.15` (its message
 says so, and the recipe's 1.0.15 entry names it); build the direct, Play
-and Amazon files from `cc64a42`, never from this line. Prepared and built
+and Amazon files from `5df3ecc`, never from this line. Prepared and built
 unsigned; not tagged, signed or released.
 
 ## Android 1.0.14 (39), direct, Google Play and Amazon builds, November 16, 2026
@@ -94,11 +94,12 @@ instead of the whole app closing. Rebuilt on November 17, before release,
 with the far-side fix: in the reflection themes the far side no longer
 shows through the rim (at the end of a run, as a ring of mines), and on
 Android the photo themes' field behind the orb is the photograph's average
-color instead of a stretched copy of it. Build it from `cc64a42`, a short
+color instead of a stretched copy of it. On November 17 the owner also had
+the Minesweeper screenshot taken out of Help. Build it from `5df3ecc`, a short
 line from `f7bdded` (the commit that first set 39) that main merges; main
 itself sets 40. Prepared and built unsigned; not signed or released in this
 repository. 37 and 38 belong to the F-Droid build, so this build takes 39.
-Do not tag `f7bdded` or `cc64a42` `v1.0.14`: F-Droid's update check reads
+Do not tag `f7bdded`, `cc64a42` or `5df3ecc` `v1.0.14`: F-Droid's update check reads
 `v` tags, and its recipe would build that commit as an F-Droid build with
 the code 39 this build uses.
 
@@ -162,8 +163,8 @@ App Store Connect app and abandoning this one.
 There is no bundler, no TypeScript, and no web test suite here. `www/index.html` is
 the sealed Sphere game: one self-contained file with fonts, CSS, and all JS
 (engine, WebGL material renderer, quiet chrome) inlined. `www/wheel.html` is
-the sealed Water Wheel, and the help sheet's history image is under
-`www/assets/`. The Wheel's Sphere pill returns to the saved sphere. One local
+the sealed Water Wheel, and `www/notices.html` the Licenses page; there is
+no `www/assets/` folder any more. The Wheel's Sphere pill returns to the saved sphere. One local
 native plugin,
 `HexShare` (in `AppDelegate.swift`, registered by `HexBridgeViewController`),
 presents the finished-board card as a `UIImage` in the iOS share sheet so
@@ -221,12 +222,9 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `7c851ed`, a bounded maintenance line on the
+The current payload pins `92b3aca`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
-Help keeps the classic Minesweeper screenshot, as on the web (a swap to the
-project's own board was tried on this line and reverted at the owner's
-instruction on November 12, 2026).
 
 - the reflection materials with no known source are gone (the change main
   took in #13), and so is Stratosphere, pulled at the owner's instruction on
@@ -250,6 +248,9 @@ instruction on November 12, 2026).
   ring of mines around the silhouette; and on Android the field behind the
   orb in the photo themes takes the photograph's average color instead of
   a stretched, low-resolution copy of it.
+- no classic Minesweeper screenshot in Help (`92b3aca`, at the owner's
+  instruction on November 17, 2026; the web keeps it). The three photo themes
+  keep their images, credited on the Licenses page.
 
 `www-fdroid/` pins `fdb3294`: `8c93811` (the F-Droid change: no photo
 themes, no screenshot) plus the same four fixes. Its themes have no
