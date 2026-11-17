@@ -5579,6 +5579,13 @@
         for (const proj of projected) {
           const idx = proj.index;
           const cell = state.cells[idx];
+          // The reflection themes paint covered faces at a few percent
+          // opacity over the WebGL mirror, so the faces in front cannot hide
+          // the ones behind the horizon. Painted first and covered by
+          // nothing, the far side showed through the rim: its wells, counts
+          // and flags, and at the end of a run every mine it held, over rim
+          // faces that a tap there reaches instead. Those faces are left out.
+          if (state.theme.reflectionSurface && !facesViewer(proj)) continue;
           // Hover/press on activatable covered faces draw in the raised pass.
           // Reflection themes have no raised pass (it tore the mirror), so the
           // pressed face must stay in this pass or it vanishes for the whole
