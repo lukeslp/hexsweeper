@@ -5,13 +5,17 @@ import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebView;
 
 import androidx.activity.OnBackPressedCallback;
@@ -29,7 +33,12 @@ import java.util.Map;
 
 @SuppressWarnings("deprecation")
 public class MainActivity extends BridgeActivity {
+    private static final String TAG = "Hexsweeper";
+    /** Process-wide, so it counts renderer deaths across the Activity rebuilds they cause. */
+    private static final RendererRecovery RENDERER_RECOVERY = new RendererRecovery();
     private GameViewport gameViewport;
+    /** Set once this Activity's WebView has lost its renderer; it must not be used again. */
+    private boolean rendererGone;
     private boolean restoreUiSessionPending;
     private boolean uiSessionBootstrapInFlight;
     private int uiSessionGeneration;
@@ -55,6 +64,14 @@ public class MainActivity extends BridgeActivity {
             public void onPageLoaded(WebView webView) {
                 syncTravelingData(webView);
                 bootstrapUiSession(webView, uiSessionGeneration, 0);
+                // A rebuild after a renderer death can come back with the
+                // system bars showing; hide them again once the board is up.
+                keepScreenImmersive();
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView webView, RenderProcessGoneDetail detail) {
+                return recoverFromRendererGone(webView, detail);
             }
         });
         super.onCreate(savedInstanceState);
@@ -89,7 +106,7 @@ public class MainActivity extends BridgeActivity {
      * board. With nothing open it leaves the app, as it always has.
      */
     private void handleBack(OnBackPressedCallback callback) {
-        WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+        WebView webView = getBridge() != null && !rendererGone ? getBridge().getWebView() : null;
         if (webView == null) {
             leaveApp(callback);
             return;
@@ -114,6 +131,33 @@ public class MainActivity extends BridgeActivity {
         if (url == null) return true;
         String path = Uri.parse(url).getPath();
         return path == null || path.isEmpty() || "/".equals(path) || "/index.html".equals(path);
+    }
+
+    /**
+     * The page's renderer process died. Left unclaimed, Android 8 and later kill
+     * the whole app ("wasn't handled by all associated webviews, killing
+     * application"), which a player sees as a crash. That happens when the
+     * low-memory killer takes the renderer, when the Play Store updates the
+     * WebView, or when the renderer crashes. Drop the dead WebView, as the
+     * platform requires, and rebuild the Activity: the board reloads from its
+     * autosave and an open sheet comes back through the saved-state path.
+     */
+    private boolean recoverFromRendererGone(WebView webView, RenderProcessGoneDetail detail) {
+        rendererGone = true;
+        boolean crashed = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && detail != null && detail.didCrash();
+        Log.w(TAG, "WebView renderer " + (crashed ? "crashed" : "was killed") + "; rebuilding the board");
+        ViewParent parent = webView.getParent();
+        if (parent instanceof ViewGroup) ((ViewGroup) parent).removeView(webView);
+        webView.destroy();
+        if (isFinishing() || isDestroyed()) return true;
+        if (RENDERER_RECOVERY.shouldRebuild(SystemClock.elapsedRealtime())) {
+            recreate();
+        } else {
+            // The renderer keeps dying right after loading: close rather than loop.
+            Log.w(TAG, "WebView renderer died repeatedly; closing");
+            finish();
+        }
+        return true;
     }
 
     /** Color of the strip the game leaves clear beside a camera cutout. */
@@ -153,7 +197,7 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         // A best time or a setting changed since the page loaded: refresh the
         // copy Android backup takes before the app leaves the screen.
-        WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+        WebView webView = getBridge() != null && !rendererGone ? getBridge().getWebView() : null;
         if (webView != null && isOwnBoardPage(webView.getUrl())) mirrorTravelingData(webView);
         super.onPause();
     }

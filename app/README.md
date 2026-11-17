@@ -144,6 +144,16 @@ background color for the strip beside a camera cutout. System Back closes an
 open sheet, returns from the Licenses page or the Water Wheel to the board,
 and leaves the app only from the bare board.
 
+If the WebView's renderer process dies (the low-memory killer takes it, the
+Play Store updates the WebView, or it crashes), Android kills the whole app
+unless the shell claims the death. `MainActivity` claims it, drops the dead
+WebView and rebuilds the Activity, so the board reloads from its autosave
+instead of closing. Three deaths inside 30 seconds close the Activity rather
+than reload forever (`RendererRecovery`). `RendererRecoveryTest` under
+`androidTest/` checks both a crash and a kill on an emulator. The iOS shell
+keeps Capacitor's default, which reloads the page when WebKit's content
+process ends.
+
 Android backup is on from 1.0.11, for one small file. The game keeps
 everything in the WebView's local storage, which a backup cannot take in
 part, so the shell copies six values into `shared_prefs/hexsweeper_backup.xml`

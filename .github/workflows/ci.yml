@@ -26,6 +26,9 @@ jobs:
       - name: Sphere optional variant contract
         run: node sphere/test-variant-contract.js
 
+      - name: Reflection renderer frame loop
+        run: node sphere/test-mirror-loop.js
+
       - name: Glitch Sphere state and route contracts
         run: |
           node glitch-sphere/test-glitch-hazard.js
