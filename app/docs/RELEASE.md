@@ -11,7 +11,7 @@
 | ASC app id | `6768871973` |
 
 Build numbers start at 7; builds 1–6 belong to the retired Hivescape app on
-this same record. The checked-in iOS project is `1.0.2 (71)` and Android is
+this same record. The checked-in iOS project is `1.0.3 (71)` and Android is
 `1.0.15 (40)`, the F-Droid build; the direct, Google Play and Amazon build
 of the same source is `1.0.14 (39)`, built from `cc64a42` (a short line
 from `f7bdded` that main merges), never from main's tip. Check the store's latest uploaded build before incrementing or
@@ -20,14 +20,15 @@ uploading; checked-in versions do not establish current remote store state.
 upload cap; error 90382 after ~15 uploads on 2026-08-18; it cleared within
 the hour.)
 
-iOS 1.0.2 (70) was uploaded on November 14, 2026 and has waited for review
-since. 1.0.2 (71) is its replacement: the same version with the November 16
-payload (the rim, reflection-loop and storage fixes) and the November 17
-far-side fix. Build 71 had not been archived when the far-side fix was
-vendored, so it keeps its number. To ship it, archive
-and upload 71, cancel the review submission of 1.0.2, attach 71 in place of
-70 and submit again. The version has not been approved, so it keeps its
-number.
+iOS 1.0.2 (70) was uploaded on November 14, 2026, approved, and was ready
+for distribution on November 17. 1.0.3 (71) is the next version: the
+November 16 payload (the rim, reflection-loop and storage fixes) and the
+November 17 far-side fix. Build 71 had not been archived or uploaded when
+1.0.2 was released. To ship it, archive and upload 71 (it lands in
+TestFlight), then create version 1.0.3 on App Store Connect, attach 71,
+take What's New from `app-store/metadata/en-US/release_notes.txt` and
+submit. 1.0.2 is released: never attach a build to it. If App Store Connect
+already holds a build 71, raise `CURRENT_PROJECT_VERSION` before archiving.
 
 ## Current payload (2026-11-17)
 
