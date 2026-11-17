@@ -2,3 +2,5 @@ Opens straight to the board; the tutorial is under ?.
 Seven themes, with a Licenses page in the ? sheet.
 Steadier gestures, and the sheet holds up at large text.
 Built for iOS 27.
+Flags just behind the sphere's edge no longer show through it.
+Less battery use after you try a reflection theme.
