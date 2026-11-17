@@ -216,21 +216,26 @@ try {
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /bottom left/i, "help copy does not point at the bottom bar");
   assert.doesNotMatch(help.text, /\bdig\b/i, "help copy still says dig");
-  // The history caption is the owner's wording, the same as on the web, and keeps its dash.
-  assert.doesNotMatch(help.text.replace("Riding on the original \u2014 history of Minesweeper", ""), /\u2014/, "help copy has a long dash");
-  // The history screenshot the owner asked to keep is served from the bundle; licenses are one tap away.
+  assert.doesNotMatch(help.text, /\u2014/, "help copy has a long dash");
+  // No Minesweeper screenshot (owner's instruction, November 17, 2026); the three
+  // photo themes keep their credits on the licenses page, one tap away.
   const bundled = await evaluate(`(async () => {
-    const img = document.querySelector("#help-history-btn img");
-    if (img.decode) { try { await img.decode(); } catch (_) {} }
     const link = document.querySelector('.menu-links a[href="notices.html"]');
     const notices = await fetch("notices.html").then(r => r.ok ? r.text() : "");
-    return { src: img.getAttribute("src"), width: img.naturalWidth, link: link ? link.textContent.trim() : "",
+    const shot = await fetch("assets/classic-minesweeper.png").then(r => r.ok, () => false);
+    return { history: !!document.querySelector("#help-history-btn, #history-lightbox"), images: document.querySelectorAll('img[src*="minesweeper"]').length, shot,
+      link: link ? link.textContent.trim() : "",
       back: notices.includes('href="index.html"'), ofl: notices.includes("SIL OPEN FONT LICENSE"), apache: notices.includes("Apache License"),
-      placeholders: /__[A-Z0-9_]+__/.test(notices), noted: notices.includes("Minesweeper screenshot") };
+      placeholders: /__[A-Z0-9_]+__/.test(notices), screenshot: /Minesweeper screenshot|Microsoft/.test(notices),
+      credits: ["W6EsQWhEc94", "uu-Jw5SunYI", "L4-16dmZ-1c", "Jose G. Ortega Castro", "Max LaRochelle", "Felix Mittermeier", "Unsplash License"].every(t => notices.includes(t)),
+      stratosphere: /stratosphere/i.test(notices) };
   })()`);
-  assert.equal(bundled.src, "assets/classic-minesweeper.png", "Help image is not the classic Minesweeper screenshot");
-  assert.ok(bundled.width > 0, "Help image did not load from the bundle");
-  assert.ok(bundled.noted, "the licenses page does not say the screenshot is not project artwork");
+  assert.equal(bundled.history, false, "the Minesweeper screenshot row is still in Help");
+  assert.equal(bundled.images, 0, "a Minesweeper screenshot is still referenced");
+  assert.equal(bundled.shot, false, "the Minesweeper screenshot is still in the bundle");
+  assert.equal(bundled.screenshot, false, "the licenses page still lists the screenshot");
+  assert.ok(bundled.credits, "the licenses page does not credit all three photographs");
+  assert.equal(bundled.stratosphere, false, "the licenses page mentions Stratosphere");
   assert.equal(bundled.link, "Licenses", "the sheet has no Licenses link");
   assert.ok(bundled.back && bundled.ofl && bundled.apache && !bundled.placeholders, `licenses page is incomplete: ${JSON.stringify(bundled)}`);
   assert.deepEqual(help.themes, ["light", "dark", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);

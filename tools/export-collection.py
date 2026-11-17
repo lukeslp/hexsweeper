@@ -2011,7 +2011,7 @@ def write_app_build() -> list[Path]:
     # Start empty: a file left by an earlier export would ride into the app.
     if APP_BUILD.exists():
         shutil.rmtree(APP_BUILD)
-    (APP_BUILD / "assets").mkdir(parents=True, exist_ok=True)
+    APP_BUILD.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
 
     sphere_exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
@@ -2023,11 +2023,6 @@ def write_app_build() -> list[Path]:
     wheel = APP_BUILD / "wheel.html"
     wheel.write_text(export_wheel_app(), encoding="utf-8")
     written.append(wheel)
-
-    # The sphere's help lightbox reads this from the bundle, beside index.html.
-    history = APP_BUILD / "assets" / "classic-minesweeper.png"
-    history.write_bytes((ROOT / "sphere" / "assets" / "classic-minesweeper.png").read_bytes())
-    written.append(history)
 
     # Licenses and credits for everything the bundle carries, linked from the
     # foot of the sheet.
