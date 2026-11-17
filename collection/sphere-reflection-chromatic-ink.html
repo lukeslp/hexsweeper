@@ -8376,6 +8376,19 @@ vec3 plate(vec2 uv) {
   return color;
 }
 
+// Behind the orb: the photograph's overall color, never the photograph. This
+// canvas is drawn at about a third of the screen's resolution, so the picture
+// stretched across the field showed as a blurry copy of itself floating behind
+// the sphere. The last mip level is the picture's average color. The full
+// shader paints a procedural field here for the same reason.
+vec3 backdropTone(vec2 uv) {
+  if (uTextureReady < 0.5) return plate(uv);
+  vec3 color = textureLod(uEnvironmentMap, vec2(0.5), 16.0).rgb * uTextureParams.y;
+  float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color = mix(vec3(luma), color, uTextureParams.z);
+  return color * mix(0.85, 1.1, uv.y);
+}
+
 vec2 sphereUv(vec3 direction) {
   direction.yz = rotate2(uShellRotation.y) * direction.yz;
   direction.xz = rotate2(-uShellRotation.x) * direction.xz;
@@ -8393,7 +8406,7 @@ void main() {
   vec2 centered = screenUv - 0.5;
   vec3 accent = materialAccent();
   vec3 field = mix(vec3(0.006, 0.008, 0.012), accent * 0.15, uAppearance * 0.42);
-  vec3 backdrop = plate(vec2(screenUv.x, 1.0 - screenUv.y));
+  vec3 backdrop = backdropTone(vec2(screenUv.x, 1.0 - screenUv.y));
   float backdropWeight = 0.18 + uTextureParams.w * 0.24;
   vec3 color = mix(field, backdrop, backdropWeight);
   color *= mix(0.62, 1.0, 1.0 - smoothstep(0.08, 0.72, length(centered)));
