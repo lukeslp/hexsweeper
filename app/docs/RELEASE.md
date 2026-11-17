@@ -12,7 +12,8 @@
 
 Build numbers start at 7; builds 1–6 belong to the retired Hivescape app on
 this same record. The checked-in iOS project is `1.0.2 (71)` and Android is
-`1.0.14 (39)`. Check the store's latest uploaded build before incrementing or
+`1.0.15 (40)`, the F-Droid build; the direct, Google Play and Amazon build
+of the same source is `1.0.14 (39)`, one commit earlier. Check the store's latest uploaded build before incrementing or
 uploading; checked-in versions do not establish current remote store state.
 (App Store Connect enforces a per-app daily
 upload cap; error 90382 after ~15 uploads on 2026-08-18; it cleared within
@@ -80,9 +81,11 @@ pnpm android:build:debug       # android/app/build/outputs/apk/debug/app-debug.a
 pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-release.aab
 ```
 
-The checked-in Android identity is `versionCode 39`, `versionName 1.0.14`,
-targeting API 36 with minimum API 24: the next direct, Google Play and
-Amazon build (37 and 38 are the F-Droid build's). The direct download serves
+The checked-in Android identity is `versionCode 40`, `versionName 1.0.15`,
+targeting API 36 with minimum API 24: the F-Droid build, to be tagged
+`v1.0.15`. Build the direct, Google Play and Amazon files from the commit
+before it, which sets `1.0.14 (39)` (37, 38 and 40 are the F-Droid
+build's; a direct build at 40 would give one code two files). The direct download serves
 `1.0.11 (36)`, dated November 14, 2026; the recorded Amazon submission is
 `1.0.4 (29)`.
 Artifact, certificate, checksum, listing, and physical Fire-tablet evidence

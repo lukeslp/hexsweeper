@@ -72,10 +72,11 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
 
 1. The repository must be public. F-Droid clones it without signing in, and
    reviewers read its history for at least three months of development.
-2. Versions 1.0.12 (37) and 1.0.13 (38) are the F-Droid build's alone: the F-Droid APK and the
+2. Versions 1.0.12 (37), 1.0.13 (38) and 1.0.15 (40) are the F-Droid build's alone: the F-Droid APK and the
    direct download share an application id and signing key, so one code must
    never name two different files. 1.0.14 (39) is the direct, Google Play and
-   Amazon build of November 16, so the next F-Droid build takes 40 or higher.
+   Amazon build of November 16, one commit before 1.0.15; the next direct or
+   store build takes 41 or higher.
    F-Droid reads the version from `app/android/app/build.gradle` as written,
    so the commit that sets 39 must not carry a `v` tag.
 3. Done for 1.0.13: tag `v1.0.13`, with the signed file on its GitHub release.
@@ -84,6 +85,11 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
    the commit it builds.)
    For a later version, tag the release commit `v<version>`, publish the
    signed file the same way and update the recipe's `commit`.
+   Open for 1.0.15 (40), the F-Droid build of the November 16 fixes: tag the
+   commit that sets 40 as `v1.0.15`, attach the signed file as
+   `hexsweeper-1.0.15.apk`, and replace the placeholder
+   `commit: 0000000000000000000000000000000000000000` in the 1.0.15 entry of
+   the recipe with that commit's full hash.
 4. Done on November 16, 2026, for 1.0.13 (38): the recipe is on branch `app.hexodus.ios` of
    the `fdroiddata` fork and its pipeline passes, including the build, the
    source scan and the comparison with the signed file. Two things that run

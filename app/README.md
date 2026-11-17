@@ -71,6 +71,15 @@ neither updates the other, and a saved board, best times and settings do not
 move between them. The FileProvider authority and the Share plugin follow the
 id; the app has no deep links or asset links to follow it.
 
+## Android 1.0.15 (40), F-Droid build, November 16, 2026
+
+The F-Droid build of 1.0.14 (39): the same fixes and shell, from the
+`www-fdroid/` payload (four themes, no history picture). It takes its own
+code because the F-Droid APK and the direct download share an application
+id and signing key. The commit that sets 40 is the one to tag `v1.0.15`;
+build the direct, Play and Amazon files from the commit that sets 39, never
+from this one. Prepared and built unsigned; not tagged, signed or released.
+
 ## Android 1.0.14 (39), direct, Google Play and Amazon builds, November 16, 2026
 
 1.0.11 (36) with the November 16 payload and one shell change. Faces from
