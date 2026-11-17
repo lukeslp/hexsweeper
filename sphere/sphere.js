@@ -2152,6 +2152,26 @@
       return Math.abs(area) * 0.5;
     }
 
+    /**
+     * True when a projected face turns toward the eye. projectRotated is a
+     * perspective view from 2.8 radii out, so the horizon is where the line
+     * of sight grazes the sphere, at normal z = 1 / 2.8 (about 0.36), not at
+     * z = 0. Faces between the two are behind the rim: their outlines fold
+     * back inside the silhouette, wound the other way, on top of the rim
+     * faces in front of them. Tiles wind counter-clockwise seen from
+     * outside, which is a negative shoelace sum in canvas coordinates.
+     */
+    function facesViewer(proj) {
+      const pts = proj.boundary;
+      let twiceArea = 0;
+      for (let i = 0, n = pts.length; i < n; i++) {
+        const a = pts[i];
+        const b = pts[i + 1 === n ? 0 : i + 1];
+        twiceArea += a.x * b.y - b.x * a.y;
+      }
+      return twiceArea < 0;
+    }
+
     function rotKey() {
       return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}`;
     }
@@ -3959,10 +3979,15 @@
      * Paint one compound path per style instead of issuing a fill and stroke
      * for every visible face. The complete renderer returns as soon as motion
      * settles, so counts, tiers, and effects remain unchanged at rest.
+     * One fill per style throws away back-to-front order, so faces behind
+     * the horizon are left out: drawn here they showed through the rim
+     * faces, and where a batch held both, the nonzero fill of the two
+     * opposite windings cancelled into holes. Without them nothing overlaps.
      */
     function drawFastMono(projected, now, styleId) {
       const batches = new Map();
       for (const proj of projected) {
+        if (!facesViewer(proj)) continue;
         const idx = proj.index;
         const cell = state.cells[idx];
         const tile = state.tiles[idx];
@@ -5619,6 +5644,8 @@
 
       // Flags stand above the shell, so they paint after their neighbors
       // (still back-to-front among themselves) or the shell clips their skirts.
+      // A flag behind the horizon stays in the back-to-front pass, where the
+      // rim faces in front of it cover it; deferred, it painted over them.
       const proudFlags = [];
       const effectId = interiorEffect();
       const effectHoles = [];
@@ -5646,7 +5673,12 @@
           if (proj.z > 0.02 && hoverRaise) {
             continue;
           }
-          if (!fastInteraction && proj.z > 0.02 && heights[idx] > 1e-6) {
+          if (
+            !fastInteraction &&
+            proj.z > 0.02 &&
+            heights[idx] > 1e-6 &&
+            facesViewer(proj)
+          ) {
             proudFlags.push(proj);
             continue;
           }
