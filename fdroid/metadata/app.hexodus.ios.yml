@@ -37,7 +37,7 @@ Builds:
 
   - versionName: 1.0.15
     versionCode: 40
-    commit: 0000000000000000000000000000000000000000
+    commit: d77efab18f1e60aa0d6ae41d3484724c3dba11c3
     subdir: app/android/app
     sudo:
       - apt-get update

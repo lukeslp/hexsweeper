@@ -1,1 +1,1 @@
-The sphere's edge no longer shows faces from the far side through it while you turn the board. If Android reclaims the game's web view, the app reloads your board instead of closing. Less battery use after you try a reflection theme.
+Faces on the far side of the sphere no longer show through its edge. If Android reclaims the game's web view, the app reloads your board instead of closing. Less battery use after you try a reflection theme.

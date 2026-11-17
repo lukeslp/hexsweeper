@@ -76,9 +76,12 @@ id; the app has no deep links or asset links to follow it.
 The F-Droid build of 1.0.14 (39): the same fixes and shell, from the
 `www-fdroid/` payload (four themes, no history picture). It takes its own
 code because the F-Droid APK and the direct download share an application
-id and signing key. The commit that sets 40 is the one to tag `v1.0.15`;
-build the direct, Play and Amazon files from the commit that sets 39, never
-from this one. Prepared and built unsigned; not tagged, signed or released.
+id and signing key. Rebuilt on November 17, before release, with the
+far-side fix (Mercury and Aurora no longer show the far side through the
+rim). The commit that rebuilt it is the one to tag `v1.0.15` (its message
+says so, and the recipe's 1.0.15 entry names it); build the direct, Play
+and Amazon files from `cc64a42`, never from this line. Prepared and built
+unsigned; not tagged, signed or released.
 
 ## Android 1.0.14 (39), direct, Google Play and Amazon builds, November 16, 2026
 
@@ -87,9 +90,15 @@ the far side of the sphere no longer show through its edge while it turns
 (M, L and XL boards in Light and Dark); the reflection renderer stays
 parked while its canvas is hidden; and when Android reclaims or crashes
 the WebView's renderer, `MainActivity` rebuilds the board from its autosave
-instead of the whole app closing. Prepared and built unsigned; not signed
-or released in this repository. 37 and 38 belong to the F-Droid build, so
-this build takes 39. Do not tag it `v1.0.14`: F-Droid's update check reads
+instead of the whole app closing. Rebuilt on November 17, before release,
+with the far-side fix: in the reflection themes the far side no longer
+shows through the rim (at the end of a run, as a ring of mines), and on
+Android the photo themes' field behind the orb is the photograph's average
+color instead of a stretched copy of it. Build it from `cc64a42`, a short
+line from `f7bdded` (the commit that first set 39) that main merges; main
+itself sets 40. Prepared and built unsigned; not signed or released in this
+repository. 37 and 38 belong to the F-Droid build, so this build takes 39.
+Do not tag `f7bdded` or `cc64a42` `v1.0.14`: F-Droid's update check reads
 `v` tags, and its recipe would build that commit as an F-Droid build with
 the code 39 this build uses.
 
@@ -212,7 +221,7 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `587e097`, a bounded maintenance line on the
+The current payload pins `7c851ed`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
 Help keeps the classic Minesweeper screenshot, as on the web (a swap to the
@@ -235,9 +244,17 @@ instruction on November 12, 2026).
   `b4a7423`); the reflection renderer stays parked while its canvas is
   hidden; and the storage helpers look the store up inside their guard
   (both main's `6506a93`).
+- main's `a36e14b`, ported by hand (`7c851ed`): in the reflection themes,
+  faces behind the horizon are no longer painted, so the far side no
+  longer shows through the rim during play or, at the end of a run, as a
+  ring of mines around the silhouette; and on Android the field behind the
+  orb in the photo themes takes the photograph's average color instead of
+  a stretched, low-resolution copy of it.
 
-`www-fdroid/` pins `9c0779a`: `8c93811` (the F-Droid change: no photo
-themes, no screenshot) plus the same three fixes.
+`www-fdroid/` pins `fdb3294`: `8c93811` (the F-Droid change: no photo
+themes, no screenshot) plus the same four fixes. Its themes have no
+photograph, so the Android field change leaves them as they were; it is
+carried so both lines keep one engine.
 
 This payload update does not create or upload an iOS or Android release. See
 [release notes](docs/RELEASE.md) for the distinction between payload checks

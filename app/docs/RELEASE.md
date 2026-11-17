@@ -13,7 +13,8 @@
 Build numbers start at 7; builds 1–6 belong to the retired Hivescape app on
 this same record. The checked-in iOS project is `1.0.2 (71)` and Android is
 `1.0.15 (40)`, the F-Droid build; the direct, Google Play and Amazon build
-of the same source is `1.0.14 (39)`, one commit earlier. Check the store's latest uploaded build before incrementing or
+of the same source is `1.0.14 (39)`, built from `cc64a42` (a short line
+from `f7bdded` that main merges), never from main's tip. Check the store's latest uploaded build before incrementing or
 uploading; checked-in versions do not establish current remote store state.
 (App Store Connect enforces a per-app daily
 upload cap; error 90382 after ~15 uploads on 2026-08-18; it cleared within
@@ -21,17 +22,20 @@ the hour.)
 
 iOS 1.0.2 (70) was uploaded on November 14, 2026 and has waited for review
 since. 1.0.2 (71) is its replacement: the same version with the November 16
-payload (the rim, reflection-loop and storage fixes). To ship it, archive
+payload (the rim, reflection-loop and storage fixes) and the November 17
+far-side fix. Build 71 had not been archived when the far-side fix was
+vendored, so it keeps its number. To ship it, archive
 and upload 71, cancel the review submission of 1.0.2, attach 71 in place of
 70 and submit again. The version has not been approved, so it keeps its
 number.
 
-## Current payload (2026-11-16)
+## Current payload (2026-11-17)
 
-`WWW_SOURCE.txt` pins game commit `587e097`, a maintenance line on the
+`WWW_SOURCE.txt` pins game commit `7c851ed`, a maintenance line on the
 October 7 `c91cd20` snapshot: the November 12 line (`42a1ae6`) plus three
-fixes from the web game of November 16. `WWW_SOURCE_FDROID.txt` pins
-`9c0779a`, the F-Droid line (`8c93811`) plus the same three.
+fixes from the web game of November 16 and main's far-side fix
+(`a36e14b`). `WWW_SOURCE_FDROID.txt` pins `fdb3294`, the F-Droid line
+(`8c93811`) plus the same four.
 [The README](../README.md#updating-the-games) lists what it adds. The app opens straight to the board and keeps its short
 tutorial behind ? → Play (**Show the tutorial**); the web game opens the
 board too and has no tutorial. Both use the same ? settings sheet.
@@ -83,8 +87,8 @@ pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-re
 
 The checked-in Android identity is `versionCode 40`, `versionName 1.0.15`,
 targeting API 36 with minimum API 24: the F-Droid build, to be tagged
-`v1.0.15`. Build the direct, Google Play and Amazon files from the commit
-before it, which sets `1.0.14 (39)` (37, 38 and 40 are the F-Droid
+`v1.0.15`. Build the direct, Google Play and Amazon files from `cc64a42`,
+which sets `1.0.14 (39)` and carries the same `www/` (37, 38 and 40 are the F-Droid
 build's; a direct build at 40 would give one code two files). The direct download serves
 `1.0.11 (36)`, dated November 14, 2026; the recorded Amazon submission is
 `1.0.4 (29)`.
