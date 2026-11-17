@@ -83,7 +83,7 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
    the commit it builds.)
    For a later version, tag the release commit `v<version>`, publish the
    signed file the same way and update the recipe's `commit`.
-4. Done on November 16, 2026: the recipe is on branch `app.hexodus.ios` of
+4. Done on November 16, 2026, for 1.0.13 (38): the recipe is on branch `app.hexodus.ios` of
    the `fdroiddata` fork and its pipeline passes, including the build, the
    source scan and the comparison with the signed file. Two things that run
    settled: the Capacitor CLI needs Node.js 22, which Debian does not have,

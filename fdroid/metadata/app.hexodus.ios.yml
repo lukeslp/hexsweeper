@@ -14,9 +14,9 @@ Repo: https://github.com/lukeslp/hexsweeper.git
 Binaries: https://github.com/lukeslp/hexsweeper/releases/download/v%v/hexsweeper-%v.apk
 
 Builds:
-  - versionName: 1.0.12
-    versionCode: 37
-    commit: 3e3d586f13606b997579e28cfe485ce0618890d1
+  - versionName: 1.0.13
+    versionCode: 38
+    commit: 69d62d4cbc8621105242428bbb25a13fa82f0777
     subdir: app/android/app
     sudo:
       - apt-get update
@@ -39,5 +39,5 @@ AllowedAPKSigningKeys: 404fd13d59f95b59fb9342e20e5953b15603832dda8ca75181c959b41
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
-CurrentVersion: 1.0.12
-CurrentVersionCode: 37
+CurrentVersion: 1.0.13
+CurrentVersionCode: 38
