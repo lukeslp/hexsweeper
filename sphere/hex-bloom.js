@@ -159,10 +159,7 @@
     light: "Light",
     dark: "Dark",
     mercury: "Mercury",
-    "ion-storm": "Storm",
     aurora: "Aurora",
-    galaxy: "Galaxy",
-    "heat-lightning": "Heat",
   };
   /**
    * ?dome=1 — the flower seated on a convex sphere segment: center tile at
@@ -1204,10 +1201,7 @@
       "light",
       "dark",
       "mercury",
-      "ion-storm",
       "aurora",
-      "galaxy",
-      "heat-lightning",
     ];
     function themeIndexById(id) {
       return THEMES.findIndex((t) => t && t.id === id);
@@ -1422,7 +1416,7 @@
             aria: () =>
               "Theme: " +
               currentThemeLabel() +
-              ". Activate to cycle Light, Dark, and the reflection materials: Mercury, Ion Storm, Aurora, Galaxy, Heat Lightning.",
+              ". Activate to cycle Light, Dark, and the reflection materials: Mercury, Aurora.",
             cycle: cycleFlowerTheme,
           },
           {

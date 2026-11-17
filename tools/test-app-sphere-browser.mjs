@@ -216,24 +216,21 @@ try {
   assert.ok(help.panelW >= 340, `help panel is only ${help.panelW}px wide on a 390px phone`);
   assert.match(help.text, /bottom left/i, "help copy does not point at the bottom bar");
   assert.doesNotMatch(help.text, /\bdig\b/i, "help copy still says dig");
-  // The history caption is the owner's wording, the same as on the web, and keeps its dash.
-  assert.doesNotMatch(help.text.replace("Riding on the original \u2014 history of Minesweeper", ""), /\u2014/, "help copy has a long dash");
-  // The history screenshot the owner asked to keep is served from the bundle; licenses are one tap away.
+  assert.doesNotMatch(help.text, /\u2014/, "help copy has a long dash");
+  // This payload carries no screenshot and no photographs; licenses are one tap away.
   const bundled = await evaluate(`(async () => {
-    const img = document.querySelector("#help-history-btn img");
-    if (img.decode) { try { await img.decode(); } catch (_) {} }
     const link = document.querySelector('.menu-links a[href="notices.html"]');
     const notices = await fetch("notices.html").then(r => r.ok ? r.text() : "");
-    return { src: img.getAttribute("src"), width: img.naturalWidth, link: link ? link.textContent.trim() : "",
+    return { history: !!document.querySelector("#help-history-btn, #history-lightbox"), images: document.querySelectorAll('img[src*="minesweeper"]').length, link: link ? link.textContent.trim() : "",
       back: notices.includes('href="index.html"'), ofl: notices.includes("SIL OPEN FONT LICENSE"), apache: notices.includes("Apache License"),
-      placeholders: /__[A-Z0-9_]+__/.test(notices), noted: notices.includes("Minesweeper screenshot") };
+      placeholders: /__[A-Z0-9_]+__/.test(notices), noted: /Unsplash|Microsoft/.test(notices) };
   })()`);
-  assert.equal(bundled.src, "assets/classic-minesweeper.png", "Help image is not the classic Minesweeper screenshot");
-  assert.ok(bundled.width > 0, "Help image did not load from the bundle");
-  assert.ok(bundled.noted, "the licenses page does not say the screenshot is not project artwork");
+  assert.equal(bundled.history, false, "the Minesweeper screenshot row is still in Help");
+  assert.equal(bundled.images, 0, "a Minesweeper screenshot is still referenced");
+  assert.equal(bundled.noted, false, "the licenses page still lists photographs or the screenshot");
   assert.equal(bundled.link, "Licenses", "the sheet has no Licenses link");
   assert.ok(bundled.back && bundled.ofl && bundled.apache && !bundled.placeholders, `licenses page is incomplete: ${JSON.stringify(bundled)}`);
-  assert.deepEqual(help.themes, ["light", "dark", "mercury", "ion-storm", "aurora", "galaxy", "heat-lightning"], `theme grid roster is ${help.themes.join(",")}`);
+  assert.deepEqual(help.themes, ["light", "dark", "mercury", "aurora"], `theme grid roster is ${help.themes.join(",")}`);
   assert.deepEqual(help.sizes, ["xsmall", "easy", "medium", "hard", "xlarge"], `size pills are ${help.sizes.join(",")}`);
   assert.equal(await evaluate('!!document.getElementById("help-warn-grid")'), false, "Warnings group is still on the sheet (themes own it now)");
   assert.ok(help.invert && help.effects, "invert / effects pills missing from the sheet");
@@ -254,17 +251,15 @@ try {
   await evaluate('document.getElementById("help-tab-settings").click()');
   assert.equal(await evaluate('document.querySelector("#help-controls [data-ctl=invert]").getBoundingClientRect().height > 30'), true, "Settings tab does not show Invert");
   await evaluate('document.getElementById("help-tab-themes").click()');
-  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
-  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "galaxy", "theme grid did not apply Galaxy");
-  assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "galaxy", "theme grid did not mark Galaxy pressed");
+  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=aurora]").click()');
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().theme.id'), "aurora", "theme grid did not apply Aurora");
+  assert.equal(await evaluate('document.querySelector("#help-theme-grid .help-theme[aria-pressed=true]").dataset.theme'), "aurora", "theme grid did not mark Aurora pressed");
   // Themes own the warning treatment: depth + seams everywhere except Mercury and Galaxy (continuous interiors, no seams).
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=mercury]").click()');
   assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Mercury did not set depth + no seams");
-  await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=galaxy]").click()');
-  assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/false", "Galaxy did not set depth + no seams");
   await evaluate('document.querySelector("#help-theme-grid .help-theme[data-theme=aurora]").click()');
   assert.equal(await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return s.relief + "/" + s.seams; })()'), "extruded/true", "Aurora did not set depth + seams");
-  assert.equal(await evaluate('SphereSweeper.THEMES.some(t => t.id === "stratosphere" || t.id === "gilded-ribbon")'), false, "a theme with no known image source is back in the payload");
+  assert.equal(await evaluate('SphereSweeper.THEMES.some(t => ["stratosphere", "gilded-ribbon", "galaxy", "ion-storm", "heat-lightning"].includes(t.id))'), false, "a theme with no known image source is back in the payload");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=easy]").click()');
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().difficulty'), "easy", "size pill did not start a Small sphere");
   await evaluate('document.querySelector("#help-size-grid .help-size[data-size=medium]").click()');
@@ -388,15 +383,8 @@ try {
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setSize("medium"); void 0;');
   await delay(250);
 
-  // Textured materials: the sealed data URI must actually load into the renderer.
-  await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "ion-storm")); void 0;');
-  const storm = await waitExpression(`(() => {
-    const c = document.getElementById("reflectionCanvas");
-    if (!c || c.style.display === "none") return null;
-    if (document.body.dataset.reflectionMaterial !== "ion-storm") return null;
-    return { chrome: document.body.dataset.sphereChrome };
-  })()`, "Ion Storm did not switch the renderer");
-  assert.equal(storm.chrome, "dark", "Ion Storm did not switch chrome to dark");
+  // No photographic material ships here: the sealed texture table is empty.
+  assert.equal(await evaluate('Object.keys(window.HEXSWEEPER_REFLECTION_TEXTURES || {}).length'), 0, "a photograph is sealed into the payload");
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "mercury")); void 0;');
   const mercury = await waitExpression(`(() => {
     const c = document.getElementById("reflectionCanvas");

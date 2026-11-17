@@ -426,31 +426,6 @@
   function reflectionTheme(overrides) {
     return Object.assign({}, THEME_MERCURY, overrides);
   }
-  const THEME_ION_STORM = reflectionTheme({
-    id: "ion-storm",
-    name: "Ion Storm",
-    chrome: "dark",
-    material: "ion-storm",
-    warn: { count: "numerals", relief: "extruded", seams: false },
-    accent: "#c893dc",
-    fallbackBg: "#060a19",
-    fallbackBgGlow: "#175fa2",
-    fallbackCore: "#06142d",
-    coveredEdge: "rgba(200,147,220,0.22)",
-    pentagonEdge: "rgba(214,178,240,0.3)",
-    hoverRing: "#e2c4f5",
-    activeRing: "#c893dc",
-    revealGlow: "#c893dc",
-    text: {
-      1: "#f1e8ff",
-      2: "#d9c0f5",
-      3: "#c893dc",
-      4: "#9fd0ff",
-      5: "#ffb27a",
-      6: "#ff7a9c",
-    },
-    label: "#f1e8ff",
-  });
   // The rest of the flower roster: aurora is procedural (no texture); the
   // others carry small textures. Palettes lift the studio's fallback tones.
   const THEME_AURORA = reflectionTheme({
@@ -470,42 +445,6 @@
     text: { 1: "#e9fffe", 2: "#b9f0ee", 3: "#88d2d0", 4: "#ffd7a0", 5: "#ff9f8f", 6: "#ff7180" },
     label: "#e9fffe",
   });
-  const THEME_GALAXY = reflectionTheme({
-    id: "galaxy",
-    name: "Galaxy",
-    material: "galaxy",
-    warn: { count: "rings", relief: "extruded", seams: false },
-    accent: "#d09a9e",
-    fallbackBg: "#050714",
-    fallbackBgGlow: "#49405c",
-    fallbackCore: "#08172b",
-    coveredEdge: "rgba(208,154,158,0.22)",
-    pentagonEdge: "rgba(230,190,194,0.3)",
-    hoverRing: "#f0cdd0",
-    activeRing: "#d09a9e",
-    revealGlow: "#d09a9e",
-    // Counts are nested rings here, in black and white — no colour on the hole.
-    text: { 1: "rgba(255,255,255,0.72)", 2: "rgba(255,255,255,0.72)", 3: "rgba(255,255,255,0.72)", 4: "rgba(255,255,255,0.72)", 5: "rgba(255,255,255,0.72)", 6: "rgba(255,255,255,0.72)" },
-    label: "rgba(255,255,255,0.85)",
-    labelStroke: "rgba(0,0,0,0.85)",
-  });
-  const THEME_HEAT_LIGHTNING = reflectionTheme({
-    id: "heat-lightning",
-    name: "Heat Lightning",
-    material: "heat-lightning",
-    warn: { count: "numerals", relief: "extruded", seams: false },
-    accent: "#ffb05b",
-    fallbackBg: "#190f16",
-    fallbackBgGlow: "#7a3f53",
-    fallbackCore: "#0d1017",
-    coveredEdge: "rgba(255,176,91,0.24)",
-    pentagonEdge: "rgba(255,205,150,0.32)",
-    hoverRing: "#ffd6a3",
-    activeRing: "#ffb05b",
-    revealGlow: "#ffb05b",
-    text: { 1: "#fff2e2", 2: "#ffd6a3", 3: "#ffb05b", 4: "#ff9db1", 5: "#c9b8ff", 6: "#8ed9f5" },
-    label: "#fff2e2",
-  });
 
   // The two mono looks keep the classic read: numbers, depth, seams.
   THEME_LIGHT.warn = { count: "numerals", relief: "extruded", seams: true };
@@ -519,10 +458,7 @@
     THEME_LIGHT,
     THEME_DARK,
     THEME_MERCURY,
-    THEME_ION_STORM,
     THEME_AURORA,
-    THEME_GALAXY,
-    THEME_HEAT_LIGHTNING,
   ].filter((t) => {
     // Native app builds ship without the globe-map themes. Their daymaps are
     // the only assets fetched over the network (globeUrl falls back to an
@@ -1581,7 +1517,7 @@
         themeBtn.title = `Theme — ${t.name} (T)`;
         themeBtn.setAttribute(
           "aria-label",
-          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Ion Storm, Aurora, Galaxy, Heat Lightning.`
+          `Theme: ${t.name}. Activate to cycle Light, Shell, Dark, Ink, Float, Card, Earth, Moon, Glow, Mercury, Aurora.`
         );
         themeBtn.innerHTML = THEME_ICONS[t.id] || THEME_ICONS.light;
       }

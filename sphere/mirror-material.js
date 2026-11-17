@@ -160,12 +160,13 @@
       texture: { desktop: "assets/reflections/oculus-1280.webp", mobile: "assets/reflections/oculus-768.webp", speed: 0, exposure: 0.90, saturation: 1.08, backdrop: 0.34, mapping: "hybrid", frame: "shell", surfaceMix: 0.72, reflectionStrength: 0.28, roughness: 0.06, motion: 4, motionAmount: 0.009, motionRate: 0.040, pulse: 0.0 },
     },
     {
-      id: "galaxy",
-      label: "Galactic Dust",
-      shortLabel: "Galaxy",
+      // Removed 2026-11-16 from the F-Droid payload: its photograph is under
+      // the Unsplash License. The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired galaxy slot",
+      shortLabel: "Retired",
       fallback: ["#050714", "#49405c", "#d09a9e", "#08172b"],
-      swatch: "radial-gradient(ellipse at 38% 62%, #d7a5a2 0 9%, #65506e 26%, #16345e 52%, #050714 78%)",
-      texture: { desktop: "assets/reflections/galaxy-1280.webp", mobile: "assets/reflections/galaxy-768.webp", speed: 0.00018, exposure: 1.10, saturation: 0.92, backdrop: 0.50, mapping: "environment", frame: "ambient", reflectionStrength: 0.22, roughness: 0.06, motion: 5, motionAmount: 0.004, motionRate: 0.016 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       retired: true,
@@ -184,12 +185,13 @@
       swatch: "linear-gradient(#111, #050505)",
     },
     {
-      id: "ion-storm",
-      label: "Ion Storm",
-      shortLabel: "Ion",
+      // Removed 2026-11-16 from the F-Droid payload: its photograph is under
+      // the Unsplash License. The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired storm slot",
+      shortLabel: "Retired",
       fallback: ["#06142d", "#175fa2", "#c893dc", "#060a19"],
-      swatch: "linear-gradient(135deg, #0a75be 12%, #123866 46%, #d39adb 72%, #100c27 92%)",
-      texture: { desktop: "assets/reflections/ion-storm-1280.webp", mobile: "assets/reflections/ion-storm-768.webp", speed: 0.00035, exposure: 0.98, saturation: 1.06, backdrop: 0.48, mapping: "hybrid", frame: "lag", surfaceMix: 0.66, reflectionStrength: 0.38, roughness: 0.08, motion: 8, motionAmount: 0.035, motionRate: 0.085, pulse: 0.10 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       id: "amber-tempest",
@@ -200,12 +202,13 @@
       texture: { desktop: "assets/reflections/amber-tempest-1280.webp", mobile: "assets/reflections/amber-tempest-768.webp", speed: -0.00018, exposure: 0.94, saturation: 0.94, backdrop: 0.48, mapping: "hybrid", frame: "lag", surfaceMix: 0.58, reflectionStrength: 0.38, roughness: 0.10, motion: 9, motionAmount: 0.024, motionRate: 0.070, pulse: 0.12 },
     },
     {
-      id: "heat-lightning",
-      label: "Heat Lightning",
-      shortLabel: "Heat",
+      // Removed 2026-11-16 from the F-Droid payload: its photograph is under
+      // the Unsplash License. The slot stays so later shader indices do not move.
+      retired: true,
+      label: "Retired lightning slot",
+      shortLabel: "Retired",
       fallback: ["#0d1017", "#7a3f53", "#ffb05b", "#190f16"],
-      swatch: "radial-gradient(circle at 53% 44%, #fff1cf 0 5%, #ff9f45 14%, #7e3b5d 34%, #11131d 72%)",
-      texture: { desktop: "assets/reflections/heat-lightning-1280.webp", mobile: "assets/reflections/heat-lightning-768.webp", speed: 0.00025, exposure: 0.96, saturation: 0.98, backdrop: 0.46, mapping: "hybrid", frame: "lag", surfaceMix: 0.66, reflectionStrength: 0.36, roughness: 0.08, motion: 1, motionAmount: 0.026, motionRate: 0.090, pulse: 0.07, offsetY: 0.02 },
+      swatch: "linear-gradient(#111, #050505)",
     },
     {
       // Removed 2026-11-12: no source could be confirmed for its image.

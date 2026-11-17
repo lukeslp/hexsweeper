@@ -743,6 +743,9 @@ def reflection_texture_boot(only: set[str] | None = None, *, mobile_only: bool =
             if only is not None and material_id not in only:
                 continue
             entries.append((material_id, data_uri(ROOT / sizes["mobile"])))
+        if not entries:
+            # No photographic material in this payload (the F-Droid build).
+            return "window.HEXSWEEPER_REFLECTION_TEXTURES = {};\n"
         decls = ",".join(f"t{i}={json.dumps(uri)}" for i, (_, uri) in enumerate(entries))
         body = ",".join(
             f"{json.dumps(material_id)}:{{desktop:t{i},mobile:t{i}}}"
@@ -765,7 +768,7 @@ def reflection_texture_boot(only: set[str] | None = None, *, mobile_only: bool =
 
 # Reflection materials shipped as canonical sphere themes (sphere.js THEMES).
 # The app seals their textures; the web root points at sphere/assets/.
-SPHERE_APP_MATERIALS = {"ion-storm", "galaxy", "heat-lightning"}
+SPHERE_APP_MATERIALS: set[str] = set()
 
 
 def reflection_registry_errors() -> list[str]:
@@ -2011,7 +2014,7 @@ def write_app_build() -> list[Path]:
     # Start empty: a file left by an earlier export would ride into the app.
     if APP_BUILD.exists():
         shutil.rmtree(APP_BUILD)
-    (APP_BUILD / "assets").mkdir(parents=True, exist_ok=True)
+    APP_BUILD.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
 
     sphere_exp = next(e for e in EXPERIMENTS if e["id"] == "sphere")
@@ -2023,11 +2026,6 @@ def write_app_build() -> list[Path]:
     wheel = APP_BUILD / "wheel.html"
     wheel.write_text(export_wheel_app(), encoding="utf-8")
     written.append(wheel)
-
-    # The sphere's help lightbox reads this from the bundle, beside index.html.
-    history = APP_BUILD / "assets" / "classic-minesweeper.png"
-    history.write_bytes((ROOT / "sphere" / "assets" / "classic-minesweeper.png").read_bytes())
-    written.append(history)
 
     # Licenses and credits for everything the bundle carries, linked from the
     # foot of the sheet.
