@@ -80,7 +80,11 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
 3. Done for 1.0.12: tag `v1.0.12`, with the signed file on its GitHub release.
    For a later version, tag the release commit `v<version>`, publish the
    signed file the same way and update the recipe's `commit`.
-4. Put the recipe on a branch of the `fdroiddata` fork and let its pipeline
-   run. The recipe has not been run through F-Droid's tools yet. Things the
-   first run will settle: whether the scanner accepts the tree pnpm installs,
-   and whether reviewers want Node.js from Debian instead of pnpm from npm.
+4. Done on November 16, 2026: the recipe is on branch `app.hexodus.ios` of
+   the `fdroiddata` fork and its pipeline passes, including the build, the
+   source scan and the comparison with the signed file. Two things that run
+   settled: the Capacitor CLI needs Node.js 22, which Debian does not have,
+   so the recipe downloads it with a checksum check; and the scanner rejects
+   the template archives inside the CLI package, so the recipe deletes them
+   after the sync.
+5. No merge request has been opened.
