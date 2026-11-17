@@ -37,8 +37,13 @@ The sealed game payload (`www/index.html`) embeds three reflection images as
 inline WebP data, taken from `sphere/assets/reflections/` in the game source.
 All three are photographs from Unsplash, used under the
 [Unsplash License](https://unsplash.com/license) and not covered by the MIT
-license: `galaxy-768.webp` (Jose G. Ortega Castro), `heat-lightning-768.webp`
-(Max LaRochelle) and `ion-storm-768.webp` (Felix Mittermeier).
+license, resized and converted to WebP:
+
+- Galaxy, `galaxy-768.webp`: [A night sky filled with lots of stars](https://unsplash.com/photos/W6EsQWhEc94), by Jose G. Ortega Castro.
+- Heat Lightning, `heat-lightning-768.webp`: [Lightning strike at night](https://unsplash.com/photos/uu-Jw5SunYI), by Max LaRochelle.
+- Ion Storm, `ion-storm-768.webp`: [Clouds with thunder digital wallpaper](https://unsplash.com/photos/L4-16dmZ-1c), by Felix Mittermeier.
+
+The app's Licenses page (`www/notices.html`) gives the same three credits.
 
 Gilded Ribbon and Stratosphere, whose images had no confirmed source, left
 the payload in 1.0.10. Source links and the search record are in
@@ -49,12 +54,10 @@ photograph.
 
 ## Classic Minesweeper screenshot
 
-`www/assets/classic-minesweeper.png` is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
-as a history note in the help sheet. It is not this project's artwork, its
-source is not recorded, and the MIT license here does not cover it. Microsoft,
-Windows and Minesweeper are trademarks of Microsoft Corporation.
-
-The F-Droid build does not include it.
+No app payload includes the screenshot of Microsoft's Minesweeper that the
+web game shows as a history note in its help sheet. `www/` dropped it on
+November 17, 2026, at the owner's instruction (Android 1.0.14 (39), iOS
+1.0.3 (71)); `www-fdroid/` never had it.
 
 ## Notices inside the app
 
