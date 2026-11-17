@@ -2535,26 +2535,30 @@
     let persistSuspended = false;
     let persistTimer = null;
 
-    function storageGet(store, key) {
+    // Each helper takes the store's name ("localStorage" / "sessionStorage")
+    // and looks it up inside its guard: when a browser blocks site data, just
+    // reading window.localStorage throws a SecurityError, and that used to
+    // abort boot before the board was built (a bare disk and no controls).
+    function storageGet(name, key) {
       try {
-        return store.getItem(key);
+        return global[name].getItem(key);
       } catch (_) {
         return null;
       }
     }
 
-    function storageSet(store, key, val) {
+    function storageSet(name, key, val) {
       try {
-        store.setItem(key, val);
+        global[name].setItem(key, val);
         return true;
       } catch (_) {
         return false;
       }
     }
 
-    function storageRemove(store, key) {
+    function storageRemove(name, key) {
       try {
-        store.removeItem(key);
+        global[name].removeItem(key);
       } catch (_) {}
     }
 
@@ -2602,21 +2606,21 @@
     /** Explicit clear only — Reset button / size change / invalid save. */
     function clearPersist() {
       if (variant) {
-        storageRemove(localStorage, runStorageKey);
-        storageRemove(sessionStorage, runStorageKey);
+        storageRemove("localStorage", runStorageKey);
+        storageRemove("sessionStorage", runStorageKey);
       } else {
-        storageRemove(localStorage, RUN_STORAGE_KEY);
-        storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
-        storageRemove(sessionStorage, RUN_STORAGE_KEY);
-        storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
+        storageRemove("localStorage", RUN_STORAGE_KEY);
+        storageRemove("localStorage", RUN_STORAGE_KEY_LEGACY);
+        storageRemove("sessionStorage", RUN_STORAGE_KEY);
+        storageRemove("sessionStorage", RUN_STORAGE_KEY_LEGACY);
       }
     }
 
     function writePersistPayload(json) {
       // Dual-write: session for same-tab reload resilience, local for return visits.
       return {
-        local: storageSet(localStorage, runStorageKey, json),
-        session: storageSet(sessionStorage, runStorageKey, json),
+        local: storageSet("localStorage", runStorageKey, json),
+        session: storageSet("sessionStorage", runStorageKey, json),
       };
     }
 
@@ -2814,7 +2818,7 @@
       const keys = variant
         ? [runStorageKey]
         : [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY];
-      const stores = [sessionStorage, localStorage];
+      const stores = ["sessionStorage", "localStorage"];
       const candidates = [];
       let order = 0;
       for (const store of stores) {
