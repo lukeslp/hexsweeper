@@ -75,11 +75,11 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
 2. Versions 1.0.12 (37), 1.0.13 (38) and 1.0.15 (40) are the F-Droid build's alone: the F-Droid APK and the
    direct download share an application id and signing key, so one code must
    never name two different files. 1.0.14 (39) is the direct, Google Play and
-   Amazon build of November 16, built from `cc64a42` (a short line from
+   Amazon build of November 16, built from `5df3ecc` (a short line from
    `f7bdded` that main merges, since main sets 40); the next direct or
    store build takes 41 or higher.
    F-Droid reads the version from `app/android/app/build.gradle` as written,
-   so no commit that sets 39 (`f7bdded`, `cc64a42`) may carry a `v` tag.
+   so no commit that sets 39 (`f7bdded`, `cc64a42`, `5df3ecc`) may carry a `v` tag.
 3. Done for 1.0.13: tag `v1.0.13`, with the signed file on its GitHub release.
    (`v1.0.12` is the same app; its listing still had a screenshot of a theme
    the F-Droid build does not include, and F-Droid reads the listing from

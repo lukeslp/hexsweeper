@@ -13,7 +13,7 @@
 Build numbers start at 7; builds 1–6 belong to the retired Hivescape app on
 this same record. The checked-in iOS project is `1.0.3 (71)` and Android is
 `1.0.15 (40)`, the F-Droid build; the direct, Google Play and Amazon build
-of the same source is `1.0.14 (39)`, built from `cc64a42` (a short line
+of the same source is `1.0.14 (39)`, built from `5df3ecc` (a short line
 from `f7bdded` that main merges), never from main's tip. Check the store's latest uploaded build before incrementing or
 uploading; checked-in versions do not establish current remote store state.
 (App Store Connect enforces a per-app daily
@@ -32,11 +32,12 @@ already holds a build 71, raise `CURRENT_PROJECT_VERSION` before archiving.
 
 ## Current payload (2026-11-17)
 
-`WWW_SOURCE.txt` pins game commit `7c851ed`, a maintenance line on the
+`WWW_SOURCE.txt` pins game commit `92b3aca`, a maintenance line on the
 October 7 `c91cd20` snapshot: the November 12 line (`42a1ae6`) plus three
 fixes from the web game of November 16 and main's far-side fix
-(`a36e14b`). `WWW_SOURCE_FDROID.txt` pins `fdb3294`, the F-Droid line
-(`8c93811`) plus the same four.
+(`a36e14b`), without the Minesweeper screenshot (owner's instruction,
+November 17). `WWW_SOURCE_FDROID.txt` pins `fdb3294`, the F-Droid line
+(`8c93811`) plus the same four fixes.
 [The README](../README.md#updating-the-games) lists what it adds. The app opens straight to the board and keeps its short
 tutorial behind ? → Play (**Show the tutorial**); the web game opens the
 board too and has no tutorial. Both use the same ? settings sheet.
@@ -88,7 +89,7 @@ pnpm android:bundle:release    # android/app/build/outputs/bundle/release/app-re
 
 The checked-in Android identity is `versionCode 40`, `versionName 1.0.15`,
 targeting API 36 with minimum API 24: the F-Droid build, to be tagged
-`v1.0.15`. Build the direct, Google Play and Amazon files from `cc64a42`,
+`v1.0.15`. Build the direct, Google Play and Amazon files from `5df3ecc`,
 which sets `1.0.14 (39)` and carries the same `www/` (37, 38 and 40 are the F-Droid
 build's; a direct build at 40 would give one code two files). The direct download serves
 `1.0.11 (36)`, dated November 14, 2026; the recorded Amazon submission is

@@ -11,7 +11,7 @@ Saved edits on the production host are live on the public site. Prefer: edit →
 
 The public root `index.html` is the Sphere game, sealed from `sphere/` by the
 exporter; the native app ships its offline export plus the hidden Water Wheel
-and history image. `launcher.html` is
+(no history image: the app payloads dropped it on 2026-11-17). `launcher.html` is
 generated from `tools/app-launcher.html` and offers the three structural boards: **Infinite**,
 **Classic**, and **Sphere**. It is **unlinked and noindex** (owner's decision, 2026-10-07):
 no game carries a Games pill or links to it; don't re-add either. `infinite.html` and `bounded.html` are generated
@@ -29,7 +29,8 @@ no first-visit cue either (Sphere boots with `autoWelcome: false`); `?welcome=1`
 still previews the sheet.
 Help lives behind ? only: the Play tab is one line of what to do plus three
 gesture rows (Tap / Hold / Drag) and, on Sphere, the classic Minesweeper
-history thumb that opens the full screenshot (owner's request, 2026-11-11);
+history thumb that opens the full screenshot (owner's request, 2026-11-11;
+web only since 2026-11-17, when the owner had the app payloads drop it);
 no paragraphs, and no `title=` tooltips
 anywhere on the page (aria-labels carry the names). Keep it that way.
 

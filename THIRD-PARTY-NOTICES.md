@@ -39,8 +39,18 @@ license: `amber-tempest` (Johannes Plenio), `chromatic-ink` (Daniel Olah),
 `galaxy` (Jose G. Ortega Castro), `heat-lightning` (Max LaRochelle),
 `ion-storm` (Felix Mittermeier) and `oculus` (Adam Gonzales).
 
+The apps' direct, Google Play and iOS builds embed three of them: Galaxy
+([A night sky filled with lots of stars](https://unsplash.com/photos/W6EsQWhEc94),
+Jose G. Ortega Castro), Heat Lightning
+([Lightning strike at night](https://unsplash.com/photos/uu-Jw5SunYI), Max
+LaRochelle) and Ion Storm
+([Clouds with thunder digital wallpaper](https://unsplash.com/photos/L4-16dmZ-1c),
+Felix Mittermeier). The app's Licenses page and
+[app/THIRD-PARTY-NOTICES.md](app/THIRD-PARTY-NOTICES.md) carry the same
+credits. The F-Droid build embeds none.
+
 No source is confirmed for `stratosphere`, so it is not credited here and the
-MIT license does not cover it. Source links and the search record are in
+MIT license does not cover it. No app build carries it. Source links and the search record are in
 [sphere/assets/reflections/SOURCES.md](sphere/assets/reflections/SOURCES.md).
 
 ## Classic Minesweeper screenshot
@@ -48,4 +58,6 @@ MIT license does not cover it. Source links and the search record are in
 `sphere/assets/classic-minesweeper.png` (also under `sphere-ux/assets/`) is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
 as a history note in the help sheet. It is not this project's artwork, its
 source is not recorded, and the MIT license here does not cover it. Microsoft,
-Windows and Minesweeper are trademarks of Microsoft Corporation.
+Windows and Minesweeper are trademarks of Microsoft Corporation. It appears on
+the web pages only: no app build carries it (the direct, Google Play and iOS
+payload dropped it on November 17, 2026; the F-Droid payload never had it).
