@@ -66,9 +66,11 @@ build (`${applicationId}`, `getPackageName()`), never a literal.
 ## Build numbers
 
 App Store Connect already holds builds 1–6 under this bundle id from the retired
-app and has received builds through 69. 1.0 (63) was submitted 2026-08-20 and
+app and has received builds through 70. 1.0 (63) was submitted 2026-08-20 and
 approved 2026-09-01; 1.0.1 went through builds 64–69 on 2026-09-01/02 (same
-payload, icon iterations) and build 69 is attached. Set `CURRENT_PROJECT_VERSION` above the
+payload, icon iterations) and build 69 is attached. 1.0.2 (70) was uploaded
+2026-11-14 and submitted for review; the checked-in project is 1.0.2 (71), its
+replacement with the November 16 payload. Set `CURRENT_PROJECT_VERSION` above the
 latest uploaded build for every iOS upload. Android starts at `versionCode 1`
 and increments independently for every Play upload.
 

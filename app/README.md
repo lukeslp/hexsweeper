@@ -71,6 +71,28 @@ neither updates the other, and a saved board, best times and settings do not
 move between them. The FileProvider authority and the Share plugin follow the
 id; the app has no deep links or asset links to follow it.
 
+## Android 1.0.15 (40), F-Droid build, November 16, 2026
+
+The F-Droid build of 1.0.14 (39): the same fixes and shell, from the
+`www-fdroid/` payload (four themes, no history picture). It takes its own
+code because the F-Droid APK and the direct download share an application
+id and signing key. The commit that sets 40 is the one to tag `v1.0.15`;
+build the direct, Play and Amazon files from the commit that sets 39, never
+from this one. Prepared and built unsigned; not tagged, signed or released.
+
+## Android 1.0.14 (39), direct, Google Play and Amazon builds, November 16, 2026
+
+1.0.11 (36) with the November 16 payload and one shell change. Faces from
+the far side of the sphere no longer show through its edge while it turns
+(M, L and XL boards in Light and Dark); the reflection renderer stays
+parked while its canvas is hidden; and when Android reclaims or crashes
+the WebView's renderer, `MainActivity` rebuilds the board from its autosave
+instead of the whole app closing. Prepared and built unsigned; not signed
+or released in this repository. 37 and 38 belong to the F-Droid build, so
+this build takes 39. Do not tag it `v1.0.14`: F-Droid's update check reads
+`v` tags, and its recipe would build that commit as an F-Droid build with
+the code 39 this build uses.
+
 ## Android 1.0.13 (38), F-Droid build, November 16, 2026
 
 The same app as 1.0.12 (37). The release was cut again because F-Droid reads
@@ -190,7 +212,7 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `42a1ae6`, a bounded maintenance line on the
+The current payload pins `587e097`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
 Help keeps the classic Minesweeper screenshot, as on the web (a swap to the
@@ -207,6 +229,15 @@ instruction on November 12, 2026).
 - plain punctuation in Help and the tutorial, and a sheet that does not clip
   at large system text.
 - the share card has a solid background on the photo themes.
+- three fixes from the web game of November 16, 2026, ported by hand to
+  this line (`fa3e01f`, `6fca2bd`, `587e097` on top of `42a1ae6`): faces
+  behind the rim no longer paint over it while the sphere turns (main's
+  `b4a7423`); the reflection renderer stays parked while its canvas is
+  hidden; and the storage helpers look the store up inside their guard
+  (both main's `6506a93`).
+
+`www-fdroid/` pins `9c0779a`: `8c93811` (the F-Droid change: no photo
+themes, no screenshot) plus the same three fixes.
 
 This payload update does not create or upload an iOS or Android release. See
 [release notes](docs/RELEASE.md) for the distinction between payload checks

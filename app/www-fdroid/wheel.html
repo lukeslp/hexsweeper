@@ -5348,26 +5348,30 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
     let persistSuspended = false;
     let persistTimer = null;
 
-    function storageGet(store, key) {
+    // Each helper takes the store's name ("localStorage" / "sessionStorage")
+    // and looks it up inside its guard: when a browser blocks site data, just
+    // reading window.localStorage throws a SecurityError, and that used to
+    // abort boot before the board was built.
+    function storageGet(name, key) {
       try {
-        return store.getItem(key);
+        return global[name].getItem(key);
       } catch (_) {
         return null;
       }
     }
 
-    function storageSet(store, key, val) {
+    function storageSet(name, key, val) {
       try {
-        store.setItem(key, val);
+        global[name].setItem(key, val);
         return true;
       } catch (_) {
         return false;
       }
     }
 
-    function storageRemove(store, key) {
+    function storageRemove(name, key) {
       try {
-        store.removeItem(key);
+        global[name].removeItem(key);
       } catch (_) {}
     }
 
@@ -5422,18 +5426,18 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
 
     /** Explicit clear only — Reset button / size change / invalid save. */
     function clearPersist() {
-      storageRemove(localStorage, RUN_STORAGE_KEY);
-      storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY);
-      storageRemove(localStorage, RUN_STORAGE_KEY_LEGACY_V1);
-      storageRemove(sessionStorage, RUN_STORAGE_KEY);
-      storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY);
-      storageRemove(sessionStorage, RUN_STORAGE_KEY_LEGACY_V1);
+      storageRemove("localStorage", RUN_STORAGE_KEY);
+      storageRemove("localStorage", RUN_STORAGE_KEY_LEGACY);
+      storageRemove("localStorage", RUN_STORAGE_KEY_LEGACY_V1);
+      storageRemove("sessionStorage", RUN_STORAGE_KEY);
+      storageRemove("sessionStorage", RUN_STORAGE_KEY_LEGACY);
+      storageRemove("sessionStorage", RUN_STORAGE_KEY_LEGACY_V1);
     }
 
     function writePersistPayload(json) {
       // Dual-write: session for same-tab reload resilience, local for return visits.
-      const a = storageSet(localStorage, RUN_STORAGE_KEY, json);
-      const b = storageSet(sessionStorage, RUN_STORAGE_KEY, json);
+      const a = storageSet("localStorage", RUN_STORAGE_KEY, json);
+      const b = storageSet("sessionStorage", RUN_STORAGE_KEY, json);
       return a || b;
     }
 
@@ -5627,7 +5631,7 @@ window.HEXSWEEPER_HOME_HREF = "index.html";
 
     function readStoredRun() {
       const keys = [RUN_STORAGE_KEY, RUN_STORAGE_KEY_LEGACY, RUN_STORAGE_KEY_LEGACY_V1];
-      const stores = [sessionStorage, localStorage];
+      const stores = ["sessionStorage", "localStorage"];
       let best = null;
       let bestAt = -1;
       for (const store of stores) {
