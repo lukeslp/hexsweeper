@@ -205,7 +205,16 @@ try {
       for (const type of ["mouseMoved", "mousePressed", "mouseReleased"]) {
         await send("Input.dispatchMouseEvent", { type, x: spot.x, y: spot.y, button: type === "mouseMoved" ? "none" : "left", clickCount: 1 });
       }
-      await waitFor(() => evaluate("classicGame.state.isGameOver && classicGame.state.win === false"), "Classic: the chord onto a mine did not end the board").catch((e) => failures.push(e.message));
+      await waitFor(() => evaluate("classicGame.state.isGameOver && classicGame.state.win === false"), "Classic: the chord onto a mine did not end the board").catch(async (e) => {
+        const why = await evaluate(`JSON.stringify((() => {
+          const s = classicGame.state, c = s.map.get(${JSON.stringify(chordKey)}), canvas = s.canvas, r = canvas.getBoundingClientRect();
+          const el = document.elementFromPoint(${spot.x}, ${spot.y});
+          return { spot: ${JSON.stringify(spot)}, el: el ? (el.id || el.className || el.tagName) : null, rect: [r.left, r.top, r.width, r.height], canvas: [canvas.width, canvas.height], view: [innerWidth, innerHeight, devicePixelRatio, scrollX, scrollY],
+            over: s.isGameOver, win: s.win, first: s.isFirstClick, hovered: s.hoveredKey, cell: c && { revealed: c.revealed, n: c.neighborMines, flags: classicGame.getNeighbors(c.q, c.r).filter((n) => n.flagged).length },
+            opened: [...s.map.values()].filter((x) => x.revealed).length, opened0: ${JSON.stringify(beforeChord.split(" ").length)}, ua: navigator.userAgent };
+        })())`).catch((err) => err.message);
+        failures.push(`${e.message} (${why})`);
+      });
       expect(await evaluate(visible("undo-btn")), "Classic: a chord onto a mine offers no Undo");
       await evaluate(`document.getElementById("undo-btn").click()`);
       await delay(250);
