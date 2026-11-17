@@ -190,7 +190,7 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `42a1ae6`, a bounded maintenance line on the
+The current payload pins `587e097`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
 Help keeps the classic Minesweeper screenshot, as on the web (a swap to the
@@ -207,6 +207,12 @@ instruction on November 12, 2026).
 - plain punctuation in Help and the tutorial, and a sheet that does not clip
   at large system text.
 - the share card has a solid background on the photo themes.
+- three fixes from the web game of November 16, 2026, ported by hand to
+  this line (`fa3e01f`, `6fca2bd`, `587e097` on top of `42a1ae6`): faces
+  behind the rim no longer paint over it while the sphere turns (main's
+  `b4a7423`); the reflection renderer stays parked while its canvas is
+  hidden; and the storage helpers look the store up inside their guard
+  (both main's `6506a93`).
 
 This payload update does not create or upload an iOS or Android release. See
 [release notes](docs/RELEASE.md) for the distinction between payload checks

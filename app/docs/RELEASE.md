@@ -18,11 +18,12 @@ uploading; checked-in versions do not establish current remote store state.
 upload cap; error 90382 after ~15 uploads on 2026-08-18; it cleared within
 the hour.)
 
-## Current payload (2026-11-12)
+## Current payload (2026-11-16)
 
-`WWW_SOURCE.txt` pins game commit `42a1ae6`, a maintenance line on the
-October 7 `c91cd20` snapshot. [The README](../README.md#updating-the-games)
-lists what it adds. The app opens straight to the board and keeps its short
+`WWW_SOURCE.txt` pins game commit `587e097`, a maintenance line on the
+October 7 `c91cd20` snapshot: the November 12 line (`42a1ae6`) plus three
+fixes from the web game of November 16.
+[The README](../README.md#updating-the-games) lists what it adds. The app opens straight to the board and keeps its short
 tutorial behind ? → Play (**Show the tutorial**); the web game opens the
 board too and has no tutorial. Both use the same ? settings sheet.
 
