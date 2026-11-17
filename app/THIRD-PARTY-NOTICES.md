@@ -56,8 +56,8 @@ photograph.
 
 No app payload includes the screenshot of Microsoft's Minesweeper that the
 web game shows as a history note in its help sheet. `www/` dropped it on
-November 17, 2026, at the owner's instruction (Android 1.0.14 (39), iOS
-1.0.3 (71)); `www-fdroid/` never had it.
+November 17, 2026 (Android 1.0.14 (39), iOS 1.0.3 (71)); `www-fdroid/` never
+had it.
 
 ## Notices inside the app
 
