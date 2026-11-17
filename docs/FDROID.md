@@ -87,11 +87,10 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
    For a later version, tag the release commit `v<version>`, publish the
    signed file the same way and update the recipe's `commit`.
    Open for 1.0.15 (40), the F-Droid build of the November 16 fixes and the
-   November 17 far-side fix: tag the commit that rebuilt it with the
-   far-side fix ("Android 1.0.15 (40) and 1.0.14 (39): rebuilt with the
-   far-side fix") as `v1.0.15`, attach the signed file as
-   `hexsweeper-1.0.15.apk`, and put that commit's full hash in the
-   `commit:` field of the recipe's 1.0.15 entry.
+   November 17 far-side fix: tag `d77efab` ("Android 1.0.15 (40) and
+   1.0.14 (39): rebuilt with the far-side fix") as `v1.0.15` and attach the
+   signed file as `hexsweeper-1.0.15.apk`. The recipe's 1.0.15 entry here
+   already names that commit's full hash.
 4. Done on November 16, 2026, for 1.0.13 (38): the recipe is on branch `app.hexodus.ios` of
    the `fdroiddata` fork and its pipeline passes, including the build, the
    source scan and the comparison with the signed file. Two things that run
