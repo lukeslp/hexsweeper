@@ -20,7 +20,11 @@ Builds:
     subdir: app/android/app
     sudo:
       - apt-get update
-      - apt-get install -y npm
+      - apt-get install -y xz-utils
+      - curl -Lo node.tar.xz https://nodejs.org/dist/v22.23.5/node-v22.23.5-linux-x64.tar.xz
+      - echo "cdeb8670a0c81f51b4dc4ac61919f9b1ad917b304bf8221eb939570663d240f8  node.tar.xz"
+        | sha256sum -c -
+      - tar -xJf node.tar.xz --strip-components=1 -C /usr/local/
       - npm install -g pnpm@10.18.0
     gradle:
       - yes
@@ -28,6 +32,8 @@ Builds:
       - cd ../..
       - pnpm install --frozen-lockfile
       - HEXSWEEPER_FDROID=1 pnpm exec cap sync android
+    scandelete:
+      - app/node_modules/.pnpm/@capacitor+cli@8.3.1/node_modules/@capacitor/cli/assets
 
 AllowedAPKSigningKeys: 404fd13d59f95b59fb9342e20e5953b15603832dda8ca75181c959b41fb5d592
 
