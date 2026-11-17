@@ -29,6 +29,9 @@ jobs:
       - name: Reflection renderer frame loop
         run: node sphere/test-mirror-loop.js
 
+      - name: Reflection themes keep the far side hidden
+        run: node sphere/test-far-side.js
+
       - name: Glitch Sphere state and route contracts
         run: |
           node glitch-sphere/test-glitch-hazard.js
