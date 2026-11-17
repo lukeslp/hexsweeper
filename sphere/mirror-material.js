@@ -1139,6 +1139,8 @@ void main() {
       this.lastTimeAt = this.startedAt;
       this.lastPaintAt = 0;
       this.frame = 0;
+      // Whether the owner wants the loop; visibility only pauses and resumes it.
+      this.running = false;
       this.failed = false;
       this.reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
       this.mobile = matchMedia("(max-width: 700px), (pointer: coarse)").matches;
@@ -1242,9 +1244,13 @@ void main() {
         this.pointer.tx = (event.clientX / Math.max(1, innerWidth)) * 2 - 1;
         this.pointer.ty = (event.clientY / Math.max(1, innerHeight)) * 2 - 1;
       };
+      // Coming back to the page resumes the loop only if it was meant to be
+      // running: Sphere stops it (and hides the canvas) on plain themes, and
+      // a visibility change used to restart it, drawing into the hidden canvas
+      // at its usual frame rate for the rest of the session.
       this.onVisibility = () => {
-        if (document.hidden) this.stop();
-        else this.start();
+        if (document.hidden) this.cancelFrame();
+        else this.scheduleFrame();
       };
       this.onSphereAction = (event) => this.handleSphereAction(event.detail || {});
       addEventListener("resize", this.onResize, { passive: true });
@@ -1559,12 +1565,22 @@ void main() {
     }
 
     start() {
-      if (this.frame || document.hidden) return;
+      this.running = true;
+      this.scheduleFrame();
+    }
+
+    stop() {
+      this.running = false;
+      this.cancelFrame();
+    }
+
+    scheduleFrame() {
+      if (!this.running || this.frame || document.hidden) return;
       this.lastTimeAt = performance.now();
       this.frame = requestAnimationFrame((time) => this.loop(time));
     }
 
-    stop() {
+    cancelFrame() {
       if (this.frame) cancelAnimationFrame(this.frame);
       this.frame = 0;
     }
@@ -1584,7 +1600,7 @@ void main() {
         this.render(time, false);
         this.lastPaintAt = time;
       }
-      this.start();
+      this.scheduleFrame();
     }
 
     render(time, force) {
