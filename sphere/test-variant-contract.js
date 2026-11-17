@@ -203,7 +203,21 @@ function createHarness(options) {
   };
   sandbox.window = sandbox;
   sandbox.global = sandbox;
-  vm.runInNewContext(sphereSource, sandbox, { filename: "sphere.js" });
+  vm.createContext(sandbox);
+  if (options.storageAccessThrows) {
+    // What a browser that blocks site data does: reading the property itself
+    // throws, before any getItem call can be wrapped. Defined from inside the
+    // context so bare and indexed reads both reach the getter.
+    vm.runInContext(
+      'for (const name of ["localStorage", "sessionStorage"]) {' +
+        "Object.defineProperty(globalThis, name, { configurable: true, get() {" +
+        'throw new Error("SecurityError: Failed to read the \'" + name + "\' property from \'Window\'");' +
+        "} });" +
+      "}",
+      sandbox
+    );
+  }
+  vm.runInContext(sphereSource, sandbox, { filename: "sphere.js" });
   const api = sandbox.SphereSweeper.boot(options.boot || {});
   return {
     api,
@@ -339,6 +353,23 @@ for (const blocked of [false, true]) {
     assert.strictEqual(welcomes, 0);
     assert.strictEqual(harness.elements["help-overlay"].hidden, true);
     assert.strictEqual(harness.api.flagAt(0), true);
+    harness.elementListeners["help-btn:click"]({ preventDefault() {}, stopPropagation() {} });
+    assert.strictEqual(harness.elements["help-overlay"].hidden, false);
+  });
+}
+
+for (const search of ["?welcome=0", "?fresh=1"]) {
+  test(`boots and plays when reading storage itself throws (${search})`, () => {
+    const harness = createHarness({
+      withHelp: true,
+      search,
+      storageAccessThrows: true,
+      boot: { autoWelcome: false },
+    });
+    assert.ok(harness.api.getState().cells.length > 0, "no board was built");
+    assert.strictEqual(harness.api.flagAt(0), true);
+    assert.strictEqual(harness.api.digAt(1), true);
+    harness.runFrame();
     harness.elementListeners["help-btn:click"]({ preventDefault() {}, stopPropagation() {} });
     assert.strictEqual(harness.elements["help-overlay"].hidden, false);
   });

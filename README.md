@@ -40,6 +40,7 @@ Node 22 and Python 3.12. None needs an install:
 ```bash
 node sphere/test-neighbors.js
 node sphere/test-variant-contract.js
+node sphere/test-mirror-loop.js
 node glitch-sphere/test-glitch-hazard.js
 node glitch-sphere/test-integration.js
 node flux-sphere/test-flux-pairs.js
