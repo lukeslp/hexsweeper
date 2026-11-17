@@ -54,8 +54,8 @@ so its bytes do not depend on how the source was checked out. CI runs this
 build on every push and prints the file's SHA-256.
 
 For F-Droid's reproducible-build check, sign that same unsigned file with the
-Hexsweeper release key and attach it to the GitHub release as
-`hexsweeper-<version>.apk`. F-Droid rebuilds from the tag, compares, and ships
+Hexsweeper release key using `fdroid/sign-upstream.sh` and attach it to the
+GitHub release as `hexsweeper-<version>.apk`. F-Droid rebuilds from the tag, compares, and ships
 the signed file.
 
 ## Licenses
@@ -72,10 +72,11 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
 
 1. The repository must be public. F-Droid clones it without signing in, and
    reviewers read its history for at least three months of development.
-2. Give the catalog release a version code no other channel has used. The
-   F-Droid APK and the direct download share an application id and signing
-   key, so the same code must never name two different files. F-Droid reads
-   the version from `app/android/app/build.gradle` as written.
+2. Version 1.0.12 (37) is the F-Droid build's alone: the F-Droid APK and the
+   direct download share an application id and signing key, so one code must
+   never name two different files. The next direct or store build takes 38 or
+   higher. F-Droid reads the version from `app/android/app/build.gradle` as
+   written.
 3. Tag the release commit `v<version>` and publish a GitHub release with the
    signed file. The recipe's `commit` and `AllowedAPKSigningKeys` are zeros
    until then.
