@@ -57,11 +57,20 @@ android {
     }
     buildTypes {
         release {
+            // Release bytes must not depend on how the source was checked out
+            // (F-Droid rebuilds from a clean clone and compares with the signed file).
+            vcsInfo.include false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (hasReleaseSigning) signingConfig signingConfigs.release
         }
     }
+}
+
+// F-Droid's scanner rejects the Play dependency-metadata signing block in an APK.
+// Play bundles keep theirs (includeInBundle is left at its default).
+android.dependenciesInfo {
+    includeInApk = false
 }
 
 tasks.register('printApplicationId') {

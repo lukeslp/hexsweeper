@@ -9,7 +9,9 @@ TASK="${1:-assembleDebug}"
 
 GRADLE_ARGS=()
 case "$TASK" in
-    assembleDebug|bundleRelease) ;;
+    # assembleRelease without the signing variables gives the unsigned APK
+    # F-Droid would build; see docs/FDROID.md.
+    assembleDebug|assembleRelease|bundleRelease) ;;
     bundlePlayRelease)
         # Google Play bundle: the application id comes from
         # hexsweeperPlayApplicationId in android/gradle.properties.
