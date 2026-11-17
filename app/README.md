@@ -71,6 +71,19 @@ neither updates the other, and a saved board, best times and settings do not
 move between them. The FileProvider authority and the Share plugin follow the
 id; the app has no deep links or asset links to follow it.
 
+## Android 1.0.14 (39), direct, Google Play and Amazon builds, November 16, 2026
+
+1.0.11 (36) with the November 16 payload and one shell change. Faces from
+the far side of the sphere no longer show through its edge while it turns
+(M, L and XL boards in Light and Dark); the reflection renderer stays
+parked while its canvas is hidden; and when Android reclaims or crashes
+the WebView's renderer, `MainActivity` rebuilds the board from its autosave
+instead of the whole app closing. Prepared and built unsigned; not signed
+or released in this repository. 37 and 38 belong to the F-Droid build, so
+this build takes 39. Do not tag it `v1.0.14`: F-Droid's update check reads
+`v` tags, and its recipe would build that commit as an F-Droid build with
+the code 39 this build uses.
+
 ## Android 1.0.13 (38), F-Droid build, November 16, 2026
 
 The same app as 1.0.12 (37). The release was cut again because F-Droid reads
