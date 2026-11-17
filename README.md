@@ -98,7 +98,7 @@ Android release notes are in
 [`fastlane/metadata/android/en-US/changelogs/`](fastlane/metadata/android/en-US/changelogs/),
 one file per version code. The per-version notes for the native builds are in
 [app/README.md](app/README.md) and [app/docs/RELEASE.md](app/docs/RELEASE.md).
-F-Droid releases are tagged `v<version>`; the first is `v1.0.12`.
+F-Droid releases are tagged `v<version>`. `v1.0.13` is the current one; `v1.0.12` was the same app with an out-of-date listing screenshot.
 The F-Droid build and what is open before a catalog request are in
 [docs/FDROID.md](docs/FDROID.md).
 
