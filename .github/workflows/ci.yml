@@ -60,6 +60,9 @@ jobs:
       - name: Web launcher route contract
         run: node tools/test-web-launcher.mjs
 
+      - name: Classic Undo and Sphere phone size in a browser
+        run: node tools/test-play-browser.mjs
+
       - name: Collection export drift guard
         run: python3 tools/export-collection.py --check
 
