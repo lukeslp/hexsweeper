@@ -115,6 +115,16 @@ try {
   };
   await send("Runtime.enable");
   await send("Page.enable");
+  // Seeded deals, so every run plays the same boards (mulberry32).
+  await send("Page.addScriptToEvaluateOnNewDocument", { source: `(() => {
+    let a = 20261117;
+    Math.random = () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  })()` });
 
   // ---- 1. Classic: Undo after a mine hit -----------------------------------
   await device({ width: 412, height: 860, touch: false });
@@ -125,6 +135,21 @@ try {
   const openKeys = `[...classicGame.state.map.values()].filter((c) => c.revealed).map((c) => c.q + "," + c.r).sort().join(" ")`;
   const visible = (id) => `(() => { const n = document.getElementById(${JSON.stringify(id)}); return !!n && !n.hidden && n.getClientRects().length > 0; })()`;
 
+  // Every point of the board takes a real click: nothing invisible (the closed
+  // menu's readouts and close button once did) sits over the canvas.
+  const covered = await evaluate(`(() => {
+    const canvas = classicGame.state.canvas, rect = canvas.getBoundingClientRect(), out = new Set();
+    for (let y = rect.top + 1; y < Math.min(rect.bottom, innerHeight); y += 3) for (let x = rect.left + 1; x < Math.min(rect.right, innerWidth); x += 3) {
+      const el = document.elementFromPoint(x, y);
+      if (!el || el === canvas) continue;
+      for (let n = el; n && n !== document.body; n = n.parentElement) {
+        const css = getComputedStyle(n);
+        if (css.opacity === "0" || css.visibility === "hidden") { out.add(el.id || n.id || el.tagName); break; }
+      }
+    }
+    return [...out].join(", ");
+  })()`);
+  expect(!covered, `Classic: invisible elements catch clicks over the board (${covered})`);
   expect(await evaluate(`document.getElementById("undo-btn").hidden`), "Classic: Undo shows before any loss");
   expect(await evaluate("classicGame.canUndo() === false"), "Classic: a fresh board claims an undo");
   await evaluate(`classicGame.dig("0,0")`);
@@ -171,24 +196,30 @@ try {
   expect(await evaluate(visible("again-btn")), "Classic: Play again is not shown after a win");
   expect(await evaluate(`document.getElementById("undo-btn").hidden`), "Classic: a win offers Undo");
 
-  // A chord that opens a mine is one undo step too. Flag a safe neighbour of
+  // A chord that opens a mine is one undo step too. Flag a safe neighbor of
   // a number so the count is "satisfied" wrongly, then click the number.
-  await evaluate(`document.getElementById("again-btn").click()`);
-  await evaluate(`classicGame.dig("0,0")`);
-  await settled();
-  const chordKey = await evaluate(`(() => {
-    const g = classicGame;
-    for (const c of g.state.map.values()) {
-      if (!c.revealed || c.neighborMines !== 1) continue;
-      const ns = g.getNeighbors(c.q, c.r).filter((n) => !n.revealed);
-      const safe = ns.find((n) => !n.isMine);
-      if (!safe || !ns.some((n) => n.isMine)) continue;
-      g.toggleFlag(safe);
-      return c.q + "," + c.r;
-    }
-    return null;
-  })()`);
-  expect(!!chordKey, "Classic: no number to chord on this deal");
+  // Not every opening shows a 1 beside a mine and a safe hex; deal again
+  // until one does.
+  let chordKey = null;
+  for (let deal = 0; deal < 20 && !chordKey; deal++) {
+    await evaluate(`document.getElementById("again-btn").click()`);
+    await waitFor(() => evaluate("classicGame.state.isFirstClick && !classicGame.state.isGameOver"), "Classic: Play again did not deal a fresh board");
+    await evaluate(`classicGame.dig("0,0")`);
+    await settled();
+    chordKey = await evaluate(`(() => {
+      const g = classicGame;
+      for (const c of g.state.map.values()) {
+        if (!c.revealed || c.neighborMines !== 1) continue;
+        const ns = g.getNeighbors(c.q, c.r).filter((n) => !n.revealed);
+        const safe = ns.find((n) => !n.isMine);
+        if (!safe || !ns.some((n) => n.isMine)) continue;
+        g.toggleFlag(safe);
+        return c.q + "," + c.r;
+      }
+      return null;
+    })()`);
+  }
+  expect(!!chordKey, "Classic: no number to chord in 20 deals");
   if (chordKey) {
     // Find the number on screen through the board's own hover hit test.
     const spot = await evaluate(`(() => {
