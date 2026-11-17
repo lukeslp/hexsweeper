@@ -44,12 +44,17 @@ Gilded Ribbon and Stratosphere, whose images had no confirmed source, left
 the payload in 1.0.10. Source links and the search record are in
 [the reflection source notes](../sphere/assets/reflections/SOURCES.md).
 
+The F-Droid build (`www-fdroid/`) leaves these three themes out and embeds no
+photograph.
+
 ## Classic Minesweeper screenshot
 
 `www/assets/classic-minesweeper.png` is a screenshot of Microsoft's Minesweeper on a Windows XP desktop, shown
 as a history note in the help sheet. It is not this project's artwork, its
 source is not recorded, and the MIT license here does not cover it. Microsoft,
 Windows and Minesweeper are trademarks of Microsoft Corporation.
+
+The F-Droid build does not include it.
 
 ## Notices inside the app
 

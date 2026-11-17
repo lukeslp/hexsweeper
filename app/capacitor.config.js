@@ -12,7 +12,9 @@ const appId = "app.hexodus.ios";
 const appName = "Hexsweeper";
 // Vendored static payload from the game source at the repository root; see WWW_SOURCE.txt.
 // No bundler runs here; www/ is already the finished game.
-const webDir = "www";
+// HEXSWEEPER_FDROID=1 stages the F-Droid payload instead: the same game without
+// the photo themes and the Minesweeper screenshot; see WWW_SOURCE_FDROID.txt.
+const webDir = process.env.HEXSWEEPER_FDROID === "1" ? "www-fdroid" : "www";
 const loggingBehavior = "production";
 const plugins = {
   // Keeps the native launch screen up until the game calls SplashScreen.hide()

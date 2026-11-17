@@ -115,9 +115,18 @@ jobs:
         working-directory: app
         run: pnpm android:build:debug
 
-      # The unsigned release APK, built the way F-Droid would build it.
-      - name: Android unsigned release build
+      # The unsigned F-Droid APK, built the way F-Droid would build it: the
+      # www-fdroid payload, which must carry no photograph and no screenshot.
+      - name: Android unsigned F-Droid build
         working-directory: app
         run: |
-          scripts/android-build.sh assembleRelease
-          sha256sum android/app/build/outputs/apk/release/app-release-unsigned.apk
+          grep -E '^[0-9a-f]{64}  ' WWW_SOURCE_FDROID.txt | (cd www-fdroid && sha256sum -c --status -)
+          scripts/android-build.sh assembleFdroidRelease
+          APK=android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if unzip -l "$APK" | grep -E 'assets/public/.*(classic-minesweeper|\.webp$)'; then
+            echo "The F-Droid APK carries an image it must not." >&2; exit 1
+          fi
+          if unzip -p "$APK" assets/public/index.html | grep -q 'data:image/webp'; then
+            echo "The F-Droid payload embeds a photograph." >&2; exit 1
+          fi
+          sha256sum "$APK"
