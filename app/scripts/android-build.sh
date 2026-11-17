@@ -12,6 +12,11 @@ case "$TASK" in
     # assembleRelease without the signing variables gives the unsigned APK
     # F-Droid would build; see docs/FDROID.md.
     assembleDebug|assembleRelease|bundleRelease) ;;
+    assembleFdroidRelease)
+        # The F-Droid build: the www-fdroid payload, unsigned.
+        TASK=assembleRelease
+        export HEXSWEEPER_FDROID=1
+        ;;
     bundlePlayRelease)
         # Google Play bundle: the application id comes from
         # hexsweeperPlayApplicationId in android/gradle.properties.

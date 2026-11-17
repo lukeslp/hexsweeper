@@ -27,14 +27,9 @@ Builds:
     prebuild:
       - cd ../..
       - pnpm install --frozen-lockfile
-      - pnpm exec cap sync android
+      - HEXSWEEPER_FDROID=1 pnpm exec cap sync android
 
 AllowedAPKSigningKeys: 0000000000000000000000000000000000000000000000000000000000000000
-
-AntiFeatures:
-  NonFreeAssets:
-    en-US: Three sphere themes use photographs under the Unsplash License, and
-      the help sheet shows a screenshot of Microsoft Minesweeper.
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
