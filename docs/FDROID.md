@@ -72,12 +72,14 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
 
 1. The repository must be public. F-Droid clones it without signing in, and
    reviewers read its history for at least three months of development.
-2. Versions 1.0.12 (37), 1.0.13 (38) and 1.0.15 (40) are the F-Droid build's alone: the F-Droid APK and the
+2. Versions 1.0.12 (37), 1.0.13 (38), 1.0.15 (40) and 1.0.16 (41) are the F-Droid build's alone: the F-Droid APK and the
    direct download share an application id and signing key, so one code must
    never name two different files. 1.0.14 (39) is the direct, Google Play and
    Amazon build of November 16, built from `5df3ecc` (a short line from
-   `f7bdded` that main merges, since main sets 40); the next direct or
-   store build takes 41 or higher.
+   `f7bdded` that main merges, since main sets 40). 1.0.16 (41) is the
+   F-Droid build too: the 1.0.15 payload with R8 code and resource shrinking
+   turned on, which F-Droid's reviewer asked for on November 20, 2026. The
+   next direct or store build takes 42 or higher.
    F-Droid reads the version from `app/android/app/build.gradle` as written,
    so no commit that sets 39 (`f7bdded`, `cc64a42`, `5df3ecc`) may carry a `v` tag.
 3. Done for 1.0.13: tag `v1.0.13`, with the signed file on its GitHub release.
