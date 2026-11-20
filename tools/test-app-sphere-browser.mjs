@@ -296,18 +296,24 @@ try {
   await evaluate('document.getElementById("qc-reset").click()');
   await delay(300);
   assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().flagsPlaced'), 0, "New sphere did not reset the board");
-  // Game over: the banner is a labelled card (Share · Undo · New sphere) and its Undo revives the run.
+  // A loss shows no card: the sphere stays as it fell and one Undo waits above
+  // the bar, as in the Minimal games' dead ends. Its press revives the run.
   await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
   await delay(60);
   await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x, y: centre.y, button: "left", clickCount: 1 });
   await waitExpression('!window.HEXSWEEPER_SPHERE_GAME.getState().isFirstClick', "dig before detonation did not resolve");
   await evaluate('(() => { const g = window.HEXSWEEPER_SPHERE_GAME; const s = g.getState(); const i = s.cells.findIndex(c => c.isMine && !c.revealed); g.digAt(i); })()');
-  await waitExpression('document.getElementById("sphere-banner").classList.contains("visible")', "game-over banner did not show");
-  const banner = await evaluate('Array.from(document.querySelectorAll("#banner-actions .banner-btn")).filter(b => !b.hidden).map(b => b.querySelector(".banner-btn-label").textContent.trim())');
-  assert.deepEqual(banner, ["Share", "Undo", "New sphere"], `banner buttons are ${banner.join(",")}`);
-  await evaluate('document.getElementById("banner-undo-btn").click()');
+  await waitExpression('!document.getElementById("lost-undo-btn").hidden', "loss Undo did not show");
+  const loss = await evaluate('(() => { const b = document.getElementById("lost-undo-btn"); const r = b.getBoundingClientRect(); return { banner: document.getElementById("sphere-banner").classList.contains("visible"), label: b.getAttribute("aria-label"), said: document.getElementById("sphere-announce").textContent, centered: Math.abs(r.left + r.width / 2 - innerWidth / 2) < 2, size: b.offsetWidth }; })()');
+  assert.equal(loss.banner, false, "a loss still showed the card");
+  assert.equal(loss.label, "Undo failed move");
+  assert.match(loss.said, /Mine detonated/, "the loss was not announced");
+  assert.ok(loss.centered, "loss Undo is not centered");
+  assert.equal(loss.size, 48, "loss Undo is not 48px");
+  await evaluate('document.getElementById("lost-undo-btn").click()');
   await delay(300);
-  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().isGameOver'), false, "banner Undo did not revive the run");
+  assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().isGameOver'), false, "loss Undo did not revive the run");
+  assert.equal(await evaluate('document.getElementById("lost-undo-btn").hidden'), true, "loss Undo stayed after the undo");
   await evaluate('document.getElementById("qc-reset").click()');
   await delay(300);
 
@@ -352,27 +358,34 @@ try {
   await evaluate('document.getElementById("qc-reset").click()');
   await delay(250);
 
-  // The signed Fire build takes the Android dense-board renderer during
-  // interaction. Exercise the full XL geometry, then let the complete resting
-  // renderer repaint so both paths stay covered by the native-payload gate.
+  // Android keeps the full detail (depth skirts, counts, glows) in moving
+  // frames; only a device that measures under 25 fps takes the light frames
+  // for that board size. Exercise the full XL geometry in both: first a drag
+  // with full detail, then with the light frames forced, then the complete
+  // resting renderer, so every path stays covered by the native-payload gate.
   await evaluate('window.HEXSWEEPER_SPHERE_GAME.setThemeIndex(SphereSweeper.THEMES.findIndex(t => t.id === "light")); window.HEXSWEEPER_SPHERE_GAME.setSize("xlarge"); void 0;');
   await waitExpression('window.HEXSWEEPER_SPHERE_GAME.getState().cells.length === 2252', "XL sphere did not build");
   const xlAmbientBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
   await delay(180);
   const xlAmbientAfter = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
   assert.ok(Math.abs(xlAmbientAfter - xlAmbientBefore) > 0.001, "XL ambient spin did not advance");
-  const xlRotBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
-  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x - 80, y: centre.y, button: "left", clickCount: 1 });
-  for (let i = 1; i <= 8; i++) {
-    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: centre.x - 80 + i * 20, y: centre.y, button: "left" });
-    await delay(18);
+  for (const light of [false, true]) {
+    if (light) await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().lightMotionFaces.add(2252); void 0;');
+    else assert.equal(await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().lightMotionFaces.has(2252)'), false, "XL started on the light motion frames");
+    const xlRotBefore = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().rotY');
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: centre.x - 80, y: centre.y, button: "left", clickCount: 1 });
+    for (let i = 1; i <= 8; i++) {
+      await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: centre.x - 80 + i * 20, y: centre.y, button: "left" });
+      await delay(18);
+    }
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x + 80, y: centre.y, button: "left", clickCount: 1 });
+    await delay(450);
+    const xlAfter = await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return { rotY: s.rotY, drawError: !!s.drawErrorReported, frameAge: performance.now() - s.lastFrameAt }; })()');
+    const label = light ? "XL light-frame" : "XL full-detail";
+    assert.ok(Math.abs(xlAfter.rotY - xlRotBefore) > 0.3, `${label} drag did not rotate`);
+    assert.equal(xlAfter.drawError, false, `${label} renderer threw`);
+    assert.ok(xlAfter.frameAge < 1500, `${label} frame loop stalled (${Math.round(xlAfter.frameAge)}ms since last frame)`);
   }
-  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: centre.x + 80, y: centre.y, button: "left", clickCount: 1 });
-  await delay(450);
-  const xlAfter = await evaluate('(() => { const s = window.HEXSWEEPER_SPHERE_GAME.getState(); return { rotY: s.rotY, drawError: !!s.drawErrorReported, frameAge: performance.now() - s.lastFrameAt }; })()');
-  assert.ok(Math.abs(xlAfter.rotY - xlRotBefore) > 0.3, "XL drag did not rotate");
-  assert.equal(xlAfter.drawError, false, "XL dense-board renderer threw");
-  assert.ok(xlAfter.frameAge < 1500, `XL frame loop stalled (${Math.round(xlAfter.frameAge)}ms since last frame)`);
   const xlParkedAt = await evaluate('window.HEXSWEEPER_SPHERE_GAME.getState().lastFrameAt');
   await delay(260);
   assert.equal(
