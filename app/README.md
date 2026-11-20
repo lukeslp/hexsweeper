@@ -222,7 +222,7 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `92b3aca`, a bounded maintenance line on the
+The current payload pins `42edf16`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
 
@@ -251,9 +251,13 @@ straight to the board). It adds, and nothing else:
 - no classic Minesweeper screenshot in Help (`92b3aca`, at the owner's
   instruction on November 17, 2026; the web keeps it). The three photo themes
   keep their images, credited on the Licenses page.
+- main's `902af61` (PR 43), ported by hand (`42edf16`, November 20, 2026):
+  on Android the sphere keeps its depth tiers and counts while it turns,
+  falling back to lighter frames only on a board whose frames measure slow;
+  and a lost run shows one outlined Undo above the bar instead of a card.
 
-`www-fdroid/` pins `fdb3294`: `8c93811` (the F-Droid change: no photo
-themes, no screenshot) plus the same four fixes. Its themes have no
+`www-fdroid/` pins `d96ffff`: `8c93811` (the F-Droid change: no photo
+themes, no screenshot) plus the same five fixes. Its themes have no
 photograph, so the Android field change leaves them as they were; it is
 carried so both lines keep one engine.
 
