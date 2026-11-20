@@ -4047,6 +4047,8 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       targetRotY: 0,
       targetRotX: 0.25,
       dragging: false,
+      /** Board sizes (face counts) that take the light Android motion frames. */
+      lightMotionFaces: new Set(),
       dragStart: null,
       // Menu chrome may leave rotation live while suppressing every gameplay
       // tap, long press and zoom gesture on the canvas.
@@ -8030,6 +8032,40 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       }
     }
 
+
+    /*
+     * Same rule as Sphere: moving frames keep the full detail, and only a
+     * device that measurably cannot hold 25 fps with it, over 16 moving
+     * frames, takes the light frames for that board size until reload.
+     */
+    const MOTION_SAMPLE = 16;
+    const MOTION_FLOOR_MS = 40;
+    const motionGaps = [];
+    let motionFaces = 0;
+    let lastMotionFrameAt = 0;
+    function noteMotionFrame(now, moving, light) {
+      if (motionFaces !== state.cells.length) {
+        motionFaces = state.cells.length;
+        motionGaps.length = 0;
+        lastMotionFrameAt = 0;
+      }
+      if (!moving || light || document.hidden) {
+        lastMotionFrameAt = 0;
+        return;
+      }
+      if (lastMotionFrameAt) {
+        const gap = now - lastMotionFrameAt;
+        if (gap > 0 && gap < 250) motionGaps.push(gap);
+      }
+      lastMotionFrameAt = now;
+      if (motionGaps.length < MOTION_SAMPLE) return;
+      const sorted = motionGaps.slice().sort((a, b) => a - b);
+      motionGaps.length = 0;
+      if (sorted[sorted.length >> 1] > MOTION_FLOOR_MS) {
+        state.lightMotionFaces.add(state.cells.length);
+      }
+    }
+
     function draw() {
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
@@ -8143,12 +8179,15 @@ window.HEXSWEEPER_SPHERE_COLLECTION = true;
       const darkMono =
         !!(state.theme.pureCovered || state.theme.id === "dark");
       const styleId = state.countStyle;
-      const fastInteraction =
-        IS_ANDROID_DEVICE &&
-        state.cells.length >= 642 &&
+      const denseAndroid = IS_ANDROID_DEVICE && state.cells.length >= 642;
+      const moving =
+        denseAndroid &&
         (state.dragging ||
           Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
           Math.abs(state.targetRotX - state.rotX) > 0.0008);
+      const fastInteraction =
+        moving && state.lightMotionFaces.has(state.cells.length);
+      if (denseAndroid) noteMotionFrame(now, moving, fastInteraction);
 
       // Per-tile permanent heights (hover is a temporary fifth offset).
       const heights = new Float32Array(state.cells.length);
