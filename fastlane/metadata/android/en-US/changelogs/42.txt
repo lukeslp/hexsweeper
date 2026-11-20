@@ -1,0 +1,1 @@
+The sphere keeps its depth and numbers while you turn it. After a mine, one Undo button takes the move back; New sphere starts over.
