@@ -1,0 +1,1 @@
+A smaller download: the build now leaves out code and resources the game never uses. Nothing in play changes.
