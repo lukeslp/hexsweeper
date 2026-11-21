@@ -63,6 +63,12 @@ jobs:
       - name: Classic Undo and Sphere phone size in a browser
         run: node tools/test-play-browser.mjs
 
+      - name: Saves move from dr.eamer.dev to lukesteuber.com
+        run: node tools/test-site-move.mjs
+
+      - name: Saves move from dr.eamer.dev in a browser
+        run: node tools/test-site-move-browser.mjs
+
       - name: Collection export drift guard
         run: python3 tools/export-collection.py --check
 
