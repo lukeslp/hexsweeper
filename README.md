@@ -138,13 +138,22 @@ loads first on every served page and carries them across:
   for debugging (that page only; its links move again). The saves there are
   left in place either way.
 - **On lukesteuber.com** it imports a hand-off before any game reads storage,
-  then strips the fragment. Best times keep the lower seconds for each size
-  and the endless best keeps the higher count. Settings and unfinished boards
-  only fill what lukesteuber.com does not already have. Unknown keys and
-  values of the wrong shape are ignored. Each hand-off imports once. After the
-  first one lands, a later one, from an old link or tab, brings records only,
-  so a board finished or cleared on lukesteuber.com cannot come back. It
-  never redirects.
+  then strips the fragment. Anyone can write a link with a hand-off in it, so
+  it imports only when the browser reports the page was reached from
+  dr.eamer.dev (`document.referrer` is `https://dr.eamer.dev/`, which the
+  default referrer policy sends on the redirect; these pages and Drummer set
+  no other policy). A link from anywhere else, or with no referrer, is
+  stripped and changes nothing, not even the record of past hand-offs. A
+  hand-off is also refused whole if any part is off: a key that is not the
+  game's, a value not in the exact shape the game writes, a board cell
+  outside its board, or a record outside plausible bounds (a best time from
+  1 second to under a day, an endless best no larger than a full plate). Best
+  times keep the lower seconds for each size and the endless best keeps the
+  higher count. Settings and unfinished boards only fill what lukesteuber.com
+  does not already have. Each hand-off imports once. After the first one
+  lands, a later one, from an old link or tab, brings records only, so a
+  board finished or cleared on lukesteuber.com cannot come back. It never
+  redirects.
 - **Anywhere else** (the apps, `file://`, localhost) it does nothing. The
   sealed app payloads do not include it.
 
@@ -158,8 +167,10 @@ What it carries, in this order:
    settings and seen-help flags of the Water Wheel, the reflection studio and
    the collection experiments.
 3. Unfinished boards, most valuable first: Sphere, the Infinite plate,
-   Classic, the Water Wheel, Escape, the reflection studio, Glitch Sphere,
-   Flux Sphere, the Dodecahedron campaign.
+   Classic, the Water Wheel, Escape, the reflection studio. Glitch Sphere,
+   Flux Sphere and the Dodecahedron campaign keep their unfinished boards on
+   dr.eamer.dev: their saves carry engine state that cannot be checked
+   strictly enough to accept.
 
 The packed fragment stays under 16,000 characters, so the whole address stays
 well under 32 KB. Records and settings always fit, and an unfinished board at
@@ -172,7 +183,11 @@ Left behind on purpose: the Minimal-wide Access keys shared by every game on
 a site (`minimal-access.v1:default`, `:locked`, `:exact`, `:calibration`,
 `minimal-gaze.v1:invert-y`), the app-only Help state
 (`hexsweeper-sphere-native-ui-v1`), and the older drag-direction keys
-that Sphere and the Water Wheel delete on load. The full key list, with the shape each key must have,
+that Sphere and the Water Wheel delete on load. A browser or extension
+that strips referrers refuses the hand-off, so its player's saves stay on
+dr.eamer.dev (still there with `?stay=1`). Any page on the dr.eamer.dev
+origin passes the referrer check; the strict shapes and bounds still apply.
+The full key list, with the shape each key must have,
 is `FAMILIES` in `site-move.js`. A new storage key needs an entry there. A
 new served page needs the script tag: the exporter adds it to generated
 pages, keeps the version stamp on the authored ones listed in

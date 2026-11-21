@@ -32,8 +32,8 @@ function store(seed = {}) {
   };
 }
 
-/** Run site-move.js once at `href` with the given storage. */
-function boot(href, local = {}, session = {}) {
+/** Run site-move.js once at `href` with the given storage and referrer. */
+function boot(href, local = {}, session = {}, referrer = "") {
   const url = new URL(href);
   const replaced = [];
   const location = {
@@ -60,7 +60,7 @@ function boot(href, local = {}, session = {}) {
     history,
     localStorage: store(local),
     sessionStorage: store(session),
-    document: { documentElement: { style: {} } },
+    document: { documentElement: { style: {} }, referrer },
     setTimeout: () => 0,
     TextEncoder,
     TextDecoder,
@@ -73,13 +73,25 @@ function boot(href, local = {}, session = {}) {
 
 const OLD = "https://dr.eamer.dev/games/hexsweeper";
 const NEW = "https://lukesteuber.com/games/hexsweeper";
+const FROM_OLD = "https://dr.eamer.dev/"; // what the browser reports after the redirect
+/** Land on lukesteuber.com the way the redirect does: referred by dr.eamer.dev. */
+const arrive = (url, local = {}, session = {}) => boot(url, local, session, FROM_OLD);
 const best = (o) => JSON.stringify(o);
 const sphereRun = (extra = {}) =>
-  JSON.stringify({ v: 2, kind: "sphere", difficulty: "hard", mines: [3, 9, 40], revealed: [1, 2, 4], flagged: [3], savedAt: 1000, ...extra });
-const classicRun = JSON.stringify({ v: 1, kind: "classic", endless: false, difficulty: "medium", first: false, over: false, mines: ["0,1"], revealed: ["0,0"], flagged: [], savedAt: 5 });
+  JSON.stringify({ v: 2, kind: "sphere", difficulty: "hard", first: false, over: false, won: false, flags: 1, mineCount: 245, time: 30, rotY: 0.4, rotX: -0.2, zoom: 1, mines: [3, 9, 40], revealed: [1, 2, 4], flagged: [3], savedAt: 1000, ...extra });
+const classicRun = JSON.stringify({ v: 1, endless: false, difficulty: "medium", radius: 7, first: false, over: false, win: null, endReason: null, finish: null, cleared: 1, flags: 0, mineCount: 35, time: 5, cam: [0, 0], zoom: 1, mines: ["0,1", "-3,2"], revealed: ["0,0"], flagged: [], torn: [], kind: "classic", savedAt: 5 });
+function plateCells(radius) {
+  const out = [];
+  for (let q = -radius; q <= radius; q++) for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) out.push(`${q},${r}`);
+  return out;
+}
+const plateRun = (radius, extra = {}) => {
+  const all = plateCells(radius);
+  return JSON.stringify({ v: 1, endless: true, difficulty: "medium", density: 0.16, radius, first: false, over: false, win: null, endReason: null, finish: null, cleared: 1, flags: 0, mineCount: 9, time: 9, cam: [12.5, -3], zoom: 1, mines: all.filter((_, i) => i % 6 === 0), revealed: all.filter((_, i) => i % 6 === 1), flagged: [], torn: [], mode: "light", savedAt: 2, ...extra });
+};
 
 const oldSaves = {
-  "hexsweeper-sphere-best-v1": best({ easy: { seconds: 50, at: "2026-11-01T00:00:00Z" }, medium: { seconds: 200, at: null }, hard: { seconds: 900, at: null } }),
+  "hexsweeper-sphere-best-v1": best({ easy: { seconds: 50, at: "2026-11-01T00:00:00.000Z" }, medium: { seconds: 200, at: null }, hard: { seconds: 900, at: null } }),
   "hexsweeper-endless-best": "321",
   "hexsweeper-sphere-theme-v6": "mercury",
   "hexsweeper-sphere-size-v2": "hard",
@@ -90,16 +102,30 @@ const oldSaves = {
   "minimal-access.v1:hex-infinite": JSON.stringify({ mode: "switch", speed: "slow" }),
   "hexsweeper-sphere-run-v2": sphereRun(),
   "hexsweeper-classic-run-v1": classicRun,
+  "hexsweeper-endless-plate-v1": plateRun(5),
   // Not the game's, or not readable: never sent.
   "someone-else-v1": "secret",
   "hexsweeper-mode-v3": "<script>",
   "hexwheel-run-v3": "{not json",
+  "hexsweeper-glitch-sphere-run-v1": sphereRun({ kind: "glitch-sphere" }),
 };
 
 function handoff(local = oldSaves, session = {}, path = "/index.html?x=1#deep") {
   const run = boot(OLD + path, local, session);
   assert.equal(run.replaced.length, 1, "dr.eamer.dev did not redirect");
   return run;
+}
+/** A hand-off link written by hand, as a third party could. */
+function crafted(d, extra = {}) {
+  const { api } = boot(OLD + "/?stay=1");
+  return `${NEW}/play.html?c=1#hexsweeper-move=${api.encode(JSON.stringify({ v: 1, id: "abc-123", d, x: [], ...extra }))}`;
+}
+function untouched(run, before, why) {
+  assert.deepEqual(run.local.dump(), before, `${why}: storage changed`);
+  assert.equal(run.local.getItem(run.api.DONE_KEY), before[run.api.DONE_KEY] ?? null, `${why}: hand-off recorded`);
+  assert.equal(run.location.hash, "", `${why}: fragment not stripped`);
+  assert.equal(run.location.search, "?c=1", `${why}: query changed`);
+  assert.equal(run.replaced.length, 0);
 }
 
 test("dr.eamer.dev redirects to the same path and query on lukesteuber.com, data in the fragment only", () => {
@@ -110,10 +136,9 @@ test("dr.eamer.dev redirects to the same path and query on lukesteuber.com, data
   assert.equal(to.search, "?x=1", "the query must not change or carry data");
   assert.match(to.hash, /^#hexsweeper-move=[A-Za-z0-9_-]+$/);
   assert.ok(to.hash.length < api.BUDGET + 20);
-  assert.ok(api.last.sent.includes("hexsweeper-sphere-run-v2"));
-  assert.ok(!api.last.sent.includes("someone-else-v1"));
-  assert.ok(!api.last.sent.includes("hexsweeper-mode-v3"), "a malformed setting was sent");
-  assert.ok(!api.last.sent.includes("hexwheel-run-v3"), "a malformed board was sent");
+  const sent = [...api.last.sent];
+  for (const key of ["hexsweeper-sphere-run-v2", "hexsweeper-classic-run-v1", "hexsweeper-endless-plate-v1", "minimal-access.v1:hex-infinite"]) assert.ok(sent.includes(key), `${key} was not sent`);
+  for (const key of ["someone-else-v1", "hexsweeper-mode-v3", "hexwheel-run-v3", "hexsweeper-glitch-sphere-run-v1"]) assert.ok(!sent.includes(key), `${key} was sent`);
 });
 
 test("records, settings and boards arrive; better records and existing settings survive", () => {
@@ -123,7 +148,7 @@ test("records, settings and boards arrive; better records and existing settings 
     "hexsweeper-endless-best": "999",
     "hexsweeper-sphere-theme-v6": "earth",
   };
-  const run = boot(url, existing);
+  const run = arrive(url, existing);
   const got = run.local.dump();
   const times = JSON.parse(got["hexsweeper-sphere-best-v1"]);
   assert.deepEqual(times.easy, { seconds: 40, at: "keep" }, "a better existing time was overwritten");
@@ -136,88 +161,138 @@ test("records, settings and boards arrive; better records and existing settings 
   assert.equal(got["minimal-access.v1:hex-infinite"], oldSaves["minimal-access.v1:hex-infinite"]);
   assert.equal(got["hexsweeper-sphere-run-v2"], oldSaves["hexsweeper-sphere-run-v2"]);
   assert.equal(got["hexsweeper-classic-run-v1"], classicRun);
-  assert.equal(got["someone-else-v1"], undefined);
-  assert.equal(got["hexsweeper-mode-v3"], undefined);
-  assert.equal(got["hexwheel-run-v3"], undefined);
+  assert.equal(got["hexsweeper-endless-plate-v1"], oldSaves["hexsweeper-endless-plate-v1"]);
+  for (const key of ["someone-else-v1", "hexsweeper-mode-v3", "hexwheel-run-v3", "hexsweeper-glitch-sphere-run-v1"]) assert.equal(got[key], undefined, key);
   assert.equal(run.location.hash, "#deep", "the page's own fragment was not restored");
   assert.equal(run.location.search, "?x=1");
   assert.equal(run.replaced.length, 0, "lukesteuber.com must never redirect");
 });
 
+test("a hand-off without the dr.eamer.dev referrer is stripped and changes nothing", () => {
+  const real = handoff().replaced[0];
+  const good = crafted({ "hexsweeper-sphere-best-v1": best({ xlarge: { seconds: 12, at: null } }), "hexsweeper-sphere-run-v2": sphereRun() });
+  for (const referrer of ["", "https://evil.example/", "https://dr.eamer.dev.evil.example/", "http://dr.eamer.dev/", "https://lukesteuber.com/games/hexsweeper/"]) {
+    for (const url of [real.replace("index.html?x=1", "play.html?c=1"), good]) {
+      const before = { "hexsweeper-effects-v1": "full" };
+      const run = boot(url, before, {}, referrer);
+      untouched(run, before, `referrer ${JSON.stringify(referrer)}`);
+      assert.equal(run.api.last.rejected, "referrer");
+    }
+  }
+  // A refused link leaves no trace: the real hand-off afterwards is still a first one.
+  const refused = boot(good, {}, {}, "https://evil.example/").local.dump();
+  const landed = arrive(real, refused);
+  assert.equal(landed.api.last.recordsOnly, false);
+  assert.equal(landed.local.getItem("hexsweeper-sphere-run-v2"), oldSaves["hexsweeper-sphere-run-v2"]);
+});
+
 test("an unfinished board already on lukesteuber.com is kept, in either store", () => {
   const url = handoff().replaced[0];
   const mine = sphereRun({ savedAt: 1 });
-  let run = boot(url, { "hexsweeper-sphere-run-v2": mine });
+  let run = arrive(url, { "hexsweeper-sphere-run-v2": mine });
   assert.equal(run.local.getItem("hexsweeper-sphere-run-v2"), mine);
-  run = boot(url, {}, { "hexsweeper-sphere-run-v1": mine });
+  run = arrive(url, {}, { "hexsweeper-sphere-run-v1": mine });
   assert.equal(run.local.getItem("hexsweeper-sphere-run-v2"), null, "a board in sessionStorage was overridden");
   assert.ok(run.api.last.kept.includes("hexsweeper-sphere-run-v2"));
 });
 
 test("the fragment is stripped, and neither a reload nor the same link imports again", () => {
   const url = handoff().replaced[0];
-  const first = boot(url);
+  const first = arrive(url);
   assert.equal(first.location.hash, "#deep");
   const after = first.local.dump();
-  // Reload: the address no longer has the hand-off.
-  const reload = boot(NEW + first.location.pathname.replace("/games/hexsweeper", "") + first.location.search + first.location.hash, after);
+  const reload = arrive(NEW + first.location.pathname.replace("/games/hexsweeper", "") + first.location.search + first.location.hash, after);
   assert.deepEqual(reload.local.dump(), after);
-  // The same hand-off link opened again after the player cleared a board.
   const cleared = { ...after };
   delete cleared["hexsweeper-sphere-run-v2"];
-  const replay = boot(url, cleared);
+  const replay = arrive(url, cleared);
   assert.equal(replay.api.last.repeat, true);
   assert.equal(replay.local.getItem("hexsweeper-sphere-run-v2"), null, "a replayed hand-off brought back a cleared board");
   assert.equal(replay.location.hash, "#deep");
 });
 
 test("a later hand-off brings records only", () => {
-  const firstUrl = handoff().replaced[0];
-  const landed = boot(firstUrl).local.dump();
+  const landed = arrive(handoff().replaced[0]).local.dump();
   delete landed["hexsweeper-sphere-run-v2"]; // finished on lukesteuber.com
   delete landed["hexsweeper-infinite-theme-v1"]; // System picked again
   const faster = { ...oldSaves, "hexsweeper-sphere-best-v1": best({ medium: { seconds: 120, at: null } }) };
-  const second = boot(handoff(faster).replaced[0], landed);
+  const second = arrive(handoff(faster).replaced[0], landed);
   assert.equal(second.api.last.recordsOnly, true);
   assert.equal(second.local.getItem("hexsweeper-sphere-run-v2"), null);
   assert.equal(second.local.getItem("hexsweeper-infinite-theme-v1"), null);
   assert.equal(JSON.parse(second.local.getItem("hexsweeper-sphere-best-v1")).medium.seconds, 120);
 });
 
-test("malformed hand-offs are ignored and still stripped", () => {
-  const { api } = boot(OLD + "/?stay=1");
-  const payload = {
-    v: 1,
-    id: "abc-123",
-    d: {
-      "hexsweeper-sphere-best-v1": best({ easy: { seconds: "1" }, medium: { seconds: -5 } }),
-      "hexsweeper-endless-best": "1e9",
-      "hexsweeper-sphere-theme-v6": "a b",
-      "hexsweeper-sphere-invert-v6": JSON.stringify({ x: 1, y: 0 }),
-      "hexsweeper-sphere-run-v2": JSON.stringify({ kind: "sphere", difficulty: "hard", mines: ["1"] }),
-      "hexsweeper-classic-run-v1": JSON.stringify([1, 2]),
-      "minimal-access.v1:hex-classic": "x".repeat(3000),
-      "hexsweeper-effects-v1": 5,
-      "evil-key": "1",
-      constructor: "1",
-    },
+test("one malformed part rejects the whole hand-off", () => {
+  const goodBest = best({ easy: { seconds: 61, at: null } });
+  const run = (extra) => sphereRun(extra);
+  const bad = {
+    "best time of 0 seconds": { "hexsweeper-sphere-best-v1": best({ easy: { seconds: 0, at: null } }) },
+    "best time over a day": { "hexsweeper-sphere-best-v1": best({ easy: { seconds: 86400, at: null } }) },
+    "fractional best time": { "hexsweeper-sphere-best-v1": best({ easy: { seconds: 1.5, at: null } }) },
+    "best time as text": { "hexsweeper-sphere-best-v1": best({ easy: { seconds: "60" } }) },
+    "unknown size": { "hexsweeper-sphere-best-v1": best({ easy: { seconds: 60 }, huge: { seconds: 61 } }) },
+    "extra best field": { "hexsweeper-sphere-best-v1": best({ easy: { seconds: 60, at: null, cheat: 1 } }) },
+    "empty best times": { "hexsweeper-sphere-best-v1": best({}) },
+    "endless best of 0": { "hexsweeper-endless-best": "0" },
+    "endless best past a full plate": { "hexsweeper-endless-best": "200000" },
+    "face past the board": { "hexsweeper-sphere-run-v2": run({ revealed: [1, 2, 1442] }) },
+    "faces out of order": { "hexsweeper-sphere-run-v2": run({ mines: [9, 3] }) },
+    "face twice": { "hexsweeper-sphere-run-v2": run({ flagged: [3, 3] }) },
+    "face as text": { "hexsweeper-sphere-run-v2": run({ mines: ["3"] }) },
+    "unknown run field": { "hexsweeper-sphere-run-v2": run({ planted: true }) },
+    "unknown sphere size": { "hexsweeper-sphere-run-v2": run({ difficulty: "huge" }) },
+    "variant kind": { "hexsweeper-sphere-run-v2": run({ kind: "glitch-sphere" }) },
+    "Classic cell off the board": { "hexsweeper-classic-run-v1": classicRun.replace('"-3,2"', '"8,0"') },
+    "Classic cell with a space": { "hexsweeper-classic-run-v1": classicRun.replace('"-3,2"', '"-3, 2"') },
+    "Classic cell with a leading zero": { "hexsweeper-classic-run-v1": classicRun.replace('"-3,2"', '"-03,2"') },
+    "Classic cell twice": { "hexsweeper-classic-run-v1": classicRun.replace('"-3,2"', '"0,1"') },
+    "plate cell past its radius": { "hexsweeper-endless-plate-v1": plateRun(5, { flagged: ["6,0"] }) },
+    "plate radius past the cap": { "hexsweeper-endless-plate-v1": plateRun(5, { radius: 161 }) },
+    "plate rift in an unknown phase": { "hexsweeper-endless-plate-v1": plateRun(5, { rift: { phase: "boss" } }) },
+    "theme id with a space": { "hexsweeper-sphere-theme-v6": "a b" },
+    "unknown effects value": { "hexsweeper-effects-v1": "max" },
+    "access value it does not offer": { "minimal-access.v1:hex-classic": JSON.stringify({ mode: "switch", speed: "warp" }) },
+    "access field it does not have": { "minimal-access.v1:hex-classic": JSON.stringify({ mode: "switch", extra: 1 }) },
+    "Dodecahedron setting it does not have": { "hexsweeper-dodeca-settings-v1": JSON.stringify({ seams: true, more: 1 }) },
+    "drag direction as numbers": { "hexsweeper-sphere-invert-v6": JSON.stringify({ x: 1, y: 0 }) },
+    "a value that is not text": { "hexsweeper-effects-v1": 5 },
+    "a key that is not the game's": { "evil-key": "1" },
+    "two keys of one family": { "hexsweeper-sphere-theme-v6": "mercury", "hexsweeper-sphere-theme-v5": "earth" },
+    "a board the move does not carry": { "hexsweeper-glitch-sphere-run-v1": run({ kind: "glitch-sphere" }) },
   };
-  const text = JSON.stringify(payload).replace('"d":{', '"d":{"__proto__":"1",');
-  const bad = boot(`${NEW}/play.html#hexsweeper-move=${api.encode(text)}`);
-  assert.deepEqual(bad.local.dump(), { [api.DONE_KEY]: bad.local.getItem(api.DONE_KEY) });
-  assert.equal(bad.api.last.imported.length, 0);
-  assert.equal(bad.location.hash, "");
-  for (const junk of ["!!!", "", "AAAA", api.encode('{"v":2,"id":"x","d":{}}'), api.encode("[]"), "A".repeat(40000)]) {
-    const run = boot(`${NEW}/play.html?q=2#hexsweeper-move=${junk}`, { "hexsweeper-mode-v3": "fire" });
-    assert.deepEqual(run.local.dump(), { "hexsweeper-mode-v3": "fire" });
-    assert.equal(run.location.hash, "");
-    assert.equal(run.location.search, "?q=2");
+  for (const [why, part] of Object.entries(bad)) {
+    const before = { "hexsweeper-mode-v3": "fire" };
+    const result = arrive(crafted({ "hexsweeper-sphere-best-v1": goodBest, ...part }), before);
+    untouched(result, before, why);
+    assert.equal(result.api.last.rejected, "unreadable", why);
   }
+  const wrapper = {
+    "dropped list naming another key": { x: ["evil-key"] },
+    "page fragment without #": { h: "deep" },
+    "unknown payload field": { extra: 1 },
+    "id in the wrong form": { id: "<b>" },
+    "version 2": { v: 2 },
+  };
+  for (const [why, extra] of Object.entries(wrapper)) {
+    const before = {};
+    untouched(arrive(crafted({ "hexsweeper-sphere-best-v1": goodBest }, extra), before), before, why);
+  }
+  const { api } = boot(OLD + "/?stay=1");
+  const proto = JSON.stringify({ v: 1, id: "abc-123", d: { "hexsweeper-sphere-best-v1": goodBest }, x: [] }).replace('"d":{', '"d":{"__proto__":"1",');
+  untouched(arrive(`${NEW}/play.html?c=1#hexsweeper-move=${api.encode(proto)}`, {}), {}, "__proto__ key");
+  for (const junk of ["!!!", "", "AAAA", api.encode("[]"), api.encode('{"v":1,"id":"a-b","d":{},"x":[]}'), "A".repeat(40000)]) {
+    const before = { "hexsweeper-mode-v3": "fire" };
+    untouched(arrive(`${NEW}/play.html?c=1#hexsweeper-move=${junk}`, before), before, `junk ${junk.slice(0, 12)}`);
+  }
+  // The same parts, well formed, are accepted.
+  const fine = arrive(crafted({ "hexsweeper-sphere-best-v1": goodBest, "hexsweeper-endless-plate-v1": plateRun(5, { rift: { phase: "chase", q: 1, r: -1, fq: 1.5, fr: -1, torn: ["0,0"], t0: 123.4 } }), "hexsweeper-dodeca-settings-v1": JSON.stringify({ seams: true, relief: "flush", appearanceAxes: { field: "dark" } }) }));
+  assert.deepEqual([...fine.api.last.imported].sort(), ["hexsweeper-dodeca-settings-v1", "hexsweeper-endless-plate-v1", "hexsweeper-sphere-best-v1"]);
 });
 
 test("other hosts, other paths and ?stay=1 do nothing", () => {
   const { api } = boot(OLD + "/?stay=1");
-  const frag = "#hexsweeper-move=" + api.encode(JSON.stringify({ v: 1, id: "z", d: { "hexsweeper-sphere-size-v2": "hard" } }));
+  const frag = "#hexsweeper-move=" + api.encode(JSON.stringify({ v: 1, id: "z-1", d: { "hexsweeper-sphere-size-v2": "hard" }, x: [] }));
   for (const href of [
     "http://localhost:8080/index.html" + frag,
     "http://127.0.0.1:5010/games/hexsweeper/index.html" + frag,
@@ -230,7 +305,7 @@ test("other hosts, other paths and ?stay=1 do nothing", () => {
     "https://dr.eamer.dev/games/hexsweeperx/",
     OLD + "/play.html?mode=fire&stay=1",
   ]) {
-    const run = boot(href, oldSaves);
+    const run = boot(href, oldSaves, {}, FROM_OLD);
     assert.equal(run.replaced.length, 0, `${href} redirected`);
     assert.deepEqual(run.local.dump(), oldSaves, `${href} touched storage`);
     assert.equal(run.location.hash, new URL(href).hash, `${href} changed the fragment`);
@@ -247,36 +322,42 @@ test("the newest board wins across keys and stores", () => {
   const older = sphereRun({ savedAt: 10, difficulty: "easy" });
   const newer = sphereRun({ savedAt: 20, difficulty: "xlarge" });
   const run = boot(OLD + "/", { "hexsweeper-sphere-run-v2": older }, { "hexsweeper-sphere-run-v1": newer });
-  const landed = boot(run.replaced[0]);
+  const landed = arrive(run.replaced[0]);
   assert.equal(landed.local.getItem("hexsweeper-sphere-run-v1"), newer);
   assert.equal(landed.local.getItem("hexsweeper-sphere-run-v2"), null);
 });
 
 test("an oversized hand-off keeps records and settings and drops boards in priority order", () => {
-  const cells = (n) => Array.from({ length: n }, (_, i) => `${(i * 7919) % 2003},${(i * 104729) % 1999}`);
-  const plate = JSON.stringify({ v: 1, endless: true, mines: cells(9000), revealed: cells(30000), flagged: cells(400), savedAt: 3 });
-  const xl = (seed) => {
+  const full = (faces, step, extra = {}) => {
     const mines = [], revealed = [];
-    for (let i = 0; i < 1442; i++) ((i * seed) % 7 === 0 ? mines : revealed).push(i);
-    return JSON.stringify({ v: 2, kind: "sphere", difficulty: "xlarge", mines, revealed, flagged: [], savedAt: seed });
+    for (let i = 0; i < faces; i++) (i % step === 0 ? mines : revealed).push(i);
+    return JSON.stringify({ v: 2, kind: "sphere", difficulty: "xlarge", first: false, over: false, won: false, flags: 0, mineCount: mines.length, time: 600, rotY: 1, rotX: 0, zoom: 1, mines, revealed, flagged: [], savedAt: 9, ...extra });
   };
-  const saves = { ...oldSaves, "hexsweeper-endless-plate-v1": plate, "hexsweeper-sphere-run-v2": xl(3), "hexwheel-run-v3": xl(5), "hexsweeper-reflection-run-v1": xl(11), "hexsweeper-glitch-sphere-run-v1": JSON.stringify({ ...JSON.parse(xl(13)), kind: "glitch-sphere" }), "hexsweeper-flux-sphere-run-v1": JSON.stringify({ ...JSON.parse(xl(17)), kind: "flux-sphere" }) };
+  const saves = {
+    ...oldSaves,
+    "hexsweeper-endless-plate-v1": plateRun(150),
+    "hexsweeper-sphere-run-v2": full(2252, 6),
+    "hexwheel-run-v3": full(1442, 5, { v: 3, tileCount: 1442, doused: [], rescues: 0, armed: null }),
+    "hexsweeper-endless-escape-v1": plateRun(40, { mode: "escape" }),
+    "hexsweeper-reflection-run-v1": full(2252, 7),
+  };
   const run = boot(OLD + "/", saves);
   const fragment = new URL(run.replaced[0]).hash;
+  const sent = [...run.api.last.sent], dropped = [...run.api.last.dropped];
   assert.ok(fragment.length <= run.api.BUDGET + "#hexsweeper-move=".length, `fragment is ${fragment.length} characters`);
   assert.ok(run.replaced[0].length < 32 * 1024 * 0.6);
-  assert.ok(run.api.last.dropped.includes("hexsweeper-endless-plate-v1"), "the oversized Infinite plate was not dropped");
-  assert.ok(run.api.last.sent.includes("hexsweeper-sphere-run-v2"), "the Sphere board did not fit");
-  assert.ok(run.api.last.sent.includes("hexsweeper-classic-run-v1"), "a small board after a dropped one was not kept");
-  assert.ok(run.api.last.dropped.includes("hexsweeper-flux-sphere-run-v1"), "the last board in priority order was kept past the budget");
+  assert.ok(dropped.includes("hexsweeper-endless-plate-v1"), "the oversized Infinite plate was not dropped");
+  assert.ok(sent.includes("hexsweeper-sphere-run-v2"), "the Sphere board did not fit");
+  assert.ok(sent.includes("hexsweeper-classic-run-v1"), "a small board after a dropped one was not kept");
   for (const key of ["hexsweeper-sphere-best-v1", "hexsweeper-endless-best", "hexsweeper-sphere-theme-v6", "minimal-access.v1:hex-infinite"]) {
-    assert.ok(run.api.last.sent.includes(key), `${key} was dropped`);
+    assert.ok(sent.includes(key), `${key} was dropped`);
   }
-  const landed = boot(run.replaced[0]);
-  assert.deepEqual([...landed.api.last.dropped], [...run.api.last.dropped]);
+  const landed = arrive(run.replaced[0]);
+  assert.deepEqual([...landed.api.last.dropped], dropped);
   assert.equal(landed.local.getItem("hexsweeper-endless-plate-v1"), null);
   assert.equal(landed.local.getItem("hexsweeper-sphere-run-v2"), saves["hexsweeper-sphere-run-v2"]);
-  process.stdout.write(`  # ${fragment.length} characters; dropped ${run.api.last.dropped.join(", ")}\n`);
+  for (const key of sent) assert.ok(landed.local.getItem(key) !== null, `${key} did not land`);
+  process.stdout.write(`  # ${fragment.length} characters; sent ${sent.filter((k) => /run|plate|escape/.test(k)).join(", ")}; dropped ${dropped.join(", ")}\n`);
 });
 
 test("the codec round-trips text of any kind", () => {
