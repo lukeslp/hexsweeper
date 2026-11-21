@@ -855,6 +855,47 @@ def safe_script(text: str) -> str:
     return text.replace("</script", "<\\/script")
 
 
+# The move from dr.eamer.dev to lukesteuber.com (site-move.js). Every served
+# page loads it first in <head>, ahead of any game script, so it can carry or
+# import saves before a game reads storage. Authored pages carry the tag by
+# hand and main() keeps their version stamps current; generated pages get it
+# here. Sources lose it when read, so the sealed app payload never ships it.
+SITE_MOVE = ROOT / "site-move.js"
+SITE_MOVE_TAG = re.compile(r'<script src="(?:\.\./)*site-move\.js\?v=[0-9a-f]+"></script>\n?')
+SITE_MOVE_PAGES = (
+    "play.html", "classic.html", "lab.html", "choices.html", "privacy.html",
+    "sphere/index.html", "sphere/dev/index.html", "sphere-reflection/index.html",
+    "sphere-ux/index.html", "sphere-ux/chamber.html", "sphere-ux/inside.html",
+    "sphere-ux/interior.html", "sphere-ux/dev/index.html", "wheel/index.html",
+    "flux-sphere/index.html", "glitch-sphere/index.html", "polyhedron/index.html",
+    "monkey-grid/index.html", "monkey-sphere/index.html",
+)
+
+
+def site_move_pages() -> list[Path]:
+    return [ROOT / name for name in SITE_MOVE_PAGES] + sorted((ROOT / "skins").glob("*.html"))
+
+
+def strip_site_move(markup: str) -> str:
+    return SITE_MOVE_TAG.sub("", markup)
+
+
+def with_site_move(markup: str, path: Path) -> str:
+    """Put the one site-move.js tag right after the page's charset meta."""
+    depth = len(path.relative_to(ROOT).parts) - 1
+    stamp = hashlib.sha1(SITE_MOVE.read_bytes()).hexdigest()[:8]
+    tag = f'<script src="{"../" * depth}site-move.js?v={stamp}"></script>'
+    markup, n = re.subn(
+        r'(<meta charset="[^"]*">)(\n?)',
+        lambda m: m.group(1) + m.group(2) + tag + m.group(2),
+        strip_site_move(markup),
+        count=1,
+    )
+    if n != 1:
+        raise SystemExit(f"with_site_move: no charset meta in {path.relative_to(ROOT)}")
+    return markup
+
+
 def load_skins() -> list[dict]:
     data = json.loads((ROOT / "skins.json").read_text(encoding="utf-8"))
     skins = data.get("skins", [])
@@ -1068,7 +1109,7 @@ def export_theme(theme: dict, source: str) -> str:
 
 def export_skin(skin: dict) -> str:
     src_path = ROOT / skin["file"]
-    markup = src_path.read_text(encoding="utf-8")
+    markup = strip_site_move(src_path.read_text(encoding="utf-8"))
     markup = re.sub(
         r"<!DOCTYPE html>\s*<!--.*?-->\s*<html",
         "<!DOCTYPE html>\n<html",
@@ -1245,7 +1286,7 @@ def export_sphere(exp: dict, *, web_controls: bool = True) -> str:
     ]
     boot_fn = exp.get("boot") or "initDevChrome"
 
-    markup = (source_dir / "index.html").read_text(encoding="utf-8")
+    markup = strip_site_move((source_dir / "index.html").read_text(encoding="utf-8"))
     # The shared web frame belongs to the canonical Sphere only. Preserve
     # other experiments and the sealed native payload byte for byte.
     frame = web_controls and source_name == "sphere" and exp["id"] == "sphere"
@@ -2374,6 +2415,11 @@ def write_app_build() -> list[Path]:
     history.write_bytes((ROOT / "sphere" / "assets" / "classic-minesweeper.png").read_bytes())
     written.append(history)
 
+    # The apps never move hosts; the web's site-move.js must not ride along.
+    for page in (sphere, wheel):
+        if "site-move" in page.read_text(encoding="utf-8"):
+            raise SystemExit(f"write_app_build: {page.name} carries site-move.js")
+
     return written
 
 
@@ -2535,7 +2581,7 @@ def main() -> int:
             print(f"wrote {path.relative_to(ROOT)} ({path.stat().st_size:,} bytes)")
         return 0
 
-    source = (ROOT / "play.html").read_text(encoding="utf-8")
+    source = strip_site_move((ROOT / "play.html").read_text(encoding="utf-8"))
     if "allowModes" not in source or "ONEPAGER_MODES" not in source:
         print("error: play.html missing HEXSWEEPER_ONEPAGER allowModes support", file=sys.stderr)
         return 2
@@ -2576,6 +2622,13 @@ def main() -> int:
     # Access for the two flat routes: loaded beside them, the first time it is turned on.
     planned[ROOT / "access.js"] = access_script()
     planned[ROOT / "bridge-client.js"] = (ROOT / "tools" / "control-frame" / "bridge-client.js").read_text(encoding="utf-8")
+    # Every served page loads site-move.js first: generated pages get the tag
+    # now, and the authored pages keep theirs with a current version stamp.
+    for path in list(planned):
+        if path.suffix == ".html":
+            planned[path] = with_site_move(planned[path], path)
+    for path in site_move_pages():
+        planned[path] = with_site_move(path.read_text(encoding="utf-8"), path)
 
     expected_theme = {f"theme-{t['id']}.html" for t in THEMES}
     expected_skin = {f"skin-{s['id']}.html" for s in skins}

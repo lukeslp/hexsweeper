@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -24,6 +25,12 @@ def load_skins() -> list[dict]:
     return skins
 
 
+def site_move_tag() -> str:
+    """The same site-move.js tag export-collection.py gives every served page."""
+    stamp = hashlib.sha1((ROOT / "site-move.js").read_bytes()).hexdigest()[:8]
+    return f'<script src="../../site-move.js?v={stamp}"></script>'
+
+
 def redirect_stub(skin: dict) -> str:
     rel = f"../collection/skin-{skin['id']}.html"
     canonical = f"{COLLECTION_PUBLIC}/skin-{skin['id']}.html"
@@ -36,6 +43,7 @@ def redirect_stub(skin: dict) -> str:
 <html lang="en">
 <head>
 <meta charset="utf-8">
+{site_move_tag()}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="0;url={rel}">
 <link rel="canonical" href="{canonical}">

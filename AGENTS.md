@@ -54,6 +54,18 @@ shows no first-visit cue, and keeps runtime titles off
 (`Hexsweeper.boot({ tooltips: false })`). play.html, its theme pens and
 Classic keep their own sheets and tooltips.
 
+## Move to lukesteuber.com
+
+Every served page loads `site-move.js` first in `<head>`. On dr.eamer.dev it
+carries the game's saves to the same path on lukesteuber.com in the URL
+fragment; on lukesteuber.com it imports them only when `document.referrer` is
+dr.eamer.dev and every part matches its exact schema. Don't add a
+`Referrer-Policy` or `rel=noreferrer` to these pages' own redirect. README
+"Moving from dr.eamer.dev" has the rules. When adding a storage key, add it to `FAMILIES`
+in `site-move.js`. When adding an authored page, add it to `SITE_MOVE_PAGES`
+in `tools/export-collection.py`, then run the exporter, which writes the tag
+and its version stamp. Never ship it in the app payloads.
+
 ## Docs to keep in sync
 
 - `README.md` — install-free usage, launcher/routes, layout, API

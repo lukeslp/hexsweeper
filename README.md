@@ -52,6 +52,9 @@ node wheel/test-menu-variants.js
 node polyhedron/test-campaign.js
 python3 tools/export-collection.py --app     # stages build/app/ for the next check
 node tools/test-web-launcher.mjs
+node tools/test-play-browser.mjs             # needs Chrome
+node tools/test-site-move.mjs
+node tools/test-site-move-browser.mjs        # needs Chrome
 python3 tools/export-collection.py --check   # generated pages match their sources
 python3 tools/export-choices-lab.py --check
 ```
@@ -119,6 +122,79 @@ routes (`index.html`, `launcher.html`, `infinite.html`, `bounded.html`, and the
 `collection/` one-pagers) are committed; run the exporter after changing their
 sources and CI checks that they match. IBM Plex is self-hosted under `fonts/`
 under the SIL Open Font License 1.1. The production pages use no font CDN; the dormant `lab.html` loads its fonts from Google Fonts.
+
+## Moving from dr.eamer.dev
+
+The same folder is served at `dr.eamer.dev/games/hexsweeper/` and
+`lukesteuber.com/games/hexsweeper/`, and lukesteuber.com is the home now.
+Browsers keep saves per site, so a server redirect would strand every saved
+board and best time on dr.eamer.dev. Instead [`site-move.js`](site-move.js)
+loads first on every served page and carries them across:
+
+- **On dr.eamer.dev** it gathers the game's own saves, packs them into the URL
+  fragment and replaces the page with the same path and query on
+  lukesteuber.com. The fragment never reaches a server or a Referer. An
+  incoming fragment that already holds a hand-off, as in a crafted link to
+  dr.eamer.dev, is dropped on every path, so only data this page packed from
+  its own storage can arrive. With nothing to carry it just redirects. Add `?stay=1` to stay on dr.eamer.dev
+  for debugging (that page only; its links move again). The saves there are
+  left in place either way.
+- **On lukesteuber.com** it imports a hand-off before any game reads storage,
+  then strips the fragment. Anyone can write a link with a hand-off in it, so
+  it imports only when the browser reports the page was reached from
+  dr.eamer.dev (`document.referrer` is `https://dr.eamer.dev/`, which the
+  default referrer policy sends on the redirect; these pages and Drummer set
+  no other policy). A link from anywhere else, or with no referrer, is
+  stripped and changes nothing, not even the record of past hand-offs. A
+  hand-off is also refused whole if any part is off: a key that is not the
+  game's, a value not in the exact shape the game writes, a board cell
+  outside its board, or a record outside plausible bounds (a best time from
+  1 second to under a day, an endless best no larger than a full plate). Best
+  times keep the lower seconds for each size and the endless best keeps the
+  higher count. Settings and unfinished boards only fill what lukesteuber.com
+  does not already have. Each hand-off imports once. After the first one
+  lands, a later one, from an old link or tab, brings records only, so a
+  board finished or cleared on lukesteuber.com cannot come back. It never
+  redirects.
+- **Anywhere else** (the apps, `file://`, localhost) it does nothing. The
+  sealed app payloads do not include it.
+
+What it carries, in this order:
+
+1. Records: Sphere best times (`hexsweeper-sphere-best-v1`) and the endless
+   best (`hexsweeper-endless-best`).
+2. Settings: effects, zoom, Sphere theme, size, count style, drag direction
+   and sheet tab, the Infinite and play.html themes, Classic size, the Games
+   page appearance, the Access settings of Infinite and Classic, and the
+   settings and seen-help flags of the Water Wheel, the reflection studio and
+   the collection experiments.
+3. Unfinished boards, most valuable first: Sphere, the Infinite plate,
+   Classic, the Water Wheel, Escape, the reflection studio. Glitch Sphere,
+   Flux Sphere and the Dodecahedron campaign keep their unfinished boards on
+   dr.eamer.dev: their saves carry engine state that cannot be checked
+   strictly enough to accept.
+
+The packed fragment stays under 16,000 characters, so the whole address stays
+well under 32 KB. Records and settings always fit, and an unfinished board at
+Sphere's largest size packs to about 4,000 characters. Boards are taken in the order above
+while they fit. A board that does not fit is dropped and stays on
+dr.eamer.dev. In practice that is a large Infinite plate, which can run to
+hundreds of kilobytes.
+
+Left behind on purpose: the Minimal-wide Access keys shared by every game on
+a site (`minimal-access.v1:default`, `:locked`, `:exact`, `:calibration`,
+`minimal-gaze.v1:invert-y`), the app-only Help state
+(`hexsweeper-sphere-native-ui-v1`), and the older drag-direction keys
+that Sphere and the Water Wheel delete on load. A browser or extension
+that strips referrers refuses the hand-off, so its player's saves stay on
+dr.eamer.dev (still there with `?stay=1`). Any page on the dr.eamer.dev
+origin passes the referrer check; the strict shapes and bounds still apply.
+The full key list, with the shape each key must have,
+is `FAMILIES` in `site-move.js`. A new storage key needs an entry there. A
+new served page needs the script tag: the exporter adds it to generated
+pages, keeps the version stamp on the authored ones listed in
+`SITE_MOVE_PAGES`, and `node tools/test-site-move.mjs` fails on any served
+page without it.
 
 ## Boards (production)
 
