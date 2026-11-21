@@ -274,6 +274,35 @@ try {
     expect(await evaluate("location.hash") === "" && await evaluate("location.search") === `?m=${i}`, `${why} was not stripped`);
   }
 
+  // ---- 5b. A hand-off written into a dr.eamer.dev link ---------------------
+  // Clicked from another site, it reaches lukesteuber.com through the real
+  // redirect, so it arrives referred by dr.eamer.dev: the old host must drop it.
+  const attack = await encode({ v: 1, id: "craft-9", x: [], d: {
+    "hexsweeper-sphere-best-v1": JSON.stringify({ xsmall: { seconds: 2, at: null } }),
+    "hexsweeper-endless-best": "99999",
+  } });
+  for (const [why, seed] of [["with nothing to carry", "localStorage.clear(); sessionStorage.clear()"],
+    ["with saves to carry", `localStorage.setItem("hexsweeper-sphere-best-v1", JSON.stringify({ xsmall: { seconds: 500, at: "2026-10-03T10:00:00.000Z" } }))`]]) {
+    await open(`${OLD}/privacy.html?stay=1`);
+    await evaluate(seed);
+    await open(`${NEW}/privacy.html`);
+    const was = await dump();
+    await send("Page.navigate", { url: `${OLD}/privacy.html?a=${why.length}#hexsweeper-move=${attack}`, referrer: "https://hexsweeper.example/" });
+    await waitFor(async () => (await evaluate("location.hostname")) === "lukesteuber.com" && (await evaluate("document.readyState === 'complete'")), `the crafted dr.eamer.dev link ${why} did not reach lukesteuber.com`);
+    await delay(200);
+    const is = await dump();
+    const times = JSON.parse(is["hexsweeper-sphere-best-v1"] || "{}");
+    expect(times.xsmall?.seconds !== 2 && is["hexsweeper-endless-best"] !== "99999", `a crafted dr.eamer.dev link ${why} imported its payload`);
+    expect(!(await evaluate("location.hash")).includes("hexsweeper-move"), `a crafted dr.eamer.dev link ${why} left a hand-off in the address`);
+    if (why === "with nothing to carry") expect(JSON.stringify(is) === JSON.stringify(was), `a crafted dr.eamer.dev link with nothing to carry changed storage: ${Object.keys(is).filter((k) => is[k] !== was[k]).join(", ")}`);
+    else expect(times.xsmall?.seconds === 500, "the old host's own record did not arrive alongside a crafted link");
+    await send("Page.reload");
+    await delay(200);
+    await waitFor(() => evaluate("document.readyState === 'complete'"), "reload did not finish");
+    const again = await dump();
+    expect(JSON.stringify(again) === JSON.stringify(is), `a reload after a crafted dr.eamer.dev link ${why} changed storage`);
+  }
+
   // ---- 6. Other hosts do nothing ------------------------------------------
   const valid = await encode({ v: 1, id: "other-1", x: [], d: { "hexsweeper-sphere-size-v2": "hard" } });
   for (const base of ["http://localhost/games/hexsweeper", "http://127.0.0.1/games/hexsweeper", "https://hexsweeper.example/games/hexsweeper", pathToFileURL(root).href]) {

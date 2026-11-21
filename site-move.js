@@ -593,8 +593,10 @@
           return typeof k === "string" && own(BY_KEY, k);
         });
       },
+      // The page's own fragment, put back after the import: never another
+      // hand-off, which a reload (same referrer) would otherwise import.
       h: str(function (h) {
-        return h.charAt(0) === "#" && h.length <= 2000;
+        return h.charAt(0) === "#" && h.length <= 2000 && h.indexOf(PARAM.slice(0, -1)) < 0;
       }),
     }, ["v", "id", "d", "x"]);
     if (!ok) return null;
@@ -669,7 +671,12 @@
   if (host === OLD_HOST && onPath) {
     if (/(?:^|&)stay=1(?:&|$)/.test(loc.search.slice(1))) return;
     var target = NEW_ORIGIN + loc.pathname + loc.search;
+    // Only a hand-off built here, from this origin's own storage, may carry
+    // PARAM. An incoming fragment that mentions it (a crafted link to
+    // dr.eamer.dev) is dropped on every path, or lukesteuber.com would see
+    // it arrive from dr.eamer.dev and trust it.
     var hash = loc.hash || "";
+    if (hash.indexOf(PARAM.slice(0, -1)) >= 0) hash = "";
     var items = [];
     try {
       items = gather();

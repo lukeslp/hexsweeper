@@ -186,6 +186,36 @@ test("a hand-off without the dr.eamer.dev referrer is stripped and changes nothi
   assert.equal(landed.local.getItem("hexsweeper-sphere-run-v2"), oldSaves["hexsweeper-sphere-run-v2"]);
 });
 
+test("a hand-off written into a dr.eamer.dev link never passes through", () => {
+  const attack = new URL(crafted({ "hexsweeper-sphere-best-v1": best({ xsmall: { seconds: 2, at: null } }), "hexsweeper-sphere-run-v2": sphereRun({ difficulty: "xsmall", mines: [5] }) })).hash;
+  for (const path of ["/index.html?q=1", "/play.html", ""]) {
+    // Nothing to carry: the redirect must not forward the crafted fragment.
+    let old = boot(OLD + path + attack, {});
+    assert.equal(old.replaced.length, 1);
+    assert.ok(!old.replaced[0].includes("hexsweeper-move"), `${path}: forwarded ${old.replaced[0].slice(0, 80)}`);
+    let landed = arrive(old.replaced[0], {});
+    assert.deepEqual(landed.local.dump(), {}, `${path}: the crafted hand-off was imported`);
+    // Saves to carry: only the old host's own data arrives, and the crafted
+    // fragment is not put back as the page's fragment for a reload to find.
+    old = boot(OLD + path + attack, oldSaves);
+    assert.ok(!old.replaced[0].includes("hexsweeper-move=" + attack.slice("#hexsweeper-move=".length)));
+    landed = arrive(old.replaced[0], {});
+    const times = JSON.parse(landed.local.getItem("hexsweeper-sphere-best-v1"));
+    assert.equal(times.xsmall, undefined, `${path}: a crafted record arrived`);
+    assert.equal(landed.local.getItem("hexsweeper-sphere-run-v2"), oldSaves["hexsweeper-sphere-run-v2"]);
+    assert.equal(landed.location.hash, "", `${path}: the crafted fragment came back as ${landed.location.hash.slice(0, 40)}`);
+    const reload = arrive(NEW + path + landed.location.hash, landed.local.dump());
+    assert.deepEqual(reload.local.dump(), landed.local.dump());
+  }
+  // pack() failing or dropping everything forwards no fragment either.
+  const huge = boot(OLD + "/" + attack, { "hexsweeper-endless-plate-v1": plateRun(150) });
+  assert.ok(!huge.replaced[0].includes(attack.slice(1)));
+  assert.deepEqual(arrive(huge.replaced[0], {}).local.dump(), {});
+  // A page fragment that is itself a hand-off is refused, even from dr.eamer.dev.
+  const nested = crafted({ "hexsweeper-effects-v1": "full" }, { h: attack });
+  untouched(arrive(nested, {}), {}, "nested hand-off as the page fragment");
+});
+
 test("an unfinished board already on lukesteuber.com is kept, in either store", () => {
   const url = handoff().replaced[0];
   const mine = sphereRun({ savedAt: 1 });

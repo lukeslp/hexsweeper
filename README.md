@@ -133,8 +133,10 @@ loads first on every served page and carries them across:
 
 - **On dr.eamer.dev** it gathers the game's own saves, packs them into the URL
   fragment and replaces the page with the same path and query on
-  lukesteuber.com. The fragment never reaches a server or a Referer. With
-  nothing to carry it just redirects. Add `?stay=1` to stay on dr.eamer.dev
+  lukesteuber.com. The fragment never reaches a server or a Referer. An
+  incoming fragment that already holds a hand-off, as in a crafted link to
+  dr.eamer.dev, is dropped on every path, so only data this page packed from
+  its own storage can arrive. With nothing to carry it just redirects. Add `?stay=1` to stay on dr.eamer.dev
   for debugging (that page only; its links move again). The saves there are
   left in place either way.
 - **On lukesteuber.com** it imports a hand-off before any game reads storage,
