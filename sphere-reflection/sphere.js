@@ -751,8 +751,14 @@
       won: false,
       rotY: 0,
       rotX: 0.25,
+      rotZ: 0,
       targetRotY: 0,
       targetRotX: 0.25,
+      targetRotZ: 0,
+      // Continuous turn totals for effects (trackTurn); start at the angles.
+      turnX: 0.25,
+      turnY: 0,
+      turnMatrix: null,
       dragging: false,
       dragStart: null,
       flagMode: false,
@@ -1371,7 +1377,8 @@
       if (state.dragging) return;
       if (
         Math.abs(state.targetRotY - state.rotY) > 0.001 ||
-        Math.abs(state.targetRotX - state.rotX) > 0.001
+        Math.abs(state.targetRotX - state.rotX) > 0.001 ||
+        Math.abs(state.targetRotZ - state.rotZ) > 0.001
       ) {
         return;
       }
@@ -1384,25 +1391,217 @@
         state.rotX = ((state.rotX + Math.PI) % tau + tau) % tau - Math.PI;
         state.targetRotX = state.rotX;
       }
+      if (Math.abs(state.rotZ) > tau * 2) {
+        state.rotZ = ((state.rotZ + Math.PI) % tau + tau) % tau - Math.PI;
+        state.targetRotZ = state.rotZ;
+      }
     }
 
-    function rotatePoint(p, rotY, rotX) {
+    /*
+     * Orientation. The camera sees a model point p at M·p, with
+     *   M = Rz(rotZ) · Rx(rotX) · Ry(rotY)
+     * — yaw about the sphere's own polar axis, pitch about the screen's
+     * horizontal axis, then roll about the line of sight. Those three angles
+     * reach every orientation. Focus, rim taps, the idle spin and the variants'
+     * arrow keys still ease yaw and pitch as before (roll leaves the front face
+     * where it is). A drag is a trackball: each move composes, in camera space,
+     * the rotation that carries the sphere point under the last finger
+     * position to the point under the new one, then stores the result back
+     * into the three angles (see trackballTo). An old save without rotZ is
+     * roll 0, the same view it always was.
+     */
+    const CAMERA_FOV = 2.8;
+    let rotationCache = null;
+
+    function rotationTerms(rotY, rotX, rotZ) {
+      if (
+        !rotationCache ||
+        rotationCache.rotY !== rotY ||
+        rotationCache.rotX !== rotX ||
+        rotationCache.rotZ !== rotZ
+      ) {
+        rotationCache = {
+          rotY,
+          rotX,
+          rotZ,
+          cy: Math.cos(rotY),
+          sy: Math.sin(rotY),
+          cx: Math.cos(rotX),
+          sx: Math.sin(rotX),
+          cz: Math.cos(rotZ),
+          sz: Math.sin(rotZ),
+        };
+      }
+      return rotationCache;
+    }
+
+    /** Model → camera. Roll defaults to the live camera's. */
+    function rotatePoint(p, rotY, rotX, rotZ) {
       let x = p.x;
       let y = p.y;
       let z = p.z;
-      const cy = Math.cos(rotY);
-      const sy = Math.sin(rotY);
+      const roll = rotZ === undefined ? state.rotZ || 0 : rotZ;
+      const { cy, sy, cx, sx, cz, sz } = rotationTerms(rotY, rotX, roll);
       const x1 = x * cy + z * sy;
       const z1 = -x * sy + z * cy;
-      const cx = Math.cos(rotX);
-      const sx = Math.sin(rotX);
       const y2 = y * cx - z1 * sx;
       const z2 = y * sx + z1 * cx;
-      return { x: x1, y: y2, z: z2 };
+      if (roll === 0) return { x: x1, y: y2, z: z2 };
+      return { x: x1 * cz - y2 * sz, y: x1 * sz + y2 * cz, z: z2 };
+    }
+
+    /** Row-major camera rotation M for the three angles (see rotatePoint). */
+    function orientationMatrix(rotY, rotX, rotZ) {
+      const cy = Math.cos(rotY), sy = Math.sin(rotY);
+      const cx = Math.cos(rotX), sx = Math.sin(rotX);
+      const cz = Math.cos(rotZ), sz = Math.sin(rotZ);
+      return [
+        cz * cy - sz * sx * sy, -sz * cx, cz * sy + sz * sx * cy,
+        sz * cy + cz * sx * sy, cz * cx, sz * sy - cz * sx * cy,
+        -cx * sy, sx, cx * cy,
+      ];
+    }
+
+    function multiplyMatrices(a, b) {
+      const out = new Array(9);
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          out[r * 3 + c] =
+            a[r * 3] * b[c] + a[r * 3 + 1] * b[3 + c] + a[r * 3 + 2] * b[6 + c];
+        }
+      }
+      return out;
+    }
+
+    /** The shortest rotation carrying unit vector a onto unit vector b. */
+    function rotationBetween(a, b) {
+      const vx = a.y * b.z - a.z * b.y;
+      const vy = a.z * b.x - a.x * b.z;
+      const vz = a.x * b.y - a.y * b.x;
+      const c = a.x * b.x + a.y * b.y + a.z * b.z;
+      const s2 = vx * vx + vy * vy + vz * vz;
+      if (s2 < 1e-18 || c <= -1 + 1e-9) return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+      // Rodrigues: I + [v]x + [v]x² (1 − c) / |v|²
+      const k = (1 - c) / s2;
+      return [
+        1 - k * (vy * vy + vz * vz), -vz + k * vx * vy, vy + k * vx * vz,
+        vz + k * vx * vy, 1 - k * (vx * vx + vz * vz), -vx + k * vy * vz,
+        -vy + k * vx * vz, vx + k * vy * vz, 1 - k * (vx * vx + vy * vy),
+      ];
+    }
+
+    /**
+     * Angles for M, on whichever of the two equivalent branches lies nearest
+     * the previous angles, each unwrapped next to its previous value, so a
+     * drag never makes the stored angles leap. When the polar axis points
+     * straight at the camera, yaw and roll turn about the same line; roll
+     * then holds and yaw takes the turn.
+     */
+    function anglesFromMatrix(m, prev) {
+      const h = Math.hypot(m[6], m[8]);
+      let best = null;
+      for (const sign of [1, -1]) {
+        const x = Math.atan2(m[7], sign * h);
+        let y;
+        let z;
+        if (h < 1e-9) {
+          z = prev.rotZ;
+          y = Math.atan2(m[2], m[0]) - (m[7] >= 0 ? 1 : -1) * z;
+        } else {
+          y = Math.atan2(-m[6] * sign, m[8] * sign);
+          z = Math.atan2(-m[1] * sign, m[4] * sign);
+        }
+        const cand = {
+          rotY: prev.rotY + angleDelta(prev.rotY, y),
+          rotX: prev.rotX + angleDelta(prev.rotX, x),
+          rotZ: prev.rotZ + angleDelta(prev.rotZ, z),
+        };
+        cand.cost =
+          Math.abs(cand.rotY - prev.rotY) +
+          Math.abs(cand.rotX - prev.rotX) +
+          Math.abs(cand.rotZ - prev.rotZ);
+        if (!best || cand.cost < best.cost) best = cand;
+      }
+      return best;
+    }
+
+    /**
+     * The camera-space unit vector of the sphere point drawn at (px, py): the
+     * exact inverse of projectRotated on the unit sphere. Past the rim the
+     * point keeps rolling over the limb, one radian per sphere radius of
+     * screen travel, so a drag that starts or wanders off the sphere still
+     * turns it, and the surface it brings back stays under the finger.
+     */
+    function screenToSphere(px, py) {
+      const f = CAMERA_FOV;
+      const X = (px - state.centerX) / state.scale;
+      const Y = (state.centerY - py) / state.scale;
+      const a = X * X + Y * Y + f * f;
+      const disc = f * f * f * f - a * (f * f - 1);
+      if (disc >= 0) {
+        const t = (f * f - Math.sqrt(disc)) / a;
+        return { x: t * X, y: t * Y, z: f * (1 - t) };
+      }
+      const d = Math.hypot(X, Y);
+      const rimZ = 1 / f;
+      const rimScreen = f / Math.sqrt(f * f - 1);
+      const phi = Math.acos(rimZ) + (d - rimScreen);
+      const s = Math.sin(phi) / d;
+      return { x: X * s, y: Y * s, z: Math.cos(phi) };
+    }
+
+    /** Turn the camera by `turn` (row-major, camera space) on top of its current orientation. */
+    function applyCameraTurn(turn) {
+      const next = anglesFromMatrix(
+        multiplyMatrices(turn, orientationMatrix(state.rotY, state.rotX, state.rotZ)),
+        state
+      );
+      state.rotY = state.targetRotY = next.rotY;
+      state.rotX = state.targetRotX = next.rotX;
+      state.rotZ = state.targetRotZ = next.rotZ;
+    }
+
+    /**
+     * Carry the grabbed sphere point (camera-space unit vector `from`) to the
+     * point now under the pointer. Returns the new grabbed vector. Working
+     * from the vector, not the last pointer position, keeps it exact while
+     * the sphere's centre or zoom moves under a still finger.
+     */
+    function trackballTo(from, px, py) {
+      const to = screenToSphere(px, py);
+      applyCameraTurn(rotationBetween(from, to));
+      return to;
+    }
+
+    /**
+     * Continuous turn totals about the screen's axes, for effects that key
+     * off how far the sphere has turned (metal gleam). Read from the camera
+     * matrix, so they never jump when the stored angles swap branches.
+     */
+    function trackTurn() {
+      const m = orientationMatrix(state.rotY, state.rotX, state.rotZ);
+      const prev = state.turnMatrix;
+      state.turnMatrix = m;
+      if (!prev) return;
+      // delta = m · prevᵀ
+      const d = new Array(9);
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          d[r * 3 + c] = m[r * 3] * prev[c * 3] + m[r * 3 + 1] * prev[c * 3 + 1] + m[r * 3 + 2] * prev[c * 3 + 2];
+        }
+      }
+      const vx = (d[7] - d[5]) / 2;
+      const vy = (d[2] - d[6]) / 2;
+      const vz = (d[3] - d[1]) / 2;
+      const sin = Math.hypot(vx, vy, vz);
+      if (sin < 1e-12) return;
+      const angle = Math.atan2(sin, (d[0] + d[4] + d[8] - 1) / 2);
+      state.turnX += (vx / sin) * angle;
+      state.turnY += (vy / sin) * angle;
     }
 
     function projectRotated(r) {
-      const fov = 2.8;
+      const fov = CAMERA_FOV;
       const depth = fov / (fov - r.z);
       return {
         x: state.centerX + r.x * state.scale * depth,
@@ -1464,7 +1663,7 @@
     }
 
     function rotKey() {
-      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.scale}`;
+      return `${state.rotY.toFixed(4)}|${state.rotX.toFixed(4)}|${state.rotZ.toFixed(4)}|${state.scale}`;
     }
 
     /** Project all tiles once per frame; cull back hemisphere for pick + draw. */
@@ -1593,6 +1792,7 @@
       state.ambientSpin = false;
       state.targetRotY = state.rotY;
       state.targetRotX = state.rotX;
+      state.targetRotZ = state.rotZ;
     }
 
     function tickAmbientSpin(now) {
@@ -1783,6 +1983,7 @@
         time: state.timeElapsed | 0,
         rotY: state.rotY,
         rotX: state.rotX,
+        rotZ: state.rotZ,
         zoom: state.zoomFactor,
         mines,
         revealed,
@@ -1912,6 +2113,8 @@
         state.rotX = data.rotX;
         state.targetRotX = data.rotX;
       }
+      // Saves from before the trackball have no roll: roll 0 is their view.
+      state.rotZ = state.targetRotZ = Number.isFinite(data.rotZ) ? data.rotZ : 0;
       if (Number.isFinite(data.zoom)) {
         state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, data.zoom));
         state.scale = state.baseScale * state.zoomFactor;
@@ -2982,7 +3185,7 @@
 
     function drawMetalCore(proj, now) {
       const time = state.reduceMotion ? 0 : now * 0.000075;
-      const angle = state.rotY * 0.22 + state.rotX * 0.10 + time;
+      const angle = state.turnY * 0.22 + state.turnX * 0.10 + time;
       const span = state.scale * 1.55;
       const dx = Math.cos(angle) * span;
       const dy = Math.sin(angle) * span;
@@ -3794,11 +3997,14 @@
       if (!state.reduceMotion) {
         state.rotY += angleDelta(state.rotY, state.targetRotY) * 0.12;
         state.rotX += angleDelta(state.rotX, state.targetRotX) * 0.12;
+        state.rotZ += angleDelta(state.rotZ, state.targetRotZ) * 0.12;
       } else {
         state.rotY = state.targetRotY;
         state.rotX = state.targetRotX;
+        state.rotZ = state.targetRotZ;
       }
       normalizeIdleRotation();
+      trackTurn();
 
       const projected = getProjected();
       const now = performance.now();
@@ -3982,7 +4188,8 @@
       if (state.reduceMotion) return false;
       return (
         Math.abs(state.targetRotY - state.rotY) > 0.0008 ||
-        Math.abs(state.targetRotX - state.rotX) > 0.0008
+        Math.abs(state.targetRotX - state.rotX) > 0.0008 ||
+        Math.abs(state.targetRotZ - state.rotZ) > 0.0008
       );
     }
 
@@ -4040,9 +4247,11 @@
       touchMoved = false;
       state.dragging = true;
       // Anchor on the live camera, not a lagging target (avoids catch-up snap).
-      state.dragStart = { x: p.x, y: p.y, rotY: state.rotY, rotX: state.rotX };
+      // grab: camera-space direction of the sphere point under the pointer.
+      state.dragStart = { x: p.x, y: p.y, grab: screenToSphere(p.x, p.y) };
       state.targetRotY = state.rotY;
       state.targetRotX = state.rotX;
+      state.targetRotZ = state.rotZ;
       state.hovered = pickTile(p.x, p.y);
       state.pressed = state.hovered;
       if (e.type === "touchstart") {
@@ -4090,15 +4299,14 @@
           touchMoved = true;
           clearTimeout(longPressTimer);
           state.pressed = -1;
-          // Free tumble — keep continuous angles (do not wrap mid-drag).
-          // Upside down (tumbled past a pole), turning about the sphere's own axis runs the
-          // other way on screen, so flip it to keep the face under the pointer following it.
-          const sx = (state.invertDragX ? -1 : 1) * (Math.cos(state.dragStart.rotX) < 0 ? -1 : 1);
-          const sy = state.invertDragY ? -1 : 1;
-          state.targetRotY = state.dragStart.rotY + dx * 0.0105 * sx;
-          state.targetRotX = state.dragStart.rotX + dy * 0.0105 * sy;
-          state.rotY = state.targetRotY;
-          state.rotX = state.targetRotX;
+          // Trackball: the point of the sphere under the finger when it
+          // landed stays under the finger, at any tilt, past the poles and
+          // over the rim. Invert X / Invert Y mirror the finger's travel on
+          // their own axis before it reaches the sphere. The first step starts
+          // from the landing point, so the 6 px that made this a drag are kept.
+          const vx = state.dragStart.x + dx * (state.invertDragX ? -1 : 1);
+          const vy = state.dragStart.y + dy * (state.invertDragY ? -1 : 1);
+          state.dragStart.grab = trackballTo(state.dragStart.grab, vx, vy);
           invalidateProjection();
         }
       }
@@ -4349,8 +4557,10 @@
       // Slight tilt so the dig reads as a globe, not a flat disk.
       state.rotY = -0.35;
       state.rotX = 0.42;
+      state.rotZ = 0;
       state.targetRotY = state.rotY;
       state.targetRotX = state.rotX;
+      state.targetRotZ = 0;
       state.zoomFactor = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, 0.88));
       state.scale = state.baseScale * state.zoomFactor;
       invalidateProjection();

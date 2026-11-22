@@ -232,6 +232,8 @@
         time: int(0, 1e7),
         rotY: num(-1e6, 1e6),
         rotX: num(-1e6, 1e6),
+        // Roll about the line of sight (trackball drag, 2026-11-21); optional.
+        rotZ: num(-1e6, 1e6),
         zoom: num(0, 100),
         mines: faces(n),
         revealed: faces(n),
