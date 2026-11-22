@@ -26,6 +26,8 @@
 //   node tools/test-sphere-drag-browser.mjs wheel/index.html
 //   node tools/test-sphere-drag-browser.mjs sphere-reflection/index.html
 //   HEXSWEEPER_DRAG_TABLE=1 ...   prints every case, not only the failures
+//   HEXSWEEPER_DRAG_ONLY=tap,pinch ...   runs only those sections
+//     (grid, pole, rim, mouse, invert, pinch, tap)
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -38,6 +40,8 @@ import { existsSync } from "node:fs";
 const root = resolve(new URL("..", import.meta.url).pathname);
 const pagePath = (process.argv[2] || "sphere/index.html").replace(/^\/+/, "");
 const showTable = process.env.HEXSWEEPER_DRAG_TABLE === "1";
+const only = (process.env.HEXSWEEPER_DRAG_ONLY || "").split(",").filter(Boolean);
+const runs = (section) => !only.length || only.includes(section);
 const chromePath = process.env.CHROME_PATH || [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/usr/bin/google-chrome",
@@ -250,6 +254,12 @@ try {
   await send("Network.setBlockedURLs", { urls: ["https://*"] });
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+  // The Water Wheel floats: its centre bobs on the water, which moves the
+  // sphere under a still finger. Reduced motion stills the bob (the drag
+  // mapping does not depend on it), so the contract measures the drag alone.
+  if (pagePath.startsWith("wheel/")) {
+    await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+  }
   await send("Page.enable");
   await send("Page.navigate", { url: `http://127.0.0.1:${port}/${pagePath}?welcome=0` });
   await waitFor(() => evaluate(PAGE_HELPERS), `no sphere game on ${pagePath}`);
@@ -267,12 +277,20 @@ try {
       await touch("touchMove", [[from[0] + ((to[0] - from[0]) * s) / steps, from[1] + ((to[1] - from[1]) * s) / steps]]);
       await delay(16);
     }
+    // The finger rests where it ended: Chrome can hold the last move until
+    // the next input frame (seen on the Water Wheel), and a second report
+    // at the same point flushes it.
+    await delay(50);
+    await touch("touchMove", [to]);
+    await delay(50);
   }
   const err = (q, f) => Math.hypot(q.x - f[0], q.y - f[1]);
   const fmt = (n) => (n >= 0 ? " " : "") + n.toFixed(1);
 
-  // 1. Grabbed point follows the finger: tilt x grab x direction.
-  for (const tilt of TILTS) {
+  // 1. Grabbed point follows the finger: tilt x grab x direction. When the
+  // finger ends past the rim the point it held has rolled over the limb and
+  // cannot be under it; then it must still have moved the finger's way.
+  for (const tilt of runs("grid") ? TILTS : []) {
     for (const gy of GRABS) {
       for (const drag of DRAGS) {
         const sc = await evaluate(`__drag.setCam(${tilt * DEG}, 0)`);
@@ -288,20 +306,21 @@ try {
         await touch("touchStart", [f0]);
         await fingerTo(f0, f1);
         const q = await evaluate(`__drag.project(${JSON.stringify(grab.p)})`);
+        const onSphere = await evaluate(`!!__drag.grab(${f1[0]}, ${f1[1]})`);
         await touch("touchEnd", []);
         await delay(20);
         const moved = [q.x - f0[0], q.y - f0[1]];
         const e = err(q, f1);
         const follows = moved[0] * drag.dx + moved[1] * drag.dy > 0;
-        check(e <= TOLERANCE_PX && follows,
-          `${label}  point moved (${fmt(moved[0])}, ${fmt(moved[1])}) for finger (${drag.dx}, ${drag.dy}); off by ${e.toFixed(1)} px${follows ? "" : "  OPPOSITE"}`);
+        check((e <= TOLERANCE_PX || !onSphere) && follows,
+          `${label}  point moved (${fmt(moved[0])}, ${fmt(moved[1])}) for finger (${drag.dx}, ${drag.dy}); ${onSphere ? `off by ${e.toFixed(1)} px` : "finger past the rim"}${follows ? "" : "  OPPOSITE"}`);
       }
     }
   }
 
   // 2. One gesture: drag down past the pole, then right. The point grabbed at
   // the start must still be under the finger at the end of each leg.
-  {
+  if (runs("pole")) {
     const sc = await evaluate(`__drag.setCam(${45 * DEG}, 0)`);
     const f0 = [sc.cx, sc.cy - 0.74 * sc.R];
     const grab = await evaluate(`__drag.grab(${f0[0]}, ${f0[1]})`);
@@ -324,7 +343,7 @@ try {
 
   // 3. A drag that lands just outside the rim turns the sphere, and the
   // surface it reaches then stays under the finger.
-  {
+  if (runs("rim")) {
     const sc = await evaluate(`__drag.setCam(${14 * DEG}, 0)`);
     let edge = sc.cx;
     while (edge < sc.cx + 3 * sc.R && (await evaluate(`__drag.game.pickTile(${edge + 1}, ${sc.cy})`)) >= 0) edge += 1;
@@ -359,7 +378,7 @@ try {
   }
 
   // 4. Mouse drag follows the same contract.
-  {
+  if (runs("mouse")) {
     const sc = await evaluate(`__drag.setCam(${70 * DEG}, 0)`);
     const f0 = [sc.cx, sc.cy - 0.8 * sc.R];
     const grab = await evaluate(`__drag.grab(${f0[0]}, ${f0[1]})`);
@@ -369,6 +388,7 @@ try {
       await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: f0[0] + (40 * s) / 8, y: f0[1], button: "left", buttons: 1 });
       await delay(16);
     }
+    await delay(50);
     const q = await evaluate(`__drag.project(${JSON.stringify(grab.p)})`);
     await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: f1[0], y: f1[1], button: "left", buttons: 0, clickCount: 1 });
     await delay(20);
@@ -377,7 +397,7 @@ try {
   }
 
   // 5. Invert X mirrors the horizontal drag.
-  if (await evaluate("typeof __drag.game.setInvertDragX === 'function'")) {
+  if (runs("invert") && (await evaluate("typeof __drag.game.setInvertDragX === 'function'"))) {
     await evaluate("__drag.game.setInvertDragX(true)");
     const sc = await evaluate(`__drag.setCam(${14 * DEG}, 0)`);
     const f0 = [sc.cx, sc.cy];
@@ -393,8 +413,27 @@ try {
     check(moved < 0 && e <= TOLERANCE_PX, `invert X: right 40 px moves the grabbed point ${fmt(moved)} px (mirror), off by ${e.toFixed(1)} px`);
   }
 
-  // 6. A pinch zooms.
-  {
+  // 6. A tap still digs the face under it.
+  if (runs("tap")) {
+    // A fresh board: on a slow software renderer an earlier drag can sit
+    // past the 480 ms hold before it moves and flag the face it landed on.
+    if (await evaluate("typeof __drag.game.reset === 'function'")) {
+      await evaluate("__drag.game.reset()");
+      await delay(300);
+    }
+    const sc = await evaluate(`__drag.setCam(${14 * DEG}, 0)`);
+    await delay(40);
+    const idx = await evaluate(`__drag.game.pickTile(${sc.cx}, ${sc.cy})`);
+    await touch("touchStart", [[sc.cx, sc.cy]]);
+    await delay(60);
+    await touch("touchEnd", []);
+    await delay(200);
+    const cell = await evaluate(`(() => { const s = __drag.game.getState(); const c = s.cells[${idx}] || {}; return { revealed: !!c.revealed, flagged: !!c.flagged, over: !!s.isGameOver, flagMode: !!s.flagMode }; })()`);
+    check(cell.revealed, `tap: a touch tap on the front face digs it: ${cell.revealed ? "dug" : `not dug (${JSON.stringify(cell)})`}`);
+  }
+
+  // 7. A pinch zooms (last: it leaves the zoom changed).
+  if (runs("pinch")) {
     const sc = await evaluate(`__drag.setCam(${14 * DEG}, 0)`);
     const z0 = sc.zoom;
     const a0 = [sc.cx - 40, sc.cy], b0 = [sc.cx + 40, sc.cy];
@@ -407,20 +446,6 @@ try {
     await delay(40);
     const z1 = (await evaluate("__drag.screen()")).zoom;
     check(z1 > z0 * 1.3, `pinch: spreading two fingers from 80 to 140 px zooms ${z0.toFixed(2)} -> ${z1.toFixed(2)}`);
-    await evaluate(`(() => { const s = __drag.game.getState(); s.zoomFactor = ${z0}; s.scale = s.baseScale * ${z0}; s.projectedCache = null; })()`);
-  }
-
-  // 7. A tap still digs the face under it.
-  {
-    const sc = await evaluate(`__drag.setCam(${14 * DEG}, 0)`);
-    await delay(40);
-    const idx = await evaluate(`__drag.game.pickTile(${sc.cx}, ${sc.cy})`);
-    await touch("touchStart", [[sc.cx, sc.cy]]);
-    await delay(60);
-    await touch("touchEnd", []);
-    await delay(200);
-    const opened = await evaluate(`!!__drag.game.getState().cells[${idx}].revealed`);
-    check(opened, `tap: a touch tap on the front face digs it: ${opened ? "dug" : "not dug"}`);
   }
 
   const passed = rows.length - failures.length;
