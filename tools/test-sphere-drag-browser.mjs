@@ -29,6 +29,7 @@
 //   node tools/test-sphere-drag-browser.mjs sphere-reflection/index.html
 //   HEXSWEEPER_DRAG_TABLE=1 ...   prints every case, not only the failures
 //   HEXSWEEPER_DRAG_ONLY=tap,pinch ...   runs only those sections
+//   HEXSWEEPER_DRAG_QUICK=1 ...   fewer tilts, grabs and crossings
 //     (grid, pole, rim, mouse, invert, tap, cross, pinch)
 
 import assert from "node:assert/strict";
@@ -65,10 +66,13 @@ const CORE = 0.88;
 const RATE_CAP = 4;
 const RATE_STEP = 1.6;
 const DEG = Math.PI / 180;
-const TILTS = [14, 45, 70, 85, 95, 120, 180];
+// HEXSWEEPER_DRAG_QUICK=1 samples fewer tilts, grabs and crossings, for CI
+// on the slower pages (the full set takes 12 minutes on the reflection studio).
+const QUICK = process.env.HEXSWEEPER_DRAG_QUICK === "1";
+const TILTS = QUICK ? [14, 85, 120] : [14, 45, 70, 85, 95, 120, 180];
 // Grab points: offset from the sphere's centre in sphere radii, screen
 // coordinates (positive is below the centre).
-const GRABS = [0.8, 0.4, 0, -0.5, -0.8];
+const GRABS = QUICK ? [0.8, 0, -0.8] : [0.8, 0.4, 0, -0.5, -0.8];
 const DRAGS = [
   { name: "right", dx: 40, dy: 0 },
   { name: "down", dx: 0, dy: 40 },
@@ -210,13 +214,15 @@ const PAGE_HELPERS = String.raw`(() => {
   // Every touchmove the engine handled, with the camera right after it
   // (this listener runs after the canvas's own, on the way up).
   h.rec = null;
-  window.addEventListener("touchmove", (e) => {
-    if (!h.rec || !e.touches[0]) return;
+  const record = (pt) => {
+    if (!h.rec || !pt) return;
     const s = st();
     const r = (document.getElementById("gameCanvas") || document.querySelector("canvas")).getBoundingClientRect();
-    h.rec.push({ x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top,
+    h.rec.push({ x: pt.clientX - r.left, y: pt.clientY - r.top,
       rotY: s.rotY, rotX: s.rotX, rotZ: s.rotZ || 0, scale: s.scale, cx: s.centerX, cy: s.centerY });
-  }, { passive: true });
+  };
+  window.addEventListener("touchmove", (e) => record(e.touches[0]), { passive: true });
+  window.addEventListener("mousemove", (e) => { if (e.buttons) record(e); }, { passive: true });
   return true;
 })()`;
 
@@ -290,23 +296,40 @@ try {
   await waitFor(() => evaluate("__drag.game.getState().tiles && __drag.game.getState().tiles.length > 0"), "board did not build");
   await delay(600);
 
-  const touch = (type, points) =>
-    send("Input.dispatchTouchEvent", {
+  const touch = async (type, points) => {
+    if (type === "touchStart") await evaluate("__drag.rec = []");
+    return send("Input.dispatchTouchEvent", {
       type,
       touchPoints: type === "touchEnd" || type === "touchCancel" ? [] : points.map(([x, y], i) => ({ x, y, id: i + 1 })),
     });
+  };
+  // Where the engine last saw the finger. Chrome can deliver a move late, so
+  // the grip is judged against the move the engine actually handled; that
+  // move must be within one step (6 px) of where the finger was sent.
+  async function handled(f, label) {
+    const last = await evaluate("__drag.rec && __drag.rec.length ? __drag.rec[__drag.rec.length - 1] : null");
+    if (!last) return f;
+    const short = Math.hypot(last.x - f[0], last.y - f[1]);
+    if (short > 6) check(false, `${label}: the engine's last move was ${short.toFixed(1)} px short of the finger`);
+    return [last.x, last.y];
+  }
   // A finger path: lands on path[0], moves through the rest at about 60 Hz.
   async function fingerTo(from, to, steps = 8) {
     for (let s = 1; s <= steps; s++) {
       await touch("touchMove", [[from[0] + ((to[0] - from[0]) * s) / steps, from[1] + ((to[1] - from[1]) * s) / steps]]);
       await delay(16);
     }
-    // The finger rests where it ended: Chrome can hold the last move until
-    // the next input frame (seen on the Water Wheel), and a second report
-    // at the same point flushes it.
-    await delay(50);
-    await touch("touchMove", [to]);
-    await delay(50);
+    await settle(to);
+  }
+  // The finger rests where it ended. Chrome delivers touch moves on the next
+  // rendered frame, and a page that has stopped animating (the Water Wheel
+  // under reduced motion) can hold the last one; asking for two frames and
+  // reporting the rest point once more delivers it.
+  async function settle(at) {
+    await evaluate("new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))");
+    await touch("touchMove", [at]);
+    await evaluate("new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))");
+    await delay(30);
   }
   const err = (q, f) => Math.hypot(q.x - f[0], q.y - f[1]);
   const fmt = (n) => (n >= 0 ? " " : "") + n.toFixed(1);
@@ -340,11 +363,12 @@ try {
         await touch("touchStart", [f0]);
         await fingerTo(f0, f1);
         const q = await evaluate(`__drag.project(${JSON.stringify(grab.p)})`);
+        const fEnd = await handled(f1, label);
         const onSphere = Math.hypot(f1[0] - sc.cx, f1[1] - sc.cy) <= CORE * rimPx;
         await touch("touchEnd", []);
         await delay(20);
         const moved = [q.x - f0[0], q.y - f0[1]];
-        const e = err(q, f1);
+        const e = err(q, fEnd);
         const follows = moved[0] * drag.dx + moved[1] * drag.dy > 0;
         check((e <= TOLERANCE_PX || !onSphere) && follows,
           `${label}  point moved (${fmt(moved[0])}, ${fmt(moved[1])}) for finger (${drag.dx}, ${drag.dy}); ${onSphere ? `off by ${e.toFixed(1)} px` : "finger in the edge band"}${follows ? "" : "  OPPOSITE"}`);
@@ -363,13 +387,15 @@ try {
     await touch("touchStart", [f0]);
     await fingerTo(f0, f1, 26);
     const mid = await evaluate(`__drag.project(${JSON.stringify(grab.p)})`);
+    const fMid = await handled(f1, "pole: down leg");
     const tiltMid = await evaluate("__drag.game.getState().rotX / (Math.PI / 180)");
     await fingerTo(f1, f2, 8);
     const end = await evaluate(`__drag.project(${JSON.stringify(grab.p)})`);
+    const fEnd = await handled(f2, "pole: right leg");
     await touch("touchEnd", []);
     await delay(20);
-    const e1 = err(mid, f1);
-    const e2 = err(end, f2);
+    const e1 = err(mid, fMid);
+    const e2 = err(end, fEnd);
     check(e1 <= TOLERANCE_PX, `pole: down ${Math.round(f1[1] - f0[1])} px from tilt 45° (tilt now ${tiltMid.toFixed(0)}°): grabbed point off by ${e1.toFixed(1)} px`);
     check(e2 <= TOLERANCE_PX && end.x - mid.x > 0,
       `pole: then right 40 px: grabbed point moved ${fmt(end.x - mid.x)} px, off by ${e2.toFixed(1)} px${end.x - mid.x > 0 ? "" : "  OPPOSITE"}`);
@@ -391,11 +417,12 @@ try {
     const centreMid = await evaluate(`__drag.project(${JSON.stringify(centre0.p)})`);
     await fingerTo(f1, f2, 10);
     const end = await evaluate(`__drag.project(${JSON.stringify(onSphere.p)})`);
+    const fEnd = await handled(f2, "rim");
     await touch("touchEnd", []);
     await delay(20);
     const turned = centreMid.x - sc.cx;
     check(turned < -5, `rim: landing 12 px outside the rim and dragging left turns the front face left: moved ${fmt(turned)} px`);
-    const e = err(end, f2);
+    const e = err(end, fEnd);
     check(e <= TOLERANCE_PX, `rim: once on the sphere the point under the finger stays there: off by ${e.toFixed(1)} px`);
 
     // Landing outside the right rim and dragging down carries the right limb down.
@@ -417,6 +444,7 @@ try {
     const f0 = [sc.cx, sc.cy - 0.8 * sc.R];
     const grab = await evaluate(`__drag.grab(${f0[0]}, ${f0[1]})`);
     const f1 = [f0[0] + 40, f0[1]];
+    await evaluate("__drag.rec = []");
     await send("Input.dispatchMouseEvent", { type: "mousePressed", x: f0[0], y: f0[1], button: "left", buttons: 1, clickCount: 1 });
     for (let s = 1; s <= 8; s++) {
       await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: f0[0] + (40 * s) / 8, y: f0[1], button: "left", buttons: 1 });
@@ -424,9 +452,10 @@ try {
     }
     await delay(50);
     const q = await evaluate(`__drag.project(${JSON.stringify(grab.p)})`);
+    const fEnd = await handled(f1, "mouse");
     await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: f1[0], y: f1[1], button: "left", buttons: 0, clickCount: 1 });
     await delay(20);
-    const e = err(q, f1);
+    const e = err(q, fEnd);
     check(e <= TOLERANCE_PX, `mouse: tilt 70°, grab -0.8R, right 40 px: off by ${e.toFixed(1)} px`);
   }
 
@@ -439,11 +468,13 @@ try {
     await touch("touchStart", [f0]);
     await fingerTo(f0, [f0[0] + 40, f0[1]]);
     const q = await evaluate(`__drag.project(${JSON.stringify(grab.p)})`);
+    const fEnd = await handled([f0[0] + 40, f0[1]], "invert X");
     await touch("touchEnd", []);
     await evaluate("__drag.game.setInvertDragX(false)");
     await delay(20);
     const moved = q.x - f0[0];
-    const e = Math.hypot(q.x - (f0[0] - 40), q.y - f0[1]);
+    // Mirrored: the point goes as far left as the finger went right.
+    const e = Math.hypot(q.x - (2 * f0[0] - fEnd[0]), q.y - fEnd[1]);
     check(moved < 0 && e <= TOLERANCE_PX, `invert X: right 40 px moves the grabbed point ${fmt(moved)} px (mirror), off by ${e.toFixed(1)} px`);
   }
 
@@ -491,9 +522,7 @@ try {
         await touch("touchMove", [pt]);
         await delay(16);
       }
-      await delay(50);
-      await touch("touchMove", [points[points.length - 1]]);
-      await delay(50);
+      await settle(points[points.length - 1]);
       await touch("touchEnd", []);
       await delay(20);
       return evaluate("__drag.rec.splice(0)");
@@ -539,8 +568,8 @@ try {
     const STEP = 4;
     // 1.2 rim radii stays on a 390 px wide screen at the default zoom.
     const OUTER = 1.2;
-    for (const tilt of [14, 70, 120]) {
-      for (const deg of [0, 60, 135, 225, 300]) {
+    for (const tilt of QUICK ? [70] : [14, 70, 120]) {
+      for (const deg of QUICK ? [0, 135, 300] : [0, 60, 135, 225, 300]) {
         const sc = await evaluate(`__drag.setCam(${tilt * DEG}, 0)`);
         const u = [Math.cos(deg * DEG), -Math.sin(deg * DEG)];
         const pts = [];
