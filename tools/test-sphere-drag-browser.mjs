@@ -19,7 +19,9 @@
 //
 // Also checked: a drag that starts just outside the rim turns the sphere and
 // tracks once the finger is on it; one gesture that drags down past the pole
-// and then right; a mouse drag; Invert X; a pinch zooms; a tap digs a face.
+// and then right; a mouse drag; Invert X; a pinch zooms; a tap digs a face;
+// and drags that cross the rim mid-drag, judged on every move event (see
+// RATE_CAP): no lurch, no jump at the crossing, no reversal.
 //
 // Usage:
 //   node tools/test-sphere-drag-browser.mjs                 # sphere/
@@ -27,7 +29,7 @@
 //   node tools/test-sphere-drag-browser.mjs sphere-reflection/index.html
 //   HEXSWEEPER_DRAG_TABLE=1 ...   prints every case, not only the failures
 //   HEXSWEEPER_DRAG_ONLY=tap,pinch ...   runs only those sections
-//     (grid, pole, rim, mouse, invert, pinch, tap)
+//     (grid, pole, rim, mouse, invert, tap, cross, pinch)
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -50,6 +52,18 @@ const chromePath = process.env.CHROME_PATH || [
   "/usr/bin/chromium-browser",
 ].find((p) => existsSync(p));
 const TOLERANCE_PX = 2;
+// The grabbed point is held exactly while the finger is inside this share of
+// the drawn rim radius; the outer band is where the drag eases off (below).
+const CORE = 0.88;
+// Continuity across the rim: no move event may turn the sphere faster, per
+// pixel of finger travel, than RATE_CAP times a drag at the centre does. An
+// exact trackball reaches 2.7x at 90% of the rim radius and grows without
+// bound at the rim (the surface turns edge-on), which is the lurch; 4x keeps
+// every exact core case legal and fails the singularity. Consecutive events
+// of equal travel may not change rate by more than RATE_STEP (a jump), and the
+// turn may not reverse (axis flip, or turning against the finger).
+const RATE_CAP = 4;
+const RATE_STEP = 1.6;
 const DEG = Math.PI / 180;
 const TILTS = [14, 45, 70, 85, 95, 120, 180];
 // Grab points: offset from the sphere's centre in sphere radii, screen
@@ -193,6 +207,16 @@ const PAGE_HELPERS = String.raw`(() => {
     return { idx, p, residual: Math.hypot(q.x - fx, q.y - fy), front: q.front };
   };
   h.faceCentre = (idx) => h.project(norm(st().tiles[idx].centerPoint));
+  // Every touchmove the engine handled, with the camera right after it
+  // (this listener runs after the canvas's own, on the way up).
+  h.rec = null;
+  window.addEventListener("touchmove", (e) => {
+    if (!h.rec || !e.touches[0]) return;
+    const s = st();
+    const r = (document.getElementById("gameCanvas") || document.querySelector("canvas")).getBoundingClientRect();
+    h.rec.push({ x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top,
+      rotY: s.rotY, rotX: s.rotX, rotZ: s.rotZ || 0, scale: s.scale, cx: s.centerX, cy: s.centerY });
+  }, { passive: true });
   return true;
 })()`;
 
@@ -287,9 +311,19 @@ try {
   const err = (q, f) => Math.hypot(q.x - f[0], q.y - f[1]);
   const fmt = (n) => (n >= 0 ? " " : "") + n.toFixed(1);
 
-  // 1. Grabbed point follows the finger: tilt x grab x direction. When the
-  // finger ends past the rim the point it held has rolled over the limb and
-  // cannot be under it; then it must still have moved the finger's way.
+  // The sphere's drawn rim, measured: the last pixel right of the centre that
+  // picks a face.
+  const rimPx = await (async () => {
+    const sc = await evaluate(`__drag.setCam(${14 * DEG}, 0)`);
+    let x = sc.cx;
+    while (x < sc.cx + 3 * sc.R && (await evaluate(`__drag.game.pickTile(${x + 1}, ${sc.cy})`)) >= 0) x += 1;
+    return x - sc.cx;
+  })();
+
+  // 1. Grabbed point follows the finger: tilt x grab x direction. Exact
+  // within the core (CORE of the rim radius). In the edge band the surface is
+  // nearly edge-on and the drag eases off instead of lurching (section 8), so
+  // a finger that ends there only has to have moved the point its way.
   for (const tilt of runs("grid") ? TILTS : []) {
     for (const gy of GRABS) {
       for (const drag of DRAGS) {
@@ -306,14 +340,14 @@ try {
         await touch("touchStart", [f0]);
         await fingerTo(f0, f1);
         const q = await evaluate(`__drag.project(${JSON.stringify(grab.p)})`);
-        const onSphere = await evaluate(`!!__drag.grab(${f1[0]}, ${f1[1]})`);
+        const onSphere = Math.hypot(f1[0] - sc.cx, f1[1] - sc.cy) <= CORE * rimPx;
         await touch("touchEnd", []);
         await delay(20);
         const moved = [q.x - f0[0], q.y - f0[1]];
         const e = err(q, f1);
         const follows = moved[0] * drag.dx + moved[1] * drag.dy > 0;
         check((e <= TOLERANCE_PX || !onSphere) && follows,
-          `${label}  point moved (${fmt(moved[0])}, ${fmt(moved[1])}) for finger (${drag.dx}, ${drag.dy}); ${onSphere ? `off by ${e.toFixed(1)} px` : "finger past the rim"}${follows ? "" : "  OPPOSITE"}`);
+          `${label}  point moved (${fmt(moved[0])}, ${fmt(moved[1])}) for finger (${drag.dx}, ${drag.dy}); ${onSphere ? `off by ${e.toFixed(1)} px` : "finger in the edge band"}${follows ? "" : "  OPPOSITE"}`);
       }
     }
   }
@@ -430,6 +464,102 @@ try {
     await delay(200);
     const cell = await evaluate(`(() => { const s = __drag.game.getState(); const c = s.cells[${idx}] || {}; return { revealed: !!c.revealed, flagged: !!c.flagged, over: !!s.isGameOver, flagMode: !!s.flagMode }; })()`);
     check(cell.revealed, `tap: a touch tap on the front face digs it: ${cell.revealed ? "dug" : `not dug (${JSON.stringify(cell)})`}`);
+  }
+
+  // 8. Crossing the rim mid-drag: every move event, not just the end. Drags
+  // start on the sphere and run out past the rim and back, at several angles
+  // and tilts, and along the rim just inside and just outside it.
+  if (runs("cross")) {
+    // Camera matrix from the three angles (roll 0 on an engine without it).
+    const mat = (r) => {
+      const cy = Math.cos(r.rotY), sy = Math.sin(r.rotY), cx = Math.cos(r.rotX), sx = Math.sin(r.rotX), cz = Math.cos(r.rotZ), sz = Math.sin(r.rotZ);
+      return [cz * cy - sz * sx * sy, -sz * cx, cz * sy + sz * sx * cy, sz * cy + cz * sx * sy, cz * cx, sz * sy - cz * sx * cy, -cx * sy, sx, cx * cy];
+    };
+    // Camera-space turn between two records: axis * angle.
+    const turn = (a, b) => {
+      const m = mat(b), p = mat(a), d = [];
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) d.push(m[r * 3] * p[c * 3] + m[r * 3 + 1] * p[c * 3 + 1] + m[r * 3 + 2] * p[c * 3 + 2]);
+      const v = [(d[7] - d[5]) / 2, (d[2] - d[6]) / 2, (d[3] - d[1]) / 2];
+      const sin = Math.hypot(...v);
+      const angle = Math.atan2(sin, (d[0] + d[4] + d[8] - 1) / 2);
+      return sin < 1e-12 ? [0, 0, 0] : v.map((x) => (x / sin) * angle);
+    };
+    async function gesture(points) {
+      await evaluate("__drag.rec = []");
+      await touch("touchStart", [points[0]]);
+      for (const pt of points.slice(1)) {
+        await touch("touchMove", [pt]);
+        await delay(16);
+      }
+      await delay(50);
+      await touch("touchMove", [points[points.length - 1]]);
+      await delay(50);
+      await touch("touchEnd", []);
+      await delay(20);
+      return evaluate("__drag.rec.splice(0)");
+    }
+    // Rate: radians of turn per sphere radius of finger travel.
+    const rates = (rec) => {
+      const out = [];
+      for (let i = 1; i < rec.length; i++) {
+        const travel = Math.hypot(rec[i].x - rec[i - 1].x, rec[i].y - rec[i - 1].y);
+        if (travel < 0.5) continue;
+        const w = turn(rec[i - 1], rec[i]);
+        const u = [(rec[i].x - rec[i - 1].x) / travel, (rec[i].y - rec[i - 1].y) / travel];
+        out.push({ i, r: Math.hypot(rec[i].x - rec[i].cx, rec[i].y - rec[i].cy), w, rate: Math.hypot(...w) / (travel / rec[i].scale),
+          along: w[0] * u[1] + w[1] * u[0] });
+      }
+      return out;
+    };
+    // Baseline: a drag through the centre.
+    const sc0 = await evaluate(`__drag.setCam(${14 * DEG}, 0)`);
+    const base = rates(await gesture(Array.from({ length: 16 }, (_, k) => [sc0.cx - 30 + 4 * k, sc0.cy])))
+      .filter((e) => e.rate > 0).map((e) => e.rate).sort((a, b) => a - b);
+    const centreRate = base[Math.floor(base.length / 2)];
+    const judge = (label, rec, straight) => {
+      // The first turning move also carries the 6 px tap threshold it waited
+      // out, so it is skipped.
+      const ev = rates(rec).filter((e) => e.rate > 0.05 * centreRate).slice(1);
+      let worst = 0, worstR = 0, jump = 1, jumpR = 0, flip = null, against = null;
+      for (let k = 0; k < ev.length; k++) {
+        const e = ev[k];
+        if (e.rate / centreRate > worst) { worst = e.rate / centreRate; worstR = e.r / rimPx; }
+        if (straight && e.along < -0.02 * Math.hypot(...e.w) && !against) against = e.r / rimPx;
+        if (k && ev[k - 1].i === e.i - 1) {
+          const q = Math.max(e.rate / ev[k - 1].rate, ev[k - 1].rate / e.rate);
+          if (q > jump) { jump = q; jumpR = e.r / rimPx; }
+          const dot = e.w[0] * ev[k - 1].w[0] + e.w[1] * ev[k - 1].w[1] + e.w[2] * ev[k - 1].w[2];
+          if (dot < 0 && !flip) flip = e.r / rimPx;
+        }
+      }
+      const ok = ev.length > 3 && worst <= RATE_CAP && jump <= RATE_STEP && flip === null && against === null;
+      check(ok, `cross: ${label}: ${ev.length} moves, peak ${worst.toFixed(1)}x centre speed at ${worstR.toFixed(2)} rim, biggest step ${jump.toFixed(2)}x at ${jumpR.toFixed(2)} rim` +
+        (flip !== null ? `, axis flips at ${flip.toFixed(2)} rim` : "") + (against !== null ? `, turns against the finger at ${against.toFixed(2)} rim` : ""));
+    };
+    const STEP = 4;
+    // 1.2 rim radii stays on a 390 px wide screen at the default zoom.
+    const OUTER = 1.2;
+    for (const tilt of [14, 70, 120]) {
+      for (const deg of [0, 60, 135, 225, 300]) {
+        const sc = await evaluate(`__drag.setCam(${tilt * DEG}, 0)`);
+        const u = [Math.cos(deg * DEG), -Math.sin(deg * DEG)];
+        const pts = [];
+        for (let r = 0.6 * rimPx; r <= OUTER * rimPx; r += STEP) pts.push([sc.cx + u[0] * r, sc.cy + u[1] * r]);
+        const out = await gesture(pts);
+        judge(`tilt ${tilt}°, out at ${deg}° from 0.6 to ${OUTER} rim`, out, true);
+        const sc2 = await evaluate(`__drag.setCam(${tilt * DEG}, 0)`);
+        const back = [];
+        for (let r = OUTER * rimPx; r >= 0.6 * rimPx; r -= STEP) back.push([sc2.cx + u[0] * r, sc2.cy + u[1] * r]);
+        judge(`tilt ${tilt}°, in at ${deg}° from ${OUTER} to 0.6 rim`, await gesture(back), true);
+      }
+      for (const k of [0.97, 1.1]) {
+        const sc = await evaluate(`__drag.setCam(${tilt * DEG}, 0)`);
+        const pts = [];
+        const R = k * rimPx;
+        for (let a = -30; a <= 120; a += (STEP / R) * (180 / Math.PI)) pts.push([sc.cx + R * Math.cos(a * DEG), sc.cy - R * Math.sin(a * DEG)]);
+        judge(`tilt ${tilt}°, along the rim at ${k} rim`, await gesture(pts), false);
+      }
+    }
   }
 
   // 7. A pinch zooms (last: it leaves the zoom changed).
