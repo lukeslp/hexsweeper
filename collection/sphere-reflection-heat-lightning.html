@@ -4424,27 +4424,56 @@ window.HEXSWEEPER_REFLECTION_MATERIAL = "heat-lightning";
       return best;
     }
 
-    /**
-     * The camera-space unit vector of the sphere point drawn at (px, py): the
-     * exact inverse of projectRotated on the unit sphere. Past the rim the
-     * point keeps rolling over the limb, one radian per sphere radius of
-     * screen travel, so a drag that starts or wanders off the sphere still
-     * turns it, and the surface it brings back stays under the finger.
+    /*
+     * Where the finger holds the sphere. Inside EDGE_CORE of the rim radius
+     * this is the exact inverse of projectRotated, so the grabbed point stays
+     * under the finger. An exact mapping cannot go further: toward the rim the
+     * surface turns edge-on and each pixel of finger travel turns the sphere
+     * faster without bound (2.7x the centre's speed at 90% of the radius, 9x
+     * at 99%), and past the rim there is no surface at all, so the drag
+     * lurched at the rim and then slowed. Beyond EDGE_CORE the polar angle
+     * of the held point instead continues with the same slope and eases to
+     * the centre's speed over EDGE_FALLOFF sphere radii, on and past the rim:
+     * one smooth curve, no corner at the core's edge or at the rim, and far
+     * off the sphere a drag turns it as a drag across its centre does.
      */
+    const EDGE_CORE = 0.9;
+    const EDGE_FALLOFF = 0.15;
+    const EDGE = (() => {
+      const f = CAMERA_FOV;
+      const rimScreen = f / Math.sqrt(f * f - 1);
+      const exactPhi = (d) => {
+        const a = d * d + f * f;
+        const t = (f * f - Math.sqrt(Math.max(0, f * f * f * f - a * (f * f - 1)))) / a;
+        return Math.acos(Math.min(1, f * (1 - t)));
+      };
+      const d0 = EDGE_CORE * rimScreen;
+      const h = 1e-6;
+      return {
+        d0,
+        phi0: exactPhi(d0),
+        slope0: (exactPhi(d0 + h) - exactPhi(d0 - h)) / (2 * h),
+        // d(phi)/d(d) at the centre: (f - 1) / f radians per sphere radius.
+        slopeFar: (f - 1) / f,
+      };
+    })();
+
+    /** The camera-space unit vector of the sphere point the finger holds at (px, py). */
     function screenToSphere(px, py) {
       const f = CAMERA_FOV;
       const X = (px - state.centerX) / state.scale;
       const Y = (state.centerY - py) / state.scale;
-      const a = X * X + Y * Y + f * f;
-      const disc = f * f * f * f - a * (f * f - 1);
-      if (disc >= 0) {
-        const t = (f * f - Math.sqrt(disc)) / a;
+      const d = Math.hypot(X, Y);
+      if (d <= EDGE.d0) {
+        const a = X * X + Y * Y + f * f;
+        const t = (f * f - Math.sqrt(f * f * f * f - a * (f * f - 1))) / a;
         return { x: t * X, y: t * Y, z: f * (1 - t) };
       }
-      const d = Math.hypot(X, Y);
-      const rimZ = 1 / f;
-      const rimScreen = f / Math.sqrt(f * f - 1);
-      const phi = Math.acos(rimZ) + (d - rimScreen);
+      const past = d - EDGE.d0;
+      const phi =
+        EDGE.phi0 +
+        EDGE.slopeFar * past +
+        (EDGE.slope0 - EDGE.slopeFar) * EDGE_FALLOFF * (1 - Math.exp(-past / EDGE_FALLOFF));
       const s = Math.sin(phi) / d;
       return { x: X * s, y: Y * s, z: Math.cos(phi) };
     }
