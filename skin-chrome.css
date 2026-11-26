@@ -321,6 +321,11 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   line-height: 1.5;
   text-align: center;
 }
+.instructions-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .instructions-pointer { display: none; }
+  .instructions-touch { display: inline; }
+}
 .menu-links {
   display: flex;
   flex-wrap: wrap;
