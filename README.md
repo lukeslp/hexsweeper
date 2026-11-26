@@ -262,7 +262,7 @@ Infinite has its own `infinite-og.png`: a board-only capture of the revealed mon
 
 OG cards: `assets/social/<card>-og.png` for production themes (`home`, `light`, `dark`, `fire`, `plague`, `escape`), lab skins (`skin-<id>`), and `sphere`. Social **title** and **description** live in `tools/export-collection.py` (`ogTitle` / `ogDescription` on `THEMES`), `skins.json` (per lab skin), and `sphere/index.html`; `tools/og-card.html` mirrors them for PNG captions. Example plate title: *Neumorphic Hexagonal Minesweeper*. Older Fire studies stay as `fire-og-alt.png`, `fire-og-bloom.png`. Rebuild PNGs with `tools/shoot-og-cards.sh` (reads card keys from `tools/og-card.html`, shoots headless at 2×, downscales to 1200×630). Requires Chromium and Pillow; set `BASE=` to override the live URL. Cycle flat-game themes with the theme control or `T`. Deep-link `play.html?mode=light|dark|fire|plague|escape` (aliases: `white`, `minimalist`, `rift`, `magma-core`, `biolume-reef`); add `&deal=1` to open a starting patch. Legacy root query links forward to the same route. Preference key: `hexsweeper-mode-v3`.
 
-First visit opens the board immediately; instructions are available through Help. On `infinite.html` the Menu and Help are one sheet, the same component as Sphere's (tabs Play, Look, Settings behind one Help and settings button; Play is one line plus Tap / Hold / Drag rows, Look is System / Light / Dark, Settings holds Effects and run export/import). The cells-cleared count is the top readout, and New board and Flag mode sit in the bottom bar. The page has no `title=` tooltips and shows no card or cue on a first visit. Both sheets keep one height across their tabs. On `play.html` the chrome is a lower-right **Appearance (sun/moon), Reset, Menu** row of matching icons; Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (Luke Steuber, Data Poems) live in its Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
+First visit opens the board immediately; instructions are available through Help. On `infinite.html` the Menu and Help are one sheet, the same component as Sphere's (tabs Play, Look, Settings behind one Help and settings button; Play is one line plus Tap / Hold / Drag rows, Look is System / Light / Dark, Settings holds Effects and run export/import). The cells-cleared count is the top readout, and New board and Flag mode sit in the bottom bar. The page has no `title=` tooltips and shows no card or cue on a first visit. Both sheets keep one height across their tabs. On `play.html` the chrome is a lower-right **Appearance (sun/moon), Reset, Menu** row of matching icons; Appearance only on the infinite Light/Dark plate. Scores, modes, board size, flag, help, export/import, and outbound links (lukesteuber.com, datapoems.io) live in its Menu. Fire / Plague / Escape restyle the Menu panel to match their materials.
 
 Fresh runs (cold load or Reset) share one `startFreshRun` path after theme chrome is applied, so Escape intro zoom and plate framing match between first paint and restart.
 
@@ -434,6 +434,7 @@ Hexsweeper.boot({
 ```
 
 Also exported: `Hexsweeper.DEFAULT_THEME`, `DEFAULT_CONFIG`, `SQRT3`.
+The booted API also has `closeMenu()` for surfaces that leave the Menu through another control.
 
 ## Sphere
 
@@ -645,12 +646,21 @@ Open `lab.html` or `choices.html` locally or by URL path. Experimental skins rem
 ## Accessibility
 
 - Help dialog and keyboard shortcuts (`?`, `T`, difficulty keys as documented in-game)
+- The flat Menu places focus on Close, contains Tab and Shift+Tab, closes on Escape,
+  and returns focus to its opener when it remains connected. Its instruction line
+  uses pointer media features: touch shows "Tap to reveal · hold to flag";
+  other inputs show "Click to reveal · right-click or Ctrl-click to flag".
 - Sphere Help keeps keyboard focus inside visible controls, isolates background
   content and returns focus to the visible Help button. Quiet browser checks are
   in `tools/test-sphere-dialog-focus.mjs`; nested-dialog coverage uses a test-only
   fixture. This does not establish TalkBack gameplay acceptance or add a tutorial.
 - `prefers-reduced-motion` respected for particle / blast motion
 - Touch: long-hold to flag; Fire drag tilts (camera locked); canvas uses `touch-action: none`
+
+`classic.html`, `skins/*.html` and `play.html` are the authored sources of the flat Menu; `core.js` and
+`skin-chrome.css` hold its shared behavior and the instruction line's visibility. After changing any of them, run
+`python3 tools/export-collection.py` to refresh `bounded.html`, the collection pens and the other pages that inline
+those files.
 
 ## Related
 

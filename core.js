@@ -6,7 +6,7 @@
  * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless,
  *   tooltips }). tooltips: false keeps title= off the stats (infinite.html).
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
- *   exportEndlessState, applyEndlessState, undo, canUndo, …) on window.Hexsweeper.
+ *   exportEndlessState, applyEndlessState, closeMenu, undo, canUndo, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
  *   undo() takes back the last dig or chord (one step, flags kept);
  *   hooks.onUndo(api) lets the skin clear its end-of-run state.
@@ -250,23 +250,59 @@
     const statsTime = document.getElementById("stats-time");
     const menuBtn = document.getElementById("menu-btn");
     const closeBtn = document.getElementById("close-modal-btn");
+    let menuOpener = null;
     // Production uses #reset-btn on the HUD; lab skins still use #restart-btn in the modal.
     const restartBtn =
       document.getElementById("restart-btn") || document.getElementById("reset-btn");
 
     function openModal() {
-      if (modal) modal.classList.add("open");
+      if (!modal) return;
+      menuOpener = menuBtn;
+      modal.inert = false;
+      modal.classList.add("open");
+      closeBtn?.focus();
     }
     function closeModal() {
-      if (modal) modal.classList.remove("open");
+      if (!modal?.classList.contains("open")) return;
+      modal.classList.remove("open");
+      modal.inert = true;
+      if (menuOpener?.isConnected) menuOpener.focus();
+      menuOpener = null;
     }
 
     if (menuBtn) menuBtn.addEventListener("click", openModal);
     if (closeBtn) closeBtn.addEventListener("click", closeModal);
     if (modal) {
+      modal.inert = !modal.classList.contains("open");
       modal.addEventListener("click", (e) => {
         if (e.target === modal) closeModal();
       });
+      window.addEventListener("keydown", (e) => {
+        if (!modal.classList.contains("open")) return;
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          closeModal();
+          return;
+        }
+        if (e.key !== "Tab") return;
+        const focusable = [...modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          .filter((el) => el.getClientRects().length && getComputedStyle(el).visibility !== "hidden");
+        if (!focusable.length) {
+          e.preventDefault();
+          closeBtn?.focus();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!modal.contains(document.activeElement) || (e.shiftKey && document.activeElement === first)) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }, true);
     }
 
     function syncDiffButtons() {
@@ -355,6 +391,7 @@
     }
 
     const api = {
+      closeMenu: closeModal,
       get state() {
         return state;
       },

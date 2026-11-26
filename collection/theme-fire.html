@@ -351,6 +351,11 @@ canvas { display: block; cursor: crosshair; max-width: 100%; }
   line-height: 1.5;
   text-align: center;
 }
+.instructions-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .instructions-pointer { display: none; }
+  .instructions-touch { display: inline; }
+}
 .menu-links {
   display: flex;
   flex-wrap: wrap;
@@ -1448,7 +1453,7 @@ body[data-mode="escape"] .menu-links {
 </div>
 
 <!-- Menu: score, mode, size, aids -->
-<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+<div id="modal-overlay" class="modal-overlay" inert role="dialog" aria-modal="true" aria-labelledby="menu-title">
   <div class="modal-content">
     <button id="close-modal-btn" class="close-btn" type="button" aria-label="Close">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1486,9 +1491,9 @@ body[data-mode="escape"] .menu-links {
     </div>
     <input type="file" id="import-run-file" accept="application/json,.json" hidden>
     <nav class="menu-links" aria-label="Elsewhere">
-      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">Luke Steuber</a>
+      <a href="https://lukesteuber.com" target="_blank" rel="noopener noreferrer">lukesteuber.com</a>
       <span class="menu-links-sep" aria-hidden="true">·</span>
-      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">Data Poems</a>
+      <a href="https://datapoems.io" target="_blank" rel="noopener noreferrer">datapoems.io</a>
     </nav>
   </div>
 </div>
@@ -1561,7 +1566,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
  * Inputs: Hexsweeper.boot({ canvasId, theme, hooks, difficulty, showStats, endless,
  *   tooltips }). tooltips: false keeps title= off the stats (infinite.html).
  * Outputs: API (setZoom, adjustZoom, setFlagMode, setCamera, restart, setFinish,
- *   exportEndlessState, applyEndlessState, undo, canUndo, …) on window.Hexsweeper.
+ *   exportEndlessState, applyEndlessState, closeMenu, undo, canUndo, …) on window.Hexsweeper.
  * Notes: Endless Escape may set finishKey — reveal that safe hex to win.
  *   undo() takes back the last dig or chord (one step, flags kept);
  *   hooks.onUndo(api) lets the skin clear its end-of-run state.
@@ -1805,23 +1810,59 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     const statsTime = document.getElementById("stats-time");
     const menuBtn = document.getElementById("menu-btn");
     const closeBtn = document.getElementById("close-modal-btn");
+    let menuOpener = null;
     // Production uses #reset-btn on the HUD; lab skins still use #restart-btn in the modal.
     const restartBtn =
       document.getElementById("restart-btn") || document.getElementById("reset-btn");
 
     function openModal() {
-      if (modal) modal.classList.add("open");
+      if (!modal) return;
+      menuOpener = menuBtn;
+      modal.inert = false;
+      modal.classList.add("open");
+      closeBtn?.focus();
     }
     function closeModal() {
-      if (modal) modal.classList.remove("open");
+      if (!modal?.classList.contains("open")) return;
+      modal.classList.remove("open");
+      modal.inert = true;
+      if (menuOpener?.isConnected) menuOpener.focus();
+      menuOpener = null;
     }
 
     if (menuBtn) menuBtn.addEventListener("click", openModal);
     if (closeBtn) closeBtn.addEventListener("click", closeModal);
     if (modal) {
+      modal.inert = !modal.classList.contains("open");
       modal.addEventListener("click", (e) => {
         if (e.target === modal) closeModal();
       });
+      window.addEventListener("keydown", (e) => {
+        if (!modal.classList.contains("open")) return;
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          closeModal();
+          return;
+        }
+        if (e.key !== "Tab") return;
+        const focusable = [...modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          .filter((el) => el.getClientRects().length && getComputedStyle(el).visibility !== "hidden");
+        if (!focusable.length) {
+          e.preventDefault();
+          closeBtn?.focus();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!modal.contains(document.activeElement) || (e.shiftKey && document.activeElement === first)) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }, true);
     }
 
     function syncDiffButtons() {
@@ -1910,6 +1951,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     }
 
     const api = {
+      closeMenu: closeModal,
       get state() {
         return state;
       },
@@ -9378,7 +9420,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
   }
 
   helpBtn?.addEventListener("click", () => {
-    document.getElementById("modal-overlay")?.classList.remove("open");
+    game.closeMenu();
     openHelp();
   });
   helpClose?.addEventListener("click", closeHelp);
@@ -9484,7 +9526,7 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
         applyTheme(i);
         // Mode picks from Menu should reveal the board immediately.
         if (button.closest(".modal-content .mode-switch")) {
-          document.getElementById("modal-overlay")?.classList.remove("open");
+          game.closeMenu();
         }
       }
     });
@@ -9504,14 +9546,17 @@ window.HEXSWEEPER_COLLECTION_EXPORT = true;
     if (e.key === "?" || (e.key === "/" && e.shiftKey)) {
       e.preventDefault();
       if (helpOverlay.classList.contains("open")) closeHelp();
-      else openHelp();
+      else {
+        game.closeMenu();
+        openHelp();
+      }
     }
     if (e.key === "t" || e.key === "T") {
       if (!e.metaKey && !e.ctrlKey) cycleTheme();
     }
     if (e.key === "Escape") {
       closeHelp();
-      document.getElementById("modal-overlay")?.classList.remove("open");
+      game.closeMenu();
       if (welcomeOverlay?.classList.contains("open")) closeWelcome();
     }
   });
