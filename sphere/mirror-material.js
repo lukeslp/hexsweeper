@@ -286,8 +286,12 @@ uniform float uMaterial;
 uniform vec2 uResolution;
 uniform vec2 uCenter;
 uniform vec2 uPointer;
-uniform vec2 uRotation;
-uniform vec2 uShellRotation;
+// Continuous turn totals about the screen's vertical and horizontal axes
+// (lagged): drift and prism angles. They never jump the way stored angles can.
+uniform vec2 uTurn;
+// Camera → sphere for the live shell, and for the lagged surface image.
+uniform mat3 uShellInverse;
+uniform mat3 uSurfaceInverse;
 uniform float uRadius;
 uniform sampler2D uEnvironmentMap;
 uniform float uTextureReady;
@@ -342,12 +346,10 @@ vec3 cameraEnvironmentRay(vec3 ray) {
   return normalize(ray);
 }
 
-vec3 inverseSphereRotation(vec3 direction, vec2 rotation) {
-  // sphere.js rotates object points around Y first, then X. Undo that exact
-  // transform in reverse so material landmarks remain attached to the tiles.
-  direction.yz = rotate2(rotation.y) * direction.yz;
-  direction.xz = rotate2(-rotation.x) * direction.xz;
-  return normalize(direction);
+vec3 inverseSphereRotation(vec3 direction, mat3 inverse) {
+  // Undo sphere.js's camera rotation (yaw, pitch, then roll) so material
+  // landmarks remain attached to the tiles.
+  return normalize(inverse * direction);
 }
 
 float softRect(vec2 point, vec2 center, vec2 halfSize, float feather) {
@@ -416,8 +418,8 @@ vec3 mercuryEnvironment(vec3 ray) {
   // non-periodic FBM exposed a hard rear meridian on an otherwise excellent
   // material. Three Cartesian projections stay continuous over the sphere.
   vec3 p = normalize(ray);
-  p.xz = rotate2(uTime * 0.012 + uRotation.x * 0.055) * p.xz;
-  p.yz = rotate2(-uTime * 0.008 + uRotation.y * 0.045) * p.yz;
+  p.xz = rotate2(uTime * 0.012 + uTurn.x * 0.055) * p.xz;
+  p.yz = rotate2(-uTime * 0.008 + uTurn.y * 0.045) * p.yz;
   vec3 weights = pow(abs(p), vec3(2.4));
   weights /= max(0.001, weights.x + weights.y + weights.z);
   vec2 driftA = vec2(uTime * 0.035, -uTime * 0.022);
@@ -454,8 +456,8 @@ vec3 mercuryEnvironment(vec3 ray) {
 }
 
 vec3 auroraEnvironment(vec3 ray) {
-  float longitude = atan(ray.z, ray.x) + uRotation.x * 0.055;
-  float latitude = asin(clamp(ray.y, -1.0, 1.0)) + uRotation.y * 0.035;
+  float longitude = atan(ray.z, ray.x) + uTurn.x * 0.055;
+  float latitude = asin(clamp(ray.y, -1.0, 1.0)) + uTurn.y * 0.035;
   float fold = fbm(vec2(longitude * 0.72 - uTime * 0.030, latitude * 1.8 + uTime * 0.018));
   float ribbonCenter = 0.18 * sin(longitude * 1.35 - uTime * 0.11) + (fold - 0.5) * 0.34;
   float ribbon = exp(-pow((latitude - ribbonCenter) * 3.15, 2.0));
@@ -612,7 +614,7 @@ vec3 imageEnvironment(vec3 ray, float lod) {
     // The oculus is fixed into the rotating shell, but its channels refract at
     // slightly different angles. Rotational energy briefly widens the split,
     // then the image resolves back into one piece as the sphere settles.
-    float prismAngle = uShellRotation.x + uShellRotation.y * 0.73 + motionTime;
+    float prismAngle = uTurn.x + uTurn.y * 0.73 + motionTime;
     vec2 prismDirection = vec2(cos(prismAngle), sin(prismAngle));
     float prismWidth = motionAmount * (0.45 + uDynamics.z * 1.9);
     vec3 warmSample = textureLod(
@@ -910,8 +912,8 @@ void main() {
       vec3 surfaceRay = uTextureDisplay.y < 0.5
         ? normal
         : uTextureDisplay.y < 1.5
-          ? inverseSphereRotation(normal, uShellRotation)
-          : inverseSphereRotation(normal, uRotation);
+          ? inverseSphereRotation(normal, uShellInverse)
+          : inverseSphereRotation(normal, uSurfaceInverse);
       vec3 surfaceColor = imageEnvironment(
         surfaceRay,
         0.65 + uTextureMapping.w * 2.0
@@ -986,7 +988,7 @@ uniform float uAppearance;
 uniform float uMaterial;
 uniform vec2 uResolution;
 uniform vec2 uCenter;
-uniform vec2 uShellRotation;
+uniform mat3 uShellInverse;
 uniform float uRadius;
 uniform sampler2D uEnvironmentMap;
 uniform float uTextureReady;
@@ -1048,8 +1050,7 @@ vec3 backdropTone(vec2 uv) {
 }
 
 vec2 sphereUv(vec3 direction) {
-  direction.yz = rotate2(uShellRotation.y) * direction.yz;
-  direction.xz = rotate2(-uShellRotation.x) * direction.xz;
+  direction = normalize(uShellInverse * direction);
   float longitude = atan(direction.z, direction.x) / 6.28318531 + 0.5;
   float latitude = asin(clamp(direction.y, -1.0, 1.0)) / 3.14159265 + 0.5;
   if (uTextureDisplay.x > 0.5) {
@@ -1137,6 +1138,8 @@ void main() {
       this.appearance = 0;
       this.axes = { field: "dark", shell: "dark", well: "light" };
       this.pointer = { x: 0, y: 0, tx: 0, ty: 0 };
+      // Springs on the game's continuous turn totals (state.turnY/turnX;
+      // rotY/rotX for an engine without them).
       this.reflectionRotation = {
         rotY: 0,
         rotX: 0,
@@ -1202,8 +1205,9 @@ void main() {
           "uResolution",
           "uCenter",
           "uPointer",
-          "uRotation",
-          "uShellRotation",
+          "uTurn",
+          "uShellInverse",
+          "uSurfaceInverse",
           "uRadius",
           "uEnvironmentMap",
           "uTextureReady",
@@ -1403,8 +1407,9 @@ void main() {
       this.game = game;
       const state = typeof game.getState === "function" ? game.getState() : null;
       if (state) {
-        this.reflectionRotation.rotY = state.rotY || 0;
-        this.reflectionRotation.rotX = state.rotX || 0;
+        const turn = this.turnOf(state);
+        this.reflectionRotation.rotY = turn.y;
+        this.reflectionRotation.rotX = turn.x;
         this.reflectionRotation.initialized = true;
         if (state.isGameOver) {
           this.tableau.kind = state.won ? 1 : -1;
@@ -1466,10 +1471,49 @@ void main() {
       return ((to - from + Math.PI) % tau + tau) % tau - Math.PI;
     }
 
+    /** How far the sphere has turned about the screen's axes, never jumping. */
+    turnOf(state) {
+      return Number.isFinite(state.turnY) && Number.isFinite(state.turnX)
+        ? { y: state.turnY, x: state.turnX }
+        : { y: state.rotY || 0, x: state.rotX || 0 };
+    }
+
+    /**
+     * Row-major camera rotation of the game: Rz(roll) · Rx(pitch) · Ry(yaw),
+     * as sphere.js rotatePoint. Uploaded untransposed, GLSL reads it as its
+     * transpose, which is the inverse the shaders want.
+     */
+    cameraMatrix(state) {
+      const cy = Math.cos(state.rotY || 0), sy = Math.sin(state.rotY || 0);
+      const cx = Math.cos(state.rotX || 0), sx = Math.sin(state.rotX || 0);
+      const cz = Math.cos(state.rotZ || 0), sz = Math.sin(state.rotZ || 0);
+      return [
+        cz * cy - sz * sx * sy, -sz * cx, cz * sy + sz * sx * cy,
+        sz * cy + cz * sx * sy, cz * cx, sz * sy - cz * sx * cy,
+        -cx * sy, sx, cx * cy,
+      ];
+    }
+
+    /** The camera matrix turned back by the spring's lag about the screen's axes. */
+    laggedCameraMatrix(m, lagY, lagX) {
+      const cy = Math.cos(-lagY), sy = Math.sin(-lagY);
+      const cx = Math.cos(-lagX), sx = Math.sin(-lagX);
+      // L = Ry(-lagY) · Rx(-lagX), camera space
+      const l = [cy, sy * sx, sy * cx, 0, cx, -sx, -sy, cy * sx, cy * cx];
+      const out = new Array(9);
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          out[r * 3 + c] = l[r * 3] * m[c] + l[r * 3 + 1] * m[3 + c] + l[r * 3 + 2] * m[6 + c];
+        }
+      }
+      return out;
+    }
+
     updateReflectionDynamics(state, elapsedSeconds, motionReduced) {
       const motion = this.reflectionRotation;
-      const targetY = state.rotY || 0;
-      const targetX = state.rotX || 0;
+      const turn = this.turnOf(state);
+      const targetY = turn.y;
+      const targetX = turn.x;
       if (!motion.initialized || motionReduced) {
         motion.rotY = targetY;
         motion.rotX = targetX;
@@ -1707,11 +1751,13 @@ void main() {
         this.canvas.height - disk.cy * sy
       );
       gl.uniform2f(this.uniforms.uPointer, this.pointer.x, -this.pointer.y);
-      gl.uniform2f(this.uniforms.uRotation, dynamics.rotY, dynamics.rotX);
-      gl.uniform2f(
-        this.uniforms.uShellRotation,
-        state.rotY || 0,
-        state.rotX || 0
+      gl.uniform2f(this.uniforms.uTurn, dynamics.rotY, dynamics.rotX);
+      const shell = this.cameraMatrix(state);
+      gl.uniformMatrix3fv(this.uniforms.uShellInverse, false, shell);
+      gl.uniformMatrix3fv(
+        this.uniforms.uSurfaceInverse,
+        false,
+        this.laggedCameraMatrix(shell, dynamics.lagY || 0, dynamics.lagX || 0)
       );
       gl.uniform4f(
         this.uniforms.uActionOrigin,
