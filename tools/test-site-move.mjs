@@ -100,7 +100,8 @@ const oldSaves = {
   "hexsweeper-infinite-theme-v1": "dark",
   "hexsweeper-zoom-v1": "1.25",
   "minimal-access.v1:hex-infinite": JSON.stringify({ mode: "switch", speed: "slow" }),
-  "hexsweeper-sphere-run-v2": sphereRun(),
+  // Carries the trackball's roll (rotZ); older saves without it still move.
+  "hexsweeper-sphere-run-v2": sphereRun({ rotZ: 0.3 }),
   "hexsweeper-classic-run-v1": classicRun,
   "hexsweeper-endless-plate-v1": plateRun(5),
   // Not the game's, or not readable: never sent.
@@ -271,6 +272,7 @@ test("one malformed part rejects the whole hand-off", () => {
     "face twice": { "hexsweeper-sphere-run-v2": run({ flagged: [3, 3] }) },
     "face as text": { "hexsweeper-sphere-run-v2": run({ mines: ["3"] }) },
     "unknown run field": { "hexsweeper-sphere-run-v2": run({ planted: true }) },
+    "roll as text": { "hexsweeper-sphere-run-v2": run({ rotZ: "0.3" }) },
     "unknown sphere size": { "hexsweeper-sphere-run-v2": run({ difficulty: "huge" }) },
     "variant kind": { "hexsweeper-sphere-run-v2": run({ kind: "glitch-sphere" }) },
     "Classic cell off the board": { "hexsweeper-classic-run-v1": classicRun.replace('"-3,2"', '"8,0"') },

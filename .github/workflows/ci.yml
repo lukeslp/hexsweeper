@@ -63,6 +63,12 @@ jobs:
       - name: Classic Undo and Sphere phone size in a browser
         run: node tools/test-play-browser.mjs
 
+      - name: Sphere drag keeps the grabbed point under the finger
+        run: |
+          node tools/test-sphere-drag-browser.mjs sphere/index.html
+          HEXSWEEPER_DRAG_QUICK=1 node tools/test-sphere-drag-browser.mjs wheel/index.html
+          HEXSWEEPER_DRAG_QUICK=1 node tools/test-sphere-drag-browser.mjs sphere-reflection/index.html
+
       - name: Saves move from dr.eamer.dev to lukesteuber.com
         run: node tools/test-site-move.mjs
 
