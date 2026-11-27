@@ -72,7 +72,7 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
 
 1. The repository must be public. F-Droid clones it without signing in, and
    reviewers read its history for at least three months of development.
-2. Versions 1.0.12 (37), 1.0.13 (38), 1.0.15 (40), 1.0.16 (41) and 1.0.17 (42) are the F-Droid build's alone: the F-Droid APK and the
+2. Versions 1.0.12 (37), 1.0.13 (38), 1.0.15 (40), 1.0.16 (41), 1.0.17 (42) and 1.0.19 (44) are the F-Droid build's alone: the F-Droid APK and the
    direct download share an application id and signing key, so one code must
    never name two different files. 1.0.14 (39) is the direct, Google Play and
    Amazon build of November 16, built from `5df3ecc` (a short line from
@@ -80,10 +80,12 @@ for the other builds; `THIRD-PARTY-NOTICES.md` says what they are.
    F-Droid build too: the 1.0.15 payload with R8 code and resource shrinking
    turned on, which F-Droid's reviewer asked for on November 20, 2026.
    1.0.17 (42) is the F-Droid build of the Android feel fix (main's PR 43,
-   ported to the payload line as `d96ffff`). The next direct or store build
-   takes 43 or higher.
+   ported to the payload line as `d96ffff`). 1.0.18 (43) is the direct,
+   Google Play and Amazon build of the trackball drag (main's PR 47, ported as
+   `9511303`); 1.0.19 (44) is its F-Droid build (`3b03a13`). The next direct
+   or store build takes 45 or higher.
    F-Droid reads the version from `app/android/app/build.gradle` as written,
-   so no commit that sets 39 (`f7bdded`, `cc64a42`, `5df3ecc`) may carry a `v` tag.
+   so no commit that sets 39 (`f7bdded`, `cc64a42`, `5df3ecc`) or 43 may carry a `v` tag.
 3. Done for 1.0.13: tag `v1.0.13`, with the signed file on its GitHub release.
    (`v1.0.12` is the same app; its listing still had a screenshot of a theme
    the F-Droid build does not include, and F-Droid reads the listing from
