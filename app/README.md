@@ -71,6 +71,16 @@ neither updates the other, and a saved board, best times and settings do not
 move between them. The FileProvider authority and the Share plugin follow the
 id; the app has no deep links or asset links to follow it.
 
+## Android 1.0.18 (43) and 1.0.19 (44), iOS 1.0.4 (72), November 26, 2026
+
+The trackball drag from the web (main's PR 47): drag the sphere and the spot
+you grab stays under your finger, even across the poles and past the edge.
+The direct, Google Play and Amazon build is 1.0.18 (43) and iOS is 1.0.4 (72),
+both from `www/` at `9511303`; they also bring the 1.0.17 changes those builds
+never had (depth and counts while turning on Android, Undo after a mine).
+1.0.19 (44) is the F-Droid build, from `www-fdroid/` at `3b03a13`; tag that
+commit `v1.0.19`, never the one that sets 43. Prepared and built unsigned.
+
 ## Android 1.0.15 (40), F-Droid build, November 16, 2026
 
 The F-Droid build of 1.0.14 (39): the same fixes and shell, from the
@@ -222,7 +232,7 @@ the exact `WWW_SOURCE.txt` commit of this repository and regenerates the
 payload, so a stale `www/` fails the build. `WWW_SOURCE.txt` identifies the
 exact commit used for this snapshot.
 
-The current payload pins `42edf16`, a bounded maintenance line on the
+The current payload pins `9511303`, a bounded maintenance line on the
 `c91cd20` snapshot (the October 7, 2026 baseline with the focus fixes, opening
 straight to the board). It adds, and nothing else:
 
@@ -255,9 +265,13 @@ straight to the board). It adds, and nothing else:
   on Android the sphere keeps its depth tiers and counts while it turns,
   falling back to lighter frames only on a board whose frames measure slow;
   and a lost run shows one outlined Undo above the bar instead of a card.
+- main's PR 47 (`7435eec`), applied unchanged to the engine files (`9511303`,
+  November 26, 2026): drag is a trackball. The point under the finger stays
+  under it at any tilt and through the poles, and near and past the rim the
+  turn eases to the centre's speed instead of lurching.
 
-`www-fdroid/` pins `d96ffff`: `8c93811` (the F-Droid change: no photo
-themes, no screenshot) plus the same five fixes. Its themes have no
+`www-fdroid/` pins `3b03a13`: `8c93811` (the F-Droid change: no photo
+themes, no screenshot) plus the same six fixes. Its themes have no
 photograph, so the Android field change leaves them as they were; it is
 carried so both lines keep one engine.
 

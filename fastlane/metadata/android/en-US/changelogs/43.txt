@@ -1,0 +1,1 @@
+Drag the sphere and the spot you grab stays under your finger, even across the poles and past the edge. The sphere keeps its depth and numbers while you turn it. After a mine, one Undo button takes the move back; New sphere starts over.

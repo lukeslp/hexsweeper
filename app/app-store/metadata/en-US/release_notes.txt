@@ -1,2 +1,2 @@
-Faces and flags on the far side of the sphere no longer show through its edge.
-Less battery use after you try a reflection theme.
+Drag the sphere and the spot you grab stays under your finger, even across the poles and past the edge.
+After a mine, one Undo button takes the move back; New sphere starts over.
